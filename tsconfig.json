@@ -6,10 +6,13 @@
     "strict": true,
     "esModuleInterop": true,
     "ignoreDeprecations": "5.0",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
-
     "noEmit": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
@@ -20,8 +23,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
-    }
+      "@/*": [
+        "./*"
+      ]
+    },
+    "resolveJsonModule": true
   },
   "include": [
     "next-env.d.ts",
@@ -31,5 +37,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
