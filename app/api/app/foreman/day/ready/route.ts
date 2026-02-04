@@ -1,0 +1,110 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyApiToken } from "@/lib/jwt";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function startOfDayUTC(dateISO: string) {
+  const d = new Date(`${dateISO}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid dateISO");
+  return d;
+}
+
+export async function POST(req: Request) {
+  // --- auth ---
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  if (!token)
+    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+
+  const payload = await verifyApiToken(token);
+  if (!payload)
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+
+  if (payload.role !== "FOREMAN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // --- body ---
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const siteId = String(body?.siteId ?? "");
+  const dateISO = String(body?.dateISO ?? "");
+  const readyToSubmit = Boolean(body?.readyToSubmit);
+
+  if (!siteId || !dateISO) {
+    return NextResponse.json(
+      { error: "siteId and dateISO required" },
+      { status: 400 },
+    );
+  }
+
+  let workDate: Date;
+  try {
+    workDate = startOfDayUTC(dateISO);
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message ?? "Invalid dateISO" },
+      { status: 400 },
+    );
+  }
+
+  // --- foreman ---
+  const foreman = await prisma.foreman.findUnique({
+    where: { userId: payload.sub },
+    select: { id: true },
+  });
+
+  if (!foreman) {
+    return NextResponse.json(
+      { error: "Foreman profile missing" },
+      { status: 403 },
+    );
+  }
+
+  // --- ensure day exists ---
+  const siteDay = await prisma.siteDay.upsert({
+    where: { siteId_workDate: { siteId, workDate } },
+    update: {},
+    create: { siteId, workDate, foremanId: foreman.id },
+    select: { id: true, foremanId: true, isLocked: true },
+  });
+
+  // prevent other foreman
+  if (siteDay.foremanId !== foreman.id) {
+    return NextResponse.json(
+      { error: "This site/day belongs to another foreman" },
+      { status: 403 },
+    );
+  }
+
+  if (siteDay.isLocked) {
+    return NextResponse.json({ error: "Day is locked" }, { status: 409 });
+  }
+
+  // if marking ready=true, require at least 1 scan
+  if (readyToSubmit) {
+    const scanCount = await prisma.attendanceScan.count({
+      where: { siteDayId: siteDay.id },
+    });
+    if (scanCount === 0) {
+      return NextResponse.json(
+        { error: "Scan at least one worker before marking ready" },
+        { status: 400 },
+      );
+    }
+  }
+
+  await prisma.siteDay.update({
+    where: { id: siteDay.id },
+    data: { readyToSubmit },
+  });
+
+  return NextResponse.json({ ok: true });
+}
