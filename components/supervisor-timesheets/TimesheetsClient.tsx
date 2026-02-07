@@ -242,13 +242,15 @@ export default function TimesheetsClient() {
         window.location.origin,
       );
 
-      // ✅ If your API supports period: keep it (your code uses it)
-      url.searchParams.set("period", periodId);
+      // Note: the API endpoint doesn't filter by period
+      // It returns all timesheets from the last 180 days
+      // Period filtering happens on the client side if needed
 
       if (qDebounced) url.searchParams.set("q", qDebounced);
       if (status !== "ALL") url.searchParams.set("status", status);
 
       const res = await fetch(url.toString(), {
+        method: "GET",
         cache: "no-store",
         signal: ac.signal,
         credentials: "include",
@@ -275,7 +277,7 @@ export default function TimesheetsClient() {
     } finally {
       setLoading(false);
     }
-  }, [periodId, qDebounced, status]);
+  }, [qDebounced, status]);
 
   useEffect(() => {
     loadList();
@@ -531,7 +533,7 @@ export default function TimesheetsClient() {
         {loading ? (
           <div className="flex items-center justify-center p-8">
             <div className="w-16 aspect-square rounded-full relative flex justify-center items-center animate-[spin_3s_linear_infinite] z-40 bg-[conic-gradient(white_0deg,white_300deg,transparent_270deg,transparent_360deg)] before:animate-[spin_2s_linear_infinite] before:absolute before:w-[60%] before:aspect-square before:rounded-full before:z-80 before:bg-[conic-gradient(white_0deg,white_270deg,transparent_180deg,transparent_360deg)] after:absolute after:w-3/4 after:aspect-square after:rounded-full after:z-60 after:animate-[spin_3s_linear_infinite] after:bg-[conic-gradient(#065f46_0deg,#065f46_180deg,transparent_180deg,transparent_360deg)]">
-              <span className="absolute w-[85%] aspect-square rounded-full z-[60] animate-[spin_5s_linear_infinite] bg-[conic-gradient(#34d399_0deg,#34d399_180deg,transparent_180deg,transparent_360deg)]"></span>
+              <span className="absolute w-[85%] aspect-square rounded-full z-60 animate-[spin_5s_linear_infinite] bg-[conic-gradient(#34d399_0deg,#34d399_180deg,transparent_180deg,transparent_360deg)]"></span>
             </div>
           </div>
         ) : rows.length === 0 ? (
