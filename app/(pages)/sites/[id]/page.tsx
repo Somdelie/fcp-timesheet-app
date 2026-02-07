@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { siteWhereFor } from "@/lib/site-scope";
+import { getSiteWageTotals } from "@/actions/site-reports";
+import { currentFortnightSatFri, toISODate } from "@/lib/fortnight";
+import { formatCurrency } from "@/lib/formatCurrency";
 import SiteAssignmentsPanel from "@/components/sites/SiteAssignmentsPanel";
 import SiteBookingPanel from "@/components/sites/SiteBookingPanel";
 import SiteTotalsPanel from "@/components/sites/SiteTotalsPanel";
@@ -26,6 +29,14 @@ export default async function SiteManagePage({
       isActive: true,
       createdAt: true,
     },
+  });
+
+  // Fetch current fortnight wage totals
+  const fortnight = currentFortnightSatFri();
+  const wageData = await getSiteWageTotals({
+    siteId: id,
+    from: fortnight.startISO,
+    to: fortnight.endISO,
   });
 
   if (!site) {
@@ -132,10 +143,12 @@ export default async function SiteManagePage({
 
             <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 p-4 text-right">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Site ID
+                Total Wages Cost
               </p>
               <p className="mt-1 font-mono text-xs text-slate-700 dark:text-slate-300 break-all">
-                {site.id}
+                {wageData.ok
+                  ? formatCurrency(wageData.totals.totalWages)
+                  : "R0.00"}
               </p>
             </div>
           </div>
