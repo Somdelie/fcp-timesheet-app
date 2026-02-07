@@ -98,6 +98,13 @@ export async function POST(req: Request) {
   // optional local dedupe to reduce DB churn
   const uniqueQrValues = Array.from(new Set(qrValues));
 
+  // Get company default day rate
+  const companySetting = await prisma.companySettings.findUnique({
+    where: { id: "singleton" },
+    select: { defaultEmployeeDayRate: true },
+  });
+  const defaultRate = companySetting?.defaultEmployeeDayRate;
+
   const employees = await prisma.employee.findMany({
     where: { qrCodeValue: { in: uniqueQrValues as string[] } },
     select: {
@@ -128,13 +135,20 @@ export async function POST(req: Request) {
     }
 
     try {
+      const effectiveRate = emp.defaultDayRate || defaultRate;
+
+      if (!effectiveRate) {
+        results.push({ qrCodeValue: qr as string, status: "UNKNOWN" });
+        continue;
+      }
+
       await prisma.attendanceScan.create({
         data: {
           siteDayId: siteDay.id,
           employeeId: emp.id,
           workDate,
           siteId,
-          dayRateAtScan: emp.defaultDayRate,
+          dayRateAtScan: effectiveRate,
           qrPayload: qr as string,
         },
       });

@@ -211,14 +211,12 @@ export default function SitesList({ initialSites }: SitesListProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[260px]">Name</TableHead>
+                    <TableHead className="w-65">Name</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead className="w-[180px] text-right">
-                      Actions
-                    </TableHead>
+                    <TableHead className="w-45 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

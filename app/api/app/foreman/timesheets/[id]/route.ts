@@ -115,7 +115,8 @@ export async function GET(
   const columns = Array.from({ length: 14 }).map((_, i) => {
     const d = addDaysUTC(startDate, i);
     const iso = isoFromDate(d);
-    return { iso, day: weekdayShort(iso) };
+    const dayNum = String(d.getUTCDate()).padStart(2, "0");
+    return { iso, day: weekdayShort(iso), date: dayNum };
   });
   const colIndex = new Map(columns.map((c, idx) => [c.iso, idx]));
 

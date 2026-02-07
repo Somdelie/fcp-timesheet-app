@@ -10,6 +10,17 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  // Silence noisy decryption warnings for corrupt/old JWT cookies.
+  // We already treat these as "no session" via try/catch.
+  logger: {
+    error(code, ...metadata) {
+      if (code === "JWT_SESSION_ERROR") {
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error(code, ...metadata);
+    },
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",

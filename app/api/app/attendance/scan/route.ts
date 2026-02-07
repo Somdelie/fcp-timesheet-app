@@ -126,6 +126,13 @@ export async function POST(req: Request) {
 
   const workDate = startOfTodayLocal();
 
+  // Get company default day rate
+  const companySetting = await prisma.companySettings.findUnique({
+    where: { id: "singleton" },
+    select: { defaultEmployeeDayRate: true },
+  });
+  const defaultRate = companySetting?.defaultEmployeeDayRate;
+
   const employee = await prisma.employee.findFirst({
     where: { qrCodeValue: employeeCode },
     select: {
@@ -144,6 +151,14 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Employee is inactive" },
       { status: 409 },
+    );
+  }
+
+  const effectiveRate = employee.defaultDayRate || defaultRate;
+  if (!effectiveRate) {
+    return NextResponse.json(
+      { error: "No day rate configured for employee" },
+      { status: 400 },
     );
   }
 
@@ -169,7 +184,7 @@ export async function POST(req: Request) {
         employeeId: employee.id,
         workDate,
         siteId,
-        dayRateAtScan: employee.defaultDayRate,
+        dayRateAtScan: effectiveRate,
         qrPayload: employeeCode,
       },
       select: { id: true, scannedAt: true },

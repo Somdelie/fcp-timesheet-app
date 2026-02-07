@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Settings, User2, Building2 } from "lucide-react";
+import {
+  Home,
+  Users,
+  Settings,
+  User2,
+  Building2,
+  NotebookIcon,
+} from "lucide-react";
 
 type Role = "ADMIN" | "SUPERVISOR" | "FOREMAN";
 
@@ -36,10 +43,28 @@ const menuItems: {
     roles: ["ADMIN", "SUPERVISOR", "FOREMAN"],
   },
   {
+    href: "/foreman",
+    label: "Foremen",
+    icon: Users,
+    roles: ["ADMIN"],
+  },
+  {
     href: "/sites",
     label: "Sites",
     icon: Building2,
     roles: ["ADMIN", "SUPERVISOR", "FOREMAN"],
+  },
+  {
+    href: "/timesheets",
+    label: "Timesheets",
+    icon: NotebookIcon,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/supervisor/timesheets",
+    label: "Manage Timesheets",
+    icon: NotebookIcon,
+    roles: ["SUPERVISOR"],
   },
   {
     href: "/users",

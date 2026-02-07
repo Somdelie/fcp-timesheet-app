@@ -72,12 +72,43 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
 
   // create/find SiteDay (unique by [siteId, workDate])
-  const siteDay = await prisma.siteDay.upsert({
-    where: { siteId_workDate: { siteId, workDate } },
-    update: {},
-    create: { siteId, foremanId: foreman.id, workDate },
-    select: { id: true, foremanId: true, isLocked: true },
-  });
+  let siteDay;
+  try {
+    siteDay = await prisma.siteDay.upsert({
+      where: { siteId_workDate: { siteId, workDate } },
+      update: {},
+      create: { siteId, foremanId: foreman.id, workDate },
+      select: { id: true, foremanId: true, isLocked: true },
+    });
+  } catch (e: any) {
+    // Check if it's a unique constraint violation
+    if (e?.code === "P2002") {
+      const errorMsg = e?.message ?? "";
+      const originalMsg =
+        e?.meta?.driverAdapterError?.cause?.originalMessage ?? "";
+      const fullErrorMsg = `${errorMsg} ${originalMsg}`.toLowerCase();
+
+      // Check if it's the foremanId_workDate constraint (foreman double-booking)
+      if (
+        fullErrorMsg.includes("foremanid") &&
+        fullErrorMsg.includes("workdate")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    // For any other error, return a generic message
+    return NextResponse.json(
+      { error: "Failed to create work day record. Please try again." },
+      { status: 500 },
+    );
+  }
 
   if (siteDay.isLocked) {
     return NextResponse.json({ error: "Day is locked" }, { status: 409 });
@@ -97,6 +128,13 @@ export async function POST(req: Request) {
 
   // optional local dedupe to reduce DB churn
   const uniqueQrValues = Array.from(new Set(qrValues));
+
+  // Get company default day rate
+  const companySetting = await prisma.companySettings.findUnique({
+    where: { id: "singleton" },
+    select: { defaultEmployeeDayRate: true },
+  });
+  const defaultRate = companySetting?.defaultEmployeeDayRate;
 
   const employees = await prisma.employee.findMany({
     where: { qrCodeValue: { in: uniqueQrValues as string[] } },
@@ -128,13 +166,20 @@ export async function POST(req: Request) {
     }
 
     try {
+      const effectiveRate = emp.defaultDayRate || defaultRate;
+
+      if (!effectiveRate) {
+        results.push({ qrCodeValue: qr as string, status: "UNKNOWN" });
+        continue;
+      }
+
       await prisma.attendanceScan.create({
         data: {
           siteDayId: siteDay.id,
           employeeId: emp.id,
           workDate,
           siteId,
-          dayRateAtScan: emp.defaultDayRate,
+          dayRateAtScan: effectiveRate,
           qrPayload: qr as string,
         },
       });

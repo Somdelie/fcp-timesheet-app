@@ -14,7 +14,6 @@ enum UserRole {
 }
 
 enum TimesheetStatus {
-  DRAFT
   SUBMITTED
   APPROVED
   REJECTED
@@ -51,6 +50,9 @@ model User {
   supervisor Supervisor?
   foreman    Foreman?
 
+  // ✅ optional: if promoted to foreman, can be linked to an employee record
+  employee Employee? @relation("EmployeeUser")
+
   auditEvents AuditEvent[]
 
   employees Employee[]
@@ -78,7 +80,7 @@ model Employee {
   lastName       String
   faceImageUrl   String?
   qrCodeValue    String  @unique
-  defaultDayRate Decimal @db.Decimal(12, 2)
+  defaultDayRate Decimal? @db.Decimal(12, 2)
 
   // ... face fields
 
@@ -87,8 +89,12 @@ model Employee {
   updatedAt DateTime @updatedAt
 
   // ✅ who created/added this employee record
-  createdByUserId String
-  createdByUser   User   @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  // ✅ optional: if employee is promoted to foreman, they have their own user account
+  userId String? @unique
+  user   User?   @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
 
   attendance      AttendanceScan[]
   photoDetections PhotoDetection[]
@@ -420,7 +426,7 @@ model Timesheet {
   foremanId String
   foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Restrict)
 
-  status TimesheetStatus @default(DRAFT)
+  status TimesheetStatus @default(SUBMITTED)
 
   submittedAt DateTime?
   approvedAt  DateTime?
@@ -479,6 +485,19 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/**
+ * COMPANY SETTINGS
+ */
+model CompanySettings {
+  id String @id @default("singleton")
+
+  // Default day rate for regular employees (not foreman)
+  defaultEmployeeDayRate Decimal @db.Decimal(12, 2) @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /**

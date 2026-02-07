@@ -13,8 +13,17 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../ui/breadcrumb";
 import { signOut } from "next-auth/react";
 import { ModeToggle } from "./ModeToggle";
+import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 
 type NavbarProps = {
   isSidebarOpen: boolean;
@@ -23,6 +32,8 @@ type NavbarProps = {
 };
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
+  const { items: breadcrumbs } = useBreadcrumbs();
+
   return (
     <header className="flex h-14 w-full items-center justify-between border-b bg-card/80 px-4 backdrop-blur sticky top-0 z-10">
       {/* left */}
@@ -32,7 +43,28 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
         </Button>
       </div>
       {/* center */}
-      <div className="text-sm font-medium">Dashboard</div>
+      <div className="flex-1 px-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            {breadcrumbs.map((crumb, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <BreadcrumbItem>
+                  {crumb.href ? (
+                    <BreadcrumbLink href={crumb.href} className="text-sm">
+                      {crumb.label}
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage className="text-sm">
+                      {crumb.label}
+                    </BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+              </div>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
       {/* right */}
       <div className="flex items-center gap-4">
         <ModeToggle />

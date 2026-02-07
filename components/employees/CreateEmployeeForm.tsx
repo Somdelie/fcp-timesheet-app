@@ -4,8 +4,10 @@ import { toast } from "react-toastify";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
+import { X, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,27 +34,23 @@ const employeeSchema = z.object({
     .string()
     .min(2, "Last name must be at least 2 characters.")
     .max(60, "Max 60 characters."),
-  defaultDayRate: z
-    .string()
-    .min(1, "Day rate is required.")
-    .refine((v) => {
-      const n = Number(String(v).replace(",", "."));
-      return Number.isFinite(n) && n > 0;
-    }, "Day rate must be a number > 0."),
   faceImageUrl: z.string().max(500, "Max 500 characters.").optional(),
 });
 
 export default function CreateEmployeeForm() {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [lastQr, setLastQr] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
-      defaultDayRate: "",
       faceImageUrl: "",
     },
   });
@@ -61,10 +59,72 @@ export default function CreateEmployeeForm() {
     form.reset({
       firstName: "",
       lastName: "",
-      defaultDayRate: "",
       faceImageUrl: "",
     });
     setLastQr(null);
+  }
+
+  async function handleUpload(file: File) {
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "employees");
+
+      const res = await fetch("/api/uploads/image", {
+        method: "POST",
+        body: fd,
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = payload?.error || "Upload failed";
+        throw new Error(msg);
+      }
+
+      const url = String(payload.url ?? "");
+      if (!url) throw new Error("Upload did not return a URL.");
+
+      form.setValue("faceImageUrl", url, { shouldValidate: true });
+      toast.success("Photo uploaded successfully");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to upload photo");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleUpload(file);
+    }
+    e.target.value = "";
+  }
+
+  function handleDrag(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      handleUpload(file);
+    } else {
+      toast.error("Please drop an image file");
+    }
   }
 
   function onSubmit(values: z.infer<typeof employeeSchema>) {
@@ -72,7 +132,6 @@ export default function CreateEmployeeForm() {
       const res = await createEmployee({
         firstName: values.firstName,
         lastName: values.lastName,
-        defaultDayRate: values.defaultDayRate,
         faceImageUrl: values.faceImageUrl || null,
         isActive: true,
       });
@@ -92,6 +151,10 @@ export default function CreateEmployeeForm() {
       // ✅ reset + close
       resetFormAndState();
       setOpen(false);
+
+      // Refresh the employees page so the new employee
+      // appears immediately in the server-rendered list.
+      router.refresh();
     });
   }
 
@@ -166,42 +229,83 @@ export default function CreateEmployeeForm() {
               />
 
               <Controller
-                name="defaultDayRate"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="defaultDayRate">
-                      Default day rate
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id="defaultDayRate"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="e.g. 450.00"
-                      autoComplete="off"
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
-
-              <Controller
                 name="faceImageUrl"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="faceImageUrl">
-                      Face image URL (optional)
+                      Face image (optional)
                     </FieldLabel>
-                    <Input
-                      {...field}
-                      id="faceImageUrl"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="Later: upload -> store URL here"
-                      autoComplete="off"
-                    />
+                    <div className="space-y-3">
+                      {field.value ? (
+                        // Show image preview
+                        <div className="relative">
+                          <div className="rounded-lg border-2 border-dashed border-green-500 bg-green-50/30 p-4 dark:bg-green-950/20">
+                            <div className="flex items-end gap-3">
+                              <img
+                                src={field.value}
+                                alt="Preview"
+                                className="h-24 w-24 rounded-lg object-cover shadow-sm"
+                              />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                                  ✓ Image uploaded
+                                </p>
+                                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                  Ready to create employee
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => field.onChange("")}
+                                className="rounded-lg bg-white p-1.5 hover:bg-red-50 text-red-600 dark:bg-zinc-800 dark:hover:bg-red-950/30 transition"
+                                title="Remove image"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        // Show upload area
+                        <div
+                          onDragEnter={handleDrag}
+                          onDragLeave={handleDrag}
+                          onDragOver={handleDrag}
+                          onDrop={handleDrop}
+                          className={`relative rounded-lg border-2 border-dashed transition-colors p-6 text-center cursor-pointer ${
+                            dragActive
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                              : "border-zinc-300 bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/30 hover:border-blue-400 dark:hover:border-blue-400"
+                          }`}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleFileInputChange}
+                            disabled={uploading}
+                          />
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-950/50">
+                              <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                                {uploading
+                                  ? "Uploading..."
+                                  : "Click to upload or drag image here"}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                PNG, JPG, GIF up to 5MB
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
                     )}

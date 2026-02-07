@@ -210,7 +210,7 @@ export default function SiteAssignmentsPanel({
     setEndingId(assignmentId);
     try {
       const res = await endForemanSiteAssignment({ assignmentId, siteId });
-      if (!res.ok) return toast.error(res.error ?? "Failed to end assignment");
+      if (!res.ok) return toast.error("Failed to end assignment");
       toast.success("Assignment ended");
       await refresh();
     } finally {

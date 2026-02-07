@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createNewUser } from "@/actions/user";
+import { createNewUser, getAllSupervisors } from "@/actions/user";
 import { UserRole } from "@/lib/roles";
 
 const createUserSchema = z
@@ -44,14 +44,42 @@ const createUserSchema = z
       .min(8, "Password must be at least 8 characters.")
       .max(100, "Password must be at most 100 characters."),
     confirmPassword: z.string(),
+    dayRate: z.string().optional(),
+    supervisorId: z.string().optional(),
   })
   .refine((v) => v.password === v.confirmPassword, {
     message: "Passwords do not match.",
     path: ["confirmPassword"],
+  })
+  .refine((v) => v.role !== "FOREMAN" || (v.dayRate && Number(v.dayRate) > 0), {
+    message: "Day rate is required for foremen and must be greater than 0.",
+    path: ["dayRate"],
+  })
+  .refine((v) => v.role !== "FOREMAN" || v.supervisorId, {
+    message: "Supervisor is required for foremen.",
+    path: ["supervisorId"],
   });
 
 export default function CreateUserForm() {
   const [pending, startTransition] = useTransition();
+  const [supervisors, setSupervisors] = useState<any[]>([]);
+  const [loadingSupervisors, setLoadingSupervisors] = useState(true);
+
+  useEffect(() => {
+    const fetchSupervisors = async () => {
+      try {
+        const data = await getAllSupervisors();
+        setSupervisors(data || []);
+      } catch (error) {
+        console.error("Failed to load supervisors:", error);
+        toast.error("Failed to load supervisors.");
+      } finally {
+        setLoadingSupervisors(false);
+      }
+    };
+
+    fetchSupervisors();
+  }, []);
 
   const form = useForm<z.infer<typeof createUserSchema>>({
     resolver: zodResolver(createUserSchema),
@@ -61,6 +89,8 @@ export default function CreateUserForm() {
       role: "FOREMAN",
       password: "",
       confirmPassword: "",
+      dayRate: undefined,
+      supervisorId: undefined,
     },
   });
 
@@ -71,6 +101,8 @@ export default function CreateUserForm() {
         email: values.email,
         password: values.password,
         role: values.role as UserRole,
+        dayRate: values.dayRate ? Number(values.dayRate) : undefined,
+        supervisorId: values.supervisorId,
       });
 
       if (!res.ok) {
@@ -85,6 +117,8 @@ export default function CreateUserForm() {
         role: "FOREMAN",
         password: "",
         confirmPassword: "",
+        dayRate: undefined,
+        supervisorId: undefined,
       });
     });
   }
@@ -165,6 +199,74 @@ export default function CreateUserForm() {
               </Field>
             )}
           />
+
+          {form.watch("role") === "FOREMAN" && (
+            <>
+              <Controller
+                name="supervisorId"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel>Supervisor</FieldLabel>
+
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={(v) => field.onChange(v)}
+                      disabled={pending || loadingSupervisors}
+                    >
+                      <SelectTrigger aria-invalid={fieldState.invalid}>
+                        <SelectValue placeholder="Select a supervisor" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Supervisors</SelectLabel>
+                          {supervisors.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-gray-500">
+                              No supervisors available
+                            </div>
+                          ) : (
+                            supervisors.map((sup: any) => (
+                              <SelectItem key={sup.id} value={sup.id}>
+                                {sup.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="dayRate"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="dayRate">Day Rate</FieldLabel>
+                    <Input
+                      {...field}
+                      id="dayRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="e.g. 150.00"
+                      autoComplete="off"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            </>
+          )}
 
           <Controller
             name="password"

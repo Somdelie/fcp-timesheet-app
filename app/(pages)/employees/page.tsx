@@ -17,7 +17,7 @@ export default async function EmployeesPage({
   const show = sp?.show === "all" ? "all" : "active";
 
   return (
-    <div className="mx-auto max-w-4xl p-4 md:p-6 space-y-4">
+    <div className="mx-auto max-w-7xl space-y-4">
       <form
         method="get"
         className="flex flex-col gap-2 md:flex-row md:items-end"

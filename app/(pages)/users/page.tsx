@@ -1,8 +1,14 @@
 import { getAllUsers } from "@/actions/user";
-import React from "react";
+import { requireServerAuth } from "@/lib/auth-server";
+import UserList from "@/components/users/UserList";
 
 export default async function UsersPage() {
+  const auth = await requireServerAuth();
   const users = await getAllUsers();
-  console.log(users);
-  return <div>UsersPage</div>;
+  // console.log(users);
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-5">
+      <UserList users={users} currentUserRole={auth.role} />
+    </div>
+  );
 }

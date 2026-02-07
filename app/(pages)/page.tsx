@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -34,42 +35,15 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  Loader,
 } from "lucide-react";
-
-// Sample data - replace with real API calls
-const weeklyAttendanceData = [
-  { day: "Mon", scans: 145, sites: 8 },
-  { day: "Tue", scans: 158, sites: 9 },
-  { day: "Wed", scans: 142, sites: 8 },
-  { day: "Thu", scans: 167, sites: 10 },
-  { day: "Fri", scans: 173, sites: 10 },
-  { day: "Sat", scans: 89, sites: 5 },
-  { day: "Sun", scans: 45, sites: 3 },
-];
-
-const timesheetStatusData = [
-  { status: "Draft", count: 12 },
-  { status: "Submitted", count: 28 },
-  { status: "Approved", count: 45 },
-  { status: "Paid", count: 156 },
-];
-
-const siteActivityData = [
-  { site: "Site A", workers: 32, photos: 4 },
-  { site: "Site B", workers: 28, photos: 3 },
-  { site: "Site C", workers: 41, photos: 5 },
-  { site: "Site D", workers: 19, photos: 2 },
-  { site: "Site E", workers: 35, photos: 4 },
-];
-
-const photoVerificationData = [
-  { month: "Jan", verified: 84, flagged: 6 },
-  { month: "Feb", verified: 92, flagged: 4 },
-  { month: "Mar", verified: 88, flagged: 8 },
-  { month: "Apr", verified: 95, flagged: 3 },
-  { month: "May", verified: 101, flagged: 5 },
-  { month: "Jun", verified: 97, flagged: 4 },
-];
+import {
+  getDashboardMetrics,
+  getWeeklyAttendanceData,
+  getTimesheetStatusData,
+  getSiteActivityData,
+  getPhotoVerificationData,
+} from "@/actions/dashboard";
 
 const lineChartConfig = {
   scans: { label: "Attendance Scans", color: "#1e5a8a" },
@@ -91,6 +65,54 @@ const photoChartConfig = {
 } satisfies ChartConfig;
 
 export default function HomePage() {
+  const [metrics, setMetrics] = useState<any>(null);
+  const [weeklyData, setWeeklyData] = useState<any>(null);
+  const [timesheetData, setTimesheetData] = useState<any>(null);
+  const [siteData, setSiteData] = useState<any>(null);
+  const [photoData, setPhotoData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [metrics, weekly, timesheet, site, photo] = await Promise.all([
+          getDashboardMetrics(),
+          getWeeklyAttendanceData(),
+          getTimesheetStatusData(),
+          getSiteActivityData(),
+          getPhotoVerificationData(),
+        ]);
+
+        setMetrics(metrics);
+        setWeeklyData(weekly);
+        setTimesheetData(timesheet);
+        setSiteData(site);
+        setPhotoData(photo);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-2">
+          <Loader className="w-8 h-8 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const weeklyAttendanceData = weeklyData || [];
+  const timesheetStatusData = timesheetData || [];
+  const siteActivityData = siteData || [];
+  const photoVerificationData = photoData || [];
   return (
     <div className="flex flex-col min-h-screen bg-muted/30">
       <div className="flex-1 p-6 space-y-6">
@@ -122,10 +144,11 @@ export default function HomePage() {
                   <p className="text-sm text-muted-foreground font-medium">
                     Active Employees
                   </p>
-                  <p className="text-3xl font-bold text-foreground">342</p>
-                  <p className="text-xs text-emerald-600 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    +12 this month
+                  <p className="text-3xl font-bold text-foreground">
+                    {metrics?.totalEmployees ?? 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Total active staff
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -142,7 +165,9 @@ export default function HomePage() {
                   <p className="text-sm text-muted-foreground font-medium">
                     Active Sites
                   </p>
-                  <p className="text-3xl font-bold text-foreground">18</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {metrics?.activeSites ?? 0}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Across all regions
                   </p>
@@ -159,12 +184,14 @@ export default function HomePage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground font-medium">
-                    Today's Attendance
+                    Foremen
                   </p>
-                  <p className="text-3xl font-bold text-foreground">167</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {metrics?.totalForemen ?? 0}
+                  </p>
                   <p className="text-xs text-emerald-600 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
-                    10 sites active
+                    Team leads
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
@@ -179,12 +206,14 @@ export default function HomePage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground font-medium">
-                    Pending Reviews
+                    Supervisors
                   </p>
-                  <p className="text-3xl font-bold text-foreground">24</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {metrics?.totalSupervisors ?? 0}
+                  </p>
                   <p className="text-xs text-orange-600 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    Requires attention
+                    Active managers
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
