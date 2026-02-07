@@ -160,9 +160,11 @@ export async function PUT(request: NextRequest) {
     }
 
     // Check if this employee is a foreman
-    const isForemanUser = await prisma.foreman.findFirst({
-      where: { userId: existing.createdByUserId },
-    });
+    const isForemanUser = existing.createdByUserId
+      ? await prisma.foreman.findFirst({
+          where: { userId: existing.createdByUserId },
+        })
+      : null;
 
     const updateData: any = {
       ...(firstName && { firstName }),
