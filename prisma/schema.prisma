@@ -34,6 +34,17 @@ enum PhotoVerificationStatus {
   REJECTED
 }
 
+enum ScanType {
+  REGULAR    // Normal QR scan
+  MANUAL     // Manually added by foreman
+}
+
+enum OvertimeType {
+  NONE       // No overtime
+  HALF_DAY   // 4 hours
+  FULL_DAY   // 8 hours
+}
+
 /**
  * AUTH / PEOPLE
  */
@@ -101,6 +112,9 @@ model Employee {
 
   // ✅ many-to-many with foremen for visibility + booking
   foremanLinks ForemanEmployee[]
+
+  // ✅ many-to-many: this employee as assistant to multiple foremen
+  assistantLinks ForemanAssistant[] @relation("AssistantToForemen")
 }
 
 model Supervisor {
@@ -135,8 +149,28 @@ model Foreman {
   // ✅ many-to-many foremen <-> employees
   employeeLinks ForemanEmployee[]
 
+  // ✅ many-to-many foremen <-> assistant employees
+  assistants ForemanAssistant[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ForemanAssistant {
+  foremanId  String
+  employeeId String
+
+  foreman  Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  employee Employee @relation("AssistantToForemen", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // When did this assistance assignment start?
+  startsOn DateTime  @default(now())
+  endsOn   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@id([foremanId, employeeId])
+  @@index([employeeId])
 }
 
 model ForemanEmployee {
@@ -283,6 +317,19 @@ model AttendanceScan {
   dayRateAtScan Decimal @db.Decimal(12, 2)
 
   qrPayload String?
+
+  // ✅ whether this is a regular QR scan or manually added
+  scanType ScanType @default(REGULAR)
+
+  // ✅ if manual, why was it added?
+  manualReason String?
+
+  // ✅ overtime tracking
+  overtimeType OvertimeType @default(NONE)
+
+  // ✅ if foreman added it manually, track who
+  addedByForemanId String?
+
   createdAt DateTime @default(now())
 
   // ✅ worker can only be booked once per day across ALL sites
@@ -292,6 +339,7 @@ model AttendanceScan {
   @@index([siteId, workDate])
   @@index([siteDayId])
   @@index([scannedAt])
+  @@index([scanType])
 }
 
 /**

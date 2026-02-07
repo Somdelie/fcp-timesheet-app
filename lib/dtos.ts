@@ -90,6 +90,7 @@ export type TimesheetDetailDto2 = {
     present: boolean[];
     daysWorked: number;
     pay: number;
+    isForeman?: boolean;
   }>;
 
   totals?: {

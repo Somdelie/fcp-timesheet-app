@@ -127,7 +127,11 @@ export async function GET(
     update: {},
     select: {
       status: true,
-      foreman: { select: { user: { select: { name: true } } } },
+      foreman: {
+        select: {
+          user: { select: { name: true } },
+        },
+      },
       submittedAt: true,
       approvedAt: true,
       rejectedAt: true,
@@ -183,8 +187,6 @@ export async function GET(
       : sites
           .map((s) => (s.code ? `${s.code} – ${s.name}` : s.name))
           .join(", ");
-
-  // Aggregate per employee
   type RowAgg = {
     employeeId: string;
     fullName: string;
@@ -202,14 +204,19 @@ export async function GET(
     const emp = s.employee;
     if (!emp) continue;
 
-    const rate =
-      decimalToNumber(s.dayRateAtScan) || decimalToNumber(emp.defaultDayRate);
+    const empFullName = fullName(emp);
+    // If this employee is the foreman, use only their default day rate
+    const isForemanEmployee =
+      foremanName !== "—" && empFullName === foremanName;
+    const rate = isForemanEmployee
+      ? decimalToNumber(emp.defaultDayRate)
+      : decimalToNumber(s.dayRateAtScan) || decimalToNumber(emp.defaultDayRate);
 
     let agg = byEmp.get(s.employeeId);
     if (!agg) {
       agg = {
         employeeId: s.employeeId,
-        fullName: fullName(emp),
+        fullName: empFullName,
         dayRate: rate,
         present: Array(14).fill(false),
       };
@@ -218,8 +225,7 @@ export async function GET(
 
     agg.present[idx] = true;
     if (rate > 0) agg.dayRate = rate;
-    const nm = fullName(emp);
-    if (nm) agg.fullName = nm;
+    if (empFullName) agg.fullName = empFullName;
   }
 
   const rows = Array.from(byEmp.values())
@@ -227,6 +233,8 @@ export async function GET(
     .map((r) => {
       const daysWorked = r.present.reduce((sum, p) => sum + (p ? 1 : 0), 0);
       const pay = daysWorked * (r.dayRate || 0);
+      // Mark as foreman if their name matches the foreman name
+      const isForeman = foremanName !== "—" && r.fullName === foremanName;
       return {
         employeeId: r.employeeId,
         fullName: r.fullName,
@@ -234,6 +242,7 @@ export async function GET(
         present: r.present,
         daysWorked,
         pay,
+        isForeman,
       };
     });
 

@@ -39,7 +39,7 @@ export function ConfirmationDialog({
       />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-sm rounded-lg border bg-background p-6 shadow-lg">
+      <div className="relative z-10 w-full max-w-2xl rounded border bg-background p-6 shadow-lg flex flex-col items-center justify-center">
         <h2 className="text-lg font-semibold">{title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{description}</p>
 

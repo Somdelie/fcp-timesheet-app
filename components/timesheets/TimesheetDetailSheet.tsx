@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMemo } from "react";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -164,9 +165,39 @@ export default function TimesheetDetailSheet<
     String((detail as any)?.supervisor?.name ?? "").trim() ||
     "—";
 
+  // Extract totals from detail
+  const foremanTotals = useMemo(() => {
+    const rows = (detail as any)?.rows ?? [];
+    let days = 0;
+    let pay = 0;
+    rows.forEach((r: any) => {
+      if (r.isForeman) {
+        days += r.daysWorked ?? 0;
+        pay += r.pay ?? 0;
+      }
+    });
+    return { days, pay };
+  }, [detail]);
+
+  const teamTotals = useMemo(() => {
+    const rows = (detail as any)?.rows ?? [];
+    let days = 0;
+    let pay = 0;
+    rows.forEach((r: any) => {
+      if (!r.isForeman) {
+        days += r.daysWorked ?? 0;
+        pay += r.pay ?? 0;
+      }
+    });
+    return { days, pay };
+  }, [detail]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="w-full h-full p-0 m-0 gap-0">
+      <SheetContent
+        side="bottom"
+        className="w-full h-full p-0 m-0 gap-0 overflow-hidden overflow-y-scroll"
+      >
         <SheetHeader className="px-3 pt-6">
           <SheetTitle className="hidden">Timesheet</SheetTitle>
 
@@ -237,33 +268,71 @@ export default function TimesheetDetailSheet<
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap gap-2">
-                {actions.map((action) => (
+              <div className="flex items-start justify-between gap-4">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {actions.map((action) => (
+                    <Button
+                      key={action.id}
+                      variant={action.variant || "default"}
+                      disabled={
+                        !action.canPerform(detailStatus) ||
+                        actionLoading !== null
+                      }
+                      onClick={() => runAction(action.id)}
+                    >
+                      {actionLoading === action.id
+                        ? `${action.label}…`
+                        : action.label}
+                    </Button>
+                  ))}
+
                   <Button
-                    key={action.id}
-                    variant={action.variant || "default"}
-                    disabled={
-                      !action.canPerform(detailStatus) || actionLoading !== null
-                    }
-                    onClick={() => runAction(action.id)}
+                    variant="outline"
+                    onClick={onRetry}
+                    disabled={!activeId}
                   >
-                    {actionLoading === action.id
-                      ? `${action.label}…`
-                      : action.label}
+                    Refresh Detail
                   </Button>
-                ))}
 
-                <Button
-                  variant="outline"
-                  onClick={onRetry}
-                  disabled={!activeId}
-                >
-                  Refresh Detail
-                </Button>
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Close
+                  </Button>
+                </div>
 
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Close
-                </Button>
+                {/* Calculation Display */}
+                <div className="flex gap-4 ml-auto">
+                  {foremanTotals.days > 0 && (
+                    <div className="text-sm border rounded px-3 py-2 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                      <div className="text-muted-foreground text-xs font-semibold">
+                        FOREMAN
+                      </div>
+                      <div className="font-medium mt-1">
+                        {foremanTotals.days} days ×{" "}
+                        {formatCurrency(foremanTotals.pay / foremanTotals.days)}
+                        /day
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(foremanTotals.pay)}
+                      </div>
+                    </div>
+                  )}
+
+                  {teamTotals.days > 0 && (
+                    <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                      <div className="text-muted-foreground text-xs font-semibold">
+                        TEAM
+                      </div>
+                      <div className="font-medium mt-1">
+                        {teamTotals.days} days ×{" "}
+                        {formatCurrency(teamTotals.pay / teamTotals.days)}/day
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(teamTotals.pay)}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : null}
@@ -363,9 +432,9 @@ export default function TimesheetDetailSheet<
               </div>
             </div>
           ) : detail ? (
-            <ScrollArea className="h-[70vh] px-3">
-              <div className="space-y-3 pb-10">{gridComponent}</div>
-            </ScrollArea>
+            <div className="h-[70vh] px-3 overflow-auto">
+              <div className="max-w-7xl">{gridComponent}</div>
+            </div>
           ) : (
             <div className="px-3 text-sm text-muted-foreground">
               Select a timesheet to view details.

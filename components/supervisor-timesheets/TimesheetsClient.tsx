@@ -366,6 +366,8 @@ export default function TimesheetsClient() {
           await postJson(
             `/api/app/supervisor/timesheets/${encodeURIComponent(activeId)}/approve`,
           );
+          // Refresh list after approving
+          setTimeout(() => loadList(), 500);
         },
       },
       {
@@ -380,6 +382,8 @@ export default function TimesheetsClient() {
             `/api/app/supervisor/timesheets/${encodeURIComponent(activeId)}/reject`,
             { reason },
           );
+          // Refresh list after rejecting
+          setTimeout(() => loadList(), 500);
         },
       },
       {
@@ -392,13 +396,19 @@ export default function TimesheetsClient() {
           await postJson(
             `/api/app/supervisor/timesheets/${encodeURIComponent(activeId)}/paid`,
           );
+          // Refresh list after marking paid
+          setTimeout(() => loadList(), 500);
         },
       },
     ];
     return actions;
-  }, [activeId]);
+  }, [activeId, loadList]);
 
   const periodOptions = useMemo(() => {
+    // Build a list of available periods:
+    // 1. Standard 14-day fortnights (for planning ahead)
+    // 2. Any existing timesheet periods (to show what's already been used)
+
     const opts: {
       id: string;
       startISO: string;
@@ -409,6 +419,7 @@ export default function TimesheetsClient() {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
+    // Add standard 14-day fortnights
     let start = new Date(`${current.startISO}T00:00:00.000Z`);
     for (let i = 0; i < 6; i++) {
       const s = new Date(start);
@@ -424,6 +435,9 @@ export default function TimesheetsClient() {
       opts.push({ id: `${startISO}_${endISO}`, startISO, endISO, disabled });
       start.setUTCDate(start.getUTCDate() - 14);
     }
+
+    // Add option to view "All Timesheets" without period filtering
+    opts.push({ id: "ALL", startISO: "", endISO: "", disabled: false });
 
     return opts;
   }, [current.startISO]);
@@ -541,7 +555,7 @@ export default function TimesheetsClient() {
             No timesheets found for this filter.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-hidden">
             <Table className="border-collapse">
               <TableHeader>
                 <TableRow className="border-b border-zinc-300/70 dark:border-zinc-700/60">

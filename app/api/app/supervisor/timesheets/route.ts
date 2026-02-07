@@ -116,12 +116,36 @@ export async function GET(req: Request) {
   const siteIds = Array.from(new Set(siteAssignments.map((a) => a.siteId)));
   if (siteIds.length === 0) return NextResponse.json({ timesheets: [] });
 
-  // Pull recent SiteDays (this is what defines which fortnights exist).
+  // Pull recent SiteDays and TimesheetPeriods
   // Default window: last 180 days (adjust anytime).
   const now = new Date();
   const windowStart = addDaysUTC(now, -180);
   const windowEnd = addDaysUTC(now, 1); // include today
 
+  // Load existing periods from database (to support custom/closed periods)
+  const existingPeriods = await prisma.timesheetPeriod.findMany({
+    where: {
+      startDate: { lt: windowEnd },
+      endDate: { gte: windowStart },
+    },
+    select: { id: true, startDate: true, endDate: true },
+  });
+
+  // For each existing period, check if it has timesheets for supervisor's foremen
+  const periodsByForeman = new Map<
+    string,
+    {
+      periodId: string;
+      startISO: string;
+      endISO: string;
+      siteInfo: Map<
+        string,
+        { siteId: string; siteName: string; siteCode?: string | null }
+      >;
+    }
+  >();
+
+  // Also track which periods have activity (work dates)
   const siteDays = await prisma.siteDay.findMany({
     where: {
       siteId: { in: siteIds },
@@ -159,14 +183,15 @@ export async function GET(req: Request) {
     },
   });
 
-  // Group by (fortnightStart, foremanId)
+  // Group by (periodId, foremanId), discovering both from work data and existing periods
   type Group = {
+    periodId: string;
     startISO: string;
     endISO: string;
     foremanId: string;
     foremanName: string;
 
-    // representative site (most recent in that fortnight)
+    // representative site (most recent in that period)
     siteId: string;
     siteName: string;
     siteCode?: string | null;
@@ -179,20 +204,62 @@ export async function GET(req: Request) {
     totalWorkerWages?: number;
   };
 
-  const groups = new Map<string, Group>(); // key = `${startISO}__${foremanId}`
+  const groups = new Map<string, Group>(); // key = `${periodId}__${foremanId}`
 
+  // Helper to convert Date to ISO string
+  function dateToISO(d: Date): string {
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Map work dates to their period (checking both database and calculated)
+  const workDateToPeriod = new Map<
+    string, // work date ISO
+    { periodId: string; startISO: string; endISO: string }
+  >();
+
+  for (const sd of siteDays) {
+    const workISO = isoFromDateUTC(sd.workDate);
+
+    if (!workDateToPeriod.has(workISO)) {
+      // Check if this work date falls within any existing period
+      const matchingPeriod = existingPeriods.find(
+        (p) =>
+          sd.workDate >= p.startDate && sd.workDate < addDaysUTC(p.endDate, 1),
+      );
+
+      if (matchingPeriod) {
+        workDateToPeriod.set(workISO, {
+          periodId: matchingPeriod.id,
+          startISO: dateToISO(matchingPeriod.startDate),
+          endISO: dateToISO(matchingPeriod.endDate),
+        });
+      } else {
+        // Fall back to calculated fortnight
+        const { startISO, endISO } = fortnightForWorkDateISO(workISO);
+        workDateToPeriod.set(workISO, {
+          periodId: `calc_${startISO}_${endISO}`,
+          startISO,
+          endISO,
+        });
+      }
+    }
+  }
+
+  // Now group sites/foremen by their periods
   for (const sd of siteDays) {
     if (!sd.foremanId) continue;
 
     const workISO = isoFromDateUTC(sd.workDate);
-    const { startISO, endISO } = fortnightForWorkDateISO(workISO);
+    const periodInfo = workDateToPeriod.get(workISO);
+    if (!periodInfo) continue;
 
-    const key = `${startISO}__${sd.foremanId}`;
+    const key = `${periodInfo.periodId}__${sd.foremanId}`;
 
     if (!groups.has(key)) {
       groups.set(key, {
-        startISO,
-        endISO,
+        periodId: periodInfo.periodId,
+        startISO: periodInfo.startISO,
+        endISO: periodInfo.endISO,
         foremanId: sd.foremanId,
         foremanName: fullName(sd.foreman?.user?.name),
         siteId: sd.site.id,
@@ -203,7 +270,7 @@ export async function GET(req: Request) {
     }
   }
 
-  // Aggregate scans into worker-day + wage totals per (fortnight, foreman).
+  // Aggregate scans into worker-day + wage totals per (period, foreman).
   const scansByGroup = new Map<
     string,
     Array<{ date: string; employeeId: string; wage: number }>
@@ -214,8 +281,10 @@ export async function GET(req: Request) {
     if (!foremanId) continue;
 
     const workISO = isoFromDateUTC(scan.siteDay.workDate);
-    const { startISO, endISO } = fortnightForWorkDateISO(workISO);
-    const key = `${startISO}__${foremanId}`;
+    const periodInfo = workDateToPeriod.get(workISO);
+    if (!periodInfo) continue;
+
+    const key = `${periodInfo.periodId}__${foremanId}`;
 
     const rate =
       decimalToNumber(scan.dayRateAtScan) ||
@@ -224,6 +293,7 @@ export async function GET(req: Request) {
     if (!scansByGroup.has(key)) scansByGroup.set(key, []);
     scansByGroup.get(key)!.push({
       date: workISO,
+
       employeeId: scan.employeeId,
       wage: rate,
     });
@@ -265,25 +335,94 @@ export async function GET(req: Request) {
   // Hard cap before expensive lookups
   list = list.slice(0, limit);
 
+  // Auto-close periods that have ended
+  // Any period whose endDate has passed gets automatically marked as submitted
+  // if it's still in SUBMITTED status
+  const today = startOfDayUTC(isoFromDateUTC(now));
+
+  for (const item of list) {
+    const endDate = startOfDayUTC(item.endISO);
+    // If today is on or after the period end date, auto-close it
+    if (endDate <= today) {
+      const startDate = startOfDayUTC(item.startISO);
+
+      // Get or create period
+      let period = await prisma.timesheetPeriod.findUnique({
+        where: { startDate_endDate: { startDate, endDate } },
+        select: { id: true },
+      });
+
+      if (!period) {
+        period = await prisma.timesheetPeriod.create({
+          data: { startDate, endDate },
+          select: { id: true },
+        });
+      }
+
+      // Get or create timesheet
+      let ts = await prisma.timesheet.findUnique({
+        where: {
+          periodId_foremanId: {
+            periodId: period.id,
+            foremanId: item.foremanId,
+          },
+        },
+        select: { id: true, status: true },
+      });
+
+      if (!ts) {
+        ts = await prisma.timesheet.create({
+          data: { periodId: period.id, foremanId: item.foremanId },
+          select: { id: true, status: true },
+        });
+      }
+
+      // Auto-close if still in SUBMITTED status
+      if (ts.status === "SUBMITTED") {
+        await prisma.timesheet.update({
+          where: { id: ts.id },
+          data: { submittedAt: new Date() },
+        });
+
+        // Auto-create next period (14 days from period end)
+        const nextStart = addDaysUTC(endDate, 1);
+        const nextEnd = addDaysUTC(nextStart, 13);
+
+        await prisma.timesheetPeriod.upsert({
+          where: {
+            startDate_endDate: { startDate: nextStart, endDate: nextEnd },
+          },
+          create: { startDate: nextStart, endDate: nextEnd },
+          update: {},
+        });
+      }
+    }
+  }
+
   // Load statuses (ensure period + timesheet row exists)
   // We do small upserts per item — OK at this scale.
   for (const item of list) {
     const startDate = startOfDayUTC(item.startISO);
     const endDate = startOfDayUTC(item.endISO);
 
-    const period = await prisma.timesheetPeriod.upsert({
-      where: { startDate_endDate: { startDate, endDate } },
-      create: { startDate, endDate },
-      update: {},
-      select: { id: true },
-    });
+    // If periodId starts with "calc_", we need to create a new period
+    let periodId = item.periodId;
+    if (periodId.startsWith("calc_")) {
+      const period = await prisma.timesheetPeriod.upsert({
+        where: { startDate_endDate: { startDate, endDate } },
+        create: { startDate, endDate },
+        update: {},
+        select: { id: true },
+      });
+      periodId = period.id;
+    }
 
     const ts = await prisma.timesheet.upsert({
       where: {
-        periodId_foremanId: { periodId: period.id, foremanId: item.foremanId },
+        periodId_foremanId: { periodId, foremanId: item.foremanId },
       },
       // Prisma schema default for Timesheet.status is SUBMITTED
-      create: { periodId: period.id, foremanId: item.foremanId },
+      create: { periodId, foremanId: item.foremanId },
       update: {},
       select: { status: true },
     });

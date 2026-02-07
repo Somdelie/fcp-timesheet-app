@@ -89,10 +89,10 @@ export default async function SiteManagePage({
   }));
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100/50 dark:from-slate-950 dark:to-slate-900/50">
-      <div className="mx-auto w-full max-w-7xl py-8 px-4 sm:px-6">
+    <div className="min-h-screen">
+      <div className="mx-auto w-full max-w-7xl py-3">
         {/* Header Navigation */}
-        <div className="mb-8">
+        <div className="mb-2">
           <Link
             href="/sites"
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"

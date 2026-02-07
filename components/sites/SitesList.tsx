@@ -103,7 +103,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
 
   return (
     <div className="">
-      <div className="mx-auto max-w-7xl py-2">
+      <div className="">
         {/* Header */}
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -212,7 +212,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-65">Name</TableHead>
-                    <TableHead>Code</TableHead>
+                    <TableHead>Job Number</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
