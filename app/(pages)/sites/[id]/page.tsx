@@ -93,7 +93,7 @@ export default async function SiteManagePage({
 
         {/* Header Card */}
         <div className="mb-3 rounded border border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm p-4 shadow-sm">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -127,16 +127,19 @@ export default async function SiteManagePage({
                     </span>
                   </div>
                 )}
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    Site ID:{" "}
+                    <span className="font-mono text-slate-900 dark:text-slate-200">
+                      {site.id}
+                    </span>
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 p-4 text-right">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Site ID
-              </p>
-              <p className="mt-1 font-mono text-xs text-slate-700 dark:text-slate-300 break-all">
-                {site.id}
-              </p>
+            <div className="w-full sm:w-auto">
+              <SiteTotalsPanel siteId={site.id} />
             </div>
           </div>
         </div>
@@ -150,8 +153,6 @@ export default async function SiteManagePage({
           />
 
           {/* <SiteBookingPanel siteId={site.id} /> */}
-
-          <SiteTotalsPanel siteId={site.id} />
         </div>
       </div>
     </div>
