@@ -89,8 +89,8 @@ export default function CreateUserForm() {
       role: "FOREMAN",
       password: "",
       confirmPassword: "",
-      dayRate: undefined,
-      supervisorId: undefined,
+      dayRate: "", // ✅ FIXED: Use empty string instead of undefined
+      supervisorId: "", // ✅ FIXED: Use empty string instead of undefined
     },
   });
 
@@ -102,7 +102,7 @@ export default function CreateUserForm() {
         password: values.password,
         role: values.role as UserRole,
         dayRate: values.dayRate ? Number(values.dayRate) : undefined,
-        supervisorId: values.supervisorId,
+        supervisorId: values.supervisorId || undefined,
       });
 
       if (!res.ok) {
@@ -117,11 +117,13 @@ export default function CreateUserForm() {
         role: "FOREMAN",
         password: "",
         confirmPassword: "",
-        dayRate: undefined,
-        supervisorId: undefined,
+        dayRate: "", // ✅ FIXED: Reset to empty string
+        supervisorId: "", // ✅ FIXED: Reset to empty string
       });
     });
   }
+
+  const role = form.watch("role");
 
   return (
     <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-4">
@@ -200,7 +202,8 @@ export default function CreateUserForm() {
             )}
           />
 
-          {form.watch("role") === "FOREMAN" && (
+          {/* ✅ FIXED: Use role variable instead of form.watch() in condition */}
+          {role === "FOREMAN" && (
             <>
               <Controller
                 name="supervisorId"
@@ -210,7 +213,7 @@ export default function CreateUserForm() {
                     <FieldLabel>Supervisor</FieldLabel>
 
                     <Select
-                      value={field.value || ""}
+                      value={field.value}
                       onValueChange={(v) => field.onChange(v)}
                       disabled={pending || loadingSupervisors}
                     >
@@ -221,7 +224,11 @@ export default function CreateUserForm() {
                       <SelectContent>
                         <SelectGroup>
                           <SelectLabel>Supervisors</SelectLabel>
-                          {supervisors.length === 0 ? (
+                          {loadingSupervisors ? (
+                            <div className="px-2 py-1.5 text-sm text-gray-500">
+                              Loading supervisors...
+                            </div>
+                          ) : supervisors.length === 0 ? (
                             <div className="px-2 py-1.5 text-sm text-gray-500">
                               No supervisors available
                             </div>
@@ -318,7 +325,17 @@ export default function CreateUserForm() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => form.reset()}
+          onClick={() =>
+            form.reset({
+              name: "",
+              email: "",
+              role: "FOREMAN",
+              password: "",
+              confirmPassword: "",
+              dayRate: "",
+              supervisorId: "",
+            })
+          }
           disabled={pending}
         >
           Reset
