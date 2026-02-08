@@ -35,14 +35,14 @@ enum PhotoVerificationStatus {
 }
 
 enum ScanType {
-  REGULAR    // Normal QR scan
-  MANUAL     // Manually added by foreman
+  REGULAR // Normal QR scan
+  MANUAL // Manually added by foreman
 }
 
 enum OvertimeType {
-  NONE       // No overtime
-  HALF_DAY   // 4 hours
-  FULL_DAY   // 8 hours
+  NONE // No overtime
+  HALF_DAY // 4 hours
+  FULL_DAY // 8 hours
 }
 
 /**
@@ -86,11 +86,11 @@ model User {
  * - faceEmbedding optional placeholder if you later do ML matching.
  */
 model Employee {
-  id             String  @id @default(cuid())
+  id             String   @id @default(cuid())
   firstName      String
   lastName       String
   faceImageUrl   String?
-  qrCodeValue    String  @unique
+  qrCodeValue    String   @unique
   defaultDayRate Decimal? @db.Decimal(12, 2)
 
   // ... face fields
@@ -288,7 +288,6 @@ model SiteDay {
   photoRequests SiteDayPhotoRequest[]
   photos        SiteDayPhoto[]
 
-  @@unique([siteId, workDate]) // one sheet per site per day
   @@unique([foremanId, workDate]) // foreman cannot be double-booked
   @@index([workDate])
   @@index([siteId, workDate])
@@ -542,7 +541,7 @@ model CompanySettings {
   id String @id @default("singleton")
 
   // Default day rate for regular employees (not foreman)
-  defaultEmployeeDayRate Decimal @db.Decimal(12, 2) @default(0)
+  defaultEmployeeDayRate Decimal @default(0) @db.Decimal(12, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -567,4 +566,12 @@ model AuditEvent {
   @@index([action])
   @@index([entity, entityId])
   @@index([actorUserId])
+}
+
+model TimesheetYear {
+  year      Int      @id
+  anchorSat DateTime // must be a Saturday, UTC midnight
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

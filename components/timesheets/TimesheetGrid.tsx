@@ -1,205 +1,436 @@
 "use client";
 
+import * as React from "react";
 import { useMemo } from "react";
-import { CircleCheck, X, Shield } from "lucide-react";
+import { CircleCheck, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatCurrency";
 
-interface TimesheetGridProps<T extends { rows?: any[]; columns?: any[] }> {
-  data: T;
+// ✅ Use the real normalized model shape
+type GridColumn = {
+  iso: string;
+  dayLabel: string;
+  dateLabel: string;
+};
+
+type GridRow = {
+  id: string;
+  label: string;
+  present: boolean[];
+  daysWorked: number;
+  pay: number;
+  isForeman?: boolean;
+};
+
+type GridTotals = {
+  totalDays: number;
+  totalPay: number;
+  foremanDays: number;
+  foremanPay: number;
+  teamDays: number;
+  teamPay: number;
+};
+
+export type TimesheetGridModel = {
+  columns: GridColumn[];
+  rows: GridRow[];
+  totals: GridTotals;
+  foremanName?: string;
+};
+
+function toNum(v: any) {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function getDayOfMonth(iso?: string) {
-  if (!iso || typeof iso !== "string") return "";
-  const parts = iso.split("-");
-  return parts[2] ?? "";
+function safeStr(v: any) {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
 }
 
-export default function TimesheetGrid<
-  T extends { rows?: any[]; columns?: any[] },
->({ data }: TimesheetGridProps<T>) {
-  const rows = (data as any)?.rows ?? [];
-  const columns = ((data as any)?.columns ?? []).map((c: any) => ({
-    ...c,
-    date: c?.date ?? getDayOfMonth(c?.iso),
-  }));
+function ZeroCell({ text = "0" }: { text?: string }) {
+  return (
+    <span className="font-extrabold text-rose-600 dark:text-rose-400">
+      {text}
+    </span>
+  );
+}
 
-  const dayCount = columns.length;
+function cellBase(cls?: string) {
+  return [
+    "px-3 py-2 text-sm whitespace-nowrap border-r border-zinc-200/70 dark:border-zinc-700/60",
+    cls ?? "",
+  ].join(" ");
+}
 
-  const sortedRows = useMemo(() => {
-    return [...rows].sort((a: any, b: any) => {
-      if (a.isForeman === b.isForeman) return 0;
-      return a.isForeman ? -1 : 1;
+function headBase(cls?: string) {
+  return [
+    "px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap border-r border-zinc-200/70 dark:border-zinc-700/60",
+    "bg-sky-50/60 dark:bg-zinc-800/30 text-zinc-700 dark:text-zinc-200",
+    cls ?? "",
+  ].join(" ");
+}
+
+/**
+ * Accepts either:
+ * - { model: TimesheetGridModel }
+ * - { data: TimesheetGridModel } (legacy)
+ */
+export default function TimesheetGrid({
+  model,
+  data,
+}: {
+  model?: TimesheetGridModel | null;
+  data?: any;
+}) {
+  const m = (model ?? data ?? null) as TimesheetGridModel | null;
+
+  const columns = Array.isArray(m?.columns) ? m!.columns : [];
+  const rowsRaw = Array.isArray(m?.rows) ? m!.rows : [];
+  const totals = m?.totals;
+
+  const foremanName = safeStr(m?.foremanName).trim();
+  const colLen = columns.length;
+
+  const rows = useMemo(() => {
+    const list = [...rowsRaw];
+
+    const isForemanRow = (r: GridRow) => {
+      if (typeof r.isForeman === "boolean") return r.isForeman;
+      if (foremanName && safeStr(r.label).trim() === foremanName) return true;
+      return false;
+    };
+
+    // mobile: foreman first, then alpha
+    list.sort((a, b) => {
+      const aF = isForemanRow(a) ? 0 : 1;
+      const bF = isForemanRow(b) ? 0 : 1;
+      if (aF !== bF) return aF - bF;
+      return safeStr(a.label).localeCompare(safeStr(b.label));
     });
-  }, [rows]);
 
-  const totals = useMemo(() => {
+    return list;
+  }, [rowsRaw, foremanName]);
+
+  const derivedTotals = useMemo(() => {
+    // Prefer server/normalizer totals (should exist now)
+    if (
+      totals &&
+      typeof totals.foremanDays === "number" &&
+      typeof totals.teamDays === "number"
+    ) {
+      return totals;
+    }
+
+    // fallback defensive compute (never trust UI state in prod)
     let foremanDays = 0;
     let foremanPay = 0;
     let teamDays = 0;
     let teamPay = 0;
 
-    rows.forEach((r: any) => {
-      if (r.isForeman) {
-        foremanDays += r.daysWorked ?? 0;
-        foremanPay += r.pay ?? 0;
+    rowsRaw.forEach((r) => {
+      const isForeman =
+        typeof r.isForeman === "boolean"
+          ? r.isForeman
+          : foremanName
+            ? safeStr(r.label).trim() === foremanName
+            : false;
+
+      const d = toNum(r.daysWorked);
+      const p = toNum(r.pay);
+
+      if (isForeman) {
+        foremanDays += d;
+        foremanPay += p;
       } else {
-        teamDays += r.daysWorked ?? 0;
-        teamPay += r.pay ?? 0;
+        teamDays += d;
+        teamPay += p;
       }
     });
 
     return {
+      totalDays: foremanDays + teamDays,
+      totalPay: foremanPay + teamPay,
       foremanDays,
       foremanPay,
       teamDays,
       teamPay,
-    };
-  }, [rows]);
+    } as GridTotals;
+  }, [totals, rowsRaw, foremanName]);
+
+  const hasData = columns.length > 0 && rows.length > 0;
+
+  if (!hasData) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        No timesheet rows to display.
+      </div>
+    );
+  }
+
+  const W_NAME = "min-w-[200px]";
+  const W_DAY = "min-w-[56px]";
+  const W_TDAYS = "min-w-[90px]";
+  const W_TPAY = "min-w-[120px]";
+
+  const isForemanRow = (r: GridRow) => {
+    if (typeof r.isForeman === "boolean") return r.isForeman;
+    if (foremanName && safeStr(r.label).trim() === foremanName) return true;
+    return false;
+  };
+
+  // pad present[] to columns length so table is always aligned
+  const presentAt = (r: GridRow, idx: number) =>
+    Boolean(Array.isArray(r.present) ? r.present[idx] : false);
 
   return (
-    <div className="rounded bg-background w-full max-w-full">
-      {/* ONE scroll container */}
-      <div className="overflow-x-auto max-w-full">
-        {/* This forces horizontal scroll when needed */}
-        <div className="w-max">
-          {/* HEADER */}
-          <div
-            className="grid border bg-slate-50 dark:bg-card"
-            style={{
-              gridTemplateColumns: `220px repeat(${dayCount}, 56px) 70px 70px 100px 100px`,
-            }}
-          >
-            <div className="sticky left-0 z-20 bg-slate-50 dark:bg-card px-3 py-1 font-semibold border border-slate-600">
-              Full Name
-            </div>
+    <div className="w-full">
+      <div className="rounded-md border border-zinc-200/70 dark:border-zinc-700/60 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-zinc-200/70 dark:border-zinc-700/60">
+                <th className={[headBase(), W_NAME].join(" ")}>Full Name</th>
 
-            {columns.map((c: any) => (
-              <div
-                key={c.iso}
-                className="px-2 py-1 text-center font-semibold text-sm border border-slate-600 flex flex-col items-center justify-center"
-              >
-                <div className="font-black leading-tight tracking-widest">
-                  {c.day}
-                </div>
-                <div className="text-muted-foreground">{c.date}</div>
-              </div>
-            ))}
-
-            <div className="px-2 py-1 text-center font-semibold border border-slate-600">
-              F/man Days
-            </div>
-            <div className="px-2 py-1 text-center font-semibold border border-slate-600">
-              Team Days
-            </div>
-            <div className="px-2 py-1 text-center font-semibold border border-slate-600">
-              F/man Pay
-            </div>
-            <div className="px-2 py-1 text-center font-semibold border border-slate-600">
-              Team Pay
-            </div>
-          </div>
-
-          {/* ROWS */}
-          {sortedRows.map((r: any) => (
-            <div
-              key={r.employeeId}
-              className={[
-                "grid border",
-                r.isForeman ? "bg-blue-50 dark:bg-blue-950" : "",
-              ].join(" ")}
-              style={{
-                gridTemplateColumns: `220px repeat(${dayCount}, 56px) 70px 70px 100px 100px`,
-              }}
-            >
-              <div
-                className={[
-                  "sticky left-0 z-10 px-3 py-2 font-medium truncate border border-slate-600 flex items-center gap-2 bg-background",
-                  r.isForeman
-                    ? "bg-blue-100/50 dark:bg-blue-900/90 font-semibold"
-                    : "",
-                ].join(" ")}
-              >
-                {r.isForeman && (
-                  <Shield className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                )}
-                {r.fullName}
-              </div>
-
-              {(r.present ?? [])
-                .slice(0, dayCount)
-                .map((p: boolean, idx: number) => (
-                  <div
-                    key={`${r.employeeId}-${idx}`}
-                    className={[
-                      "px-2 py-2 text-center flex items-center justify-center border border-slate-600",
-                      p ? "bg-emerald-300/30" : "bg-red-200/30",
-                    ].join(" ")}
-                    title={p ? "Present (scanned)" : "Absent (no scan)"}
+                {columns.map((c) => (
+                  <th
+                    key={c.iso}
+                    className={[headBase("text-center"), W_DAY].join(" ")}
                   >
-                    {p ? (
-                      <CircleCheck className="text-emerald-600" />
-                    ) : (
-                      <X className="text-red-600" />
-                    )}
-                  </div>
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="font-extrabold">
+                        {c.dayLabel || "—"}
+                      </span>
+                      <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                        {c.dateLabel || ""}
+                      </span>
+                    </div>
+                  </th>
                 ))}
 
-              <div className="px-2 py-2 text-center font-semibold border border-slate-600">
-                {r.isForeman ? r.daysWorked : "—"}
-              </div>
-              <div className="px-2 py-2 text-center font-semibold border border-slate-600">
-                {!r.isForeman ? r.daysWorked : "—"}
-              </div>
-              <div className="px-2 py-2 text-center font-semibold border border-slate-600">
-                {r.isForeman ? formatCurrency(r.pay) : "—"}
-              </div>
-              <div className="px-2 py-2 text-center font-semibold border border-slate-600">
-                {!r.isForeman ? formatCurrency(r.pay) : "—"}
-              </div>
-            </div>
-          ))}
+                {/* Mobile-style extra columns */}
+                <th
+                  className={[
+                    headBase("text-center bg-amber-50/70 dark:bg-amber-950/20"),
+                    W_TDAYS,
+                  ].join(" ")}
+                >
+                  F/man Days
+                </th>
+                <th
+                  className={[
+                    headBase("text-center bg-amber-50/70 dark:bg-amber-950/20"),
+                    W_TDAYS,
+                  ].join(" ")}
+                >
+                  Man/Days
+                </th>
+                <th
+                  className={[
+                    headBase(
+                      "text-center bg-emerald-50/70 dark:bg-emerald-950/20",
+                    ),
+                    W_TPAY,
+                  ].join(" ")}
+                >
+                  F/man Pay
+                </th>
+                <th
+                  className={[
+                    headBase(
+                      "text-center bg-emerald-50/70 dark:bg-emerald-950/20",
+                    ),
+                    W_TPAY,
+                  ].join(" ")}
+                >
+                  Team Pay
+                </th>
+              </tr>
+            </thead>
 
-          {/* TOTALS */}
-          <div
-            className="grid bg-slate-50 dark:bg-slate-900 border"
-            style={{
-              gridTemplateColumns: `220px repeat(${dayCount}, 56px) 70px 70px 100px 100px`,
-            }}
-          >
-            <div className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-900 px-3 py-2 font-bold border-r border-slate-600">
-              TOTAL
-            </div>
+            <tbody>
+              {rows.map((r) => {
+                const isForeman = isForemanRow(r);
 
-            {columns.map((c: any) => (
-              <div key={`t-${c.iso}`} className="px-2 py-2" />
-            ))}
+                const daysWorked = toNum(r.daysWorked);
+                const pay = toNum(r.pay);
 
-            <div className="px-2 py-2 text-center font-bold border-l border-slate-600">
-              {totals.foremanDays}
-            </div>
-            <div className="px-2 py-2 text-center font-bold border-l border-slate-600">
-              {totals.teamDays}
-            </div>
-            <div className="px-2 py-2 text-center font-bold border-l border-slate-600">
-              {formatCurrency(totals.foremanPay)}
-            </div>
-            <div className="px-2 py-2 text-center font-bold border-l border-slate-600">
-              {formatCurrency(totals.teamPay)}
-            </div>
-          </div>
+                const foremanDaysCell = isForeman ? (
+                  <span className="font-extrabold">{daysWorked}</span>
+                ) : (
+                  <ZeroCell />
+                );
+                const teamDaysCell = !isForeman ? (
+                  <span className="font-extrabold">{daysWorked}</span>
+                ) : (
+                  <ZeroCell />
+                );
+
+                const foremanPayCell = isForeman ? (
+                  <span className="font-extrabold">{formatCurrency(pay)}</span>
+                ) : (
+                  <ZeroCell />
+                );
+                const teamPayCell = !isForeman ? (
+                  <span className="font-extrabold">{formatCurrency(pay)}</span>
+                ) : (
+                  <ZeroCell />
+                );
+
+                return (
+                  <tr
+                    key={r.id}
+                    className={[
+                      "border-b border-zinc-200/70 dark:border-zinc-700/60",
+                      "hover:bg-zinc-50/70 dark:hover:bg-zinc-800/50 transition-colors",
+                      isForeman ? "bg-sky-50/70 dark:bg-sky-950/15" : "",
+                    ].join(" ")}
+                  >
+                    <td className={[cellBase("font-medium"), W_NAME].join(" ")}>
+                      <div className="flex items-center gap-2">
+                        {isForeman ? (
+                          <Badge variant="secondary" className="font-extrabold">
+                            Foreman
+                          </Badge>
+                        ) : null}
+                        <span className={isForeman ? "font-extrabold" : ""}>
+                          {isForeman ? `👨‍💼 ${r.label}` : r.label}
+                        </span>
+                      </div>
+                    </td>
+
+                    {Array.from({ length: colLen }).map((_, idx) => {
+                      const p = presentAt(r, idx);
+                      return (
+                        <td
+                          key={`${r.id}-${columns[idx]?.iso ?? idx}`}
+                          className={[
+                            cellBase("text-center"),
+                            W_DAY,
+                            p
+                              ? "bg-emerald-500/5 dark:bg-emerald-500/10"
+                              : "bg-rose-500/5 dark:bg-rose-500/10",
+                          ].join(" ")}
+                        >
+                          {p ? (
+                            <CircleCheck className="inline-block h-5 w-5 text-emerald-600" />
+                          ) : (
+                            <X className="inline-block h-5 w-5 text-rose-600" />
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    <td
+                      className={[
+                        cellBase(
+                          "text-center bg-amber-50/70 dark:bg-amber-950/20",
+                        ),
+                        W_TDAYS,
+                      ].join(" ")}
+                    >
+                      {foremanDaysCell}
+                    </td>
+
+                    <td
+                      className={[
+                        cellBase(
+                          "text-center bg-amber-50/70 dark:bg-amber-950/20",
+                        ),
+                        W_TDAYS,
+                      ].join(" ")}
+                    >
+                      {teamDaysCell}
+                    </td>
+
+                    <td
+                      className={[
+                        cellBase(
+                          "text-center bg-emerald-50/70 dark:bg-emerald-950/20",
+                        ),
+                        W_TPAY,
+                      ].join(" ")}
+                    >
+                      {foremanPayCell}
+                    </td>
+
+                    <td
+                      className={[
+                        cellBase(
+                          "text-center bg-emerald-50/70 dark:bg-emerald-950/20",
+                        ),
+                        W_TPAY,
+                      ].join(" ")}
+                    >
+                      {teamPayCell}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* TOTAL row (mobile style) */}
+              <tr className="bg-[#262D68] text-white">
+                <td
+                  className={[
+                    cellBase("font-extrabold text-white"),
+                    W_NAME,
+                  ].join(" ")}
+                >
+                  TOTAL
+                </td>
+
+                {columns.map((c) => (
+                  <td
+                    key={`t-${c.iso}`}
+                    className={[
+                      cellBase("text-center text-white/70"),
+                      W_DAY,
+                      "bg-white/10",
+                    ].join(" ")}
+                  >
+                    —
+                  </td>
+                ))}
+
+                <td
+                  className={[
+                    cellBase("text-center font-extrabold text-white"),
+                    W_TDAYS,
+                  ].join(" ")}
+                >
+                  {derivedTotals.foremanDays}
+                </td>
+                <td
+                  className={[
+                    cellBase("text-center font-extrabold text-white"),
+                    W_TDAYS,
+                  ].join(" ")}
+                >
+                  {derivedTotals.teamDays}
+                </td>
+                <td
+                  className={[
+                    cellBase("text-center font-extrabold text-white"),
+                    W_TPAY,
+                  ].join(" ")}
+                >
+                  {formatCurrency(derivedTotals.foremanPay)}
+                </td>
+                <td
+                  className={[
+                    cellBase("text-center font-extrabold text-white"),
+                    W_TPAY,
+                  ].join(" ")}
+                >
+                  {formatCurrency(derivedTotals.teamPay)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
 
-      <div className="px-3 py-3 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <CircleCheck className="w-4 h-4 text-emerald-500" />
-          Present = scanned that day
-        </span>
-        {" • "}
-        <span className="inline-flex items-center gap-1">
-          <X className="w-4 h-4 text-red-500" />
-          Absent = no scan
-        </span>
+        <div className="p-3 text-xs text-muted-foreground border-t border-zinc-200/70 dark:border-zinc-700/60">
+          ✅ Present = scanned that day • ❌ Absent = no scan
+        </div>
       </div>
     </div>
   );

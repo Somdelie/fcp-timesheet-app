@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseSupervisorTimesheetId } from "@/lib/timesheetId";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function getBearer(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  if (!h.toLowerCase().startsWith("bearer ")) return "";
+  return h.slice(7).trim();
+}
 
 function startOfDayUTC(d: Date) {
   const x = new Date(d.getTime());
@@ -25,7 +30,6 @@ function toISODateUTC(d: Date) {
 
 function weekdayShortUTC(iso: string) {
   const d = new Date(`${iso}T00:00:00.000Z`);
-  // keep consistent locale output (don’t rely on server locale)
   return d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
 }
 
@@ -46,12 +50,17 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // ✅ JWT auth (mobile)
+    const token = getBearer(req);
+    const payload = token ? await verifyApiToken(token) : null;
 
-    const role = (session.user as any)?.role;
-    const userId = (session.user as any)?.id;
+    if (!payload) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const role = payload.role;
+    const userId = payload.sub; // ✅ your JWT uses sub as User.id
+
     if (role !== "ADMIN" && role !== "SUPERVISOR") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -119,8 +128,9 @@ export async function GET(
     if (role === "SUPERVISOR") {
       const supervisor = await prisma.supervisor.findUnique({
         where: { userId },
-        select: { id: true },
+        select: { id: true, user: { select: { name: true } } },
       });
+
       if (!supervisor) {
         return NextResponse.json(
           { error: "Supervisor profile not found" },
@@ -128,7 +138,6 @@ export async function GET(
         );
       }
 
-      // Check: does supervisor have active site assignments?
       const now = new Date();
       const supervisorSites = await prisma.supervisorSiteAssignment.findMany({
         where: {
@@ -148,7 +157,6 @@ export async function GET(
         );
       }
 
-      // Check: does this foreman have any work on any of the supervisor's sites?
       const foremansWork = await prisma.siteDay.findFirst({
         where: {
           foremanId: parsed.foremanId,
@@ -215,22 +223,16 @@ export async function GET(
         workDate: true,
         dayRateAtScan: true,
         employee: {
-          select: {
-            firstName: true,
-            lastName: true,
-            defaultDayRate: true,
-          },
+          select: { firstName: true, lastName: true, defaultDayRate: true },
         },
       },
     });
 
-    // Aggregate per employee
     type RowAgg = {
       employeeId: string;
       fullName: string;
       dayRate: number;
       present: boolean[];
-      // unique day tracking to prevent duplicates
       seenDay: Set<string>;
     };
 
@@ -259,12 +261,10 @@ export async function GET(
         byEmp.set(s.employeeId, agg);
       }
 
-      // only count this employee+day once
       if (!agg.seenDay.has(iso)) {
         agg.seenDay.add(iso);
         agg.present[idx] = true;
       } else {
-        // still mark presence
         agg.present[idx] = true;
       }
 
@@ -296,9 +296,10 @@ export async function GET(
       { totalDays: 0, totalPay: 0 },
     );
 
+    // Same structure as web route
     const supervisor =
       role === "SUPERVISOR"
-        ? { name: (session.user as any)?.name ?? "Supervisor" }
+        ? { name: "Supervisor" } // mobile token doesn't carry name; keep shape
         : timesheet.approvedBySupervisor
           ? {
               id: timesheet.approvedBySupervisor.id,
@@ -308,7 +309,7 @@ export async function GET(
 
     return NextResponse.json({
       timesheet: {
-        id: timesheet.id, // ✅ real Timesheet.id
+        id: timesheet.id,
         startISO,
         endISO,
         sitesLabel,
@@ -327,7 +328,7 @@ export async function GET(
       },
     });
   } catch (e: any) {
-    console.error("Error fetching timesheet detail:", e);
+    console.error("Error fetching timesheet detail (mobile):", e);
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
       { status: 500 },

@@ -71,24 +71,21 @@ export async function POST(req: Request) {
   if (!site)
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
 
-  // create/find SiteDay (unique by [siteId, workDate])
-  const siteDay = await prisma.siteDay.upsert({
-    where: { siteId_workDate: { siteId, workDate } },
-    update: {},
-    create: { siteId, foremanId: foreman.id, workDate },
+  // create/find SiteDay for this foreman
+  let siteDay = await prisma.siteDay.findFirst({
+    where: { foremanId: foreman.id, workDate },
     select: { id: true, foremanId: true, isLocked: true },
   });
 
-  if (siteDay.isLocked) {
-    return NextResponse.json({ error: "Day is locked" }, { status: 409 });
+  if (!siteDay) {
+    siteDay = await prisma.siteDay.create({
+      data: { siteId, foremanId: foreman.id, workDate },
+      select: { id: true, foremanId: true, isLocked: true },
+    });
   }
 
-  // prevent other foreman from posting to the same day
-  if (siteDay.foremanId !== foreman.id) {
-    return NextResponse.json(
-      { error: "This site/day belongs to another foreman" },
-      { status: 403 },
-    );
+  if (siteDay.isLocked) {
+    return NextResponse.json({ error: "Day is locked" }, { status: 409 });
   }
 
   const qrValues = scans

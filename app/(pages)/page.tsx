@@ -213,7 +213,7 @@ export default function HomePage() {
                   </p>
                   <p className="text-xs text-orange-600 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    Active managers
+                    Active Supervisors
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">

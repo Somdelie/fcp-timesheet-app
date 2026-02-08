@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { formatCurrency } from "@/lib/formatCurrency";
 
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -21,6 +20,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+// ✅ IMPORTANT: adjust this import path to where your grid model type lives
+import type { TimesheetGridModel } from "@/lib/timesheets/gridModel";
 
 export interface TimesheetAction {
   id: string;
@@ -54,13 +56,29 @@ export interface TimesheetDetailSheetProps<
   onRetry: () => void;
   onRefreshDetail: () => Promise<void>;
   actions?: TimesheetAction[];
+
+  /**
+   * ✅ FIX: pass the SAME normalized model you use for the grid
+   * so header totals always match the grid (mobile-style columns).
+   */
+  gridModel?: TimesheetGridModel | null;
+
+  /**
+   * Rendered grid component (usually <TimesheetGrid model={gridModel} />)
+   */
   gridComponent: React.ReactNode;
+
   prettyRange: (startISO: string, endISO: string) => string;
 }
 
 function toSafeErrorText(e: unknown) {
   if (e instanceof Error) return e.message;
   return "Request failed.";
+}
+
+function safeDiv(n: number, d: number) {
+  if (!Number.isFinite(n) || !Number.isFinite(d) || d <= 0) return 0;
+  return n / d;
 }
 
 export default function TimesheetDetailSheet<
@@ -80,11 +98,13 @@ export default function TimesheetDetailSheet<
   onRetry,
   onRefreshDetail,
   actions = [],
+  gridModel,
   gridComponent,
   prettyRange,
 }: TimesheetDetailSheetProps<T>) {
   const [actionLoading, setActionLoading] = React.useState<null | string>(null);
   const [actionErr, setActionErr] = React.useState<string | null>(null);
+
   const [reasonDialogOpen, setReasonDialogOpen] = React.useState(false);
   const [pendingActionId, setPendingActionId] = React.useState<string | null>(
     null,
@@ -152,10 +172,11 @@ export default function TimesheetDetailSheet<
     }
   }
 
-  const detailStatus = (detail as any)?.status ?? "";
+  const detailStatus = String((detail as any)?.status ?? "").trim();
 
-  // ✅ FIX: accept either flattened strings OR nested objects
+  // ✅ FIX: accept either flattened strings OR nested objects OR normalized gridModel
   const foremanDisplay =
+    String((gridModel as any)?.foremanName ?? "").trim() ||
     String((detail as any)?.foremanName ?? "").trim() ||
     String((detail as any)?.foreman?.name ?? "").trim() ||
     "—";
@@ -165,32 +186,22 @@ export default function TimesheetDetailSheet<
     String((detail as any)?.supervisor?.name ?? "").trim() ||
     "—";
 
-  // Extract totals from detail
-  const foremanTotals = useMemo(() => {
-    const rows = (detail as any)?.rows ?? [];
-    let days = 0;
-    let pay = 0;
-    rows.forEach((r: any) => {
-      if (r.isForeman) {
-        days += r.daysWorked ?? 0;
-        pay += r.pay ?? 0;
-      }
-    });
-    return { days, pay };
-  }, [detail]);
+  /**
+   * ✅ FIX: Use the normalized model totals (same numbers the grid uses)
+   * so we match mobile: F/man totals + Team totals.
+   */
+  const foremanTotals = {
+    days: Number(gridModel?.totals?.foremanDays ?? 0),
+    pay: Number(gridModel?.totals?.foremanPay ?? 0),
+  };
 
-  const teamTotals = useMemo(() => {
-    const rows = (detail as any)?.rows ?? [];
-    let days = 0;
-    let pay = 0;
-    rows.forEach((r: any) => {
-      if (!r.isForeman) {
-        days += r.daysWorked ?? 0;
-        pay += r.pay ?? 0;
-      }
-    });
-    return { days, pay };
-  }, [detail]);
+  const teamTotals = {
+    days: Number(gridModel?.totals?.teamDays ?? 0),
+    pay: Number(gridModel?.totals?.teamPay ?? 0),
+  };
+
+  const totalDays = foremanTotals.days + teamTotals.days;
+  const totalPay = foremanTotals.pay + teamTotals.pay;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -213,9 +224,10 @@ export default function TimesheetDetailSheet<
                   (Sat–Fri)
                 </div>
 
-                {/* Optional status pill if you want it here */}
                 <div className="pt-2">
-                  <span className="text-xs font-bold">{detailStatus}</span>
+                  <span className="text-xs font-bold">
+                    {detailStatus || "—"}
+                  </span>
                 </div>
               </div>
 
@@ -228,7 +240,7 @@ export default function TimesheetDetailSheet<
 
               <div className="flex flex-col gap-1 border-l-2 border-card px-4 flex-1">
                 <div className="text-sm text-muted-foreground">
-                  Contract Manager:
+                  Contract Manager
                 </div>
                 <div className="font-medium py-1 border rounded px-3">
                   {contractManagerDisplay}
@@ -269,7 +281,6 @@ export default function TimesheetDetailSheet<
               ) : null}
 
               <div className="flex items-start justify-between gap-4">
-                {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
                   {actions.map((action) => (
                     <Button
@@ -300,38 +311,52 @@ export default function TimesheetDetailSheet<
                   </Button>
                 </div>
 
-                {/* Calculation Display */}
-                <div className="flex gap-4 ml-auto">
-                  {foremanTotals.days > 0 && (
+                {/* ✅ Mobile-style totals cards (driven by gridModel) */}
+                <div className="flex gap-4 ml-auto flex-wrap justify-end">
+                  <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <div className="text-muted-foreground text-xs font-semibold">
+                      TOTAL
+                    </div>
+                    <div className="font-medium mt-1">
+                      {totalDays} days • {formatCurrency(totalPay)}
+                    </div>
+                  </div>
+
+                  {foremanTotals.days > 0 ? (
                     <div className="text-sm border rounded px-3 py-2 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                       <div className="text-muted-foreground text-xs font-semibold">
                         FOREMAN
                       </div>
                       <div className="font-medium mt-1">
                         {foremanTotals.days} days ×{" "}
-                        {formatCurrency(foremanTotals.pay / foremanTotals.days)}
+                        {formatCurrency(
+                          safeDiv(foremanTotals.pay, foremanTotals.days),
+                        )}
                         /day
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         Total: {formatCurrency(foremanTotals.pay)}
                       </div>
                     </div>
-                  )}
+                  ) : null}
 
-                  {teamTotals.days > 0 && (
+                  {teamTotals.days > 0 ? (
                     <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                       <div className="text-muted-foreground text-xs font-semibold">
                         TEAM
                       </div>
                       <div className="font-medium mt-1">
                         {teamTotals.days} days ×{" "}
-                        {formatCurrency(teamTotals.pay / teamTotals.days)}/day
+                        {formatCurrency(
+                          safeDiv(teamTotals.pay, teamTotals.days),
+                        )}
+                        /day
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         Total: {formatCurrency(teamTotals.pay)}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -349,11 +374,11 @@ export default function TimesheetDetailSheet<
             </DialogHeader>
 
             <div className="space-y-3">
-              {actionErr && (
+              {actionErr ? (
                 <div className="text-sm text-rose-600 dark:text-rose-400">
                   {actionErr}
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Reason</label>

@@ -2,14 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyApiToken } from "@/lib/jwt";
-import {
-  addDaysUTC,
-  isoFromDateUTC,
-  startOfDayUTC,
-  decimalToNumber,
-} from "@/lib/dateUtc";
+import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 import { makeSupervisorTimesheetId } from "@/lib/timesheetId";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,433 +15,360 @@ function getBearer(req: Request) {
   return m?.[1] ?? null;
 }
 
-function safeUpper(s: string) {
-  return (s ?? "").trim().toUpperCase();
-}
-
-function safeLower(s: string) {
-  return (s ?? "").trim().toLowerCase();
-}
-
-/**
- * Fortnight rules:
- * - weeks run Sat -> Fri
- * - fortnight = 14 days (Sat->Fri, Sat->Fri)
- *
- * Given any date, find the Saturday that starts its week (UTC).
- * JS: getUTCDay(): Sun=0..Sat=6
- * We want: Sat as start.
- */
-function startOfWeekSatUTC(date: Date) {
-  const js = date.getUTCDay(); // 0..6
-  const back = (js + 1) % 7; // Sat(6)->0, Sun(0)->1, Mon(1)->2 ...
-  const start = addDaysUTC(date, -back);
-  return startOfDayUTC(isoFromDateUTC(start));
-}
-
-function fortnightForWorkDateISO(workDateISO: string) {
-  const d = startOfDayUTC(workDateISO);
-  const start = startOfWeekSatUTC(d);
-  const end = addDaysUTC(start, 13);
-  return { startISO: isoFromDateUTC(start), endISO: isoFromDateUTC(end) };
-}
-
-function fullName(name?: string | null) {
-  const x = String(name ?? "").trim();
-  return x.length ? x : "—";
-}
-
-export async function GET(req: Request) {
-  let userId: string | null = null;
-  let role: string | null = null;
-
+async function getAuth(req: Request) {
   const token = getBearer(req);
-
   if (token) {
     const payload = await verifyApiToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!payload) return null;
+    return { userId: payload.sub, role: payload.role };
+  }
+  const session = await getServerSession(authOptions);
+  const u = session?.user as any;
+  if (!u?.id) return null;
+  return { userId: u.id as string, role: u.role as string };
+}
+
+function startOfDayUTC(d: Date) {
+  const x = new Date(d.getTime());
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
+function toISODateUTC(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function startOfDayUTCFromISO(iso: string) {
+  const d = new Date(`${iso}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${iso}`);
+  return d;
+}
+
+function parsePeriodId(raw: string | null) {
+  const s = String(raw ?? "").trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})$/);
+  if (!m) return null;
+  return { startISO: m[1], endISO: m[2] };
+}
+
+function decimalToNumber(v: unknown): number {
+  if (v == null) return 0;
+  if (typeof v === "number") return v;
+  const anyV = v as any;
+  if (typeof anyV?.toNumber === "function") return anyV.toNumber();
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function resolvePeriod(req: Request) {
+  const url = new URL(req.url);
+  const parsed = parsePeriodId(url.searchParams.get("period"));
+
+  if (parsed) {
+    const startDate = startOfDayUTCFromISO(parsed.startISO);
+    const endDate = startOfDayUTCFromISO(parsed.endISO);
+
+    const existing = await prisma.timesheetPeriod.findUnique({
+      where: { startDate_endDate: { startDate, endDate } },
+      select: { id: true, startDate: true, endDate: true },
+    });
+
+    if (!existing) {
+      throw new Error(
+        `Timesheet period ${parsed.startISO}_${parsed.endISO} not found.`,
+      );
     }
-    userId = payload.sub;
-    role = payload.role;
-  } else {
-    const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    userId = user?.id ?? null;
-    role = user?.role ?? null;
+
+    return {
+      periodId: existing.id,
+      startDate: existing.startDate,
+      endDate: existing.endDate,
+      startISO: parsed.startISO,
+      endISO: parsed.endISO,
+    };
   }
 
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (role !== "SUPERVISOR")
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Default: compute current period from TimesheetYear anchor
+  const today = startOfDayUTC(new Date());
+  const year = today.getUTCFullYear();
 
-  const url = new URL(req.url);
-  const q = safeLower(url.searchParams.get("q") ?? "");
-  const status = safeUpper(url.searchParams.get("status") ?? "ALL") as
-    | "ALL"
-    | "SUBMITTED"
-    | "APPROVED"
-    | "REJECTED"
-    | "PAID";
-
-  const limitRaw = Number(url.searchParams.get("limit") ?? "30");
-  const limit =
-    Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
-      ? limitRaw
-      : 30;
-
-  const supervisor = await prisma.supervisor.findUnique({
-    where: { userId },
-    select: { id: true, user: { select: { name: true } } },
+  const yearCfg = await prisma.timesheetYear.findUnique({
+    where: { year },
+    select: { anchorSat: true },
   });
-  if (!supervisor) {
-    return NextResponse.json(
-      { error: "Supervisor not found" },
-      { status: 404 },
+
+  if (!yearCfg) {
+    throw new Error(
+      `TimesheetYear not configured for ${year}. Admin must generate the year with an anchor Saturday.`,
     );
   }
 
-  // Sites this supervisor manages
-  const siteAssignments = await prisma.supervisorSiteAssignment.findMany({
-    where: { supervisorId: supervisor.id },
-    select: { siteId: true },
-  });
+  const ft = getFortnightForDateUTC(today, yearCfg.anchorSat);
 
-  const siteIds = Array.from(new Set(siteAssignments.map((a) => a.siteId)));
-  if (siteIds.length === 0) return NextResponse.json({ timesheets: [] });
-
-  // Pull recent SiteDays and TimesheetPeriods
-  // Default window: last 180 days (adjust anytime).
-  const now = new Date();
-  const windowStart = addDaysUTC(now, -180);
-  const windowEnd = addDaysUTC(now, 1); // include today
-
-  // Load existing periods from database (to support custom/closed periods)
-  const existingPeriods = await prisma.timesheetPeriod.findMany({
+  const period = await prisma.timesheetPeriod.upsert({
     where: {
-      startDate: { lt: windowEnd },
-      endDate: { gte: windowStart },
+      startDate_endDate: { startDate: ft.startDate, endDate: ft.endDate },
     },
+    create: {
+      startDate: ft.startDate,
+      endDate: ft.endDate,
+    },
+    update: {},
     select: { id: true, startDate: true, endDate: true },
   });
 
-  // For each existing period, check if it has timesheets for supervisor's foremen
-  const periodsByForeman = new Map<
-    string,
-    {
-      periodId: string;
-      startISO: string;
-      endISO: string;
-      siteInfo: Map<
-        string,
-        { siteId: string; siteName: string; siteCode?: string | null }
-      >;
-    }
-  >();
-
-  // Also track which periods have activity (work dates)
-  const siteDays = await prisma.siteDay.findMany({
-    where: {
-      siteId: { in: siteIds },
-      workDate: { gte: windowStart, lt: windowEnd },
-    },
-    select: {
-      foremanId: true,
-      workDate: true,
-      site: { select: { id: true, name: true, code: true } },
-      foreman: { select: { user: { select: { name: true } } } },
-    },
-    orderBy: { workDate: "desc" },
-  });
-
-  if (siteDays.length === 0) return NextResponse.json({ timesheets: [] });
-
-  // Preload scans for these sites/foremen in the same window so we can
-  // compute worker-day counts and wages per fortnight/foreman.
-  const scans = await prisma.attendanceScan.findMany({
-    where: {
-      siteDay: {
-        siteId: { in: siteIds },
-        workDate: { gte: windowStart, lt: windowEnd },
-      },
-    },
-    select: {
-      siteDay: { select: { foremanId: true, workDate: true } },
-      employeeId: true,
-      dayRateAtScan: true,
-      employee: {
-        select: {
-          defaultDayRate: true,
-        },
-      },
-    },
-  });
-
-  // Group by (periodId, foremanId), discovering both from work data and existing periods
-  type Group = {
-    periodId: string;
-    startISO: string;
-    endISO: string;
-    foremanId: string;
-    foremanName: string;
-
-    // representative site (most recent in that period)
-    siteId: string;
-    siteName: string;
-    siteCode?: string | null;
-
-    // filled later from actual Timesheet row
-    status: "SUBMITTED" | "APPROVED" | "REJECTED" | "PAID";
-
-    // filled later from scans
-    totalWorkerDays?: number;
-    totalWorkerWages?: number;
+  return {
+    periodId: period.id,
+    startDate: period.startDate,
+    endDate: period.endDate,
+    startISO: toISODateUTC(period.startDate),
+    endISO: toISODateUTC(period.endDate),
   };
+}
 
-  const groups = new Map<string, Group>(); // key = `${periodId}__${foremanId}`
+export async function GET(req: Request) {
+  try {
+    const auth = await getAuth(req);
+    if (!auth || auth.role !== "SUPERVISOR") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  // Helper to convert Date to ISO string
-  function dateToISO(d: Date): string {
-    return d.toISOString().slice(0, 10);
-  }
+    const userId = auth.userId;
 
-  // Map work dates to their period (checking both database and calculated)
-  const workDateToPeriod = new Map<
-    string, // work date ISO
-    { periodId: string; startISO: string; endISO: string }
-  >();
+    const supervisor = await prisma.supervisor.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
 
-  for (const sd of siteDays) {
-    const workISO = isoFromDateUTC(sd.workDate);
-
-    if (!workDateToPeriod.has(workISO)) {
-      // Check if this work date falls within any existing period
-      const matchingPeriod = existingPeriods.find(
-        (p) =>
-          sd.workDate >= p.startDate && sd.workDate < addDaysUTC(p.endDate, 1),
+    if (!supervisor) {
+      return NextResponse.json(
+        { error: "Supervisor not found" },
+        { status: 404 },
       );
-
-      if (matchingPeriod) {
-        workDateToPeriod.set(workISO, {
-          periodId: matchingPeriod.id,
-          startISO: dateToISO(matchingPeriod.startDate),
-          endISO: dateToISO(matchingPeriod.endDate),
-        });
-      } else {
-        // Fall back to calculated fortnight
-        const { startISO, endISO } = fortnightForWorkDateISO(workISO);
-        workDateToPeriod.set(workISO, {
-          periodId: `calc_${startISO}_${endISO}`,
-          startISO,
-          endISO,
-        });
-      }
     }
-  }
 
-  // Now group sites/foremen by their periods
-  for (const sd of siteDays) {
-    if (!sd.foremanId) continue;
+    // Resolve period (same logic as admin - from DB)
+    const period = await resolvePeriod(req);
+    const { periodId, startDate, endDate, startISO, endISO } = period;
 
-    const workISO = isoFromDateUTC(sd.workDate);
-    const periodInfo = workDateToPeriod.get(workISO);
-    if (!periodInfo) continue;
+    // Get URL params
+    const url = new URL(req.url);
+    const q = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const statusFilter = url.searchParams.get("status") ?? "ALL";
 
-    const key = `${periodInfo.periodId}__${sd.foremanId}`;
+    // Find sites this supervisor is assigned to (active assignments only)
+    const now = new Date();
+    const supervisorSites = await prisma.supervisorSiteAssignment.findMany({
+      where: {
+        supervisorId: supervisor.id,
+        startsOn: { lte: now },
+        OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+      },
+      select: { siteId: true },
+    });
 
-    if (!groups.has(key)) {
-      groups.set(key, {
-        periodId: periodInfo.periodId,
-        startISO: periodInfo.startISO,
-        endISO: periodInfo.endISO,
-        foremanId: sd.foremanId,
-        foremanName: fullName(sd.foreman?.user?.name),
-        siteId: sd.site.id,
-        siteName: sd.site.name,
-        siteCode: sd.site.code ?? null,
-        status: "SUBMITTED",
+    const siteIds = supervisorSites.map((a) => a.siteId);
+
+    // If supervisor has no sites, return empty
+    if (siteIds.length === 0) {
+      return NextResponse.json({
+        timesheets: [],
+        period: { id: `${startISO}_${endISO}`, startISO, endISO },
       });
     }
-  }
 
-  // Aggregate scans into worker-day + wage totals per (period, foreman).
-  const scansByGroup = new Map<
-    string,
-    Array<{ date: string; employeeId: string; wage: number }>
-  >();
-
-  for (const scan of scans) {
-    const foremanId = scan.siteDay.foremanId;
-    if (!foremanId) continue;
-
-    const workISO = isoFromDateUTC(scan.siteDay.workDate);
-    const periodInfo = workDateToPeriod.get(workISO);
-    if (!periodInfo) continue;
-
-    const key = `${periodInfo.periodId}__${foremanId}`;
-
-    const rate =
-      decimalToNumber(scan.dayRateAtScan) ||
-      decimalToNumber(scan.employee?.defaultDayRate);
-
-    if (!scansByGroup.has(key)) scansByGroup.set(key, []);
-    scansByGroup.get(key)!.push({
-      date: workISO,
-
-      employeeId: scan.employeeId,
-      wage: rate,
-    });
-  }
-
-  for (const [key, arr] of scansByGroup.entries()) {
-    const uniquePairs = new Set<string>();
-    let totalWages = 0;
-
-    for (const s of arr) {
-      const pairKey = `${s.employeeId}-${s.date}`;
-      if (!uniquePairs.has(pairKey)) {
-        uniquePairs.add(pairKey);
-        totalWages += s.wage;
-      }
-    }
-
-    const g = groups.get(key);
-    if (g) {
-      g.totalWorkerDays = uniquePairs.size;
-      g.totalWorkerWages = totalWages;
-    }
-  }
-
-  // Convert to array, newest first, then limit
-  let list = Array.from(groups.values()).sort((a, b) =>
-    a.startISO < b.startISO ? 1 : a.startISO > b.startISO ? -1 : 0,
-  );
-
-  // optional search filter (foreman or site)
-  if (q.length) {
-    list = list.filter((x) => {
-      const s =
-        `${x.foremanName} ${x.siteName} ${x.siteCode ?? ""}`.toLowerCase();
-      return s.includes(q);
-    });
-  }
-
-  // Hard cap before expensive lookups
-  list = list.slice(0, limit);
-
-  // Auto-close periods that have ended
-  // Any period whose endDate has passed gets automatically marked as submitted
-  // if it's still in SUBMITTED status
-  const today = startOfDayUTC(isoFromDateUTC(now));
-
-  for (const item of list) {
-    const endDate = startOfDayUTC(item.endISO);
-    // If today is on or after the period end date, auto-close it
-    if (endDate <= today) {
-      const startDate = startOfDayUTC(item.startISO);
-
-      // Get or create period
-      let period = await prisma.timesheetPeriod.findUnique({
-        where: { startDate_endDate: { startDate, endDate } },
-        select: { id: true },
-      });
-
-      if (!period) {
-        period = await prisma.timesheetPeriod.create({
-          data: { startDate, endDate },
-          select: { id: true },
-        });
-      }
-
-      // Get or create timesheet
-      let ts = await prisma.timesheet.findUnique({
-        where: {
-          periodId_foremanId: {
-            periodId: period.id,
-            foremanId: item.foremanId,
+    // Get all siteDays in this period for supervisor's sites
+    const siteDaysInPeriod = await prisma.siteDay.findMany({
+      where: {
+        workDate: { gte: startDate, lt: endDate },
+        siteId: { in: siteIds },
+      },
+      select: {
+        foremanId: true,
+        workDate: true,
+        site: { select: { id: true, code: true, name: true } },
+        foreman: {
+          select: {
+            id: true,
+            user: { select: { name: true } },
           },
         },
-        select: { id: true, status: true },
-      });
-
-      if (!ts) {
-        ts = await prisma.timesheet.create({
-          data: { periodId: period.id, foremanId: item.foremanId },
-          select: { id: true, status: true },
-        });
-      }
-
-      // Auto-close if still in SUBMITTED status
-      if (ts.status === "SUBMITTED") {
-        await prisma.timesheet.update({
-          where: { id: ts.id },
-          data: { submittedAt: new Date() },
-        });
-
-        // Auto-create next period (14 days from period end)
-        const nextStart = addDaysUTC(endDate, 1);
-        const nextEnd = addDaysUTC(nextStart, 13);
-
-        await prisma.timesheetPeriod.upsert({
-          where: {
-            startDate_endDate: { startDate: nextStart, endDate: nextEnd },
-          },
-          create: { startDate: nextStart, endDate: nextEnd },
-          update: {},
-        });
-      }
-    }
-  }
-
-  // Load statuses (ensure period + timesheet row exists)
-  // We do small upserts per item — OK at this scale.
-  for (const item of list) {
-    const startDate = startOfDayUTC(item.startISO);
-    const endDate = startOfDayUTC(item.endISO);
-
-    // If periodId starts with "calc_", we need to create a new period
-    let periodId = item.periodId;
-    if (periodId.startsWith("calc_")) {
-      const period = await prisma.timesheetPeriod.upsert({
-        where: { startDate_endDate: { startDate, endDate } },
-        create: { startDate, endDate },
-        update: {},
-        select: { id: true },
-      });
-      periodId = period.id;
-    }
-
-    const ts = await prisma.timesheet.upsert({
-      where: {
-        periodId_foremanId: { periodId, foremanId: item.foremanId },
       },
-      // Prisma schema default for Timesheet.status is SUBMITTED
-      create: { periodId, foremanId: item.foremanId },
-      update: {},
-      select: { status: true },
     });
 
-    item.status = ts.status;
+    const foremanIds = Array.from(
+      new Set(siteDaysInPeriod.map((sd) => sd.foremanId)),
+    );
+
+    if (foremanIds.length === 0) {
+      return NextResponse.json({
+        timesheets: [],
+        period: { id: `${startISO}_${endISO}`, startISO, endISO },
+      });
+    }
+
+    // Get attendance scans for these foremen in this period
+    const scans = await prisma.attendanceScan.findMany({
+      where: {
+        siteDay: {
+          workDate: { gte: startDate, lt: endDate },
+          foremanId: { in: foremanIds },
+          siteId: { in: siteIds },
+        },
+      },
+      select: {
+        siteDay: { select: { foremanId: true, workDate: true } },
+        employeeId: true,
+        dayRateAtScan: true,
+        employee: { select: { defaultDayRate: true } },
+      },
+    });
+
+    // Group sites by foreman
+    const sitesByForeman = new Map<
+      string,
+      Map<string, { id: string; code: string | null; name: string }>
+    >();
+
+    for (const sd of siteDaysInPeriod) {
+      if (!sitesByForeman.has(sd.foremanId)) {
+        sitesByForeman.set(sd.foremanId, new Map());
+      }
+      const siteMap = sitesByForeman.get(sd.foremanId)!;
+      siteMap.set(sd.site.id, {
+        id: sd.site.id,
+        code: sd.site.code,
+        name: sd.site.name,
+      });
+    }
+
+    // Compute totals per foreman
+    const scansByForeman = new Map<
+      string,
+      Array<{ date: string; wage: number; employeeId: string }>
+    >();
+
+    for (const scan of scans) {
+      const foremanId = scan.siteDay.foremanId;
+      const dateISO = toISODateUTC(scan.siteDay.workDate);
+      const rate =
+        decimalToNumber(scan.dayRateAtScan) ||
+        decimalToNumber(scan.employee?.defaultDayRate);
+
+      const list = scansByForeman.get(foremanId) ?? [];
+      list.push({ date: dateISO, wage: rate, employeeId: scan.employeeId });
+      scansByForeman.set(foremanId, list);
+    }
+
+    const totalsByForeman = new Map<string, { days: number; wages: number }>();
+
+    for (const [foremanId, list] of scansByForeman.entries()) {
+      const uniquePairs = new Set<string>();
+      let totalWages = 0;
+
+      for (const s of list) {
+        const key = `${s.employeeId}-${s.date}`;
+        if (!uniquePairs.has(key)) {
+          uniquePairs.add(key);
+          totalWages += s.wage;
+        }
+      }
+
+      totalsByForeman.set(foremanId, {
+        days: uniquePairs.size,
+        wages: totalWages,
+      });
+    }
+
+    // Get timesheets for these foremen in this period
+    const timesheetRows = await prisma.timesheet.findMany({
+      where: {
+        periodId,
+        foremanId: { in: foremanIds },
+      },
+      select: {
+        id: true,
+        foremanId: true,
+        status: true,
+      },
+    });
+
+    const statusByForeman = new Map(
+      timesheetRows.map((t) => [t.foremanId, { id: t.id, status: t.status }]),
+    );
+
+    // Build response - one row per foreman per site combo (like admin but filtered to supervisor)
+    const siteDaysByForeman = new Map<string, typeof siteDaysInPeriod>();
+    for (const sd of siteDaysInPeriod) {
+      if (!siteDaysByForeman.has(sd.foremanId)) {
+        siteDaysByForeman.set(sd.foremanId, []);
+      }
+      siteDaysByForeman.get(sd.foremanId)!.push(sd);
+    }
+
+    const result: any[] = [];
+
+    for (const foremanId of foremanIds) {
+      const siteDays = siteDaysByForeman.get(foremanId) || [];
+      const sites = sitesByForeman.get(foremanId)
+        ? Array.from(sitesByForeman.get(foremanId)!.values())
+        : [];
+
+      const foreman = siteDays[0]?.foreman;
+      const foremanName = foreman?.user?.name ?? "Foreman";
+
+      const timesheet = statusByForeman.get(foremanId);
+      const totals = totalsByForeman.get(foremanId) || {
+        days: 0,
+        wages: 0,
+      };
+
+      // Get the first site for supervisor-view (single site per row)
+      const firstSite = sites[0] || null;
+
+      result.push({
+        id: makeSupervisorTimesheetId(startISO, endISO, foremanId),
+        startISO,
+        endISO,
+        status: timesheet?.status ?? "SUBMITTED",
+        foremanName,
+        siteCode: firstSite?.code ?? null,
+        siteName: firstSite?.name ?? null,
+        totalWorkerDays: totals.days,
+        totalWorkerWages: totals.wages,
+      });
+    }
+
+    // Apply filters
+    const filtered = result
+      .filter((row) => {
+        // Search filter
+        if (q) {
+          const matchForeman = row.foremanName.toLowerCase().includes(q);
+          const matchSite =
+            (row.siteName && row.siteName.toLowerCase().includes(q)) ||
+            (row.siteCode && row.siteCode.toLowerCase().includes(q));
+          if (!matchForeman && !matchSite) return false;
+        }
+
+        // Status filter
+        if (statusFilter !== "ALL" && row.status !== statusFilter) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => a.foremanName.localeCompare(b.foremanName));
+
+    return NextResponse.json({
+      timesheets: filtered,
+      period: { id: `${startISO}_${endISO}`, startISO, endISO },
+    });
+  } catch (e: any) {
+    console.error("Error fetching supervisor timesheets:", e);
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500 },
+    );
   }
-
-  if (status !== "ALL") {
-    list = list.filter((x) => x.status === status);
-  }
-
-  return NextResponse.json({
-    timesheets: list.map((t) => ({
-      id: makeSupervisorTimesheetId(t.startISO, t.endISO, t.foremanId),
-      startISO: t.startISO,
-      endISO: t.endISO,
-
-      foremanName: t.foremanName,
-      siteCode: t.siteCode ?? null,
-      siteName: t.siteName,
-
-      status: t.status,
-      totalWorkerDays: t.totalWorkerDays ?? 0,
-      totalWorkerWages: t.totalWorkerWages ?? 0,
-    })),
-  });
 }

@@ -67,52 +67,41 @@ export async function GET(req: Request) {
   const dateISO = isoDateJoburg();
   const workDate = joburgMidnightDate(dateISO);
 
-  // 1) Try load existing day
-  const existing = await prisma.siteDay.findUnique({
-    where: { siteId_workDate: { siteId, workDate } },
-    select: { id: true, foremanId: true },
+  // 1) Try load existing day for THIS foreman
+  const existing = await prisma.siteDay.findFirst({
+    where: { foremanId: foreman.id, workDate },
+    select: { id: true, foremanId: true, siteId: true },
   });
 
-  // If day exists for that site/date but belongs to someone else, do NOT hijack it.
-  if (existing && existing.foremanId !== foreman.id) {
-    return NextResponse.json(
-      { error: "This site day is already owned by another foreman." },
-      { status: 409 },
-    );
-  }
-
   // 2) Create if missing
+  let siteDay;
   if (!existing) {
     try {
-      await prisma.siteDay.create({
+      siteDay = await prisma.siteDay.create({
         data: {
           siteId,
           foremanId: foreman.id,
           workDate,
         },
-        select: { id: true },
+        select: { id: true, siteId: true, foremanId: true },
       });
     } catch (e: any) {
       // Handle race: if another request created it first
-      const again = await prisma.siteDay.findUnique({
-        where: { siteId_workDate: { siteId, workDate } },
-        select: { id: true, foremanId: true },
+      const again = await prisma.siteDay.findFirst({
+        where: { foremanId: foreman.id, workDate },
+        select: { id: true, foremanId: true, siteId: true },
       });
 
       if (!again) throw e;
-
-      if (again.foremanId !== foreman.id) {
-        return NextResponse.json(
-          { error: "This site day is already owned by another foreman." },
-          { status: 409 },
-        );
-      }
+      siteDay = again;
     }
+  } else {
+    siteDay = existing;
   }
 
   // 3) Fetch full day DTO
-  const siteDay = await prisma.siteDay.findUnique({
-    where: { siteId_workDate: { siteId, workDate } },
+  const siteDayFull = await prisma.siteDay.findUnique({
+    where: { id: siteDay.id },
     select: {
       id: true,
       readyToSubmit: true,
@@ -138,19 +127,19 @@ export async function GET(req: Request) {
 
   // console.log(siteDay);
 
-  if (!siteDay) {
+  if (!siteDayFull) {
     return NextResponse.json({ error: "Failed to load day" }, { status: 500 });
   }
 
   return NextResponse.json({
     day: {
-      id: siteDay.id,
+      id: siteDayFull.id,
       dateISO,
       status: "PENDING", // until you add real status
       flags: 0,
-      readyToSubmit: siteDay.readyToSubmit,
-      site: siteDay.site,
-      scans: siteDay.scans.map((s) => ({
+      readyToSubmit: siteDayFull.readyToSubmit,
+      site: siteDayFull.site,
+      scans: siteDayFull.scans.map((s) => ({
         id: s.id,
         scannedAt: s.scannedAt.toISOString(),
         employee: {

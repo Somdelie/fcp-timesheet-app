@@ -1,5 +1,5 @@
-import TimesheetsClient from "@/components/supervisor-timesheets/TimesheetsClient";
+import TimesheetsListClient from "@/components/timesheets/TimesheetsClient";
 
 export default function SupervisorTimesheetsPage() {
-  return <TimesheetsClient />;
+  return <TimesheetsListClient mode="SUPERVISOR" />;
 }

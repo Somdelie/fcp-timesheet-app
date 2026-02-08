@@ -72,11 +72,9 @@ export async function GET(req: Request) {
   if (!site)
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
 
-  // --- ensure SiteDay exists (unique on [siteId, workDate]) ---
-  const siteDay = await prisma.siteDay.upsert({
-    where: { siteId_workDate: { siteId, workDate } },
-    update: {},
-    create: { siteId, workDate, foremanId: foreman.id },
+  // --- ensure SiteDay exists for this foreman on this date ---
+  let siteDay = await prisma.siteDay.findFirst({
+    where: { foremanId: foreman.id, workDate },
     select: {
       id: true,
       siteId: true,
@@ -87,12 +85,18 @@ export async function GET(req: Request) {
     },
   });
 
-  // prevent other foreman from viewing/editing this site day
-  if (siteDay.foremanId !== foreman.id) {
-    return NextResponse.json(
-      { error: "This site/day belongs to another foreman" },
-      { status: 403 },
-    );
+  if (!siteDay) {
+    siteDay = await prisma.siteDay.create({
+      data: { siteId, workDate, foremanId: foreman.id },
+      select: {
+        id: true,
+        siteId: true,
+        foremanId: true,
+        workDate: true,
+        isLocked: true,
+        readyToSubmit: true,
+      },
+    });
   }
 
   // --- scans (no employee relation in schema, so join manually) ---

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Settings as SettingsIcon, Copy, Check } from "lucide-react";
 import { toast } from "react-toastify";
+
 import {
   Card,
   CardContent,
@@ -16,10 +17,64 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+
 import {
   getCompanySettings,
   updateCompanySettings,
 } from "@/actions/company-settings";
+
+import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+
+type FortnightResult = {
+  startISO: string;
+  endISO: string;
+  id: string;
+};
+
+function utcDateFromISO(iso: string) {
+  const d = new Date(`${iso}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${iso}`);
+  return d;
+}
+
+function toISODateUTC(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function isSaturdayISO(iso: string) {
+  const d = utcDateFromISO(iso);
+  return d.getUTCDay() === 6;
+}
+
+async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: { accept: "application/json" },
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(
+      payload?.error || payload?.message || `Request failed (${res.status})`,
+    );
+  }
+  return payload as T;
+}
+
+async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    cache: "no-store",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(
+      payload?.error || payload?.message || `Request failed (${res.status})`,
+    );
+  }
+  return payload as T;
+}
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -31,40 +86,93 @@ export default function SettingsPage() {
     dateFormat: "YYYY-MM-DD",
   });
 
+  const nowYearUTC = useMemo(() => new Date().getUTCFullYear(), []);
+  const [year, setYear] = useState<number>(nowYearUTC);
+
   const [defaultEmployeeDayRate, setDefaultEmployeeDayRate] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
-  const [fortnight, setFortnight] = useState<{
-    startISO: string;
-    endISO: string;
-    id: string;
-  } | null>(null);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Load company settings on mount
+  // Timesheet anchor (source of truth from DB) + admin input
+  const [anchorISO, setAnchorISO] = useState<string>("");
+  const [anchorInputISO, setAnchorInputISO] = useState<string>("");
+
+  // Fortnight preview
+  const [fortnight, setFortnight] = useState<FortnightResult | null>(null);
+
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const [isSavingRate, setIsSavingRate] = useState(false);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
+  const [isLoadingAnchor, setIsLoadingAnchor] = useState(false);
+  const [isSavingAnchor, setIsSavingAnchor] = useState(false);
+
+  // Load company settings
   useEffect(() => {
-    const loadSettings = async () => {
+    let alive = true;
+
+    async function loadSettings() {
       try {
         const res = await getCompanySettings();
+        if (!alive) return;
         if (res.ok) {
-          setDefaultEmployeeDayRate(res.settings.defaultEmployeeDayRate);
+          setDefaultEmployeeDayRate(
+            String(res.settings.defaultEmployeeDayRate),
+          );
         }
       } catch (err) {
         console.error("Failed to load settings:", err);
       } finally {
-        setIsLoading(false);
+        if (!alive) return;
+        setIsLoadingSettings(false);
       }
-    };
+    }
 
     loadSettings();
+    return () => {
+      alive = false;
+    };
   }, []);
 
+  // Load anchor for selected year
+  useEffect(() => {
+    let alive = true;
+
+    async function loadAnchor() {
+      setIsLoadingAnchor(true);
+      try {
+        const data = await getJson<{
+          ok: boolean;
+          year: number;
+          anchorISO: string | null;
+        }>(`/api/app/admin/timesheets/year-anchor?year=${year}`);
+
+        if (!alive) return;
+
+        const iso = data.anchorISO ?? "";
+        setAnchorISO(iso);
+        setAnchorInputISO(iso);
+        setFortnight(null);
+      } catch (e: any) {
+        console.error(e);
+        if (!alive) return;
+        setAnchorISO("");
+        setAnchorInputISO("");
+        setFortnight(null);
+      } finally {
+        if (!alive) return;
+        setIsLoadingAnchor(false);
+      }
+    }
+
+    loadAnchor();
+    return () => {
+      alive = false;
+    };
+  }, [year]);
+
   const handleChange = (key: string, value: string) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
@@ -73,77 +181,119 @@ export default function SettingsPage() {
   };
 
   const handleSaveDefaultDayRate = async () => {
-    if (!defaultEmployeeDayRate) {
+    const trimmed = defaultEmployeeDayRate.trim();
+    const num = Number(trimmed);
+
+    if (!trimmed || !Number.isFinite(num) || num < 0) {
       toast.error("Please enter a valid day rate.");
       return;
     }
 
-    setIsSaving(true);
+    setIsSavingRate(true);
     try {
       const res = await updateCompanySettings({
-        defaultEmployeeDayRate,
+        defaultEmployeeDayRate: trimmed,
       });
-
-      if (res.ok) {
-        toast.success("Default employee day rate updated!");
-      } else {
-        toast.error(res.error || "Failed to save settings.");
-      }
+      if (res.ok) toast.success("Default employee day rate updated!");
+      else toast.error(res.error || "Failed to save settings.");
     } catch (err) {
       console.error("Error saving settings:", err);
       toast.error("Failed to save settings.");
     } finally {
-      setIsSaving(false);
+      setIsSavingRate(false);
     }
   };
 
-  const generateFortnight = (date: Date = new Date()) => {
-    const day = date.getDay();
-    const backToSat = (day + 1) % 7;
-    const sat = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    sat.setDate(sat.getDate() - backToSat);
+  // Generate fortnight using DB anchor (UTC)
+  const generateFortnightForDate = (dateISO: string) => {
+    if (!anchorISO) {
+      toast.error(
+        "No anchor set for this year. Set the anchor Saturday first.",
+      );
+      return;
+    }
 
-    const anchor = new Date("2026-01-31T00:00:00");
-    const daysSince = Math.floor(
-      (sat.getTime() - anchor.getTime()) / (24 * 60 * 60 * 1000),
-    );
-    const mod14 = ((daysSince % 14) + 14) % 14;
+    try {
+      const anchor = utcDateFromISO(anchorISO);
+      const date = utcDateFromISO(dateISO);
 
-    const start = new Date(sat);
-    start.setDate(start.getDate() - mod14);
-
-    const end = new Date(start);
-    end.setDate(end.getDate() + 13);
-
-    const toISODate = (d: Date) => d.toISOString().split("T")[0];
-
-    const result = {
-      startISO: toISODate(start),
-      endISO: toISODate(end),
-      id: `${toISODate(start)}_${toISODate(end)}`,
-    };
-
-    setFortnight(result);
+      const result = getFortnightForDateUTC(date, anchor);
+      setFortnight({
+        startISO: result.startISO,
+        endISO: result.endISO,
+        id: result.id,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate fortnight.");
+    }
   };
 
   const handleGenerateFortnightToday = () => {
-    generateFortnight(new Date());
+    const todayISO = toISODateUTC(new Date());
+    generateFortnightForDate(todayISO);
   };
 
   const handleGenerateFortnightDate = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    if (e.target.value) {
-      const selectedDate = new Date(e.target.value + "T00:00:00Z");
-      generateFortnight(selectedDate);
+    const iso = e.target.value;
+    if (!iso) return;
+    generateFortnightForDate(iso);
+  };
+
+  // Persist anchor + generate the year's periods
+  const handleSaveYearAnchor = async () => {
+    const iso = anchorInputISO.trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      toast.error("Anchor must be a valid date (YYYY-MM-DD).");
+      return;
+    }
+
+    if (!isSaturdayISO(iso)) {
+      toast.error("Anchor must be a Saturday.");
+      return;
+    }
+
+    const d = utcDateFromISO(iso);
+    if (d.getUTCFullYear() !== year) {
+      toast.error(`Anchor must be inside year ${year}.`);
+      return;
+    }
+
+    setIsSavingAnchor(true);
+    try {
+      await postJson<{ ok: boolean; year: number; count: number }>(
+        `/api/app/admin/timesheets/generate-year`,
+        { year, anchorISO: iso },
+      );
+
+      toast.success(`Anchor saved + periods generated for ${year}.`);
+      setAnchorISO(iso);
+      setFortnight(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save anchor.");
+    } finally {
+      setIsSavingAnchor(false);
     }
   };
 
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error("Failed to copy.");
+    }
   };
+
+  const anchorStatus = useMemo(() => {
+    if (isLoadingAnchor) return "loading" as const;
+    if (!anchorISO) return "missing" as const;
+    if (anchorISO !== anchorInputISO.trim()) return "dirty" as const;
+    return "saved" as const;
+  }, [anchorISO, anchorInputISO, isLoadingAnchor]);
 
   return (
     <div className="flex flex-col min-h-screen bg-muted/30">
@@ -159,14 +309,12 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Save Message */}
         {saveMessage && (
           <div className="bg-emerald-500/15 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-lg">
             {saveMessage}
           </div>
         )}
 
-        {/* Settings Tabs */}
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
@@ -176,7 +324,7 @@ export default function SettingsPage() {
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
           </TabsList>
 
-          {/* General Settings */}
+          {/* General */}
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
@@ -186,7 +334,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="appName">Application Name</Label>
                     <Input
@@ -246,7 +394,7 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Payroll Settings */}
+          {/* Payroll */}
           <TabsContent value="payroll" className="space-y-6">
             <Card>
               <CardHeader>
@@ -274,7 +422,7 @@ export default function SettingsPage() {
                       onChange={(e) =>
                         setDefaultEmployeeDayRate(e.target.value)
                       }
-                      disabled={isLoading}
+                      disabled={isLoadingSettings}
                     />
                   </div>
 
@@ -283,9 +431,9 @@ export default function SettingsPage() {
                   <div className="flex justify-end">
                     <Button
                       onClick={handleSaveDefaultDayRate}
-                      disabled={isSaving || isLoading}
+                      disabled={isSavingRate || isLoadingSettings}
                     >
-                      {isSaving ? "Saving..." : "Save Day Rate"}
+                      {isSavingRate ? "Saving..." : "Save Day Rate"}
                     </Button>
                   </div>
                 </div>
@@ -293,7 +441,7 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* System Settings */}
+          {/* System */}
           <TabsContent value="system" className="space-y-6">
             <Card>
               <CardHeader>
@@ -303,7 +451,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="timezone">Timezone</Label>
                     <Input
@@ -341,11 +489,79 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Fortnight Generator</CardTitle>
                 <CardDescription>
-                  Generate fortnight periods for timesheet management
-                  (Saturday-Friday cycles)
+                  Uses the ADMIN anchor Saturday for the selected year (Sat→Fri,
+                  14 days, UTC).
                 </CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-6">
+                {/* Year + Anchor */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Year</Label>
+                    <Input
+                      type="number"
+                      value={year}
+                      onChange={(e) => setYear(Number(e.target.value))}
+                      min={2000}
+                      max={2100}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Anchor Saturday</Label>
+                    <Input
+                      type="date"
+                      value={anchorInputISO}
+                      onChange={(e) => setAnchorInputISO(e.target.value)}
+                      disabled={isLoadingAnchor}
+                    />
+
+                    {anchorStatus === "loading" && (
+                      <div className="text-xs text-muted-foreground">
+                        Loading anchor…
+                      </div>
+                    )}
+
+                    {anchorStatus === "missing" && (
+                      <div className="text-xs text-rose-500">
+                        No anchor saved for {year}. Set it first.
+                      </div>
+                    )}
+
+                    {anchorStatus === "saved" && anchorISO && (
+                      <div className="text-xs text-muted-foreground">
+                        Saved anchor:{" "}
+                        <span className="font-mono">{anchorISO}</span>{" "}
+                        <Badge variant="outline" className="ml-2">
+                          Saturday
+                        </Badge>
+                      </div>
+                    )}
+
+                    {anchorStatus === "dirty" && anchorISO && (
+                      <div className="text-xs text-amber-500">
+                        You changed the anchor input. Click “Save Anchor”.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button
+                      className="w-full"
+                      onClick={handleSaveYearAnchor}
+                      disabled={isSavingAnchor || isLoadingAnchor}
+                    >
+                      {isSavingAnchor
+                        ? "Saving…"
+                        : "Save Anchor + Generate Year"}
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Fortnight compute */}
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fortnightDate">Select Date</Label>
@@ -353,18 +569,21 @@ export default function SettingsPage() {
                       id="fortnightDate"
                       type="date"
                       onChange={handleGenerateFortnightDate}
+                      disabled={!anchorISO}
                     />
                   </div>
 
                   <Button
                     onClick={handleGenerateFortnightToday}
                     className="w-full"
+                    disabled={!anchorISO}
                   >
                     Generate for Today
                   </Button>
                 </div>
 
-                {fortnight && (
+                {/* Preview */}
+                {fortnight ? (
                   <div className="space-y-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                     <div className="space-y-3">
                       <div className="space-y-2">
@@ -391,10 +610,10 @@ export default function SettingsPage() {
 
                       <Separator />
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold">
-                            Start Date (Saturday)
+                            Start Date
                           </Label>
                           <div className="flex items-center gap-2">
                             <code className="flex-1 px-3 py-2 bg-background border border-slate-300 dark:border-slate-600 rounded text-xs font-mono">
@@ -421,7 +640,7 @@ export default function SettingsPage() {
 
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold">
-                            End Date (Friday)
+                            End Date
                           </Label>
                           <div className="flex items-center gap-2">
                             <code className="flex-1 px-3 py-2 bg-background border border-slate-300 dark:border-slate-600 rounded text-xs font-mono">
@@ -454,26 +673,28 @@ export default function SettingsPage() {
                           <strong>Duration:</strong> 14 days (2 weeks)
                         </p>
                         <p>
-                          <strong>Anchor Date:</strong> 2026-01-31 (Saturday)
+                          <strong>Anchor Date:</strong>{" "}
+                          <span className="font-mono">{anchorISO || "—"}</span>
                         </p>
                         <p>
-                          All fortnights run Saturday through Friday for
-                          consistent timesheet cycles.
+                          Fortnights run Saturday→Friday (UTC) based on the
+                          saved anchor.
                         </p>
                       </div>
                     </div>
                   </div>
-                )}
-
-                {!fortnight && (
+                ) : (
                   <div className="bg-blue-500/10 border border-blue-500/25 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg text-sm">
-                    Select a date or click "Generate for Today" to generate a
-                    fortnight period.
+                    {anchorISO
+                      ? "Select a date or click “Generate for Today” to compute the fortnight using the saved anchor."
+                      : `Set the anchor Saturday for ${year} first.`}
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Advanced */}
           <TabsContent value="advanced" className="space-y-6">
             <Card>
               <CardHeader>

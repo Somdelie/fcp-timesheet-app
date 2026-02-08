@@ -64,9 +64,9 @@ export async function GET(
   const todayISO = isoFromDateUTC(new Date());
   const today = startOfDayUTC(todayISO);
 
-  // siteDay is unique by (siteId, workDate)
-  const siteDay = await prisma.siteDay.findUnique({
-    where: { siteId_workDate: { siteId, workDate: today } },
+  // Get all siteDays for this site on this date (multiple foremen can work the same day)
+  const siteDays = await prisma.siteDay.findMany({
+    where: { siteId, workDate: today },
     select: { id: true, isLocked: true, readyToSubmit: true, foremanId: true },
   });
 
@@ -94,8 +94,8 @@ export async function GET(
       siteId,
       dateISO: todayISO,
       scannedCount,
-      readyToSubmit: siteDay?.readyToSubmit ?? false,
-      isLocked: siteDay?.isLocked ?? false,
+      readyToSubmit: siteDays.some((s) => s.readyToSubmit) ? true : false,
+      isLocked: siteDays.some((s) => s.isLocked) ? true : false,
       foremenOnSite: assignedForemen.map((a) => ({
         foremanId: a.foremanId,
         name: a.foreman.user?.name ?? a.foreman.user?.email ?? "Foreman",

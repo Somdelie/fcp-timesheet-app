@@ -65,20 +65,42 @@ async function getOrCreateSiteDay(opts: {
   foremanId: string;
   workDate: Date;
 }) {
+  // Check if siteDay already exists for this foreman on this date
+  const existing = await prisma.siteDay.findFirst({
+    where: {
+      foremanId: opts.foremanId,
+      workDate: opts.workDate,
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  // Create new siteDay for this foreman on this date/site
   try {
-    return await prisma.siteDay.upsert({
-      where: {
-        siteId_workDate: { siteId: opts.siteId, workDate: opts.workDate },
-      },
-      create: {
+    return await prisma.siteDay.create({
+      data: {
         siteId: opts.siteId,
         foremanId: opts.foremanId,
         workDate: opts.workDate,
       },
-      update: {},
       select: { id: true },
     });
   } catch (e: any) {
+    // if race condition, fetch again
+    if (e?.code === "P2002") {
+      const again = await prisma.siteDay.findFirst({
+        where: {
+          foremanId: opts.foremanId,
+          workDate: opts.workDate,
+        },
+        select: { id: true },
+      });
+      if (again) return again;
+    }
+    // if foreman already has a day for another site, this hits @@unique([foremanId, workDate])
     if (e?.code === "P2002") {
       throw new Error(
         "You already have an attendance sheet for today on another site.",

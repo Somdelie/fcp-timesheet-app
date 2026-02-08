@@ -67,15 +67,18 @@ export async function GET(
   const todayISO = isoFromDateUTC(new Date());
   const today = startOfDayUTC(todayISO);
 
-  const siteDay = await prisma.siteDay.findUnique({
-    where: { siteId_workDate: { siteId, workDate: today } },
+  const siteDays = await prisma.siteDay.findMany({
+    where: { siteId, workDate: today },
     select: { id: true },
   });
 
-  if (!siteDay) return NextResponse.json({ ok: true, requests: [] });
+  if (siteDays.length === 0)
+    return NextResponse.json({ ok: true, requests: [] });
+
+  const siteDayIds = siteDays.map((s) => s.id);
 
   const requests = await prisma.siteDayPhotoRequest.findMany({
-    where: { siteDayId: siteDay.id },
+    where: { siteDayId: { in: siteDayIds } },
     select: {
       id: true,
       siteDayId: true,
@@ -140,38 +143,62 @@ export async function POST(
   const todayISO = isoFromDateUTC(new Date());
   const today = startOfDayUTC(todayISO);
 
-  // Ensure a SiteDay exists; if not, create one using the first assigned foreman (or reject)
-  const assigned = await prisma.foremanSiteAssignment.findFirst({
-    where: { siteId, endsOn: null },
+  // Get or create siteDays for all assigned foremen
+  const assignedForemen = await prisma.foremanSiteAssignment.findMany({
+    where: {
+      siteId,
+      startsOn: { lte: new Date() },
+      OR: [{ endsOn: null }, { endsOn: { gte: new Date() } }],
+    },
     select: { foremanId: true },
-    orderBy: { startsOn: "desc" },
   });
 
-  if (!assigned) {
+  if (assignedForemen.length === 0) {
     return NextResponse.json(
       { error: "No foreman assigned to this site." },
       { status: 400 },
     );
   }
 
-  const siteDay = await prisma.siteDay.upsert({
-    where: { siteId_workDate: { siteId, workDate: today } },
-    create: { siteId, foremanId: assigned.foremanId, workDate: today },
-    update: {},
-    select: { id: true },
-  });
+  // Create siteDays if they don't exist for the assigned foremen
+  const siteDays = await Promise.all(
+    assignedForemen.map((f) =>
+      prisma.siteDay
+        .findFirst({
+          where: { foremanId: f.foremanId, workDate: today },
+          select: { id: true },
+        })
+        .then((existing) =>
+          existing
+            ? existing
+            : prisma.siteDay.create({
+                data: {
+                  siteId,
+                  foremanId: f.foremanId,
+                  workDate: today,
+                },
+                select: { id: true },
+              }),
+        ),
+    ),
+  );
 
   const dueAt = dueAtISO ? new Date(`${dueAtISO}T17:00:00.000Z`) : null;
 
-  const created = await prisma.siteDayPhotoRequest.create({
-    data: {
-      siteDayId: siteDay.id,
-      requestedByUserId: userId,
-      note: note || null,
-      dueAt,
-    },
-    select: { id: true },
-  });
+  // Create photo requests for all siteDays
+  const created = await Promise.all(
+    siteDays.map((sd) =>
+      prisma.siteDayPhotoRequest.create({
+        data: {
+          siteDayId: sd.id,
+          requestedByUserId: userId,
+          note: note || null,
+          dueAt,
+        },
+        select: { id: true },
+      }),
+    ),
+  );
 
-  return NextResponse.json({ ok: true, requestId: created.id });
+  return NextResponse.json({ ok: true, requestIds: created.map((c) => c.id) });
 }

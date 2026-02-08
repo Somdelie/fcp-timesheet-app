@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 import type { TimesheetDetailDto2 } from "@/lib/dtos";
+import { normalizeTimesheetToGrid } from "@/lib/timesheets/normalizeTimesheetDetail";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -275,7 +276,7 @@ export default function TimesheetSheet({
           ) : detail ? (
             <ScrollArea className="h-[90vh] px-3">
               <div className="space-y-3 pb-10">
-                <TimesheetGrid data={detail} />
+                <TimesheetGrid model={normalizeTimesheetToGrid(detail)} />
               </div>
             </ScrollArea>
           ) : (

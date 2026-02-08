@@ -68,20 +68,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- ensure day exists ---
-  const siteDay = await prisma.siteDay.upsert({
-    where: { siteId_workDate: { siteId, workDate } },
-    update: {},
-    create: { siteId, workDate, foremanId: foreman.id },
+  // --- ensure day exists for this foreman ---
+  let siteDay = await prisma.siteDay.findFirst({
+    where: { foremanId: foreman.id, workDate },
     select: { id: true, foremanId: true, isLocked: true },
   });
 
-  // prevent other foreman
-  if (siteDay.foremanId !== foreman.id) {
-    return NextResponse.json(
-      { error: "This site/day belongs to another foreman" },
-      { status: 403 },
-    );
+  if (!siteDay) {
+    siteDay = await prisma.siteDay.create({
+      data: { siteId, workDate, foremanId: foreman.id },
+      select: { id: true, foremanId: true, isLocked: true },
+    });
   }
 
   if (siteDay.isLocked) {

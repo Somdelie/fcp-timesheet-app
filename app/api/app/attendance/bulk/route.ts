@@ -71,28 +71,21 @@ export async function POST(req: Request) {
   if (!site)
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
 
-  // create/find SiteDay (unique by [siteId, workDate])
-  let siteDay;
-  try {
-    siteDay = await prisma.siteDay.upsert({
-      where: { siteId_workDate: { siteId, workDate } },
-      update: {},
-      create: { siteId, foremanId: foreman.id, workDate },
-      select: { id: true, foremanId: true, isLocked: true },
-    });
-  } catch (e: any) {
-    // Check if it's a unique constraint violation
-    if (e?.code === "P2002") {
-      const errorMsg = e?.message ?? "";
-      const originalMsg =
-        e?.meta?.driverAdapterError?.cause?.originalMessage ?? "";
-      const fullErrorMsg = `${errorMsg} ${originalMsg}`.toLowerCase();
+  // create/find SiteDay for this foreman
+  let siteDay = await prisma.siteDay.findFirst({
+    where: { foremanId: foreman.id, workDate },
+    select: { id: true, foremanId: true, isLocked: true },
+  });
 
+  if (!siteDay) {
+    try {
+      siteDay = await prisma.siteDay.create({
+        data: { siteId, foremanId: foreman.id, workDate },
+        select: { id: true, foremanId: true, isLocked: true },
+      });
+    } catch (e: any) {
       // Check if it's the foremanId_workDate constraint (foreman double-booking)
-      if (
-        fullErrorMsg.includes("foremanid") &&
-        fullErrorMsg.includes("workdate")
-      ) {
+      if (e?.code === "P2002") {
         return NextResponse.json(
           {
             error:
@@ -101,25 +94,12 @@ export async function POST(req: Request) {
           { status: 409 },
         );
       }
+      // For any other error, return a generic message
+      return NextResponse.json(
+        { error: "Failed to create work day record. Please try again." },
+        { status: 500 },
+      );
     }
-
-    // For any other error, return a generic message
-    return NextResponse.json(
-      { error: "Failed to create work day record. Please try again." },
-      { status: 500 },
-    );
-  }
-
-  if (siteDay.isLocked) {
-    return NextResponse.json({ error: "Day is locked" }, { status: 409 });
-  }
-
-  // prevent other foreman from posting to the same day
-  if (siteDay.foremanId !== foreman.id) {
-    return NextResponse.json(
-      { error: "This site/day belongs to another foreman" },
-      { status: 403 },
-    );
   }
 
   const qrValues = scans
