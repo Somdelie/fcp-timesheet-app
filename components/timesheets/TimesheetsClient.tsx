@@ -31,6 +31,7 @@ import TimesheetDetailSheet, {
 } from "@/components/timesheets/TimesheetDetailSheet";
 import TimesheetGrid from "@/components/timesheets/TimesheetGrid";
 import { normalizeTimesheetToGrid } from "@/lib/timesheets/normalizeTimesheetDetail";
+import { Spinner } from "@/components/ui/spinner";
 
 type RoleMode = "ADMIN" | "SUPERVISOR";
 
@@ -690,14 +691,18 @@ export default function TimesheetsListClient({ mode }: Props) {
       <div className="rounded-md border border-zinc-300/70 bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-900/40 shadow-sm">
         <div className="p-4 flex items-center justify-between border-b border-zinc-300/70 dark:border-zinc-700/60">
           <div className="text-sm text-muted-foreground">
-            {loading
-              ? "Loading…"
-              : `${rows.length} timesheet${rows.length === 1 ? "" : "s"}`}
+            {loading ? (
+              <Spinner className="size-4" />
+            ) : (
+              `${rows.length} timesheet${rows.length === 1 ? "" : "s"}`
+            )}
           </div>
         </div>
 
         {loading ? (
-          <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+          <div className="p-6 flex justify-center">
+            <Spinner className="size-5" />
+          </div>
         ) : rows.length === 0 ? (
           <div className="p-6 text-sm text-muted-foreground">
             No timesheets found for this filter.

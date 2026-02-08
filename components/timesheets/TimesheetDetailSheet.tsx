@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { formatCurrency } from "@/lib/formatCurrency";
 
 import { Button } from "@/components/ui/button";
+import { AnimatedLoader } from "@/components/ui/animated-loader";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -435,9 +436,7 @@ export default function TimesheetDetailSheet<
         {/* GRID/DETAIL CONTENT */}
         <div className="mt-4">
           {loading ? (
-            <div className="px-3 text-sm text-muted-foreground">
-              Loading timesheet…
-            </div>
+            <AnimatedLoader />
           ) : error ? (
             <div className="px-3 space-y-3">
               <div className="text-sm text-rose-600 dark:text-rose-400">

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { AnimatedLoader } from "@/components/ui/animated-loader";
 import {
   Sheet,
   SheetContent,
@@ -252,9 +253,7 @@ export default function TimesheetSheet({
 
         <div className="mt-4">
           {loading ? (
-            <div className="px-3 text-sm text-muted-foreground">
-              Loading timesheet…
-            </div>
+            <AnimatedLoader />
           ) : error ? (
             <div className="px-3 space-y-3">
               <div className="text-sm text-rose-600 dark:text-rose-400">
