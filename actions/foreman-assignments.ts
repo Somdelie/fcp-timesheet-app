@@ -65,6 +65,8 @@ export async function linkSupervisorToForeman(input: {
  * Assign foreman to a site.
  * - ADMIN can assign anyone
  * - SUPERVISOR can assign only foremen linked to them AND only sites assigned to them
+ *
+ * Note: This automatically links the foreman to all active supervisors at the site.
  */
 export async function assignForemanToSite(input: {
   foremanUserId: string; // user.id
@@ -73,6 +75,20 @@ export async function assignForemanToSite(input: {
   const auth = await requireServerAuth();
   const foremanUserId = clean(input.foremanUserId);
   const siteId = clean(input.siteId);
+
+  // Check if the site has at least one active supervisor
+  const activeSupervisorAssignments =
+    await prisma.supervisorSiteAssignment.findMany({
+      where: { siteId, endsOn: null },
+      select: { supervisorId: true },
+    });
+
+  if (activeSupervisorAssignments.length === 0) {
+    return {
+      ok: false as const,
+      error: "Cannot assign foreman: site must have a supervisor first.",
+    };
+  }
 
   const foreman = await prisma.foreman.findUnique({
     where: { userId: foremanUserId },
@@ -113,12 +129,37 @@ export async function assignForemanToSite(input: {
     return { ok: false as const, error: "Not allowed." };
   }
 
-  await prisma.foremanSiteAssignment.create({
-    data: {
-      foremanId: foreman.id,
-      siteId,
-      startsOn: new Date(),
-    },
+  // Create site assignment AND link foreman to all active supervisors at this site
+  await prisma.$transaction(async (tx) => {
+    // 1. Create the site assignment
+    await tx.foremanSiteAssignment.create({
+      data: {
+        foremanId: foreman.id,
+        siteId,
+        startsOn: new Date(),
+      },
+    });
+
+    // 2. Link foreman to each active supervisor at this site (if not already linked)
+    for (const { supervisorId } of activeSupervisorAssignments) {
+      const existingLink = await tx.supervisorForeman.findFirst({
+        where: {
+          supervisorId,
+          foremanId: foreman.id,
+          endsOn: null,
+        },
+      });
+
+      if (!existingLink) {
+        await tx.supervisorForeman.create({
+          data: {
+            supervisorId,
+            foremanId: foreman.id,
+            startsOn: new Date(),
+          },
+        });
+      }
+    }
   });
 
   return { ok: true as const };

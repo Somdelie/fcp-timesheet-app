@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,12 @@ export async function POST(req: Request) {
   const workDateISO = String(body?.workDateISO ?? "");
   const scans = Array.isArray(body?.scans) ? body.scans : [];
 
+  // Get forForemanId from header (preferred) or query params (legacy)
+  const url = new URL(req.url);
+  const forForemanId =
+    req.headers.get("x-acting-foreman-id")?.trim() ||
+    url.searchParams.get("forForemanId");
+
   if (!siteId || !workDateISO) {
     return NextResponse.json(
       { error: "siteId and workDateISO required" },
@@ -53,13 +60,34 @@ export async function POST(req: Request) {
 
   const workDate = startOfDayUTC(workDateISO);
 
-  const foreman = await prisma.foreman.findUnique({
-    where: { userId: payload.sub },
+  // Resolve if user is real foreman or assistant
+  const resolved = await resolveActingForeman(payload.sub, forForemanId);
+  if (!resolved.ok) {
+    return NextResponse.json(
+      { error: resolved.error },
+      { status: resolved.status },
+    );
+  }
+
+  const actingForemanId = resolved.foremanId!;
+  const actingMode = resolved.mode;
+  const assistantEmployeeId =
+    resolved.mode === "ASSISTANT" ? resolved.assistantEmployeeId : null;
+
+  // Validate acting foreman is assigned to the site
+  const siteAssignment = await prisma.foremanSiteAssignment.findFirst({
+    where: {
+      foremanId: actingForemanId,
+      siteId,
+      startsOn: { lte: new Date() },
+      OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+    },
     select: { id: true },
   });
-  if (!foreman) {
+
+  if (!siteAssignment) {
     return NextResponse.json(
-      { error: "Foreman profile missing" },
+      { error: "You are not assigned to this site." },
       { status: 403 },
     );
   }
@@ -73,15 +101,15 @@ export async function POST(req: Request) {
 
   // create/find SiteDay for this foreman
   let siteDay = await prisma.siteDay.findFirst({
-    where: { foremanId: foreman.id, workDate },
-    select: { id: true, foremanId: true, isLocked: true },
+    where: { foremanId: actingForemanId, workDate },
+    select: { id: true, foremanId: true, isLocked: true, siteId: true },
   });
 
   if (!siteDay) {
     try {
       siteDay = await prisma.siteDay.create({
-        data: { siteId, foremanId: foreman.id, workDate },
-        select: { id: true, foremanId: true, isLocked: true },
+        data: { siteId, foremanId: actingForemanId, workDate },
+        select: { id: true, foremanId: true, isLocked: true, siteId: true },
       });
     } catch (e: any) {
       // Check if it's the foremanId_workDate constraint (foreman double-booking)
@@ -100,6 +128,15 @@ export async function POST(req: Request) {
         { status: 500 },
       );
     }
+  } else if (siteDay.siteId !== siteId) {
+    // Foreman already has a SiteDay on this date for a different site
+    return NextResponse.json(
+      {
+        error:
+          "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
+      },
+      { status: 409 },
+    );
   }
 
   const qrValues = scans
@@ -153,15 +190,28 @@ export async function POST(req: Request) {
         continue;
       }
 
+      // Determine scan attribution based on whether this is an assistant or real foreman
+      const scanData: any = {
+        siteDayId: siteDay.id,
+        employeeId: emp.id,
+        workDate,
+        siteId,
+        dayRateAtScan: effectiveRate,
+        qrPayload: qr as string,
+      };
+
+      // Add attribution fields for assistants
+      if (actingMode === "ASSISTANT") {
+        scanData.scanType = "MANUAL";
+        scanData.manualReason = "ASSISTANT";
+        scanData.addedByForemanId = actingForemanId;
+      } else {
+        // Real foreman - keep default REGULAR scan type
+        scanData.scanType = "REGULAR";
+      }
+
       await prisma.attendanceScan.create({
-        data: {
-          siteDayId: siteDay.id,
-          employeeId: emp.id,
-          workDate,
-          siteId,
-          dayRateAtScan: effectiveRate,
-          qrPayload: qr as string,
-        },
+        data: scanData,
       });
       results.push({ qrCodeValue: qr as string, status: "CREATED" });
     } catch (e: any) {
@@ -180,5 +230,11 @@ export async function POST(req: Request) {
     ok: true,
     siteDayId: siteDay.id,
     results,
+    ...(actingMode === "ASSISTANT" && {
+      acting: {
+        mode: actingMode,
+        foremanId: actingForemanId,
+      },
+    }),
   });
 }

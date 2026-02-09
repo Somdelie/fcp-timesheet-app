@@ -117,16 +117,20 @@ export default async function EmployeesList({
                             {e.firstName} {e.lastName}
                           </span>
                           <div className="mt-0.5 flex flex-wrap gap-1">
-                            {(e.createdByRole === "FOREMAN" ||
-                              e.userId ||
-                              e.linkedToForemanId) && (
-                              <Badge variant="default" className="text-xs">
-                                Foreman
+                            {e.linkedToForemanId && (
+                              <Badge variant="secondary" className="text-xs">
+                                Assistant
                               </Badge>
                             )}
-                            {e.createdByRole !== "FOREMAN" &&
-                              !e.userId &&
-                              !e.linkedToForemanId && (
+                            {!e.linkedToForemanId &&
+                              (e.createdByRole === "FOREMAN" || e.userId) && (
+                                <Badge variant="default" className="text-xs">
+                                  Foreman
+                                </Badge>
+                              )}
+                            {!e.linkedToForemanId &&
+                              e.createdByRole !== "FOREMAN" &&
+                              !e.userId && (
                                 <Badge variant="secondary" className="text-xs">
                                   Individual
                                 </Badge>

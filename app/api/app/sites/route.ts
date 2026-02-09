@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,20 +26,27 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const foreman = await prisma.foreman.findUnique({
-    where: { userId: payload.sub },
-    select: { id: true },
-  });
+  // x-acting-foreman-id is always Foreman.id (used by assistants)
+  const actingForemanId =
+    req.headers.get("x-acting-foreman-id")?.trim() || null;
 
-  if (!foreman) {
-    return NextResponse.json({ error: "Foreman not found" }, { status: 404 });
+  // Resolve whether user is a real foreman or an assistant acting on behalf of a foreman
+  const resolved = await resolveActingForeman(payload.sub, actingForemanId);
+
+  if (!resolved.ok) {
+    return NextResponse.json(
+      { error: resolved.error },
+      { status: resolved.status },
+    );
   }
+
+  const effectiveForemanId = resolved.foremanId!;
 
   const now = new Date();
 
   const assignments = await prisma.foremanSiteAssignment.findMany({
     where: {
-      foremanId: foreman.id,
+      foremanId: effectiveForemanId,
       OR: [{ endsOn: null }, { endsOn: { gt: now } }],
       site: { isActive: true },
     },

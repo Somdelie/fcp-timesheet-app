@@ -22,8 +22,8 @@ export type EmployeeDTO = {
 };
 
 function serializeEmployee(e: any): EmployeeDTO {
-  // Check if employee is linked to any foreman (most recent link)
-  const linkedToForemanId = e.foremanLinks?.[0]?.foremanId ?? null;
+  // Check if employee is an assistant to a foreman (has active ForemanAssistant link)
+  const linkedToForemanId = e.assistantLinks?.[0]?.foremanId ?? null;
   return {
     id: e.id,
     firstName: e.firstName,
@@ -101,7 +101,10 @@ export async function listEmployees(input?: {
           role: true,
         },
       },
-      foremanLinks: {
+      assistantLinks: {
+        where: {
+          endsOn: null, // Only active assistant links
+        },
         select: {
           foremanId: true,
         },

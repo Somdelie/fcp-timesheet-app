@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,18 +40,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "siteId is required" }, { status: 400 });
   }
 
-  const foreman = await prisma.foreman.findUnique({
-    where: { userId: payload.sub },
-    select: { id: true },
-  });
-  if (!foreman) {
-    return NextResponse.json({ error: "Foreman not found" }, { status: 404 });
+  // x-acting-foreman-id is always Foreman.id (used by assistants)
+  const actingForemanId =
+    req.headers.get("x-acting-foreman-id")?.trim() || null;
+
+  // Resolve whether user is a real foreman or an assistant acting on behalf of a foreman
+  const resolved = await resolveActingForeman(payload.sub, actingForemanId);
+  if (!resolved.ok) {
+    return NextResponse.json(
+      { error: resolved.error },
+      { status: resolved.status },
+    );
   }
+
+  const effectiveForemanId = resolved.foremanId!;
 
   // Must be assigned (active) to the site
   const activeAssign = await prisma.foremanSiteAssignment.findFirst({
     where: {
-      foremanId: foreman.id,
+      foremanId: effectiveForemanId,
       siteId,
       OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
     },
@@ -69,7 +77,7 @@ export async function GET(req: Request) {
 
   // 1) Try load existing day for THIS foreman
   const existing = await prisma.siteDay.findFirst({
-    where: { foremanId: foreman.id, workDate },
+    where: { foremanId: effectiveForemanId, workDate },
     select: { id: true, foremanId: true, siteId: true },
   });
 
@@ -80,7 +88,7 @@ export async function GET(req: Request) {
       siteDay = await prisma.siteDay.create({
         data: {
           siteId,
-          foremanId: foreman.id,
+          foremanId: effectiveForemanId,
           workDate,
         },
         select: { id: true, siteId: true, foremanId: true },
@@ -88,7 +96,7 @@ export async function GET(req: Request) {
     } catch (e: any) {
       // Handle race: if another request created it first
       const again = await prisma.siteDay.findFirst({
-        where: { foremanId: foreman.id, workDate },
+        where: { foremanId: effectiveForemanId, workDate },
         select: { id: true, foremanId: true, siteId: true },
       });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export async function GET(req: Request) {
   const dateISO =
     String(url.searchParams.get("dateISO") ?? "") ||
     String(url.searchParams.get("workDateISO") ?? "");
+  const forForemanId = url.searchParams.get("forForemanId");
 
   if (!siteId || !dateISO) {
     return NextResponse.json(
@@ -50,15 +52,32 @@ export async function GET(req: Request) {
     );
   }
 
-  // --- resolve foreman ---
-  const foreman = await prisma.foreman.findUnique({
-    where: { userId: payload.sub },
+  // --- resolve acting foreman ---
+  const resolved = await resolveActingForeman(payload.sub, forForemanId);
+  if (!resolved.ok) {
+    return NextResponse.json(
+      { error: resolved.error },
+      { status: resolved.status },
+    );
+  }
+
+  const actingForemanId = resolved.foremanId!;
+  const actingMode = resolved.mode;
+
+  // Validate acting foreman is assigned to the site (active ForemanSiteAssignment)
+  const siteAssignment = await prisma.foremanSiteAssignment.findFirst({
+    where: {
+      foremanId: actingForemanId,
+      siteId,
+      startsOn: { lte: new Date() },
+      OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+    },
     select: { id: true },
   });
 
-  if (!foreman) {
+  if (!siteAssignment) {
     return NextResponse.json(
-      { error: "Foreman profile missing" },
+      { error: "You are not assigned to this site." },
       { status: 403 },
     );
   }
@@ -74,7 +93,7 @@ export async function GET(req: Request) {
 
   // --- ensure SiteDay exists for this foreman on this date ---
   let siteDay = await prisma.siteDay.findFirst({
-    where: { foremanId: foreman.id, workDate },
+    where: { foremanId: actingForemanId, workDate },
     select: {
       id: true,
       siteId: true,
@@ -87,7 +106,7 @@ export async function GET(req: Request) {
 
   if (!siteDay) {
     siteDay = await prisma.siteDay.create({
-      data: { siteId, workDate, foremanId: foreman.id },
+      data: { siteId, workDate, foremanId: actingForemanId },
       select: {
         id: true,
         siteId: true,
@@ -97,6 +116,16 @@ export async function GET(req: Request) {
         readyToSubmit: true,
       },
     });
+  } else if (siteDay.siteId !== siteId) {
+    // SiteDay unique constraint is (foremanId, workDate)
+    // Foreman can only have one site per day
+    return NextResponse.json(
+      {
+        error:
+          "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
+      },
+      { status: 409 },
+    );
   }
 
   // --- scans (no employee relation in schema, so join manually) ---
@@ -149,5 +178,11 @@ export async function GET(req: Request) {
         };
       }),
     },
+    ...(actingMode === "ASSISTANT" && {
+      acting: {
+        mode: actingMode,
+        foremanId: actingForemanId,
+      },
+    }),
   });
 }

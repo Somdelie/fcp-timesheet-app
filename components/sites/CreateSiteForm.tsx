@@ -95,7 +95,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
                 htmlFor="code"
                 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
               >
-                Site Code{" "}
+                Job Number{" "}
                 <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
                   (Optional)
                 </span>

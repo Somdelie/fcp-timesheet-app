@@ -1,54 +1,190 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function normalizeEmail(v: unknown) {
+  return String(v ?? "")
+    .trim()
+    .toLowerCase();
+}
 
-  const user = session.user as any;
-  if (user?.role !== "ADMIN")
+/**
+ * GET /api/app/admin/foremen
+ * List all foremen (admin-only)
+ */
+export async function GET(req: Request) {
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+
+  if (!token) {
+    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  }
+
+  const payload = await verifyApiToken(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
+  if (payload.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const url = new URL(req.url);
+  const q = url.searchParams.get("q") ?? "";
 
   try {
-    const foremen = await prisma.user.findMany({
-      where: { role: "FOREMAN" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        foreman: {
-          select: {
-            id: true,
-            createdAt: true,
-          },
+    const foremen = await prisma.foreman.findMany({
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, createdAt: true },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
+    // Apply search filter if q is provided
+    const filtered = q
+      ? foremen.filter(
+          (f) =>
+            f.user.name?.toLowerCase().includes(q.toLowerCase()) ||
+            f.user.email?.toLowerCase().includes(q.toLowerCase()),
+        )
+      : foremen;
+
     return NextResponse.json({
       ok: true,
-      foremen: foremen.map((f) => ({
-        id: f.id,
-        email: f.email,
-        name: f.name,
-        role: f.role,
-        createdAt: f.createdAt.toISOString(),
-        foreman: f.foreman,
+      foremen: filtered.map((f) => ({
+        foremanId: f.id,
+        userId: f.user.id,
+        name: f.user.name,
+        email: f.user.email,
+        createdAt: f.user.createdAt?.toISOString(),
       })),
     });
   } catch (e: any) {
-    console.error("Error fetching foremen:", e);
     return NextResponse.json(
-      { error: "Failed to fetch foremen" },
+      { error: e?.message ?? "Server error" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * POST /api/app/admin/foremen
+ * Create a new foreman account
+ */
+export async function POST(req: Request) {
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+
+  if (!token) {
+    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  }
+
+  const payload = await verifyApiToken(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
+  if (payload.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const email = normalizeEmail(body.email);
+  const name = body.name != null ? String(body.name).trim() : null;
+  const password = String(body.password ?? "");
+
+  // Validation
+  if (!email.includes("@")) {
+    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+  }
+
+  if (!name || name.length < 2) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
+
+  if (password.length < 8) {
+    return NextResponse.json(
+      { error: "Password must be at least 8 characters" },
+      { status: 400 },
+    );
+  }
+
+  // Hash password
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if email already exists
+      const existing = await tx.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+
+      if (existing) {
+        throw new Error("EMAIL_EXISTS");
+      }
+
+      // Create user with FOREMAN role
+      const user = await tx.user.create({
+        data: {
+          email,
+          name,
+          role: "FOREMAN",
+          password: passwordHash,
+        },
+        select: { id: true, email: true, name: true },
+      });
+
+      // Create foreman record
+      const foreman = await tx.foreman.create({
+        data: { userId: user.id },
+        select: { id: true },
+      });
+
+      return { user, foreman };
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        foreman: {
+          foremanId: result.foreman.id,
+          userId: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
+        },
+      },
+      { status: 201 },
+    );
+  } catch (e: any) {
+    if (e.message === "EMAIL_EXISTS") {
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 409 },
+      );
+    }
+
+    if (String(e?.code) === "P2002") {
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json(
+      { error: e?.message ?? "Failed to create foreman" },
       { status: 500 },
     );
   }

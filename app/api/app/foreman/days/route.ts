@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,16 +28,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const foreman = await prisma.foreman.findUnique({
-      where: { userId: payload.sub },
-      select: { id: true },
-    });
-    if (!foreman) {
+    // Resolve if user is real foreman or assistant
+    // Note: assistants cannot list days without specifying a foreman
+    // For now, we infer the foreman from the helper (will fail if multiple links)
+    const resolved = await resolveActingForeman(payload.sub);
+    if (!resolved.ok) {
       return NextResponse.json(
-        { error: "Foreman profile missing" },
-        { status: 403 },
+        { error: resolved.error },
+        { status: resolved.status },
       );
     }
+
+    const actingForemanId = resolved.foremanId!;
 
     // last 90 days (adjust if you want more/less)
     const since = new Date();
@@ -50,7 +53,7 @@ export async function GET(req: Request) {
      */
     const days = await prisma.siteDay.findMany({
       where: {
-        foremanId: foreman.id,
+        foremanId: actingForemanId,
         workDate: { gte: since },
       },
       orderBy: { workDate: "desc" },

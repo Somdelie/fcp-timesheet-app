@@ -73,6 +73,12 @@ const menuItems: {
     roles: ["ADMIN"],
   },
   { href: "/users/new", label: "Create User", icon: User2, roles: ["ADMIN"] },
+  {
+    href: "/admin/foremen",
+    label: "Manage Foremen",
+    icon: Users,
+    roles: ["ADMIN"],
+  },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
 ];
 

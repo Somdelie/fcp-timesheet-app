@@ -140,6 +140,9 @@ export default function SiteAssignmentsPanel({
   const [assigningFore, setAssigningFore] = React.useState(false);
   const [endingId, setEndingId] = React.useState<string | null>(null);
 
+  // Check if there are any active supervisors (no endsOn date)
+  const hasActiveSupervisor = supervisors.some((s) => !s.endsOn);
+
   async function refresh() {
     setLoading(true);
     try {
@@ -299,10 +302,30 @@ export default function SiteAssignmentsPanel({
               Foremen
             </h3>
 
+            {!hasActiveSupervisor && !loading && (
+              <div className="mb-3 rounded border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                You must assign a supervisor to this site before adding foremen.
+                Foremen will be automatically linked to the site&apos;s
+                supervisors when assigned.
+              </div>
+            )}
+
             <div className="flex gap-2">
-              <Select value={foremanUserId} onValueChange={setForemanUserId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a foreman" />
+              <Select
+                value={foremanUserId}
+                onValueChange={setForemanUserId}
+                disabled={!hasActiveSupervisor}
+              >
+                <SelectTrigger
+                  className={`w-full ${!hasActiveSupervisor ? "opacity-50" : ""}`}
+                >
+                  <SelectValue
+                    placeholder={
+                      hasActiveSupervisor
+                        ? "Select a foreman"
+                        : "Assign a supervisor first"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {foremanOptions.map((f) => (
@@ -315,7 +338,9 @@ export default function SiteAssignmentsPanel({
 
               <Button
                 onClick={handleAssignForeman}
-                disabled={assigningFore || !foremanUserId}
+                disabled={
+                  assigningFore || !foremanUserId || !hasActiveSupervisor
+                }
                 className="gap-2"
               >
                 {assigningFore ? (
@@ -358,8 +383,9 @@ export default function SiteAssignmentsPanel({
       </div>
 
       <div className="mt-6 rounded border border-slate-200/50 bg-blue-50/50 p-3 text-xs text-blue-700 dark:border-slate-700/50 dark:bg-blue-500/5 dark:text-blue-400">
-        If Add still fails, you are probably not logged in as Admin (for
-        supervisors), or your options are not using User.id.
+        <strong>Workflow:</strong> Assign supervisors first, then foremen.
+        Foremen are automatically linked to all active supervisors when assigned
+        to a site.
       </div>
     </Card>
   );

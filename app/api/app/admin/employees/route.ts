@@ -1,68 +1,69 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * GET /api/app/admin/employees
+ * List all employees (optionally filtered to unlinked only, or by search)
+ */
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
 
-  const user = session.user as any;
-  if (user?.role !== "ADMIN")
+  if (!token) {
+    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  }
+
+  const payload = await verifyApiToken(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
+  if (payload.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const url = new URL(req.url);
-    const search = url.searchParams.get("q")?.trim().toLowerCase() || "";
-    const isActive = url.searchParams.get("isActive");
+    const q = url.searchParams.get("q")?.trim().toLowerCase() || "";
+    const unlinked = url.searchParams.get("unlinked") === "true";
 
     const employees = await prisma.employee.findMany({
       where: {
-        ...(search && {
+        ...(q && {
           OR: [
-            { firstName: { contains: search, mode: "insensitive" } },
-            { lastName: { contains: search, mode: "insensitive" } },
-            { qrCodeValue: { contains: search, mode: "insensitive" } },
+            { firstName: { contains: q, mode: "insensitive" } },
+            { lastName: { contains: q, mode: "insensitive" } },
+            { qrCodeValue: { contains: q, mode: "insensitive" } },
           ],
         }),
-        ...(isActive && {
-          isActive: isActive === "true",
-        }),
       },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        qrCodeValue: true,
-        isActive: true,
-        defaultDayRate: true,
-        createdAt: true,
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
       },
       orderBy: { createdAt: "desc" },
-      take: 100,
     });
 
     return NextResponse.json({
       ok: true,
-      employees: employees.map((e) => ({
-        id: e.id,
-        firstName: e.firstName,
-        lastName: e.lastName,
-        fullName: `${e.firstName} ${e.lastName}`.trim(),
-        qrCodeValue: e.qrCodeValue,
-        isActive: e.isActive,
-        defaultDayRate: e.defaultDayRate,
-        createdAt: e.createdAt.toISOString(),
+      employees: employees.map((emp) => ({
+        id: emp.id,
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        qrCodeValue: emp.qrCodeValue,
+        userId: emp.user?.id ?? null,
+        userName: emp.user?.name ?? null,
+        userEmail: emp.user?.email ?? null,
       })),
     });
   } catch (e: any) {
-    console.error("Error fetching employees:", e);
     return NextResponse.json(
-      { error: "Failed to fetch employees" },
+      { error: e?.message ?? "Server error" },
       { status: 500 },
     );
   }

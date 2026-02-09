@@ -40,6 +40,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  // Fetch foremen this user can act for as an assistant
+  const assistantLinks = await prisma.foremanAssistant.findMany({
+    where: {
+      employee: {
+        userId: user.id,
+      },
+      OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+    },
+    select: {
+      foreman: {
+        select: {
+          id: true,
+          user: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  const availableForemen = assistantLinks.map((x) => ({
+    foremanId: x.foreman.id,
+    name: x.foreman.user.name ?? "Foreman",
+  }));
+
   const token = await signApiToken({
     sub: user.id,
     email: user.email,
@@ -53,6 +76,8 @@ export async function POST(req: Request) {
       email: user.email,
       name: user.name,
       role: user.role,
+      availableForemen,
+      actingForeman: null,
     },
   });
 }

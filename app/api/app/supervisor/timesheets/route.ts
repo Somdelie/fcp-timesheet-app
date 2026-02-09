@@ -34,6 +34,12 @@ function startOfDayUTC(d: Date) {
   return x;
 }
 
+function addDaysUTC(d: Date, days: number) {
+  const x = new Date(d.getTime());
+  x.setUTCDate(x.getUTCDate() + days);
+  return x;
+}
+
 function toISODateUTC(d: Date) {
   return d.toISOString().slice(0, 10);
 }
@@ -41,6 +47,7 @@ function toISODateUTC(d: Date) {
 function startOfDayUTCFromISO(iso: string) {
   const d = new Date(`${iso}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${iso}`);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
@@ -151,6 +158,9 @@ export async function GET(req: Request) {
     const period = await resolvePeriod(req);
     const { periodId, startDate, endDate, startISO, endISO } = period;
 
+    // ✅ INCLUDE WHOLE END DAY (Sat→Fri style period ends at 00:00 of endDate)
+    const endExclusive = addDaysUTC(endDate, 1);
+
     // Get URL params
     const url = new URL(req.url);
     const q = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
@@ -177,10 +187,10 @@ export async function GET(req: Request) {
       });
     }
 
-    // Get all siteDays in this period for supervisor's sites
+    // ✅ Get all siteDays in this period for supervisor's sites (inclusive end day)
     const siteDaysInPeriod = await prisma.siteDay.findMany({
       where: {
-        workDate: { gte: startDate, lt: endDate },
+        workDate: { gte: startDate, lt: endExclusive },
         siteId: { in: siteIds },
       },
       select: {
@@ -207,11 +217,11 @@ export async function GET(req: Request) {
       });
     }
 
-    // Get attendance scans for these foremen in this period
+    // ✅ Get attendance scans for these foremen in this period (inclusive end day)
     const scans = await prisma.attendanceScan.findMany({
       where: {
         siteDay: {
-          workDate: { gte: startDate, lt: endDate },
+          workDate: { gte: startDate, lt: endExclusive },
           foremanId: { in: foremanIds },
           siteId: { in: siteIds },
         },
@@ -297,7 +307,7 @@ export async function GET(req: Request) {
       timesheetRows.map((t) => [t.foremanId, { id: t.id, status: t.status }]),
     );
 
-    // Build response - one row per foreman per site combo (like admin but filtered to supervisor)
+    // Build response - one row per foreman (first site shown)
     const siteDaysByForeman = new Map<string, typeof siteDaysInPeriod>();
     for (const sd of siteDaysInPeriod) {
       if (!siteDaysByForeman.has(sd.foremanId)) {
@@ -306,7 +316,17 @@ export async function GET(req: Request) {
       siteDaysByForeman.get(sd.foremanId)!.push(sd);
     }
 
-    const result: any[] = [];
+    const result: Array<{
+      id: string;
+      startISO: string;
+      endISO: string;
+      status: string;
+      foremanName: string;
+      siteCode: string | null;
+      siteName: string | null;
+      totalWorkerDays: number;
+      totalWorkerWages: number;
+    }> = [];
 
     for (const foremanId of foremanIds) {
       const siteDays = siteDaysByForeman.get(foremanId) || [];
@@ -318,12 +338,8 @@ export async function GET(req: Request) {
       const foremanName = foreman?.user?.name ?? "Foreman";
 
       const timesheet = statusByForeman.get(foremanId);
-      const totals = totalsByForeman.get(foremanId) || {
-        days: 0,
-        wages: 0,
-      };
+      const totals = totalsByForeman.get(foremanId) || { days: 0, wages: 0 };
 
-      // Get the first site for supervisor-view (single site per row)
       const firstSite = sites[0] || null;
 
       result.push({
@@ -342,7 +358,6 @@ export async function GET(req: Request) {
     // Apply filters
     const filtered = result
       .filter((row) => {
-        // Search filter
         if (q) {
           const matchForeman = row.foremanName.toLowerCase().includes(q);
           const matchSite =
@@ -351,7 +366,6 @@ export async function GET(req: Request) {
           if (!matchForeman && !matchSite) return false;
         }
 
-        // Status filter
         if (statusFilter !== "ALL" && row.status !== statusFilter) {
           return false;
         }

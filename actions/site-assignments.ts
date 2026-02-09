@@ -180,6 +180,21 @@ export async function assignForemanToSite(input: {
   const siteId = String(input.siteId);
   const foremanUserId = String(input.foremanUserId);
 
+  // Check if the site has at least one active supervisor
+  const activeSupervisorAssignments =
+    await prisma.supervisorSiteAssignment.findMany({
+      where: { siteId, endsOn: null },
+      select: { supervisorId: true },
+    });
+
+  if (activeSupervisorAssignments.length === 0) {
+    return {
+      ok: false as const,
+      error:
+        "Cannot assign foreman: site must have a supervisor first. Please assign a supervisor to this site before adding foremen.",
+    };
+  }
+
   const foreman = await prisma.foreman.findUnique({
     where: { userId: foremanUserId },
     select: { id: true },
@@ -196,13 +211,38 @@ export async function assignForemanToSite(input: {
       error: "Foreman is already assigned to this site.",
     };
 
-  await prisma.foremanSiteAssignment.create({
-    data: {
-      siteId,
-      foremanId: foreman.id,
-      startsOn: new Date(),
-      endsOn: null,
-    },
+  // Create foreman site assignment AND link foreman to all active supervisors at this site
+  await prisma.$transaction(async (tx) => {
+    // 1. Create the site assignment
+    await tx.foremanSiteAssignment.create({
+      data: {
+        siteId,
+        foremanId: foreman.id,
+        startsOn: new Date(),
+        endsOn: null,
+      },
+    });
+
+    // 2. Link foreman to each active supervisor at this site (if not already linked)
+    for (const { supervisorId } of activeSupervisorAssignments) {
+      const existingLink = await tx.supervisorForeman.findFirst({
+        where: {
+          supervisorId,
+          foremanId: foreman.id,
+          endsOn: null,
+        },
+      });
+
+      if (!existingLink) {
+        await tx.supervisorForeman.create({
+          data: {
+            supervisorId,
+            foremanId: foreman.id,
+            startsOn: new Date(),
+          },
+        });
+      }
+    }
   });
 
   revalidatePath(`/sites/${siteId}`);

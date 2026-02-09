@@ -1,7 +1,12 @@
-const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "./generated/prisma/client.ts";
+import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const connectionString = `${process.env.DATABASE_URL}`;
+
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const hashedPassword = await bcrypt.hash("Zola@1990", 12);
@@ -16,7 +21,7 @@ async function main() {
   });
   console.log("Created user:", user);
 
-  // Fetch all users with their posts
+  // Fetch all users
   const allUsers = await prisma.user.findMany();
   console.log("All users:", JSON.stringify(allUsers, null, 2));
 }

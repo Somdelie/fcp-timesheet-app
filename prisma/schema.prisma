@@ -92,6 +92,7 @@ model Employee {
   faceImageUrl   String?
   qrCodeValue    String   @unique
   defaultDayRate Decimal? @db.Decimal(12, 2)
+  idNumber       String?  // Optional: ID/passport number, required on frontend later
 
   // ... face fields
 
@@ -288,10 +289,9 @@ model SiteDay {
   photoRequests SiteDayPhotoRequest[]
   photos        SiteDayPhoto[]
 
-  @@unique([foremanId, workDate]) // foreman cannot be double-booked
-  @@index([workDate])
-  @@index([siteId, workDate])
+   @@unique([siteId, foremanId, workDate])
   @@index([foremanId, workDate])
+  @@index([siteId, workDate])
 }
 
 /**

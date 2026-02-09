@@ -95,9 +95,10 @@ export async function updateCompanySettings(input: {
       });
     }
 
-    // Update employees created by non-foreman users (regular employees) only
-    // Foreman-created employees may have custom rates that shouldn't be auto-updated
-    // Also exclude employees who have been promoted to foreman (userId is not null)
+    // Update employees:
+    // 1. Regular employees created by non-foremen (no userId)
+    // 2. Assistants (have ForemanAssistant link)
+    // But exclude foremen promoted from employees (have userId but NO ForemanAssistant link)
     const foremanIds = await tx.foreman
       .findMany({
         select: { userId: true },
@@ -106,10 +107,23 @@ export async function updateCompanySettings(input: {
 
     await tx.employee.updateMany({
       where: {
-        createdByUserId: {
-          notIn: foremanIds,
-        },
-        userId: null, // Exclude employees promoted to foreman
+        OR: [
+          {
+            // Regular employees created by non-foremen
+            createdByUserId: {
+              notIn: foremanIds,
+            },
+            userId: null,
+          },
+          {
+            // Assistants (have active ForemanAssistant link)
+            assistantLinks: {
+              some: {
+                endsOn: null, // Only active assistant links
+              },
+            },
+          },
+        ],
       },
       data: { defaultDayRate: dayRate as any },
     });

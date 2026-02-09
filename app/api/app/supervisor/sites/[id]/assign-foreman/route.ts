@@ -75,6 +75,22 @@ export async function POST(
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
   }
 
+  // ✅ Check if the site has at least one active supervisor
+  const activeSupervisorAssignments =
+    await prisma.supervisorSiteAssignment.findMany({
+      where: { siteId, endsOn: null },
+      select: { supervisorId: true },
+    });
+
+  if (activeSupervisorAssignments.length === 0) {
+    return NextResponse.json(
+      {
+        error: "Cannot assign foreman: site must have a supervisor first.",
+      },
+      { status: 400 },
+    );
+  }
+
   // ✅ Close any active assignment first (if exists)
   const now = new Date();
 
@@ -116,14 +132,38 @@ export async function POST(
     );
   }
 
-  // ✅ Create new assignment
-  await prisma.foremanSiteAssignment.create({
-    data: {
-      siteId,
-      foremanId,
-      startsOn: now,
-      endsOn: null,
-    },
+  // ✅ Create new assignment AND link foreman to all active supervisors at the site
+  await prisma.$transaction(async (tx) => {
+    // 1. Create the site assignment
+    await tx.foremanSiteAssignment.create({
+      data: {
+        siteId,
+        foremanId,
+        startsOn: now,
+        endsOn: null,
+      },
+    });
+
+    // 2. Link foreman to each active supervisor at this site (if not already linked)
+    for (const { supervisorId } of activeSupervisorAssignments) {
+      const existingLink = await tx.supervisorForeman.findFirst({
+        where: {
+          supervisorId,
+          foremanId,
+          endsOn: null,
+        },
+      });
+
+      if (!existingLink) {
+        await tx.supervisorForeman.create({
+          data: {
+            supervisorId,
+            foremanId,
+            startsOn: now,
+          },
+        });
+      }
+    }
   });
 
   return NextResponse.json({ ok: true, assigned: "created" });
