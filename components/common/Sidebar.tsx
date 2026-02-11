@@ -9,6 +9,7 @@ import {
   User2,
   Building2,
   NotebookIcon,
+  MapPin,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SUPERVISOR" | "FOREMAN";
@@ -53,6 +54,12 @@ const menuItems: {
     label: "Sites",
     icon: Building2,
     roles: ["ADMIN", "SUPERVISOR", "FOREMAN"],
+  },
+  {
+    href: "/sites/map",
+    label: "Sites Map",
+    icon: MapPin,
+    roles: ["ADMIN"],
   },
   {
     href: "/timesheets",
