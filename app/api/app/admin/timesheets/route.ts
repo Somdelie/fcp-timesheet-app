@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+import { requireApiAuth } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,15 +113,15 @@ async function resolvePeriod(req: Request) {
   };
 }
 
-export async function GET(req: Request) {
+/**
+ * GET /api/app/admin/timesheets
+ * List timesheets with filters (ADMIN/SUPERVISOR only, JWT auth for mobile)
+ */
+export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session)
+    const ctx = await requireApiAuth(req, ["ADMIN", "SUPERVISOR"]);
+    if (!ctx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const userRole = (session.user as any)?.role;
-    if (userRole !== "ADMIN" && userRole !== "SUPERVISOR") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const url = new URL(req.url);

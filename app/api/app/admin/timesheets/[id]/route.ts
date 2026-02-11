@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,18 +46,18 @@ function fullName(emp: { firstName: string; lastName: string }) {
   return `${emp.firstName} ${emp.lastName}`.trim();
 }
 
+/**
+ * GET /api/app/admin/timesheets/:id
+ * Get single timesheet detail (ADMIN/SUPERVISOR only, JWT auth for mobile)
+ */
 export async function GET(
-  req: Request,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session)
+    const authCtx = await requireApiAuth(req, ["ADMIN", "SUPERVISOR"]);
+    if (!authCtx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const userRole = (session.user as any)?.role;
-    if (userRole !== "ADMIN" && userRole !== "SUPERVISOR") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const url = new URL(req.url);
