@@ -227,7 +227,8 @@ export async function GET(req: Request) {
         },
       },
       select: {
-        siteDay: { select: { foremanId: true, workDate: true } },
+        siteDay: { select: { foremanId: true, workDate: true, siteId: true } },
+        siteId: true,
         employeeId: true,
         dayRateAtScan: true,
         employee: { select: { defaultDayRate: true } },
@@ -252,39 +253,44 @@ export async function GET(req: Request) {
       });
     }
 
-    // Compute totals per foreman
-    const scansByForeman = new Map<
+    // Compute totals per (foreman, site)
+    const scansByForemanSite = new Map<
       string,
       Array<{ date: string; wage: number; employeeId: string }>
     >();
 
     for (const scan of scans) {
       const foremanId = scan.siteDay.foremanId;
+      const siteId = scan.siteId;
       const dateISO = toISODateUTC(scan.siteDay.workDate);
       const rate =
         decimalToNumber(scan.dayRateAtScan) ||
         decimalToNumber(scan.employee?.defaultDayRate);
 
-      const list = scansByForeman.get(foremanId) ?? [];
+      const key = `${foremanId}__${siteId}`;
+      const list = scansByForemanSite.get(key) ?? [];
       list.push({ date: dateISO, wage: rate, employeeId: scan.employeeId });
-      scansByForeman.set(foremanId, list);
+      scansByForemanSite.set(key, list);
     }
 
-    const totalsByForeman = new Map<string, { days: number; wages: number }>();
+    const totalsByForemanSite = new Map<
+      string,
+      { days: number; wages: number }
+    >();
 
-    for (const [foremanId, list] of scansByForeman.entries()) {
+    for (const [key, list] of scansByForemanSite.entries()) {
       const uniquePairs = new Set<string>();
       let totalWages = 0;
 
       for (const s of list) {
-        const key = `${s.employeeId}-${s.date}`;
-        if (!uniquePairs.has(key)) {
-          uniquePairs.add(key);
+        const pairKey = `${s.employeeId}-${s.date}`;
+        if (!uniquePairs.has(pairKey)) {
+          uniquePairs.add(pairKey);
           totalWages += s.wage;
         }
       }
 
-      totalsByForeman.set(foremanId, {
+      totalsByForemanSite.set(key, {
         days: uniquePairs.size,
         wages: totalWages,
       });
@@ -307,7 +313,7 @@ export async function GET(req: Request) {
       timesheetRows.map((t) => [t.foremanId, { id: t.id, status: t.status }]),
     );
 
-    // Build response - one row per foreman (first site shown)
+    // Build response - one row per (foreman, site)
     const siteDaysByForeman = new Map<string, typeof siteDaysInPeriod>();
     for (const sd of siteDaysInPeriod) {
       if (!siteDaysByForeman.has(sd.foremanId)) {
@@ -322,10 +328,12 @@ export async function GET(req: Request) {
       endISO: string;
       status: string;
       foremanName: string;
+      siteId: string | null;
       siteCode: string | null;
       siteName: string | null;
       totalWorkerDays: number;
       totalWorkerWages: number;
+      rowKey: string;
     }> = [];
 
     for (const foremanId of foremanIds) {
@@ -338,21 +346,32 @@ export async function GET(req: Request) {
       const foremanName = foreman?.user?.name ?? "Foreman";
 
       const timesheet = statusByForeman.get(foremanId);
-      const totals = totalsByForeman.get(foremanId) || { days: 0, wages: 0 };
 
-      const firstSite = sites[0] || null;
+      for (const site of sites) {
+        const key = `${foremanId}__${site.id}`;
+        const totals =
+          totalsByForemanSite.get(key) || ({ days: 0, wages: 0 } as const);
 
-      result.push({
-        id: makeSupervisorTimesheetId(startISO, endISO, foremanId),
-        startISO,
-        endISO,
-        status: timesheet?.status ?? "SUBMITTED",
-        foremanName,
-        siteCode: firstSite?.code ?? null,
-        siteName: firstSite?.name ?? null,
-        totalWorkerDays: totals.days,
-        totalWorkerWages: totals.wages,
-      });
+        // Skip sites that have no attendance scans in this period
+        if (!totals.days) continue;
+
+        const id = makeSupervisorTimesheetId(startISO, endISO, foremanId);
+
+        result.push({
+          id,
+          startISO,
+          endISO,
+          status: timesheet?.status ?? "SUBMITTED",
+          foremanName,
+          siteId: site.id,
+          siteCode: site.code ?? null,
+          siteName: site.name ?? null,
+          totalWorkerDays: totals.days,
+          totalWorkerWages: totals.wages,
+          // unique per (foreman, site) row for UI keys
+          rowKey: `${id}__${site.id}`,
+        });
+      }
     }
 
     // Apply filters

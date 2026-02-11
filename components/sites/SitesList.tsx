@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { Search, Plus, Copy, ArrowRight } from "lucide-react";
+import { Search, Plus, Copy, ArrowRight, Camera } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import CreateSiteForm from "./CreateSiteForm";
+import { requestSiteGroupPhoto } from "@/actions/sites";
+import { useUserRole } from "@/lib/user-role-context";
 
 type SiteRow = {
   id: string;
@@ -80,11 +82,21 @@ interface SitesListProps {
 export default function SitesList({ initialSites }: SitesListProps) {
   const router = useRouter();
   const sp = useSearchParams();
+  const role = useUserRole();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const q = sp.get("q") ?? "";
   const show = (sp.get("show") ?? "active") as "active" | "all";
   const [query, setQuery] = React.useState(q);
+
+  const [photoDialogOpen, setPhotoDialogOpen] = React.useState(false);
+  const [photoSite, setPhotoSite] = React.useState<SiteRow | null>(null);
+  const [photoWorkDate, setPhotoWorkDate] = React.useState<string>(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [photoDueDate, setPhotoDueDate] = React.useState<string>("");
+  const [photoNote, setPhotoNote] = React.useState<string>("");
+  const [photoSubmitting, setPhotoSubmitting] = React.useState(false);
 
   React.useEffect(() => setQuery(q), [q]);
 
@@ -100,6 +112,46 @@ export default function SitesList({ initialSites }: SitesListProps) {
   }
 
   const filtered = initialSites;
+
+  async function handleSubmitPhotoRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!photoSite) {
+      toast.error("No site selected");
+      return;
+    }
+    if (!photoWorkDate) {
+      toast.error("Please choose a work date");
+      return;
+    }
+
+    setPhotoSubmitting(true);
+    try {
+      const res = await requestSiteGroupPhoto({
+        siteId: photoSite.id,
+        workDate: photoWorkDate,
+        note: photoNote || undefined,
+        dueDate: photoDueDate || undefined,
+      });
+
+      if (!res.ok) {
+        toast.error(res.error || "Failed to create photo request");
+        return;
+      }
+
+      toast.success(
+        res.count === 1
+          ? "Photo request sent to foreman."
+          : `Photo requests sent to ${res.count} foremen.`,
+      );
+      setPhotoDialogOpen(false);
+      setPhotoNote("");
+      setPhotoDueDate("");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create photo request");
+    } finally {
+      setPhotoSubmitting(false);
+    }
+  }
 
   return (
     <div className="">
@@ -254,6 +306,20 @@ export default function SitesList({ initialSites }: SitesListProps) {
                             <Copy className="mr-1 h-3.5 w-3.5" />
                             ID
                           </Button>
+                          {role === "ADMIN" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+                              onClick={() => {
+                                setPhotoSite(s);
+                                setPhotoDialogOpen(true);
+                              }}
+                            >
+                              <Camera className="h-3.5 w-3.5" />
+                              Request Photo
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             className="gap-1.5"
@@ -278,6 +344,88 @@ export default function SitesList({ initialSites }: SitesListProps) {
             Manage supervisors, book site-days, and track wages from the site
             detail page.
           </div>
+        )}
+
+        {/* Admin: Random group photo request dialog */}
+        {role === "ADMIN" && (
+          <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Request Group Photo</DialogTitle>
+                <DialogDescription>
+                  Ask the assigned foreman(s) to upload a group photo for a
+                  specific work date.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmitPhotoRequest} className="space-y-4">
+                <div className="text-sm text-zinc-700 dark:text-zinc-300">
+                  <div className="font-semibold">
+                    Site:{" "}
+                    <span className="font-normal">
+                      {photoSite ? photoSite.name : "Select from Sites list"}
+                    </span>
+                  </div>
+                  {photoSite?.code && (
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Job Number: {photoSite.code}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Work Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={photoWorkDate}
+                    onChange={(e) => setPhotoWorkDate(e.target.value)}
+                    required
+                  />
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Photo request will be sent to foreman assignments that were
+                    active on this date.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Due Date (optional)
+                  </label>
+                  <Input
+                    type="date"
+                    value={photoDueDate}
+                    onChange={(e) => setPhotoDueDate(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Note to foreman (optional)
+                  </label>
+                  <Input
+                    value={photoNote}
+                    onChange={(e) => setPhotoNote(e.target.value)}
+                    placeholder="e.g. Please include all workers on shift."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPhotoDialogOpen(false)}
+                    disabled={photoSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={photoSubmitting}>
+                    {photoSubmitting ? "Sending..." : "Send Request"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
     </div>

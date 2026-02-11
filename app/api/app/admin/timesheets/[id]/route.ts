@@ -61,6 +61,9 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const url = new URL(req.url);
+    const siteIdFilter = url.searchParams.get("siteId");
+
     const { id } = await ctx.params;
     const parsed = parseId(id);
 
@@ -110,6 +113,7 @@ export async function GET(
     const siteIds = await prisma.siteDay.findMany({
       where: {
         foremanId,
+        ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
         workDate: { gte: startDate, lt: endExclusive },
       },
       distinct: ["siteId"],
@@ -130,6 +134,7 @@ export async function GET(
       where: {
         siteDay: {
           foremanId,
+          ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
           workDate: { gte: startDate, lt: endExclusive },
         },
       },

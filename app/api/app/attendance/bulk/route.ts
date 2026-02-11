@@ -99,9 +99,9 @@ export async function POST(req: Request) {
   if (!site)
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
 
-  // create/find SiteDay for this foreman
+  // create/find SiteDay for this foreman on this site and date
   let siteDay = await prisma.siteDay.findFirst({
-    where: { foremanId: actingForemanId, workDate },
+    where: { foremanId: actingForemanId, siteId, workDate },
     select: { id: true, foremanId: true, isLocked: true, siteId: true },
   });
 
@@ -112,31 +112,26 @@ export async function POST(req: Request) {
         select: { id: true, foremanId: true, isLocked: true, siteId: true },
       });
     } catch (e: any) {
-      // Check if it's the foremanId_workDate constraint (foreman double-booking)
+      // If another request created the SiteDay concurrently, re-fetch it
       if (e?.code === "P2002") {
+        siteDay = await prisma.siteDay.findFirst({
+          where: { foremanId: actingForemanId, siteId, workDate },
+          select: { id: true, foremanId: true, isLocked: true, siteId: true },
+        });
+        if (!siteDay) {
+          return NextResponse.json(
+            { error: "Failed to create work day record. Please try again." },
+            { status: 500 },
+          );
+        }
+      } else {
+        // For any other error, return a generic message
         return NextResponse.json(
-          {
-            error:
-              "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
-          },
-          { status: 409 },
+          { error: "Failed to create work day record. Please try again." },
+          { status: 500 },
         );
       }
-      // For any other error, return a generic message
-      return NextResponse.json(
-        { error: "Failed to create work day record. Please try again." },
-        { status: 500 },
-      );
     }
-  } else if (siteDay.siteId !== siteId) {
-    // Foreman already has a SiteDay on this date for a different site
-    return NextResponse.json(
-      {
-        error:
-          "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
-      },
-      { status: 409 },
-    );
   }
 
   const qrValues = scans

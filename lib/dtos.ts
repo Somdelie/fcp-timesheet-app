@@ -104,7 +104,11 @@ export type SupervisorTimesheetListRow = {
   startISO: string;
   endISO: string;
   foremanName: string;
+  // site this row is summarising
+  siteId?: string | null;
   siteCode?: string | null;
   siteName: string;
   status: "SUBMITTED" | "APPROVED" | "REJECTED" | "PAID";
+  // optional unique key for UI lists when a foreman has multiple sites
+  rowKey?: string;
 };

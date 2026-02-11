@@ -60,10 +60,12 @@ type SupervisorRow = {
   endISO: string;
   status: string;
   foremanName?: string | null;
+  siteId?: string | null;
   siteCode?: string | null;
   siteName?: string | null;
   totalWorkerDays?: number | null;
   totalWorkerWages?: number | null;
+  rowKey?: string;
 };
 
 function toSafeErrorText(e: unknown) {
@@ -231,6 +233,7 @@ export default function TimesheetsListClient({ mode }: Props) {
 
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailErr, setDetailErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
@@ -469,18 +472,21 @@ export default function TimesheetsListClient({ mode }: Props) {
   }, [loadList, periodId]);
 
   const openDetail = useCallback(
-    async (id: string) => {
+    async (id: string, siteId?: string | null) => {
       setOpen(true);
       setActiveId(id);
+      setActiveSiteId(siteId ?? null);
       setDetail(null);
       setDetailErr(null);
       setDetailLoading(true);
 
       try {
-        const url =
+        const base =
           mode === "ADMIN"
-            ? `/api/app/admin/timesheets/${encodeURIComponent(id)}`
-            : `/api/app/supervisor/timesheets/${encodeURIComponent(id)}`;
+            ? "/api/app/admin/timesheets/"
+            : "/api/app/supervisor/timesheets/";
+
+        const url = `${base}${encodeURIComponent(id)}${siteId ? `?siteId=${encodeURIComponent(siteId)}` : ""}`;
 
         const res = await fetch(url, {
           cache: "no-store",
@@ -509,8 +515,8 @@ export default function TimesheetsListClient({ mode }: Props) {
 
   const refreshDetail = useCallback(async () => {
     if (!activeId) return;
-    await openDetail(activeId);
-  }, [activeId, openDetail]);
+    await openDetail(activeId, activeSiteId);
+  }, [activeId, activeSiteId, openDetail]);
 
   const actions = useMemo((): TimesheetAction[] => {
     const base = "/api/app/supervisor";
@@ -740,7 +746,14 @@ export default function TimesheetsListClient({ mode }: Props) {
                   <TableRow
                     key={r.id}
                     className="border-b border-zinc-300/70 dark:border-zinc-700/60 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/60 cursor-pointer transition-colors"
-                    onClick={() => openDetail(r.id)}
+                    onClick={() =>
+                      openDetail(
+                        r.id,
+                        Array.isArray(r.sites) && r.sites.length
+                          ? r.sites[0]?.id
+                          : undefined,
+                      )
+                    }
                   >
                     <TableCell className="px-4 py-3 font-medium">
                       {prettyRange(r.startISO, r.endISO)}
@@ -796,9 +809,9 @@ export default function TimesheetsListClient({ mode }: Props) {
               <TableBody>
                 {(rowsSup as SupervisorRow[]).map((r) => (
                   <TableRow
-                    key={r.id}
+                    key={r.rowKey ?? r.id}
                     className="border-b border-zinc-300/70 dark:border-zinc-700/60 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/60 cursor-pointer transition-colors"
-                    onClick={() => openDetail(r.id)}
+                    onClick={() => openDetail(r.id, r.siteId)}
                   >
                     <TableCell className="px-4 py-3 font-medium">
                       {prettyRange(iso10(r.startISO), iso10(r.endISO))}

@@ -3,9 +3,33 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseSupervisorTimesheetId } from "@/lib/timesheetId";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function getBearer(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] ?? null;
+}
+
+async function getAuth(req: Request) {
+  const token = getBearer(req);
+  if (token) {
+    const payload = await verifyApiToken(token);
+    if (!payload) return null;
+    return { userId: payload.sub, role: payload.role } as {
+      userId: string;
+      role: string;
+    };
+  }
+
+  const session = await getServerSession(authOptions);
+  const u = session?.user as any;
+  if (!u?.id) return null;
+  return { userId: u.id as string, role: u.role as string };
+}
 
 function startOfDayUTC(d: Date) {
   const x = new Date(d.getTime());
@@ -46,12 +70,12 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session)
+    const auth = await getAuth(req);
+    if (!auth)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const role = (session.user as any)?.role;
-    const userId = (session.user as any)?.id;
+    const role = auth.role;
+    const userId = auth.userId;
     if (role !== "ADMIN" && role !== "SUPERVISOR") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -74,6 +98,9 @@ export async function GET(
     );
     const endDate = startOfDayUTC(new Date(`${parsed.endISO}T00:00:00.000Z`));
     const endExclusive = addDaysUTC(endDate, 1);
+
+    const url = new URL(req.url);
+    const siteIdFilter = url.searchParams.get("siteId");
 
     // Find or create the period
     const period = await prisma.timesheetPeriod.upsert({
@@ -148,11 +175,12 @@ export async function GET(
         );
       }
 
-      // Check: does this foreman have any work on any of the supervisor's sites?
+      // Check: does this foreman have any work on any of the supervisor's sites
+      // (and, if provided, on the requested site)?
       const foremansWork = await prisma.siteDay.findFirst({
         where: {
           foremanId: parsed.foremanId,
-          siteId: { in: siteIds },
+          siteId: siteIdFilter ? siteIdFilter : { in: siteIds },
           workDate: { gte: startDate, lt: endExclusive },
         },
         select: { id: true },
@@ -177,10 +205,11 @@ export async function GET(
     });
     const colIndex = new Map(columns.map((c, idx) => [c.iso, idx]));
 
-    // Sites worked in this period by this foreman
+    // Sites worked in this period by this foreman (optionally filter by site)
     const siteRows = await prisma.siteDay.findMany({
       where: {
         foremanId: timesheet.foreman.id,
+        ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
         workDate: { gte: startDate, lt: endExclusive },
       },
       distinct: ["siteId"],
@@ -202,11 +231,12 @@ export async function GET(
           ? `${sites[0].code ? sites[0].code + " · " : ""}${sites[0].name}`
           : `${sites.length} sites`;
 
-    // Scans in this period for this foreman (via SiteDay)
+    // Scans in this period for this foreman (via SiteDay), optionally filtered by site
     const scans = await prisma.attendanceScan.findMany({
       where: {
         siteDay: {
           foremanId: timesheet.foreman.id,
+          ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
           workDate: { gte: startDate, lt: endExclusive },
         },
       },
@@ -296,9 +326,12 @@ export async function GET(
       { totalDays: 0, totalPay: 0 },
     );
 
+    const supervisorNameFromToken =
+      role === "SUPERVISOR" ? undefined : undefined;
+
     const supervisor =
       role === "SUPERVISOR"
-        ? { name: (session.user as any)?.name ?? "Supervisor" }
+        ? { name: supervisorNameFromToken ?? "Supervisor" }
         : timesheet.approvedBySupervisor
           ? {
               id: timesheet.approvedBySupervisor.id,

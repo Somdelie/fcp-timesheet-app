@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -44,6 +45,8 @@ import {
   getSiteActivityData,
   getPhotoVerificationData,
 } from "@/actions/dashboard";
+import { useUserRole } from "@/lib/user-role-context";
+import type { UserRole } from "@/lib/roles";
 
 const lineChartConfig = {
   scans: { label: "Attendance Scans", color: "#1e5a8a" },
@@ -71,23 +74,39 @@ export default function HomePage() {
   const [siteData, setSiteData] = useState<any>(null);
   const [photoData, setPhotoData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const role = useUserRole();
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [metrics, weekly, timesheet, site, photo] = await Promise.all([
-          getDashboardMetrics(),
-          getWeeklyAttendanceData(),
-          getTimesheetStatusData(),
-          getSiteActivityData(),
-          getPhotoVerificationData(),
-        ]);
+        if (role === "ADMIN") {
+          const [metricsRes, weekly, timesheet, site, photo] =
+            await Promise.all<[any, any, any, any, any]>([
+              getDashboardMetrics(),
+              getWeeklyAttendanceData(),
+              getTimesheetStatusData(),
+              getSiteActivityData(),
+              getPhotoVerificationData(),
+            ]);
 
-        setMetrics(metrics);
-        setWeeklyData(weekly);
-        setTimesheetData(timesheet);
-        setSiteData(site);
-        setPhotoData(photo);
+          setMetrics(metricsRes);
+          setWeeklyData(weekly);
+          setTimesheetData(timesheet);
+          setSiteData(site);
+          setPhotoData(photo);
+        } else if (role === "SUPERVISOR") {
+          const [weekly, timesheet, site] = await Promise.all<[any, any, any]>([
+            getWeeklyAttendanceData(),
+            getTimesheetStatusData(),
+            getSiteActivityData(),
+          ]);
+
+          setWeeklyData(weekly);
+          setTimesheetData(timesheet);
+          setSiteData(site);
+        } else {
+          // FOREMAN or other roles: no heavy dashboard data needed
+        }
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
       } finally {
@@ -96,7 +115,7 @@ export default function HomePage() {
     };
 
     loadData();
-  }, []);
+  }, [role]);
 
   if (loading) {
     return (
@@ -113,13 +132,348 @@ export default function HomePage() {
   const timesheetStatusData = timesheetData || [];
   const siteActivityData = siteData || [];
   const photoVerificationData = photoData || [];
+
+  if (role === "SUPERVISOR") {
+    return (
+      <div className="flex flex-col min-h-screen bg-muted/30">
+        <div className="flex-1 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Supervisor Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Overview of your sites, attendance and timesheets.
+              </p>
+            </div>
+          </div>
+
+          {/* Charts Row: attendance + timesheets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Attendance (My Sites)</CardTitle>
+                <CardDescription>
+                  Attendance scans and active sites over the past week.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {weeklyAttendanceData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-10">
+                    No attendance data yet for your sites.
+                  </p>
+                ) : (
+                  <ChartContainer
+                    config={lineChartConfig}
+                    className="h-75 w-full"
+                  >
+                    <LineChart data={weeklyAttendanceData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                      <YAxis tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="scans"
+                        stroke="var(--color-scans)"
+                        strokeWidth={3}
+                        dot={{ fill: "var(--color-scans)", r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="sites"
+                        stroke="var(--color-sites)"
+                        strokeWidth={3}
+                        dot={{ fill: "var(--color-sites)", r: 4 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Timesheet Status (My Sites)</CardTitle>
+                <CardDescription>
+                  Current status of timesheets you manage.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {timesheetStatusData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-10">
+                    No timesheet data yet for your sites.
+                  </p>
+                ) : (
+                  <ChartContainer
+                    config={barChartConfig}
+                    className="h-75 w-full"
+                  >
+                    <BarChart data={timesheetStatusData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="status"
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar
+                        dataKey="count"
+                        fill="var(--color-count)"
+                        radius={[8, 8, 0, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sites + activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Sites by Activity</CardTitle>
+                <CardDescription>
+                  Worker count and scans across your sites.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {siteActivityData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-10">
+                    No site activity data yet for your sites.
+                  </p>
+                ) : (
+                  <ChartContainer
+                    config={siteChartConfig}
+                    className="h-75 w-full"
+                  >
+                    <BarChart data={siteActivityData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="site" tickLine={false} axisLine={false} />
+                      <YAxis tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar
+                        dataKey="workers"
+                        fill="var(--color-workers)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="photos"
+                        fill="var(--color-photos)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Links</CardTitle>
+                <CardDescription>
+                  Jump straight to key supervisor actions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Link
+                    href="/supervisor/timesheets"
+                    className="block w-full rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                  >
+                    Review supervisor timesheets
+                  </Link>
+                  <Link
+                    href="/sites"
+                    className="block w-full rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                  >
+                    View my sites
+                  </Link>
+                  <Link
+                    href="/employees"
+                    className="block w-full rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                  >
+                    View site employees
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Recent Activity (My Sites)</CardTitle>
+                <CardDescription>
+                  Latest events across the sites you supervise.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[
+                    {
+                      icon: CheckCircle,
+                      color: "text-emerald-600",
+                      bg: "bg-emerald-100",
+                      title: "Timesheet approved",
+                      description: "Site B - Week ending June 14, 2024",
+                      time: "2 hours ago",
+                    },
+                    {
+                      icon: Camera,
+                      color: "text-blue-600",
+                      bg: "bg-blue-100",
+                      title: "Photo verification completed",
+                      description: "Site A - 12 workers verified",
+                      time: "4 hours ago",
+                    },
+                    {
+                      icon: AlertCircle,
+                      color: "text-orange-600",
+                      bg: "bg-orange-100",
+                      title: "Timesheet requires attention",
+                      description: "Site D - Missing supervisor sign-off",
+                      time: "6 hours ago",
+                    },
+                  ].map((activity, index) => {
+                    const Icon = activity.icon;
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-start gap-4 pb-4 border-b last:border-b-0"
+                      >
+                        <div
+                          className={`w-10 h-10 ${activity.bg} rounded-lg flex items-center justify-center shrink-0`}
+                        >
+                          <Icon className={`w-5 h-5 ${activity.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground">
+                            {activity.title}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {activity.description}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {activity.time}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Supervisor Shortcuts</CardTitle>
+                <CardDescription>
+                  Common tasks you perform frequently.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[
+                    {
+                      label: "Approve pending timesheets",
+                      icon: ClipboardCheck,
+                    },
+                    { label: "Review photo flags", icon: AlertCircle },
+                    { label: "Check attendance anomalies", icon: TrendingUp },
+                  ].map((action, index) => {
+                    const Icon = action.icon;
+                    return (
+                      <button
+                        key={index}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="font-medium text-foreground text-sm">
+                          {action.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (role === "FOREMAN") {
+    return (
+      <div className="flex flex-col min-h-screen bg-muted/30">
+        <div className="flex-1 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Foreman Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Manage your daily site activity and attendance.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Foreman Area</CardTitle>
+                <CardDescription>
+                  Access your main foreman tools.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link
+                  href="/foreman"
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  Go to foreman area
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Attendance & Timesheets</CardTitle>
+                <CardDescription>
+                  Capture and review your crew attendance.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link
+                  href="/timesheets"
+                  className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  Go to timesheets
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: ADMIN dashboard with full system overview
   return (
     <div className="flex flex-col min-h-screen bg-muted/30">
       <div className="flex-1 p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              Admin Dashboard
+            </h1>
             <p className="text-muted-foreground mt-1">
               Overview of workforce management system
             </p>

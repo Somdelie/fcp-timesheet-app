@@ -92,7 +92,7 @@ model Employee {
   faceImageUrl   String?
   qrCodeValue    String   @unique
   defaultDayRate Decimal? @db.Decimal(12, 2)
-  idNumber       String?  // Optional: ID/passport number, required on frontend later
+  idNumber       String? // Optional: ID/passport number, required on frontend later
 
   // ... face fields
 
@@ -289,7 +289,7 @@ model SiteDay {
   photoRequests SiteDayPhotoRequest[]
   photos        SiteDayPhoto[]
 
-   @@unique([siteId, foremanId, workDate])
+  @@unique([siteId, foremanId, workDate])
   @@index([foremanId, workDate])
   @@index([siteId, workDate])
 }
@@ -374,8 +374,11 @@ model SiteDayPhoto {
   siteDay   SiteDay @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
 
   // Storage pointer (S3/R2/etc)
-  imageUrl   String
-  uploadedAt DateTime @default(now())
+  imageUrl String
+
+  // Cloudinary public ID for cleanup
+  cloudinaryPublicId String?
+  uploadedAt         DateTime @default(now())
 
   uploadedByUserId String?
   uploadedByUser   User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)

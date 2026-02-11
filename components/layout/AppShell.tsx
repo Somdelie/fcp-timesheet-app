@@ -5,6 +5,7 @@ import Navbar from "@/components/common/Navbar";
 import Sidebar from "@/components/common/Sidebar";
 import { BreadcrumbProvider } from "@/lib/breadcrumb-context";
 import type { UserRole } from "@/lib/roles";
+import { UserRoleProvider } from "@/lib/user-role-context";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -16,17 +17,19 @@ export function AppShell({ children, role }: AppShellProps) {
 
   return (
     <BreadcrumbProvider>
-      <div className="flex min-h-screen bg-background text-foreground">
-        <Sidebar isOpen={isSidebarOpen} role={role} />
-        <div className="flex flex-1 flex-col">
-          <Navbar
-            isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-            role={role}
-          />
-          <main className="flex-1 overflow-auto py-3 px-4">{children}</main>
+      <UserRoleProvider role={role}>
+        <div className="flex min-h-screen bg-background text-foreground">
+          <Sidebar isOpen={isSidebarOpen} role={role} />
+          <div className="flex flex-1 flex-col">
+            <Navbar
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+              role={role}
+            />
+            <main className="flex-1 overflow-auto py-3 px-4">{children}</main>
+          </div>
         </div>
-      </div>
+      </UserRoleProvider>
     </BreadcrumbProvider>
   );
 }

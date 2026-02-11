@@ -59,3 +59,10 @@ export async function uploadImageFile(
 export function getSecureUrl(result: UploadApiResponse): string {
   return result.secure_url || result.url;
 }
+
+export async function deleteImage(publicId: string): Promise<void> {
+  if (!publicId) return;
+  await cloudinary.uploader.destroy(publicId).catch(() => {
+    // Ignore deletion errors to avoid blocking cleanup.
+  });
+}

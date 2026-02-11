@@ -91,9 +91,9 @@ export async function GET(req: Request) {
   if (!site)
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
 
-  // --- ensure SiteDay exists for this foreman on this date ---
+  // --- ensure SiteDay exists for this foreman on this site and date ---
   let siteDay = await prisma.siteDay.findFirst({
-    where: { foremanId: actingForemanId, workDate },
+    where: { foremanId: actingForemanId, siteId, workDate },
     select: {
       id: true,
       siteId: true,
@@ -116,16 +116,6 @@ export async function GET(req: Request) {
         readyToSubmit: true,
       },
     });
-  } else if (siteDay.siteId !== siteId) {
-    // SiteDay unique constraint is (foremanId, workDate)
-    // Foreman can only have one site per day
-    return NextResponse.json(
-      {
-        error:
-          "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
-      },
-      { status: 409 },
-    );
   }
 
   // --- scans (no employee relation in schema, so join manually) ---
@@ -153,6 +143,21 @@ export async function GET(req: Request) {
 
   const byId = new Map(employees.map((e) => [e.id, e]));
 
+  // Load any photo requests for this SiteDay so the foreman can see
+  // if a group photo has been requested by admin/supervisor.
+  const photoRequests = await prisma.siteDayPhotoRequest.findMany({
+    where: { siteDayId: siteDay.id },
+    orderBy: { requestedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      requestedAt: true,
+      dueAt: true,
+      note: true,
+      siteDayPhotos: { select: { id: true } },
+    },
+  });
+
   return NextResponse.json({
     day: {
       id: siteDay.id,
@@ -177,6 +182,14 @@ export async function GET(req: Request) {
           },
         };
       }),
+      photoRequests: photoRequests.map((r) => ({
+        id: r.id,
+        status: r.status,
+        requestedAt: r.requestedAt.toISOString(),
+        dueAt: r.dueAt ? r.dueAt.toISOString() : null,
+        note: r.note ?? null,
+        photoCount: r.siteDayPhotos.length,
+      })),
     },
     ...(actingMode === "ASSISTANT" && {
       acting: {

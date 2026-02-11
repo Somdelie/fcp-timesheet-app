@@ -86,9 +86,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- ensure day exists for this foreman ---
+  // --- ensure day exists for this foreman on this site and date ---
   let siteDay = await prisma.siteDay.findFirst({
-    where: { foremanId: actingForemanId, workDate },
+    where: { foremanId: actingForemanId, siteId, workDate },
     select: { id: true, foremanId: true, isLocked: true, siteId: true },
   });
 
@@ -97,15 +97,6 @@ export async function POST(req: Request) {
       data: { siteId, workDate, foremanId: actingForemanId },
       select: { id: true, foremanId: true, isLocked: true, siteId: true },
     });
-  } else if (siteDay.siteId !== siteId) {
-    // Foreman can only have one site per day
-    return NextResponse.json(
-      {
-        error:
-          "This foreman is already assigned to another site on this date. A foreman can only work one site per day.",
-      },
-      { status: 409 },
-    );
   }
 
   if (siteDay.isLocked) {

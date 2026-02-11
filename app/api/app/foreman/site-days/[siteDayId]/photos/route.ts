@@ -65,6 +65,7 @@ export async function POST(
       data: {
         siteDayId: siteDay.id,
         imageUrl: url,
+        cloudinaryPublicId: upload.public_id,
         uploadedByUserId: payload.sub,
         requestId: requestId ?? undefined,
       },

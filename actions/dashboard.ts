@@ -26,6 +26,25 @@ export async function getDashboardMetrics() {
 
 export async function getWeeklyAttendanceData() {
   const auth = await requireServerAuth();
+
+  // If supervisor, limit to their assigned sites only.
+  let supervisorSiteIds: string[] | null = null;
+  if (auth.role === "SUPERVISOR") {
+    const supervisor = await prisma.supervisor.findUnique({
+      where: { userId: auth.userId },
+      include: {
+        siteAssignments: {
+          where: {
+            OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+          },
+          select: { siteId: true },
+        },
+      },
+    });
+
+    supervisorSiteIds =
+      supervisor?.siteAssignments.map((a) => a.siteId) ?? ([] as string[]);
+  }
   const today = new Date();
   const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -36,15 +55,23 @@ export async function getWeeklyAttendanceData() {
     date.setDate(date.getDate() - (today.getDay() - (i + 1)));
     const dateISO = toISODate(date);
 
+    const baseDateFilter = { workDate: new Date(`${dateISO}T00:00:00Z`) };
+
     const scansCount = await prisma.attendanceScan.count({
       where: {
-        workDate: new Date(`${dateISO}T00:00:00Z`),
+        ...baseDateFilter,
+        ...(supervisorSiteIds && supervisorSiteIds.length > 0
+          ? { siteId: { in: supervisorSiteIds } }
+          : {}),
       },
     });
 
     const sitesCount = await prisma.siteDay.count({
       where: {
-        workDate: new Date(`${dateISO}T00:00:00Z`),
+        ...baseDateFilter,
+        ...(supervisorSiteIds && supervisorSiteIds.length > 0
+          ? { siteId: { in: supervisorSiteIds } }
+          : {}),
       },
     });
 
@@ -61,11 +88,48 @@ export async function getWeeklyAttendanceData() {
 export async function getTimesheetStatusData() {
   const auth = await requireServerAuth();
 
+  // For supervisors, only count timesheets for foremen they are linked to.
+  let foremanFilter: any = {};
+  if (auth.role === "SUPERVISOR") {
+    const supervisor = await prisma.supervisor.findUnique({
+      where: { userId: auth.userId },
+      select: {
+        id: true,
+        foremanLinks: {
+          select: { foremanId: true },
+        },
+      },
+    });
+
+    const foremanIds =
+      supervisor?.foremanLinks.map((link) => link.foremanId) ?? [];
+
+    if (foremanIds.length > 0) {
+      foremanFilter = { foremanId: { in: foremanIds } };
+    } else {
+      // No linked foremen: all counts are 0 for this supervisor.
+      return [
+        { status: "Submitted", count: 0 },
+        { status: "Approved", count: 0 },
+        { status: "Rejected", count: 0 },
+        { status: "Paid", count: 0 },
+      ];
+    }
+  }
+
   const [submitted, approved, rejected, paid] = await Promise.all([
-    prisma.timesheet.count({ where: { status: "SUBMITTED" } }),
-    prisma.timesheet.count({ where: { status: "APPROVED" } }),
-    prisma.timesheet.count({ where: { status: "REJECTED" } }),
-    prisma.timesheet.count({ where: { status: "PAID" } }),
+    prisma.timesheet.count({
+      where: { status: "SUBMITTED", ...foremanFilter },
+    }),
+    prisma.timesheet.count({
+      where: { status: "APPROVED", ...foremanFilter },
+    }),
+    prisma.timesheet.count({
+      where: { status: "REJECTED", ...foremanFilter },
+    }),
+    prisma.timesheet.count({
+      where: { status: "PAID", ...foremanFilter },
+    }),
   ]);
 
   return [
@@ -79,8 +143,33 @@ export async function getTimesheetStatusData() {
 export async function getSiteActivityData() {
   const auth = await requireServerAuth();
 
+  // Supervisors only see activity for sites they are assigned to.
+  let siteFilter: any = { isActive: true };
+  if (auth.role === "SUPERVISOR") {
+    const supervisor = await prisma.supervisor.findUnique({
+      where: { userId: auth.userId },
+      include: {
+        siteAssignments: {
+          where: {
+            OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+          },
+          select: { siteId: true },
+        },
+      },
+    });
+
+    const siteIds =
+      supervisor?.siteAssignments.map((assignment) => assignment.siteId) ?? [];
+    if (siteIds.length > 0) {
+      siteFilter = { ...siteFilter, id: { in: siteIds } };
+    } else {
+      // No sites for this supervisor.
+      return [];
+    }
+  }
+
   const sites = await prisma.site.findMany({
-    where: { isActive: true },
+    where: siteFilter,
     take: 5,
     orderBy: { createdAt: "desc" },
     select: {

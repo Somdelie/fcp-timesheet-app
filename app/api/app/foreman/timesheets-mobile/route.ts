@@ -172,6 +172,22 @@ export async function GET(req: Request) {
       });
     }
 
+    // Build a quick lookup of sites by id
+    const sitesById = new Map<
+      string,
+      { id: string; code: string | null; name: string | null }
+    >();
+    for (const d of siteDaysInPeriod) {
+      const s = d.site;
+      if (!sitesById.has(s.id)) {
+        sitesById.set(s.id, {
+          id: s.id,
+          code: s.code ?? null,
+          name: s.name ?? null,
+        });
+      }
+    }
+
     // Scans for this foreman in this period (same wage aggregation as supervisor)
     const scans = await prisma.attendanceScan.findMany({
       where: {
@@ -181,65 +197,139 @@ export async function GET(req: Request) {
         },
       },
       select: {
-        siteDay: { select: { workDate: true } },
+        siteDay: { select: { workDate: true, siteId: true } },
+        siteId: true,
         employeeId: true,
         dayRateAtScan: true,
+        scanType: true,
+        manualReason: true,
         employee: { select: { defaultDayRate: true } },
       },
     });
 
-    // totals = unique (employeeId + date) count + sum wages
-    const uniquePairs = new Set<string>();
-    let totalWages = 0;
+    // totals per site = unique (employeeId + date) count + sum wages
+    const scansBySite = new Map<
+      string,
+      Array<{ date: string; wage: number; employeeId: string }>
+    >();
+
+    // Track whether scans on a site were done by assistant vs foreman
+    const hasAssistantScans = new Map<string, boolean>();
+    const hasForemanScans = new Map<string, boolean>();
 
     for (const s of scans) {
-      const dateISO = toISODateUTC(s.siteDay.workDate);
-      const key = `${s.employeeId}-${dateISO}`;
-      if (uniquePairs.has(key)) continue;
-      uniquePairs.add(key);
+      const siteId = s.siteDay.siteId ?? s.siteId;
+      if (!siteId) continue;
 
+      const dateISO = toISODateUTC(s.siteDay.workDate);
       const rate =
         decimalToNumber(s.dayRateAtScan) ||
         decimalToNumber(s.employee?.defaultDayRate);
 
-      totalWages += rate;
+      const list = scansBySite.get(siteId) ?? [];
+      list.push({ date: dateISO, wage: rate, employeeId: s.employeeId });
+      scansBySite.set(siteId, list);
+
+      const isAssistantScan =
+        s.scanType === "MANUAL" && s.manualReason === "ASSISTANT";
+      if (isAssistantScan) {
+        hasAssistantScans.set(siteId, true);
+      } else {
+        hasForemanScans.set(siteId, true);
+      }
     }
 
-    const totalWorkerDays = uniquePairs.size;
+    const totalsBySite = new Map<string, { days: number; wages: number }>();
+
+    for (const [siteId, list] of scansBySite.entries()) {
+      const uniquePairs = new Set<string>();
+      let totalWages = 0;
+
+      for (const s of list) {
+        const key = `${s.employeeId}-${s.date}`;
+        if (!uniquePairs.has(key)) {
+          uniquePairs.add(key);
+          totalWages += s.wage;
+        }
+      }
+
+      totalsBySite.set(siteId, {
+        days: uniquePairs.size,
+        wages: totalWages,
+      });
+    }
 
     // Pull timesheet record status (if exists)
     const ts = await prisma.timesheet.findUnique({
       where: { periodId_foremanId: { periodId, foremanId: foreman.id } },
       select: { id: true, status: true },
     });
+    const id = makeSupervisorTimesheetId(startISO, endISO, foreman.id);
 
-    // Use the first site like supervisor list does
-    const firstSite = siteDaysInPeriod[0]?.site ?? null;
+    // Optional: resolve a single active assistant for this foreman to label creator
+    const now = new Date();
+    const assistantLink = await prisma.foremanAssistant.findFirst({
+      where: {
+        foremanId: foreman.id,
+        startsOn: { lte: now },
+        OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+      },
+      include: {
+        employee: { select: { firstName: true, lastName: true } },
+      },
+    });
 
-    // Build list row (SAME ID FORMAT AS SUPERVISOR)
-    const row = {
-      id: makeSupervisorTimesheetId(startISO, endISO, foreman.id),
-      startISO,
-      endISO,
-      status: ts?.status ?? "SUBMITTED",
-      foremanName: foreman.user?.name ?? "Foreman",
-      siteCode: firstSite?.code ?? null,
-      siteName: firstSite?.name ?? null,
-      totalWorkerDays,
-      totalWorkerWages: totalWages,
-    };
+    const assistantName = assistantLink
+      ? `${assistantLink.employee.firstName} ${assistantLink.employee.lastName}`.trim()
+      : null;
+
+    const rows = Array.from(sitesById.values())
+      .map((site) => {
+        const totals = totalsBySite.get(site.id) || {
+          days: 0,
+          wages: 0,
+        };
+
+        const assistant = hasAssistantScans.get(site.id) ?? false;
+        const foremanOwn = hasForemanScans.get(site.id) ?? false;
+
+        let createdByLabel = "You";
+        if (assistant && !foremanOwn && assistantName) {
+          createdByLabel = assistantName;
+        }
+
+        return {
+          id,
+          startISO,
+          endISO,
+          status: ts?.status ?? "SUBMITTED",
+          foremanName: foreman.user?.name ?? "Foreman",
+          siteId: site.id,
+          siteCode: site.code,
+          siteName: site.name,
+          totalWorkerDays: totals.days,
+          totalWorkerWages: totals.wages,
+          rowKey: `${id}__${site.id}`,
+          createdByLabel,
+        };
+      })
+      // keep only sites with at least one worker day
+      .filter((row) => row.totalWorkerDays > 0);
 
     // Apply same filters (q/status), though foreman usually doesn’t need them
-    const matchQ =
-      !q ||
-      row.foremanName.toLowerCase().includes(q) ||
-      (row.siteName && row.siteName.toLowerCase().includes(q)) ||
-      (row.siteCode && row.siteCode.toLowerCase().includes(q));
+    const filtered = rows.filter((row) => {
+      const matchQ =
+        !q ||
+        row.foremanName.toLowerCase().includes(q) ||
+        (row.siteName && row.siteName.toLowerCase().includes(q)) ||
+        (row.siteCode && row.siteCode.toLowerCase().includes(q));
 
-    const matchStatus = statusFilter === "ALL" || row.status === statusFilter;
+      const matchStatus = statusFilter === "ALL" || row.status === statusFilter;
+      return matchQ && matchStatus;
+    });
 
     return NextResponse.json({
-      timesheets: matchQ && matchStatus ? [row] : [],
+      timesheets: filtered,
       period: { id: `${startISO}_${endISO}`, startISO, endISO },
     });
   } catch (e: any) {

@@ -2,18 +2,41 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+async function getAdminFromRequest(req: Request) {
+  // 1) Try mobile/API Bearer token
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : null;
 
-  const user = session.user as any;
-  if (user?.role !== "ADMIN")
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (token) {
+    const payload = await verifyApiToken(token);
+    if (payload && payload.role === "ADMIN") {
+      return { id: payload.sub, role: "ADMIN" as const };
+    }
+  }
+
+  // 2) Fallback to NextAuth web session
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as any)?.role as string | undefined;
+
+  if (session?.user && role === "ADMIN") {
+    return { id: (session.user as any).id as string, role: "ADMIN" as const };
+  }
+
+  return null;
+}
+
+export async function GET(req: Request) {
+  const admin = await getAdminFromRequest(req);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const url = new URL(req.url);

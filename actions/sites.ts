@@ -301,3 +301,100 @@ export async function bookForemanForDay(input: {
     return { ok: false as const, error: "Failed to book foreman." };
   }
 }
+
+/**
+ * Create random group photo request(s) for a site on a given work date.
+ *
+ * - ADMIN and SUPERVISOR can call this (via requireCanManageSite).
+ * - It finds all foremen assigned to the site on that date (based on
+ *   ForemanSiteAssignment.startsOn/endsOn), ensures SiteDay rows exist
+ *   for each, then creates SiteDayPhotoRequest records.
+ */
+export async function requestSiteGroupPhoto(input: {
+  siteId: string;
+  workDate: string; // YYYY-MM-DD
+  note?: string;
+  dueDate?: string; // optional YYYY-MM-DD for due-at date
+}) {
+  const auth = await requireServerAuth();
+
+  const siteId = String(input.siteId ?? "").trim();
+  if (!siteId) {
+    return { ok: false as const, error: "Site is required." };
+  }
+
+  await requireCanManageSite(auth, siteId);
+
+  const workDate = parseWorkDate(input.workDate);
+  if (!workDate) {
+    return {
+      ok: false as const,
+      error: "Invalid work date. Use format YYYY-MM-DD.",
+    };
+  }
+
+  const note = String(input.note ?? "").trim() || null;
+  const dueDate = String(input.dueDate ?? "").trim();
+  const dueAt = dueDate ? new Date(`${dueDate}T17:00:00.000Z`) : null;
+
+  // Find all foremen assigned to this site on that work date
+  const assignments = await prisma.foremanSiteAssignment.findMany({
+    where: {
+      siteId,
+      startsOn: { lte: workDate },
+      OR: [{ endsOn: null }, { endsOn: { gte: workDate } }],
+    },
+    select: { foremanId: true },
+  });
+
+  if (assignments.length === 0) {
+    return {
+      ok: false as const,
+      error: "No foreman assigned to this site on that day.",
+    };
+  }
+
+  // Ensure SiteDay exists for each foreman on that date
+  const siteDays = await Promise.all(
+    assignments.map((a) =>
+      prisma.siteDay
+        .findFirst({
+          where: { siteId, foremanId: a.foremanId, workDate },
+          select: { id: true },
+        })
+        .then((existing) =>
+          existing
+            ? existing
+            : prisma.siteDay.create({
+                data: {
+                  siteId,
+                  foremanId: a.foremanId,
+                  workDate,
+                },
+                select: { id: true },
+              }),
+        ),
+    ),
+  );
+
+  // Create photo requests for each SiteDay
+  const created = await Promise.all(
+    siteDays.map((sd) =>
+      prisma.siteDayPhotoRequest.create({
+        data: {
+          siteDayId: sd.id,
+          requestedByUserId: auth.userId,
+          note,
+          dueAt,
+        },
+        select: { id: true, siteDayId: true },
+      }),
+    ),
+  );
+
+  return {
+    ok: true as const,
+    count: created.length,
+    requests: created.map((r) => ({ id: r.id, siteDayId: r.siteDayId })),
+  };
+}

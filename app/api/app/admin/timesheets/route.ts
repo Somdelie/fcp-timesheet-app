@@ -155,7 +155,10 @@ export async function GET(req: Request) {
         },
       },
       select: {
-        siteDay: { select: { foremanId: true, workDate: true } },
+        siteDay: {
+          select: { foremanId: true, workDate: true, siteId: true },
+        },
+        siteId: true,
         employeeId: true,
         dayRateAtScan: true,
         employee: { select: { defaultDayRate: true } },
@@ -169,56 +172,36 @@ export async function GET(req: Request) {
       });
     }
 
+    // Group sites by foreman (per-site, not aggregated)
     type SiteLite = { id: string; code: string | null; name: string };
-    type ForemanAgg = {
-      foremanId: string;
-      foremanName: string;
-      sites: Map<string, SiteLite>;
-      totalWorkerDays: number;
-      totalWorkerWages: number;
-    };
 
-    const byForeman = new Map<string, ForemanAgg>();
+    const sitesByForeman = new Map<string, Map<string, SiteLite>>();
 
-    // Sites per foreman
     for (const sd of siteDays) {
-      let agg = byForeman.get(sd.foremanId);
-      if (!agg) {
-        agg = {
-          foremanId: sd.foremanId,
-          foremanName: sd.foreman.user?.name ?? "Foreman",
-          sites: new Map(),
-          totalWorkerDays: 0,
-          totalWorkerWages: 0,
-        };
-        byForeman.set(sd.foremanId, agg);
+      if (!sitesByForeman.has(sd.foremanId)) {
+        sitesByForeman.set(sd.foremanId, new Map());
       }
-
-      agg.sites.set(sd.site.id, {
+      const siteMap = sitesByForeman.get(sd.foremanId)!;
+      siteMap.set(sd.site.id, {
         id: sd.site.id,
         code: sd.site.code,
         name: sd.site.name,
       });
     }
 
-    // Compute totals per foreman
-    const scansByForeman = new Map<
+    const foremanIds = Array.from(new Set(siteDays.map((sd) => sd.foremanId)));
+
+    // Compute totals per (foreman, site)
+    const scansByForemanSite = new Map<
       string,
       Array<{ date: string; wage: number; employeeId: string }>
     >();
 
     for (const scan of scans) {
       const foremanId = scan.siteDay.foremanId;
+      const siteId = scan.siteId;
 
-      if (!byForeman.has(foremanId)) {
-        byForeman.set(foremanId, {
-          foremanId,
-          foremanName: "Unknown",
-          sites: new Map(),
-          totalWorkerDays: 0,
-          totalWorkerWages: 0,
-        });
-      }
+      if (!siteId) continue;
 
       const dateISO = toISODateUTC(scan.siteDay.workDate);
 
@@ -226,33 +209,36 @@ export async function GET(req: Request) {
         decimalToNumber(scan.dayRateAtScan) ||
         decimalToNumber(scan.employee?.defaultDayRate);
 
-      const list = scansByForeman.get(foremanId) ?? [];
+      const key = `${foremanId}__${siteId}`;
+      const list = scansByForemanSite.get(key) ?? [];
       list.push({ date: dateISO, wage: rate, employeeId: scan.employeeId });
-      scansByForeman.set(foremanId, list);
+      scansByForemanSite.set(key, list);
     }
 
-    for (const [foremanId, list] of scansByForeman.entries()) {
+    const totalsByForemanSite = new Map<
+      string,
+      { days: number; wages: number }
+    >();
+
+    for (const [key, list] of scansByForemanSite.entries()) {
       const uniquePairs = new Set<string>();
       let totalWages = 0;
 
       for (const s of list) {
-        const key = `${s.employeeId}-${s.date}`;
-        if (!uniquePairs.has(key)) {
-          uniquePairs.add(key);
+        const pairKey = `${s.employeeId}-${s.date}`;
+        if (!uniquePairs.has(pairKey)) {
+          uniquePairs.add(pairKey);
           totalWages += s.wage;
         }
       }
 
-      const agg = byForeman.get(foremanId);
-      if (agg) {
-        agg.totalWorkerDays = uniquePairs.size;
-        agg.totalWorkerWages = totalWages;
-      }
+      totalsByForemanSite.set(key, {
+        days: uniquePairs.size,
+        wages: totalWages,
+      });
     }
 
-    const foremanIds = Array.from(byForeman.keys());
-
-    // ✅ REAL STATUS: pull from Timesheet table
+    // ✅ REAL STATUS: pull from Timesheet table (per foreman, same for all sites)
     const timesheetRows = await prisma.timesheet.findMany({
       where: { periodId, foremanId: { in: foremanIds } },
       select: {
@@ -260,17 +246,14 @@ export async function GET(req: Request) {
         status: true,
       },
     });
+
     const statusByForeman = new Map(
       timesheetRows.map((t) => [t.foremanId, t.status]),
     );
 
-    // Supervisor derived from site assignments (your logic)
+    // Supervisor derived from site assignments (per site)
     const siteIdsInPeriod = Array.from(
-      new Set(
-        Array.from(byForeman.values()).flatMap((agg) =>
-          Array.from(agg.sites.keys()),
-        ),
-      ),
+      new Set(siteDays.map((sd) => sd.site.id)),
     );
 
     const supervisorSiteAssignments =
@@ -292,40 +275,62 @@ export async function GET(req: Request) {
       });
     }
 
-    const supervisorByForeman = new Map<
-      string,
-      { id: string; name: string } | null
-    >();
-
-    for (const agg of byForeman.values()) {
-      let found: { id: string; name: string } | null = null;
-      for (const siteId of agg.sites.keys()) {
-        const sup = supervisorsBySite.get(siteId);
-        if (sup) {
-          found = sup;
-          break;
-        }
+    // Build response - one row per (foreman, site)
+    const siteDaysByForeman = new Map<string, typeof siteDays>();
+    for (const sd of siteDays) {
+      if (!siteDaysByForeman.has(sd.foremanId)) {
+        siteDaysByForeman.set(sd.foremanId, []);
       }
-      supervisorByForeman.set(agg.foremanId, found);
+      siteDaysByForeman.get(sd.foremanId)!.push(sd);
     }
 
-    const timesheets = Array.from(byForeman.values())
-      .map((agg) => {
-        const sup = supervisorByForeman.get(agg.foremanId);
-        const realStatus = statusByForeman.get(agg.foremanId) ?? "SUBMITTED";
+    const rows: Array<{
+      id: string;
+      startISO: string;
+      endISO: string;
+      status: string;
+      foreman: { id: string; name: string };
+      supervisor: { id: string; name: string } | null;
+      totalWorkerDays: number;
+      totalWorkerWages: number;
+      sites: SiteLite[];
+    }> = [];
 
-        return {
-          id: `${startISO}_${endISO}_${agg.foremanId}`, // your UI id format
+    for (const foremanId of foremanIds) {
+      const siteDaysForForeman = siteDaysByForeman.get(foremanId) || [];
+      const foremanName =
+        siteDaysForForeman[0]?.foreman.user?.name ?? "Foreman";
+
+      const siteMap = sitesByForeman.get(foremanId);
+      const sites = siteMap ? Array.from(siteMap.values()) : [];
+
+      const timesheetStatus = statusByForeman.get(foremanId) ?? "SUBMITTED";
+
+      for (const site of sites) {
+        const key = `${foremanId}__${site.id}`;
+        const totals =
+          totalsByForemanSite.get(key) || ({ days: 0, wages: 0 } as const);
+
+        // Skip sites that have no attendance scans in this period
+        if (!totals.days) continue;
+
+        const supervisor = supervisorsBySite.get(site.id) ?? null;
+
+        rows.push({
+          id: `${startISO}_${endISO}_${foremanId}`,
           startISO,
           endISO,
-          status: realStatus,
-          foreman: { id: agg.foremanId, name: agg.foremanName },
-          supervisor: sup ?? null,
-          totalWorkerDays: agg.totalWorkerDays,
-          totalWorkerWages: agg.totalWorkerWages,
-          sites: Array.from(agg.sites.values()),
-        };
-      })
+          status: timesheetStatus,
+          foreman: { id: foremanId, name: foremanName },
+          supervisor,
+          totalWorkerDays: totals.days,
+          totalWorkerWages: totals.wages,
+          sites: [site],
+        });
+      }
+    }
+
+    const timesheets = rows
       .filter((row) => {
         // search
         if (q) {
@@ -344,13 +349,15 @@ export async function GET(req: Request) {
           statusFilter &&
           statusFilter !== "ALL" &&
           row.status !== statusFilter
-        )
+        ) {
           return false;
+        }
 
         // supervisor filter
         if (supervisorId && supervisorId !== "ALL") {
-          if (!row.supervisor || row.supervisor.id !== supervisorId)
+          if (!row.supervisor || row.supervisor.id !== supervisorId) {
             return false;
+          }
         }
 
         return true;

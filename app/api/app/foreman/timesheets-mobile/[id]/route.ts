@@ -92,6 +92,9 @@ export async function GET(
     const endDate = startOfDayUTCFromISO(parsed.endISO);
     const endExclusive = addDaysUTC(endDate, 1);
 
+    const url = new URL(req.url);
+    const siteIdFilter = url.searchParams.get("siteId");
+
     // Find or create the period (same as supervisor)
     const period = await prisma.timesheetPeriod.upsert({
       where: { startDate_endDate: { startDate, endDate } },
@@ -126,10 +129,11 @@ export async function GET(
     });
     const colIndex = new Map(columns.map((c, idx) => [c.iso, idx] as const));
 
-    // Sites worked in this period
+    // Sites worked in this period (optionally filter by site)
     const siteRows = await prisma.siteDay.findMany({
       where: {
         foremanId: foreman.id,
+        ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
         workDate: { gte: startDate, lt: endExclusive },
       },
       distinct: ["siteId"],
@@ -151,11 +155,12 @@ export async function GET(
           ? `${sites[0].code ? sites[0].code + " · " : ""}${sites[0].name}`
           : `${sites.length} sites`;
 
-    // Scans via SiteDay (same pattern as supervisor)
+    // Scans via SiteDay (same pattern as supervisor, optionally filtered by site)
     const scans = await prisma.attendanceScan.findMany({
       where: {
         siteDay: {
           foremanId: foreman.id,
+          ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
           workDate: { gte: startDate, lt: endExclusive },
         },
       },
