@@ -18,15 +18,17 @@ export function AppShell({ children, role }: AppShellProps) {
   return (
     <BreadcrumbProvider>
       <UserRoleProvider role={role}>
-        <div className="flex min-h-screen bg-background text-foreground">
+        <div className="flex h-screen bg-background text-foreground">
           <Sidebar isOpen={isSidebarOpen} role={role} />
-          <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
             <Navbar
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
               role={role}
             />
-            <main className="flex-1 overflow-auto py-3 px-4">{children}</main>
+            <main className="flex-1 overflow-auto w-full py-3 px-4">
+              {children}
+            </main>
           </div>
         </div>
       </UserRoleProvider>

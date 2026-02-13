@@ -4,8 +4,8 @@ import { toast } from "react-toastify";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useTransition, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import { X, Upload } from "lucide-react";
 
@@ -39,12 +39,26 @@ const employeeSchema = z.object({
 
 export default function CreateEmployeeForm() {
   const router = useRouter();
+  const sp = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [lastQr, setLastQr] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const create = sp.get("create");
+    if (create !== "employee") return;
+
+    setOpen(true);
+
+    const params = new URLSearchParams(sp.toString());
+    params.delete("create");
+    const qs = params.toString();
+    router.replace(qs ? `/employees?${qs}` : "/employees");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sp]);
 
   const form = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),

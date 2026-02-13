@@ -26,6 +26,7 @@ export async function GET(
       id: true,
       email: true,
       name: true,
+      phone: true,
       role: true,
       createdAt: true,
       updatedAt: true,
@@ -55,6 +56,9 @@ export async function PATCH(
 
   if (body.name !== undefined)
     data.name = body.name ? String(body.name).trim() : null;
+
+  if (body.phone !== undefined)
+    data.phone = body.phone ? String(body.phone).trim() : null;
 
   if (body.role !== undefined) {
     const roleRaw = String(body.role).trim().toUpperCase();
@@ -89,6 +93,7 @@ export async function PATCH(
           id: true,
           email: true,
           name: true,
+          phone: true,
           role: true,
           updatedAt: true,
         },

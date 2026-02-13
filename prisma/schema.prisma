@@ -53,6 +53,7 @@ model User {
   email    String   @unique
   password String
   name     String?
+  phone    String?
   role     UserRole
 
   createdAt DateTime @default(now())
@@ -77,6 +78,21 @@ model User {
   sessions Session[]
 
   accounts Account[]
+
+  pushTokens PushToken[]
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /**
@@ -214,7 +230,12 @@ model Site {
   name     String
   code     String? @unique
   location String?
-  isActive Boolean @default(true)
+
+  // Optional: map/address data (nullable so existing DB rows are unaffected)
+  address   String?
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

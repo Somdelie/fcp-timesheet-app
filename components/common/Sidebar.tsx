@@ -79,13 +79,6 @@ const menuItems: {
     icon: Users,
     roles: ["ADMIN"],
   },
-  { href: "/users/new", label: "Create User", icon: User2, roles: ["ADMIN"] },
-  {
-    href: "/admin/foremen",
-    label: "Manage Foremen",
-    icon: Users,
-    roles: ["ADMIN"],
-  },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
 ];
 
@@ -94,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role }) => {
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out ${
+      className={`flex h-full flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out ${
         isOpen ? "w-64" : "w-16"
       }`}
     >

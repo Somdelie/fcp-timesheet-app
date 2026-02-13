@@ -120,6 +120,8 @@ export async function createNewUser(input: {
               defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
               qrCodeValue,
               createdByUserId: created.id,
+              // Link the employee profile back to this foreman user
+              userId: created.id,
               isActive: true,
             },
           });
@@ -166,6 +168,7 @@ export async function getUserByEmail(email: string) {
       id: true,
       email: true,
       name: true,
+      phone: true,
       role: true,
       supervisor: true,
       foreman: true,
@@ -183,6 +186,7 @@ export async function getAllUsers() {
       id: true,
       email: true,
       name: true,
+      phone: true,
       role: true,
       createdAt: true,
     },
@@ -216,7 +220,10 @@ export async function getAllSupervisors() {
 // get all foremen
 export async function getAllForemen() {
   const foremen = await prisma.user.findMany({
-    where: { role: "FOREMAN" },
+    where: {
+      role: "FOREMAN",
+      foreman: { isNot: null }, // Only include users that have a Foreman record
+    },
     select: {
       id: true,
       email: true,
@@ -228,6 +235,16 @@ export async function getAllForemen() {
           id: true,
           defaultDayRate: true,
           createdAt: true,
+        },
+      },
+      // Check if this user was promoted from an employee who is an assistant
+      employee: {
+        select: {
+          id: true,
+          assistantLinks: {
+            select: { foremanId: true },
+            take: 1,
+          },
         },
       },
     },
@@ -257,9 +274,11 @@ export async function updateUser(input: {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
 }) {
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim();
+  const phone = (input.phone ?? null)?.toString().trim() || null;
 
   if (!email.includes("@")) {
     return { ok: false as const, error: "Invalid email." };
@@ -271,15 +290,31 @@ export async function updateUser(input: {
   try {
     const user = await prisma.user.update({
       where: { id: input.id },
-      data: { email, name },
+      data: { email, name, phone },
       select: {
         id: true,
         email: true,
         name: true,
+        phone: true,
         role: true,
         createdAt: true,
       },
     });
+
+    // Keep foreman-linked employee profiles in sync with the user name
+    if (user.role === "FOREMAN") {
+      const parts = name.split(" ").filter((p) => p.trim().length > 0);
+      const firstName = parts[0] || name;
+      const lastName = parts.slice(1).join(" ");
+
+      await prisma.employee.updateMany({
+        where: { userId: user.id },
+        data: {
+          firstName,
+          lastName,
+        },
+      });
+    }
 
     revalidatePath("/users");
     return { ok: true as const, user };

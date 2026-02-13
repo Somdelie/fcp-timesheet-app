@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { parseSupervisorTimesheetId } from "@/lib/timesheetId";
 import { startOfDayUTC } from "@/lib/dateUtc";
+import { writeAuditEvent } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,6 +110,41 @@ export async function POST(
         rejectionReason: null,
       },
       select: { status: true, submittedAt: true },
+    });
+
+    const foremanNameRow = await prisma.foreman.findUnique({
+      where: { id: foreman.id },
+      select: { user: { select: { name: true } } },
+    });
+    const foremanName = foremanNameRow?.user?.name?.trim() || "Foreman";
+
+    const siteDay = await prisma.siteDay.findFirst({
+      where: {
+        foremanId: foreman.id,
+        workDate: {
+          gte: startDate,
+          lt: new Date(endDate.getTime() + 24 * 60 * 60 * 1000),
+        },
+      },
+      orderBy: { workDate: "desc" },
+      select: { site: { select: { id: true, name: true } } },
+    });
+
+    await writeAuditEvent({
+      actorUserId: auth.userId,
+      action: "TIMESHEET_SUBMITTED",
+      entity: "Timesheet",
+      entityId: ts.id,
+      metadata: {
+        foremanId: foreman.id,
+        period: { startISO: parsed.startISO, endISO: parsed.endISO },
+        siteId: siteDay?.site?.id ?? null,
+        siteName: siteDay?.site?.name ?? null,
+        title: "Timesheet submitted",
+        description: siteDay?.site?.name
+          ? `${siteDay.site.name} - ${foremanName}`
+          : foremanName,
+      },
     });
 
     return NextResponse.json({ ok: true, ...updated });

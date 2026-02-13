@@ -5,11 +5,29 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { siteWhereFor } from "@/lib/site-scope";
 import { parseWorkDate, toISODate } from "@/lib/workdate";
+import { writeAuditEvent } from "@/lib/audit";
 import { requireCanManageSite } from "@/lib/guards";
 import { revalidatePath } from "next/cache";
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function cleanNumber(v: unknown) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isValidLatitude(n: number) {
+  return Number.isFinite(n) && n >= -90 && n <= 90;
+}
+
+function isValidLongitude(n: number) {
+  return Number.isFinite(n) && n >= -180 && n <= 180;
 }
 
 function serializeSite(s: any) {
@@ -18,6 +36,9 @@ function serializeSite(s: any) {
     name: s.name,
     code: s.code,
     location: s.location,
+    address: s.address ?? null,
+    latitude: typeof s.latitude === "number" ? s.latitude : null,
+    longitude: typeof s.longitude === "number" ? s.longitude : null,
     isActive: s.isActive,
     createdAt:
       s.createdAt instanceof Date
@@ -77,6 +98,9 @@ export async function listSites(input?: {
       name: true,
       code: true,
       location: true,
+      address: true,
+      latitude: true,
+      longitude: true,
       isActive: true,
       createdAt: true,
     },
@@ -94,6 +118,9 @@ export async function createSite(input: {
   name: string;
   code?: string | null;
   location?: string | null;
+  address?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   isActive?: boolean;
 }) {
   const auth = await requireServerAuth();
@@ -104,8 +131,23 @@ export async function createSite(input: {
   const name = clean(input.name);
   const code = clean(input.code) || null;
   const location = clean(input.location) || null;
+  const address = clean(input.address) || null;
+  const latitude = cleanNumber(input.latitude);
+  const longitude = cleanNumber(input.longitude);
 
   if (!name) return { ok: false as const, error: "Site name is required." };
+  if (latitude !== null && !isValidLatitude(latitude)) {
+    return {
+      ok: false as const,
+      error: "Latitude must be between -90 and 90.",
+    };
+  }
+  if (longitude !== null && !isValidLongitude(longitude)) {
+    return {
+      ok: false as const,
+      error: "Longitude must be between -180 and 180.",
+    };
+  }
 
   try {
     const site = await prisma.site.create({
@@ -113,6 +155,9 @@ export async function createSite(input: {
         name,
         code,
         location,
+        address,
+        latitude,
+        longitude,
         isActive: input.isActive ?? true,
       },
       select: {
@@ -120,8 +165,24 @@ export async function createSite(input: {
         name: true,
         code: true,
         location: true,
+        address: true,
+        latitude: true,
+        longitude: true,
         isActive: true,
         createdAt: true,
+      },
+    });
+
+    await writeAuditEvent({
+      actorUserId: auth.userId,
+      action: "SITE_CREATED",
+      entity: "Site",
+      entityId: site.id,
+      metadata: {
+        siteId: site.id,
+        siteName: site.name,
+        title: "New site created",
+        description: site.name,
       },
     });
 
@@ -134,6 +195,80 @@ export async function createSite(input: {
       return { ok: false as const, error: "Site code must be unique." };
     }
     return { ok: false as const, error: "Failed to create site." };
+  }
+}
+
+export async function updateSiteLocation(input: {
+  siteId: string;
+  location?: string | null;
+  address?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+}) {
+  const auth = await requireServerAuth();
+  const siteId = clean(input.siteId);
+  if (!siteId) return { ok: false as const, error: "Site is required." };
+
+  await requireCanManageSite(auth, siteId);
+
+  const location =
+    input.location === undefined ? undefined : clean(input.location) || null;
+  const address =
+    input.address === undefined ? undefined : clean(input.address) || null;
+  const latitude =
+    input.latitude === undefined ? undefined : cleanNumber(input.latitude);
+  const longitude =
+    input.longitude === undefined ? undefined : cleanNumber(input.longitude);
+
+  if (
+    latitude !== undefined &&
+    latitude !== null &&
+    !isValidLatitude(latitude)
+  ) {
+    return {
+      ok: false as const,
+      error: "Latitude must be between -90 and 90.",
+    };
+  }
+  if (
+    longitude !== undefined &&
+    longitude !== null &&
+    !isValidLongitude(longitude)
+  ) {
+    return {
+      ok: false as const,
+      error: "Longitude must be between -180 and 180.",
+    };
+  }
+
+  try {
+    const site = await prisma.site.update({
+      where: { id: siteId },
+      data: {
+        ...(location !== undefined ? { location } : {}),
+        ...(address !== undefined ? { address } : {}),
+        ...(latitude !== undefined ? { latitude } : {}),
+        ...(longitude !== undefined ? { longitude } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        location: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    revalidatePath(`/sites/${siteId}`);
+    revalidatePath(`/sites/map`);
+
+    return { ok: true as const, site: serializeSite(site) };
+  } catch (e: any) {
+    return { ok: false as const, error: "Failed to update site location." };
   }
 }
 
@@ -397,4 +532,34 @@ export async function requestSiteGroupPhoto(input: {
     count: created.length,
     requests: created.map((r) => ({ id: r.id, siteDayId: r.siteDayId })),
   };
+}
+
+/**
+ * Mark a site as finished (set isActive = false)
+ */
+export async function markSiteFinished(siteId: string) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN") {
+    return {
+      ok: false as const,
+      error: "Only admin can mark sites as finished.",
+    };
+  }
+
+  const id = clean(siteId);
+  if (!id) return { ok: false as const, error: "Site is required." };
+
+  try {
+    await prisma.site.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    revalidatePath("/sites");
+    revalidatePath(`/sites/${id}`);
+
+    return { ok: true as const };
+  } catch (e: any) {
+    return { ok: false as const, error: "Failed to mark site as finished." };
+  }
 }

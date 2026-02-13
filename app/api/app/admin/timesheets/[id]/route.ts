@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireApiAuth } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+async function getAdminOrSupervisorFromRequest(req: NextRequest) {
+  // 1) Prefer API Bearer token (mobile/third-party clients)
+  const apiCtx = await requireApiAuth(req, ["ADMIN", "SUPERVISOR"]);
+  if (apiCtx) {
+    return { id: apiCtx.user.sub, role: apiCtx.user.role } as const;
+  }
+
+  // 2) Fallback to NextAuth web session (admin dashboard)
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as any)?.role as string | undefined;
+
+  if (session?.user && (role === "ADMIN" || role === "SUPERVISOR")) {
+    return { id: (session.user as any).id as string, role } as const;
+  }
+
+  return null;
+}
 
 function addDaysUTC(d: Date, days: number) {
   const x = new Date(d.getTime());
@@ -55,8 +75,8 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authCtx = await requireApiAuth(req, ["ADMIN", "SUPERVISOR"]);
-    if (!authCtx) {
+    const actor = await getAdminOrSupervisorFromRequest(req);
+    if (!actor) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

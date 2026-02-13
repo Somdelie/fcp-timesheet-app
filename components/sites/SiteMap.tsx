@@ -24,10 +24,23 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
   const [selectedSite, setSelectedSite] = React.useState<SiteMapMarker | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = React.useState("");
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   const [is3D, setIs3D] = React.useState(true);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+
+  const filteredSites = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sites;
+
+    return sites.filter((s) => {
+      const haystack = [s.name, s.code ?? "", s.region ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [sites, searchQuery]);
 
   // Initialize map only once
   React.useEffect(() => {
@@ -226,10 +239,30 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
   React.useEffect(() => {
     if (!mapRef.current || !mapInitializedRef.current) return;
 
-    updateMarkers(mapRef.current, sites, selectedSite?.id || null, hoveredId);
-  }, [sites, selectedSite, hoveredId]);
+    updateMarkers(
+      mapRef.current,
+      filteredSites,
+      selectedSite?.id || null,
+      hoveredId,
+    );
+  }, [filteredSites, selectedSite, hoveredId]);
+
+  // Reconcile markers when filtering changes (adds/removes markers)
+  React.useEffect(() => {
+    if (!mapRef.current || !mapInitializedRef.current) return;
+    addMarkersToMap(mapRef.current, filteredSites);
+  }, [filteredSites]);
+
+  // Clear selection if it no longer matches the filtered list
+  React.useEffect(() => {
+    if (!selectedSite) return;
+    if (!filteredSites.some((s) => s.id === selectedSite.id)) {
+      setSelectedSite(null);
+    }
+  }, [filteredSites, selectedSite]);
 
   const addMarkersToMap = (map: mapboxgl.Map, sitesToAdd: SiteMapMarker[]) => {
+    markersRef.current.forEach((marker) => marker.remove());
     markersRef.current.clear();
 
     sitesToAdd.forEach((site) => {
@@ -333,6 +366,11 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
   // Generate theme-aware styles
   const themedStyles = getThemedStyles(isDark);
 
+  const searchIsActive = searchQuery.trim().length > 0;
+  const locationCountLabel = searchIsActive
+    ? `${filteredSites.length} of ${sites.length}`
+    : `${sites.length}`;
+
   return (
     <div style={themedStyles.container}>
       <div style={themedStyles.mapWrapper}>
@@ -356,7 +394,9 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
             <div>
               <div style={themedStyles.headerTitle}>Sites Map</div>
               <div style={themedStyles.headerSubtitle}>
-                {sites.length} locations
+                {searchIsActive
+                  ? `${filteredSites.length} of ${sites.length} locations`
+                  : `${sites.length} locations`}
               </div>
             </div>
           </div>
@@ -388,8 +428,8 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
       <div style={themedStyles.panel}>
         {/* Panel Header */}
         <div style={themedStyles.panelHeader}>
-          <h2 style={themedStyles.panelTitle}>Locations</h2>
-          <div style={themedStyles.locationCount}>{sites.length}</div>
+          <h2 style={themedStyles.panelTitle}>Sites Locations</h2>
+          <div style={themedStyles.locationCount}>{locationCountLabel}</div>
         </div>
 
         {/* Search Bar */}
@@ -409,6 +449,11 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
             type="text"
             placeholder="Search location..."
             style={themedStyles.searchInput}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setSearchQuery("");
+            }}
           />
         </div>
 
@@ -423,38 +468,50 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
 
         {/* Sites List */}
         <div style={themedStyles.sitesList}>
-          {sites.map((site) => (
+          {filteredSites.length === 0 ? (
             <div
-              key={site.id}
-              onClick={() => handleSiteClick(site)}
-              onMouseEnter={() => setHoveredId(site.id)}
-              onMouseLeave={() => setHoveredId(null)}
               style={{
-                ...themedStyles.siteRow,
-                ...(selectedSite?.id === site.id
-                  ? themedStyles.siteRowActive
-                  : hoveredId === site.id
-                    ? themedStyles.siteRowHover
-                    : {}),
+                padding: "12px",
+                color: isDark ? "#94a3b8" : "#64748b",
+                fontSize: 13,
               }}
             >
-              <div style={themedStyles.siteRowLeft}>
-                <div
-                  style={{
-                    ...themedStyles.siteStatus,
-                    backgroundColor: getStatusColor(site.status),
-                  }}
-                />
-                <div style={themedStyles.siteInfo}>
-                  <div style={themedStyles.siteName}>{site.name}</div>
-                  <div style={themedStyles.siteCode}>{site.code}</div>
-                </div>
-              </div>
-              {site.region && (
-                <div style={themedStyles.siteRegion}>{site.region}</div>
-              )}
+              No matching sites.
             </div>
-          ))}
+          ) : (
+            filteredSites.map((site) => (
+              <div
+                key={site.id}
+                onClick={() => handleSiteClick(site)}
+                onMouseEnter={() => setHoveredId(site.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                style={{
+                  ...themedStyles.siteRow,
+                  ...(selectedSite?.id === site.id
+                    ? themedStyles.siteRowActive
+                    : hoveredId === site.id
+                      ? themedStyles.siteRowHover
+                      : {}),
+                }}
+              >
+                <div style={themedStyles.siteRowLeft}>
+                  <div
+                    style={{
+                      ...themedStyles.siteStatus,
+                      backgroundColor: getStatusColor(site.status),
+                    }}
+                  />
+                  <div style={themedStyles.siteInfo}>
+                    <div style={themedStyles.siteName}>{site.name}</div>
+                    <div style={themedStyles.siteCode}>{site.code}</div>
+                  </div>
+                </div>
+                {site.region && (
+                  <div style={themedStyles.siteRegion}>{site.region}</div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Footer */}
@@ -502,14 +559,14 @@ function getThemedStyles(isDark: boolean): Record<string, React.CSSProperties> {
       display: "flex",
       height: "100vh",
       width: "100%",
-      backgroundColor: isDark ? "#0f172a" : "#f8fafc",
+      backgroundColor: isDark ? "#1e293b" : "#f8fafc",
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     },
     mapWrapper: {
       flex: 1,
       position: "relative",
-      backgroundColor: isDark ? "#1e293b" : "#e8f4f8",
+      backgroundColor: "transparent",
     },
     map: {
       height: "100%",
@@ -566,7 +623,7 @@ function getThemedStyles(isDark: boolean): Record<string, React.CSSProperties> {
       transition: "all 0.2s ease",
     },
     panel: {
-      width: 360,
+      width: 300,
       backgroundColor: isDark ? "#1e293b" : "white",
       borderLeft: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
       display: "flex",
@@ -645,19 +702,26 @@ function getThemedStyles(isDark: boolean): Record<string, React.CSSProperties> {
       alignItems: "center",
       padding: "12px 12px",
       marginBottom: "6px",
-      borderRadius: 10,
+      borderRadius: 5,
       cursor: "pointer",
       transition: "all 0.2s ease",
       backgroundColor: "transparent",
-      border: "1px solid transparent",
+      borderWidth: 1,
+      borderStyle: "solid",
+      borderColor: "transparent",
+      borderBottomWidth: 4,
+      borderBottomStyle: "solid",
+      borderBottomColor: "transparent",
     },
     siteRowHover: {
       backgroundColor: isDark ? "#134e4a" : "#f0fdf4",
-      border: isDark ? "1px solid #0f766e" : "1px solid #d1fae5",
+      borderColor: isDark ? "#0f766e" : "#d1fae5",
+      borderBottomColor: isDark ? "#0f766e" : "#d1fae5",
     },
     siteRowActive: {
       backgroundColor: isDark ? "#0f766e" : "#d1fae5",
-      border: isDark ? "1px solid #14b8a6" : "1px solid #86efac",
+      borderColor: isDark ? "#14b8a6" : "#86efac",
+      borderBottomColor: isDark ? "#14b8a6" : "#86efac",
     },
     siteRowLeft: {
       display: "flex",

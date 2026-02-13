@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { parseWorkDate } from "@/lib/workdate";
+import { notifyForemenSiteDayPhotoRequested } from "@/lib/notifySitePhotoRequest";
+import { sendExpoPush } from "@/lib/expoPush";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -219,7 +221,18 @@ export async function POST(
         startsOn: { lte: workDate },
         OR: [{ endsOn: null }, { endsOn: { gte: workDate } }],
       },
-      select: { foremanId: true },
+      select: {
+        foremanId: true,
+        foreman: {
+          select: {
+            user: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (assignments.length === 0) {
@@ -268,6 +281,118 @@ export async function POST(
         }),
       ),
     );
+
+    // Best-effort WhatsApp notification (free text; may fail outside 24h window)
+    try {
+      await notifyForemenSiteDayPhotoRequested({
+        siteId,
+        dateISO: workDateStr,
+        note,
+      });
+    } catch (e) {
+      console.error("Photo-request WhatsApp notify error:", e);
+    }
+
+    // Best-effort Expo push notifications to assigned foremen and assistants
+    try {
+      // Map foreman user IDs
+      const foremanUserIds = new Set(
+        assignments
+          .map((a) => a.foreman.user?.id)
+          .filter((id): id is string => Boolean(id)),
+      );
+
+      const foremanIds = assignments.map((a) => a.foremanId);
+
+      // Assistants linked to these foremen, active on this date
+      const assistantLinks = await prisma.foremanAssistant.findMany({
+        where: {
+          foremanId: { in: foremanIds },
+          startsOn: { lte: workDate },
+          OR: [{ endsOn: null }, { endsOn: { gte: workDate } }],
+        },
+        select: {
+          foremanId: true,
+          employee: {
+            select: { userId: true },
+          },
+        },
+      });
+
+      const assistantsByForeman = new Map<string, string[]>();
+      const assistantUserIds = new Set<string>();
+
+      for (const link of assistantLinks) {
+        const userId = link.employee.userId;
+        if (!userId) continue;
+        assistantUserIds.add(userId);
+
+        const arr = assistantsByForeman.get(link.foremanId) ?? [];
+        arr.push(userId);
+        assistantsByForeman.set(link.foremanId, arr);
+      }
+
+      const userIds = Array.from(
+        new Set<string>([...foremanUserIds, ...assistantUserIds]),
+      );
+
+      if (userIds.length > 0) {
+        const [site, pushTokens] = await Promise.all([
+          prisma.site.findUnique({
+            where: { id: siteId },
+            select: { name: true, code: true },
+          }),
+          prisma.pushToken.findMany({
+            where: { userId: { in: userIds } },
+            select: { token: true, userId: true },
+          }),
+        ]);
+
+        const siteLabel = site?.code
+          ? `${site.code} • ${site.name}`
+          : (site?.name ?? "Site");
+
+        const tokensByUser = new Map<string, string[]>();
+        for (const pt of pushTokens) {
+          const arr = tokensByUser.get(pt.userId) ?? [];
+          arr.push(pt.token);
+          tokensByUser.set(pt.userId, arr);
+        }
+
+        // created[i] corresponds to assignments[i]
+        await Promise.all(
+          created.map(async (reqRow, index) => {
+            const foremanUserId = assignments[index]?.foreman.user?.id;
+            if (!foremanUserId) return;
+
+            const tokensForForeman = tokensByUser.get(foremanUserId) ?? [];
+
+            const assistantUserIdsForForeman =
+              assistantsByForeman.get(assignments[index].foremanId) ?? [];
+
+            const tokensForAssistants = assistantUserIdsForForeman.flatMap(
+              (uid) => tokensByUser.get(uid) ?? [],
+            );
+
+            const tokens = [...tokensForForeman, ...tokensForAssistants];
+            if (tokens.length === 0) return;
+
+            const title = "Site day photo requested";
+            const body = `Site: ${siteLabel} • Date: ${workDateStr}`;
+            const data = {
+              type: "PHOTO_REQUEST" as const,
+              requestId: reqRow.id,
+              siteId,
+              dateISO: workDateStr,
+            };
+
+            await sendExpoPush(tokens, { title, body, data });
+          }),
+        );
+      }
+    } catch (e) {
+      console.error("Photo-request Expo push notify error:", e);
+    }
 
     return NextResponse.json({
       ok: true,

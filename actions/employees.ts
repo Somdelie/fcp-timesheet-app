@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { requireServerAuth } from "@/lib/auth-server";
 import { employeeWhereFor } from "@/lib/employee-scope";
 import { prisma } from "@/lib/prisma";
+import { writeAuditEvent } from "@/lib/audit";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 
@@ -68,7 +69,7 @@ export async function listEmployees(input?: {
 
   const q = (input?.q ?? "").trim();
   const onlyActive = (input?.show ?? "active") !== "all";
-  const take = Math.min(Math.max(input?.take ?? 200, 1), 500);
+  const take = Math.min(Math.max(input?.take ?? 500, 1), 1000);
 
   const employees = await prisma.employee.findMany({
     where: {
@@ -77,9 +78,9 @@ export async function listEmployees(input?: {
       ...(q
         ? {
             OR: [
-              { firstName: { contains: q, mode: "insensitive" } },
-              { lastName: { contains: q, mode: "insensitive" } },
-              { qrCodeValue: { contains: q, mode: "insensitive" } },
+              { firstName: { contains: q, mode: "insensitive" as const } },
+              { lastName: { contains: q, mode: "insensitive" as const } },
+              { qrCodeValue: { contains: q, mode: "insensitive" as const } },
             ],
           }
         : {}),
@@ -113,7 +114,10 @@ export async function listEmployees(input?: {
     },
   });
 
-  return { ok: true as const, employees: employees.map(serializeEmployee) };
+  return {
+    ok: true as const,
+    employees: employees.map(serializeEmployee),
+  };
 }
 
 export async function createEmployee(input: {
@@ -215,6 +219,7 @@ export async function createEmployee(input: {
         const t = Array.isArray(target)
           ? target.join(",")
           : String(target ?? "");
+
         if (t.includes("qrCodeValue")) continue; // retry collision
         return {
           ok: false as const,
@@ -261,9 +266,19 @@ export async function updateEmployee(input: {
 
   const canSee = await prisma.employee.findFirst({
     where: { id, ...whereScope },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, user: { select: { role: true } } },
   });
   if (!canSee) return { ok: false as const, error: "Not found." };
+
+  const isForemanEmployee = !!canSee.userId && canSee.user?.role === "FOREMAN";
+
+  // Prevent name edits for foreman employees; these are managed via the user profile
+  if (isForemanEmployee && ("firstName" in data || "lastName" in data)) {
+    return {
+      ok: false as const,
+      error: "Foreman names can only be updated on the user profile.",
+    };
+  }
 
   if (input.defaultDayRate !== undefined) {
     // Only foreman employees can have their day rate updated

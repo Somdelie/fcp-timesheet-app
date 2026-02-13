@@ -119,14 +119,23 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     const nextLast = lastName.trim();
 
     (startTransition as any)(async () => {
-      const res = await updateEmployee({
+      const payload: any = {
         id: employee.id,
-        firstName: nextFirst,
-        lastName: nextLast,
         faceImageUrl: faceImageUrl || null,
         isActive,
-        ...(isForeman && { defaultDayRate: defaultDayRate || null }),
-      });
+      };
+
+      // Only allow name edits for non-foreman employees
+      if (!isForeman) {
+        payload.firstName = nextFirst;
+        payload.lastName = nextLast;
+      }
+
+      if (isForeman) {
+        payload.defaultDayRate = defaultDayRate || null;
+      }
+
+      const res = await updateEmployee(payload);
 
       if (!res.ok) {
         toast.error(res.error);
@@ -162,7 +171,13 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 id="firstName-edit"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                disabled={isForeman}
               />
+              {isForeman && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Foreman names are managed from the user profile.
+                </p>
+              )}
             </Field>
             <Field>
               <FieldLabel htmlFor="lastName-edit">Last name</FieldLabel>
@@ -170,6 +185,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 id="lastName-edit"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                disabled={isForeman}
               />
             </Field>
             <Field>

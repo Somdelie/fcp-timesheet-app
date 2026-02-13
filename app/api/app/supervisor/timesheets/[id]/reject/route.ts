@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { parseSupervisorTimesheetId } from "@/lib/timesheetId";
 import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { writeAuditEvent } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,6 +131,39 @@ export async function POST(
       approvedBySupervisorId: null,
     },
     select: { status: true, rejectedAt: true },
+  });
+
+  const [foremanNameRow, siteDay] = await Promise.all([
+    prisma.foreman.findUnique({
+      where: { id: parsed.foremanId },
+      select: { user: { select: { name: true } } },
+    }),
+    prisma.siteDay.findFirst({
+      where: {
+        foremanId: parsed.foremanId,
+        workDate: { gte: startDate, lt: endExclusive },
+      },
+      orderBy: { workDate: "desc" },
+      select: { site: { select: { id: true, name: true } } },
+    }),
+  ]);
+  const foremanName = foremanNameRow?.user?.name?.trim() || "Foreman";
+
+  await writeAuditEvent({
+    actorUserId: auth.userId,
+    action: "TIMESHEET_REJECTED",
+    entity: "Timesheet",
+    entityId: ts.id,
+    metadata: {
+      foremanId: parsed.foremanId,
+      period: { startISO: parsed.startISO, endISO: parsed.endISO },
+      siteId: siteDay?.site?.id ?? null,
+      siteName: siteDay?.site?.name ?? null,
+      title: "Timesheet rejected",
+      description: siteDay?.site?.name
+        ? `${siteDay.site.name} - ${foremanName}`
+        : foremanName,
+    },
   });
 
   return NextResponse.json({ ok: true, ...updated });

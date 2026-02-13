@@ -26,6 +26,8 @@ export default async function ForemanPage() {
           createdAt: new Date(foreman.foreman.createdAt).toLocaleDateString(),
         }
       : null,
+    // Check if this foreman is actually an assistant (promoted employee with assistantLinks)
+    isAssistant: (foreman.employee?.assistantLinks?.length ?? 0) > 0,
   }));
 
   return <ForemanContent foremen={formattedForemen} />;

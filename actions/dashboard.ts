@@ -3,6 +3,8 @@
 import { requireServerAuth } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { toISODate } from "@/lib/workdate";
+import { addDaysUTC, isoFromDateUTC } from "@/lib/dateUtc";
+import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 
 export async function getDashboardMetrics() {
   const auth = await requireServerAuth();
@@ -45,44 +47,94 @@ export async function getWeeklyAttendanceData() {
     supervisorSiteIds =
       supervisor?.siteAssignments.map((a) => a.siteId) ?? ([] as string[]);
   }
+  function weekdayShortUTC(d: Date) {
+    const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return names[d.getUTCDay()] ?? "";
+  }
+
   const today = new Date();
-  const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  today.setUTCHours(0, 0, 0, 0);
 
-  const data = [];
+  // Resolve the week window from the timesheet anchor (Sat->Fri).
+  // If TimesheetYear is not configured, fall back to the most recent Saturday.
+  const year = today.getUTCFullYear();
+  const yearRow = await prisma.timesheetYear.findUnique({
+    where: { year },
+    select: { anchorSat: true },
+  });
 
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - (today.getDay() - (i + 1)));
-    const dateISO = toISODate(date);
+  let weekStart: Date;
+  if (yearRow?.anchorSat) {
+    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
+    const week2Start = addDaysUTC(fortnight.startDate, 7);
+    weekStart =
+      today.getTime() >= week2Start.getTime()
+        ? week2Start
+        : fortnight.startDate;
+  } else {
+    // Most recent Saturday (UTC midnight)
+    const backToSat = (today.getUTCDay() + 1) % 7; // Sat->0, Sun->1, Mon->2 ... Fri->6
+    weekStart = addDaysUTC(today, -backToSat);
+  }
 
-    const baseDateFilter = { workDate: new Date(`${dateISO}T00:00:00Z`) };
+  const weekEndExclusive = addDaysUTC(weekStart, 7);
 
-    const scansCount = await prisma.attendanceScan.count({
-      where: {
-        ...baseDateFilter,
-        ...(supervisorSiteIds && supervisorSiteIds.length > 0
-          ? { siteId: { in: supervisorSiteIds } }
-          : {}),
-      },
-    });
-
-    const sitesCount = await prisma.siteDay.count({
-      where: {
-        ...baseDateFilter,
-        ...(supervisorSiteIds && supervisorSiteIds.length > 0
-          ? { siteId: { in: supervisorSiteIds } }
-          : {}),
-      },
-    });
-
-    data.push({
-      day: dayLabels[i],
-      scans: scansCount,
-      sites: sitesCount,
+  // If supervisor has no assigned sites, return the week window with zeros.
+  if (
+    auth.role === "SUPERVISOR" &&
+    (!supervisorSiteIds || supervisorSiteIds.length === 0)
+  ) {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = addDaysUTC(weekStart, i);
+      return { day: weekdayShortUTC(d), scans: 0, sites: 0 };
     });
   }
 
-  return data;
+  const siteFilter =
+    supervisorSiteIds && supervisorSiteIds.length > 0
+      ? { siteId: { in: supervisorSiteIds } }
+      : {};
+
+  const [scanGroups, siteDayGroups] = await Promise.all([
+    prisma.attendanceScan.groupBy({
+      by: ["workDate"],
+      where: {
+        workDate: { gte: weekStart, lt: weekEndExclusive },
+        ...siteFilter,
+      },
+      _count: { _all: true },
+    }),
+    prisma.siteDay.groupBy({
+      by: ["workDate"],
+      where: {
+        workDate: { gte: weekStart, lt: weekEndExclusive },
+        ...siteFilter,
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const scansByIso = new Map<string, number>();
+  for (const g of scanGroups) {
+    const iso = isoFromDateUTC(g.workDate);
+    scansByIso.set(iso, g._count._all);
+  }
+
+  const sitesByIso = new Map<string, number>();
+  for (const g of siteDayGroups) {
+    const iso = isoFromDateUTC(g.workDate);
+    sitesByIso.set(iso, g._count._all);
+  }
+
+  return Array.from({ length: 7 }).map((_, i) => {
+    const d = addDaysUTC(weekStart, i);
+    const iso = toISODate(d);
+    return {
+      day: weekdayShortUTC(d),
+      scans: scansByIso.get(iso) ?? 0,
+      sites: sitesByIso.get(iso) ?? 0,
+    };
+  });
 }
 
 export async function getTimesheetStatusData() {

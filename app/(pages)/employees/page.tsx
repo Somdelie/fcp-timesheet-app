@@ -17,38 +17,7 @@ export default async function EmployeesPage({
   const show = sp?.show === "all" ? "all" : "active";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
-      <form
-        method="get"
-        className="flex flex-col gap-2 md:flex-row md:items-end"
-      >
-        <div className="flex-1">
-          <label className="text-xs text-muted-foreground">Search</label>
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Search by name or QR..."
-            className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2"
-          />
-        </div>
-
-        <div className="min-w-35">
-          <label className="text-xs text-muted-foreground">Show</label>
-          <select
-            name="show"
-            defaultValue={show}
-            className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
-          >
-            <option value="active">Active</option>
-            <option value="all">All</option>
-          </select>
-        </div>
-
-        <button className="h-10 rounded-md border px-4 text-sm hover:bg-muted">
-          Filter
-        </button>
-      </form>
-
+    <div className="mx-auto max-w-7xl space-y-4 overflow-hidden">
       <EmployeesList q={q} show={show} />
     </div>
   );

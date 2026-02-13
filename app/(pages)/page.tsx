@@ -48,6 +48,73 @@ import {
 import { useUserRole } from "@/lib/user-role-context";
 import type { UserRole } from "@/lib/roles";
 
+type RecentActivityItem = {
+  id: string;
+  kind: string;
+  title: string;
+  description: string;
+  at: string; // ISO
+  href?: string | null;
+};
+
+function formatRelativeTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const now = Date.now();
+  const diffMs = Math.max(0, now - d.getTime());
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / (60 * 60000));
+  const days = Math.floor(diffMs / (24 * 60 * 60000));
+
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  if (days === 1) return "Yesterday";
+  if (days < 14) return `${days} days ago`;
+
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
+function activityVisual(kind: string) {
+  switch (kind) {
+    case "TIMESHEET_APPROVED":
+      return {
+        Icon: CheckCircle,
+        color: "text-emerald-600",
+        bg: "bg-emerald-100",
+      };
+    case "TIMESHEET_SUBMITTED":
+      return {
+        Icon: ClipboardCheck,
+        color: "text-blue-600",
+        bg: "bg-blue-100",
+      };
+    case "TIMESHEET_REJECTED":
+      return { Icon: AlertCircle, color: "text-red-600", bg: "bg-red-100" };
+    case "TIMESHEET_PAID":
+      return { Icon: Clock, color: "text-indigo-600", bg: "bg-indigo-100" };
+    case "EMPLOYEE_CREATED":
+      return { Icon: Users, color: "text-cyan-600", bg: "bg-cyan-100" };
+    case "SITE_CREATED":
+      return { Icon: Building2, color: "text-violet-600", bg: "bg-violet-100" };
+    case "PHOTO_VERIFIED":
+      return { Icon: Camera, color: "text-green-600", bg: "bg-green-100" };
+    case "PHOTO_FLAGGED":
+      return {
+        Icon: AlertCircle,
+        color: "text-orange-600",
+        bg: "bg-orange-100",
+      };
+    default:
+      return { Icon: TrendingUp, color: "text-slate-600", bg: "bg-slate-100" };
+  }
+}
+
 const lineChartConfig = {
   scans: { label: "Attendance Scans", color: "#1e5a8a" },
   sites: { label: "Active Sites", color: "#2ba3c1" },
@@ -73,20 +140,41 @@ export default function HomePage() {
   const [timesheetData, setTimesheetData] = useState<any>(null);
   const [siteData, setSiteData] = useState<any>(null);
   const [photoData, setPhotoData] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const role = useUserRole();
 
   useEffect(() => {
+    const loadRecentActivity = async (): Promise<RecentActivityItem[]> => {
+      const res = await fetch(`/api/recent-activity?limit=8`, {
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        // Hide activity if unauthorized or forbidden for this role.
+        if (res.status === 401 || res.status === 403) return [];
+        throw new Error(`Recent activity failed (${res.status})`);
+      }
+
+      const json = (await res.json().catch(() => null)) as {
+        items?: RecentActivityItem[];
+      } | null;
+      return Array.isArray(json?.items) ? json!.items! : [];
+    };
+
     const loadData = async () => {
       try {
         if (role === "ADMIN") {
-          const [metricsRes, weekly, timesheet, site, photo] =
-            await Promise.all<[any, any, any, any, any]>([
+          const [metricsRes, weekly, timesheet, site, photo, activity] =
+            await Promise.all([
               getDashboardMetrics(),
               getWeeklyAttendanceData(),
               getTimesheetStatusData(),
               getSiteActivityData(),
               getPhotoVerificationData(),
+              loadRecentActivity(),
             ]);
 
           setMetrics(metricsRes);
@@ -94,16 +182,19 @@ export default function HomePage() {
           setTimesheetData(timesheet);
           setSiteData(site);
           setPhotoData(photo);
+          setRecentActivity(activity);
         } else if (role === "SUPERVISOR") {
-          const [weekly, timesheet, site] = await Promise.all<[any, any, any]>([
+          const [weekly, timesheet, site, activity] = await Promise.all([
             getWeeklyAttendanceData(),
             getTimesheetStatusData(),
             getSiteActivityData(),
+            loadRecentActivity(),
           ]);
 
           setWeeklyData(weekly);
           setTimesheetData(timesheet);
           setSiteData(site);
+          setRecentActivity(activity);
         } else {
           // FOREMAN or other roles: no heavy dashboard data needed
         }
@@ -165,7 +256,7 @@ export default function HomePage() {
                 ) : (
                   <ChartContainer
                     config={lineChartConfig}
-                    className="h-75 w-full"
+                    className="h-full w-full"
                   >
                     <LineChart data={weeklyAttendanceData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -201,13 +292,13 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 {timesheetStatusData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-10">
+                  <p className="text-sm text-muted-foreground text-center py-6">
                     No timesheet data yet for your sites.
                   </p>
                 ) : (
                   <ChartContainer
                     config={barChartConfig}
-                    className="h-75 w-full"
+                    className="h-full w-full"
                   >
                     <BarChart data={timesheetStatusData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -247,7 +338,7 @@ export default function HomePage() {
                 ) : (
                   <ChartContainer
                     config={siteChartConfig}
-                    className="h-75 w-full"
+                    className="h-full w-full"
                   >
                     <BarChart data={siteActivityData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -319,24 +410,24 @@ export default function HomePage() {
                       color: "text-emerald-600",
                       bg: "bg-emerald-100",
                       title: "Timesheet approved",
-                      description: "Site B - Week ending June 14, 2024",
+                      description: "Downtown Office - John Smith",
                       time: "2 hours ago",
                     },
                     {
-                      icon: Camera,
+                      icon: ClipboardCheck,
                       color: "text-blue-600",
                       bg: "bg-blue-100",
-                      title: "Photo verification completed",
-                      description: "Site A - 12 workers verified",
+                      title: "Timesheet submitted",
+                      description: "Harbor Complex - Jane Doe",
                       time: "4 hours ago",
                     },
                     {
-                      icon: AlertCircle,
-                      color: "text-orange-600",
-                      bg: "bg-orange-100",
-                      title: "Timesheet requires attention",
-                      description: "Site D - Missing supervisor sign-off",
-                      time: "6 hours ago",
+                      icon: Camera,
+                      color: "text-green-600",
+                      bg: "bg-green-100",
+                      title: "Photo verification completed",
+                      description: "Riverside Project - 12 photos verified",
+                      time: "Yesterday",
                     },
                   ].map((activity, index) => {
                     const Icon = activity.icon;
@@ -381,14 +472,24 @@ export default function HomePage() {
                     {
                       label: "Approve pending timesheets",
                       icon: ClipboardCheck,
+                      href: "/supervisor/timesheets",
                     },
-                    { label: "Review photo flags", icon: AlertCircle },
-                    { label: "Check attendance anomalies", icon: TrendingUp },
+                    {
+                      label: "Review photo flags",
+                      icon: AlertCircle,
+                      href: "/sites",
+                    },
+                    {
+                      label: "Check attendance anomalies",
+                      icon: TrendingUp,
+                      href: "/supervisor/timesheets",
+                    },
                   ].map((action, index) => {
                     const Icon = action.icon;
                     return (
-                      <button
+                      <Link
                         key={index}
+                        href={action.href}
                         className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
                       >
                         <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -397,7 +498,7 @@ export default function HomePage() {
                         <span className="font-medium text-foreground text-sm">
                           {action.label}
                         </span>
-                      </button>
+                      </Link>
                     );
                   })}
                 </div>
@@ -467,11 +568,11 @@ export default function HomePage() {
   // Default: ADMIN dashboard with full system overview
   return (
     <div className="flex flex-col min-h-screen bg-muted/30">
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 space-y-2">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-xl font-bold text-foreground">
               Admin Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -491,87 +592,172 @@ export default function HomePage() {
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
+          {/* Active Employees */}
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-blue-800">
+            {/* Water Background */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
+              <div className="absolute inset-0 bg-linear-to-r from-blue-500/25 to-blue-500/5 opacity-60" />
+              <svg
+                viewBox="0 0 2880 90"
+                preserveAspectRatio="none"
+                className="absolute bottom-0 left-0 h-full w-[200%] animate-wave"
+              >
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  transform="translate(1440 0)"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+              </svg>
+            </div>
+
+            <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground font-medium">
+                  <p className="text-sm text-blue-400 font-medium">
                     Active Employees
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-3xl font-bold text-slate-100">
                     {metrics?.totalEmployees ?? 0}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Total active staff
-                  </p>
+                  <p className="text-xs text-slate-400">Total active staff</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-500/10 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-blue-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
+          {/* Active Sites */}
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-cyan-800">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
+              <div className="absolute inset-0 bg-linear-to-r from-cyan-500/25 to-cyan-500/5 opacity-60" />
+              <svg
+                viewBox="0 0 2880 90"
+                preserveAspectRatio="none"
+                className="absolute bottom-0 left-0 h-full w-[200%] animate-wave"
+              >
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  transform="translate(1440 0)"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+              </svg>
+            </div>
+
+            <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground font-medium">
+                  <p className="text-sm text-cyan-400 font-medium">
                     Active Sites
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-3xl font-bold text-slate-100">
                     {metrics?.activeSites ?? 0}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Across all regions
-                  </p>
+                  <p className="text-xs text-slate-400">Across all regions</p>
                 </div>
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-cyan-600" />
+                <div className="w-12 h-12 bg-cyan-500/10 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-cyan-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
+          {/* Foremen */}
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-emerald-800">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
+              <div className="absolute inset-0 bg-linear-to-r from-emerald-500/25 to-emerald-500/5 opacity-60" />
+              <svg
+                viewBox="0 0 2880 90"
+                preserveAspectRatio="none"
+                className="absolute bottom-0 left-0 h-full w-[200%] animate-wave"
+              >
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  transform="translate(1440 0)"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+              </svg>
+            </div>
+
+            <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground font-medium">
+                  <p className="text-sm text-emerald-400 font-medium">
                     Foremen
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-3xl font-bold text-slate-100">
                     {metrics?.totalForemen ?? 0}
                   </p>
-                  <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  <p className="text-xs text-emerald-500 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
                     Team leads
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                  <ClipboardCheck className="w-6 h-6 text-emerald-600" />
+                <div className="w-12 h-12 bg-emerald-500/10 flex items-center justify-center">
+                  <ClipboardCheck className="w-6 h-6 text-emerald-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
+          {/* Supervisors */}
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-orange-800">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
+              <div className="absolute inset-0 bg-linear-to-r from-orange-500/25 to-orange-500/5 opacity-60" />
+              <svg
+                viewBox="0 0 2880 90"
+                preserveAspectRatio="none"
+                className="absolute bottom-0 left-0 h-full w-[200%] animate-wave"
+              >
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+                <path
+                  fill="currentColor"
+                  className="text-white/10"
+                  transform="translate(1440 0)"
+                  d="M0,40 C120,55 240,20 360,30 480,40 600,70 720,65 840,60 960,35 1080,30 1200,25 1320,40 1440,50 L1440,90 L0,90 Z"
+                />
+              </svg>
+            </div>
+
+            <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground font-medium">
+                  <p className="text-sm text-orange-400 font-medium">
                     Supervisors
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-3xl font-bold text-slate-100">
                     {metrics?.totalSupervisors ?? 0}
                   </p>
-                  <p className="text-xs text-orange-600 flex items-center gap-1">
+                  <p className="text-xs text-orange-500 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     Active Supervisors
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-orange-500/10 flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-orange-500" />
                 </div>
               </div>
             </CardContent>
@@ -579,17 +765,20 @@ export default function HomePage() {
         </div>
 
         {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Weekly Attendance Trend */}
-          <Card>
-            <CardHeader>
+          <Card className="max-h-75 flex flex-col">
+            <CardHeader className="pb-2">
               <CardTitle>Weekly Attendance Trend</CardTitle>
               <CardDescription>
                 Attendance scans and active sites over the past week
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={lineChartConfig} className="h-75 w-full">
+            <CardContent className="flex-1 min-h-0">
+              <ChartContainer
+                config={lineChartConfig}
+                className="h-full w-full"
+              >
                 <LineChart data={weeklyAttendanceData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="day" tickLine={false} axisLine={false} />
@@ -615,15 +804,15 @@ export default function HomePage() {
           </Card>
 
           {/* Timesheet Status */}
-          <Card>
-            <CardHeader>
+          <Card className="max-h-75 flex flex-col">
+            <CardHeader className="pb-2">
               <CardTitle>Timesheet Status</CardTitle>
               <CardDescription>
                 Current status of timesheet submissions
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={barChartConfig} className="h-75 w-full">
+            <CardContent className="flex-1 min-h-0">
+              <ChartContainer config={barChartConfig} className="h-full w-full">
                 <BarChart data={timesheetStatusData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="status" tickLine={false} axisLine={false} />
@@ -641,17 +830,20 @@ export default function HomePage() {
         </div>
 
         {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Site Activity */}
-          <Card>
-            <CardHeader>
+          <Card className="max-h-75 flex flex-col">
+            <CardHeader className="pb-2">
               <CardTitle>Top Sites by Activity</CardTitle>
               <CardDescription>
                 Worker count and photo submissions by site
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={siteChartConfig} className="h-75 w-full">
+            <CardContent className="flex-1 min-h-0">
+              <ChartContainer
+                config={siteChartConfig}
+                className="h-full w-full"
+              >
                 <BarChart data={siteActivityData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="site" tickLine={false} axisLine={false} />
@@ -673,15 +865,18 @@ export default function HomePage() {
           </Card>
 
           {/* Photo Verification */}
-          <Card>
-            <CardHeader>
+          <Card className="max-h-75 flex flex-col">
+            <CardHeader className="pb-2">
               <CardTitle>Photo Verification Status</CardTitle>
               <CardDescription>
                 Monthly verification and flagged photos
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={photoChartConfig} className="h-75 w-full">
+            <CardContent className="flex-1 min-h-0">
+              <ChartContainer
+                config={photoChartConfig}
+                className="h-full w-full"
+              >
                 <AreaChart data={photoVerificationData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" tickLine={false} axisLine={false} />
@@ -718,67 +913,50 @@ export default function HomePage() {
                 Latest system events and updates
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="max-h-[30vh] overflow-y-auto">
               <div className="space-y-4">
-                {[
-                  {
-                    icon: CheckCircle,
-                    color: "text-emerald-600",
-                    bg: "bg-emerald-100",
-                    title: "Timesheet approved",
-                    description: "Site B - Week ending June 14, 2024",
-                    time: "2 hours ago",
-                  },
-                  {
-                    icon: Camera,
-                    color: "text-blue-600",
-                    bg: "bg-blue-100",
-                    title: "Photo verification completed",
-                    description: "Site A - 32 workers verified",
-                    time: "4 hours ago",
-                  },
-                  {
-                    icon: Users,
-                    color: "text-cyan-600",
-                    bg: "bg-cyan-100",
-                    title: "New employee added",
-                    description: "John Smith - QR code generated",
-                    time: "5 hours ago",
-                  },
-                  {
-                    icon: AlertCircle,
-                    color: "text-orange-600",
-                    bg: "bg-orange-100",
-                    title: "Photo flagged for review",
-                    description: "Site D - Attendance mismatch detected",
-                    time: "6 hours ago",
-                  },
-                ].map((activity, index) => {
-                  const Icon = activity.icon;
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-start gap-4 pb-4 border-b last:border-b-0"
-                    >
-                      <div
-                        className={`w-10 h-10 ${activity.bg} rounded-lg flex items-center justify-center shrink-0`}
+                {recentActivity.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No recent activity yet.
+                  </div>
+                ) : (
+                  recentActivity.map((activity) => {
+                    const { Icon, color, bg } = activityVisual(activity.kind);
+                    const row = (
+                      <div className="flex items-start gap-4 pb-4 border-b last:border-b-0">
+                        <div
+                          className={`w-10 h-10 ${bg} rounded-lg flex items-center justify-center shrink-0`}
+                        >
+                          <Icon className={`w-5 h-5 ${color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground">
+                            {activity.title}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {activity.description}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatRelativeTime(activity.at)}
+                        </span>
+                      </div>
+                    );
+
+                    const href = activity.href ?? null;
+                    return href ? (
+                      <Link
+                        key={activity.id}
+                        href={href}
+                        className="block rounded-lg -m-2 p-2 hover:bg-muted/50 transition-colors"
                       >
-                        <Icon className={`w-5 h-5 ${activity.color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground">
-                          {activity.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.description}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {activity.time}
-                      </span>
-                    </div>
-                  );
-                })}
+                        {row}
+                      </Link>
+                    ) : (
+                      <div key={activity.id}>{row}</div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -788,18 +966,27 @@ export default function HomePage() {
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Common administrative tasks</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="max-h-[30vh] overflow-y-auto">
               <div className="space-y-3">
                 {[
-                  { label: "Add New Employee", icon: Users },
-                  { label: "Create Site", icon: Building2 },
-                  { label: "Review Timesheets", icon: ClipboardCheck },
-                  { label: "Request Photos", icon: Camera },
+                  {
+                    label: "Add New Employee",
+                    icon: Users,
+                    href: "/employees?create=employee",
+                  },
+                  { label: "Create Site", icon: Building2, href: "/new" },
+                  {
+                    label: "Review Timesheets",
+                    icon: ClipboardCheck,
+                    href: "/timesheets",
+                  },
+                  { label: "Request Photos", icon: Camera, href: "/sites" },
                 ].map((action, index) => {
                   const Icon = action.icon;
                   return (
-                    <button
+                    <Link
                       key={index}
+                      href={action.href}
                       className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
                     >
                       <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -808,7 +995,7 @@ export default function HomePage() {
                       <span className="font-medium text-foreground text-sm">
                         {action.label}
                       </span>
-                    </button>
+                    </Link>
                   );
                 })}
               </div>

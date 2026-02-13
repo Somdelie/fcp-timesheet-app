@@ -25,6 +25,7 @@ interface EditUserInfoFormProps {
     id: string;
     email: string;
     name: string;
+    phone?: string | null;
     role: string;
     createdAt: Date;
   };
@@ -40,6 +41,7 @@ const EditUserInfoForm = ({
   const [pending, startTransition] = React.useTransition();
   const [name, setName] = React.useState(userInfo.name);
   const [email, setEmail] = React.useState(userInfo.email);
+  const [phone, setPhone] = React.useState(userInfo.phone ?? "");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
 
@@ -50,6 +52,7 @@ const EditUserInfoForm = ({
 
     const nextName = name.trim();
     const nextEmail = email.trim();
+    const nextPhone = phone.trim();
     const nextPassword = password.trim();
 
     startTransition(async () => {
@@ -58,6 +61,7 @@ const EditUserInfoForm = ({
         id: userInfo.id,
         name: nextName,
         email: nextEmail,
+        phone: nextPhone || null,
       });
 
       if (!res.ok) {
@@ -132,6 +136,20 @@ const EditUserInfoForm = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+            </Field>
+            <Field>
+              <Label htmlFor={`phone-${userInfo.id}`}>Phone</Label>
+              <Input
+                id={`phone-${userInfo.id}`}
+                name="phone"
+                inputMode="tel"
+                placeholder="e.g. 0821234567 or +27821234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Used for WhatsApp notifications. Leave blank to remove.
+              </p>
             </Field>
 
             {isAdmin && (

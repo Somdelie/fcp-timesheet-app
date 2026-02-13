@@ -49,6 +49,7 @@ export async function POST(req: Request) {
 
   const email = normalizeEmail(body.email);
   const name = body.name != null ? String(body.name).trim() : null;
+  const phone = body.phone != null ? String(body.phone).trim() || null : null;
   const roleRaw = String(body.role ?? "")
     .trim()
     .toUpperCase();
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
         data: {
           email,
           name,
+          phone,
           role: roleRaw, // your schema uses string enum; this is fine
           password: passwordHash,
         },
@@ -82,6 +84,7 @@ export async function POST(req: Request) {
           id: true,
           email: true,
           name: true,
+          phone: true,
           role: true,
           createdAt: true,
         },

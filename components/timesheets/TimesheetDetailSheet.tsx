@@ -311,70 +311,6 @@ export default function TimesheetDetailSheet<
                     Close
                   </Button>
                 </div>
-
-                {/* ✅ Mobile-style totals cards (driven by gridModel) */}
-                <div className="flex flex-col gap-2 ml-auto items-end">
-                  <div className="flex gap-4 flex-wrap justify-end items-stretch">
-                    <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 max-w-xs text-right">
-                      <div className="text-muted-foreground text-xs font-semibold">
-                        FOREMAN TOTAL
-                      </div>
-                      <div className="font-medium mt-1">
-                        Total amount to be paid to {foremanDisplay}:
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1 font-semibold">
-                        {formatCurrency(totalPay)}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4 flex-wrap justify-end">
-                      <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <div className="text-muted-foreground text-xs font-semibold">
-                          TOTAL
-                        </div>
-                        <div className="font-medium mt-1">
-                          {totalDays} days • {formatCurrency(totalPay)}
-                        </div>
-                      </div>
-
-                      {foremanTotals.days > 0 ? (
-                        <div className="text-sm border rounded px-3 py-2 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-                          <div className="text-muted-foreground text-xs font-semibold">
-                            FOREMAN
-                          </div>
-                          <div className="font-medium mt-1">
-                            {foremanTotals.days} days ×{" "}
-                            {formatCurrency(
-                              safeDiv(foremanTotals.pay, foremanTotals.days),
-                            )}
-                            /day
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Total: {formatCurrency(foremanTotals.pay)}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {teamTotals.days > 0 ? (
-                        <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                          <div className="text-muted-foreground text-xs font-semibold">
-                            TEAM
-                          </div>
-                          <div className="font-medium mt-1">
-                            {teamTotals.days} days ×{" "}
-                            {formatCurrency(
-                              safeDiv(teamTotals.pay, teamTotals.days),
-                            )}
-                            /day
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Total: {formatCurrency(teamTotals.pay)}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           ) : null}
@@ -472,8 +408,70 @@ export default function TimesheetDetailSheet<
               </div>
             </div>
           ) : detail ? (
-            <div className="h-[70vh] px-3 overflow-auto">
+            <div className="h-[70vh] px-3 overflow-auto flex flex-col gap-4">
               <div className="max-w-7xl">{gridComponent}</div>
+              {/* ✅ Mobile-style totals cards (driven by gridModel) */}
+
+              <div className="flex gap-4 flex-wrap justify-end items-stretch">
+                <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 max-w-xs text-right">
+                  <div className="text-muted-foreground text-xs font-semibold">
+                    FOREMAN TOTAL
+                  </div>
+                  <div className="font-medium mt-1">
+                    Total amount to be paid to {foremanDisplay}:
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 font-semibold">
+                    {formatCurrency(totalPay)}
+                  </div>
+                </div>
+
+                <div className="flex gap-4 flex-wrap justify-end">
+                  <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                    <div className="text-muted-foreground text-xs font-semibold">
+                      TOTAL
+                    </div>
+                    <div className="font-medium mt-1">
+                      {totalDays} days • {formatCurrency(totalPay)}
+                    </div>
+                  </div>
+
+                  {foremanTotals.days > 0 ? (
+                    <div className="text-sm border rounded px-3 py-2 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                      <div className="text-muted-foreground text-xs font-semibold">
+                        FOREMAN
+                      </div>
+                      <div className="font-medium mt-1">
+                        {foremanTotals.days} days ×{" "}
+                        {formatCurrency(
+                          safeDiv(foremanTotals.pay, foremanTotals.days),
+                        )}
+                        /day
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(foremanTotals.pay)}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {teamTotals.days > 0 ? (
+                    <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                      <div className="text-muted-foreground text-xs font-semibold">
+                        TEAM
+                      </div>
+                      <div className="font-medium mt-1">
+                        {teamTotals.days} days ×{" "}
+                        {formatCurrency(
+                          safeDiv(teamTotals.pay, teamTotals.days),
+                        )}
+                        /day
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Total: {formatCurrency(teamTotals.pay)}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="px-3 text-sm text-muted-foreground">

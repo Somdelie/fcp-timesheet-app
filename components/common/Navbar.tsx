@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -23,7 +25,30 @@ import {
 } from "../ui/breadcrumb";
 import { signOut } from "next-auth/react";
 import { ModeToggle } from "./ModeToggle";
-import { useBreadcrumbs } from "@/lib/breadcrumb-context";
+
+// Map of path segments to display labels
+const pathLabels: Record<string, string> = {
+  admin: "Admin",
+  employees: "Employees",
+  foreman: "Foremen",
+  sites: "Sites",
+  timesheets: "Timesheets",
+  users: "Users",
+  settings: "Settings",
+  profile: "Profile",
+  supervisor: "Supervisor",
+  new: "New",
+  map: "Map",
+};
+
+function formatSegment(segment: string): string {
+  // Check if we have a custom label
+  if (pathLabels[segment.toLowerCase()]) {
+    return pathLabels[segment.toLowerCase()];
+  }
+  // Capitalize first letter for unknown segments
+  return segment.charAt(0).toUpperCase() + segment.slice(1);
+}
 
 type NavbarProps = {
   isSidebarOpen: boolean;
@@ -32,10 +57,33 @@ type NavbarProps = {
 };
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
-  const { items: breadcrumbs } = useBreadcrumbs();
+  const pathname = usePathname();
+
+  // Generate breadcrumbs from pathname
+  const breadcrumbs = React.useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+
+    // Always start with Dashboard
+    const crumbs: { label: string; href?: string }[] = [
+      { label: "Dashboard", href: "/" },
+    ];
+
+    // Build path progressively
+    let currentPath = "";
+    segments.forEach((segment, index) => {
+      currentPath += `/${segment}`;
+      const isLast = index === segments.length - 1;
+      crumbs.push({
+        label: formatSegment(segment),
+        href: isLast ? undefined : currentPath,
+      });
+    });
+
+    return crumbs;
+  }, [pathname]);
 
   return (
-    <header className="flex h-14 w-full items-center justify-between border-b bg-card/80 px-4 backdrop-blur sticky top-0 z-10">
+    <header className="flex h-14 shrink-0 w-full items-center justify-between border-b bg-card/80 px-4 backdrop-blur z-10">
       {/* left */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
@@ -47,7 +95,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
         <Breadcrumb>
           <BreadcrumbList>
             {breadcrumbs.map((crumb, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <React.Fragment key={index}>
                 <BreadcrumbItem>
                   {crumb.href ? (
                     <BreadcrumbLink href={crumb.href} className="text-sm">
@@ -60,7 +108,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
                   )}
                 </BreadcrumbItem>
                 {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
-              </div>
+              </React.Fragment>
             ))}
           </BreadcrumbList>
         </Breadcrumb>

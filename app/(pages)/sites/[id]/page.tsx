@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import SiteAssignmentsPanel from "@/components/sites/SiteAssignmentsPanel";
 import SiteBookingPanel from "@/components/sites/SiteBookingPanel";
 import SiteTotalsPanel from "@/components/sites/SiteTotalsPanel";
+import EditSiteLocationDialog from "@/components/sites/EditSiteLocationDialog";
 import { ArrowLeft, CheckCircle, MapPin, Hash } from "lucide-react";
 import Link from "next/link";
 
@@ -26,6 +27,9 @@ export default async function SiteManagePage({
       name: true,
       code: true,
       location: true,
+      address: true,
+      latitude: true,
+      longitude: true,
       isActive: true,
       createdAt: true,
     },
@@ -88,6 +92,9 @@ export default async function SiteManagePage({
     email: u.email ?? "",
   }));
 
+  const hasCoords =
+    typeof site.latitude === "number" && typeof site.longitude === "number";
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-7xl py-3">
@@ -138,18 +145,56 @@ export default async function SiteManagePage({
                     </span>
                   </div>
                 )}
+
+                {site.address && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                      Address: {site.address}
+                    </span>
+                  </div>
+                )}
+
+                {hasCoords && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                      Pin:{" "}
+                      <span className="font-mono text-slate-900 dark:text-slate-200">
+                        {site.latitude!.toFixed(6)},{" "}
+                        {site.longitude!.toFixed(6)}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                {!site.address && !hasCoords && (
+                  <div className="text-sm font-medium text-slate-500 dark:text-slate-500">
+                    No address/pin set yet.
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 p-4 text-right">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Total Wages Cost
-              </p>
-              <p className="mt-1 font-mono text-xs text-slate-700 dark:text-slate-300 break-all">
-                {wageData.ok
-                  ? formatCurrency(wageData.totals.totalWages)
-                  : "R0.00"}
-              </p>
+            <div className="flex flex-col items-end gap-2">
+              <EditSiteLocationDialog
+                siteId={site.id}
+                initialLocation={site.location}
+                initialAddress={site.address}
+                initialLatitude={site.latitude}
+                initialLongitude={site.longitude}
+              />
+
+              <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 p-4 text-right">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  Total Wages Cost
+                </p>
+                <p className="mt-1 font-mono text-xs text-slate-700 dark:text-slate-300 break-all">
+                  {wageData.ok
+                    ? formatCurrency(wageData.totals.totalWages)
+                    : "R0.00"}
+                </p>
+              </div>
             </div>
           </div>
         </div>

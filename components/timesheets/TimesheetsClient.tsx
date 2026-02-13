@@ -3,6 +3,24 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table";
+import {
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 import type { TimesheetDetailDto, TimesheetDetailDto2 } from "@/lib/dtos";
@@ -52,6 +70,7 @@ type AdminRow = {
   totalWorkerDays?: number | null;
   totalWorkerWages?: number | null;
   sites?: Array<{ id: string; code?: string | null; name: string }>;
+  rowKey?: string;
 };
 
 type SupervisorRow = {
@@ -67,6 +86,24 @@ type SupervisorRow = {
   totalWorkerWages?: number | null;
   rowKey?: string;
 };
+
+function ensureUniqueRowKeys<T extends { id: string; rowKey?: string }>(
+  rows: T[],
+): T[] {
+  // If API ever returns duplicate `id`s, React/TanStack need a unique per-row key.
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(r.id, (counts.get(r.id) ?? 0) + 1);
+
+  const seen = new Map<string, number>();
+  return rows.map((r) => {
+    if ((counts.get(r.id) ?? 0) <= 1) return r;
+    if (r.rowKey) return r;
+
+    const n = (seen.get(r.id) ?? 0) + 1;
+    seen.set(r.id, n);
+    return { ...r, rowKey: `${r.id}__dup${n}` };
+  });
+}
 
 function toSafeErrorText(e: unknown) {
   if (e instanceof Error) return e.message;
@@ -231,12 +268,27 @@ export default function TimesheetsListClient({ mode }: Props) {
 
   const [err, setErr] = useState<string | null>(null);
 
+  // Table sorting and pagination state
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailErr, setDetailErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
+
+  const totalWages = useMemo(() => {
+    const list = mode === "ADMIN" ? rowsAdmin : rowsSup;
+    return list.reduce(
+      (sum, row) => sum + Number(row.totalWorkerWages ?? 0),
+      0,
+    );
+  }, [mode, rowsAdmin, rowsSup]);
 
   // ✅ normalized grid model (same for admin + supervisor)
   const gridModel = useMemo(() => {
@@ -251,6 +303,352 @@ export default function TimesheetsListClient({ mode }: Props) {
     if (!gridModel) return null;
     return <TimesheetGrid model={gridModel as any} />;
   }, [gridModel]);
+
+  // Column definitions for Admin table
+  const adminColumns = useMemo<ColumnDef<AdminRow>[]>(
+    () => [
+      {
+        id: "fortnight",
+        accessorFn: (row) => row.startISO,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Fortnight
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {prettyRange(row.original.startISO, row.original.endISO)}
+          </span>
+        ),
+      },
+      {
+        id: "sites",
+        header: "Sites",
+        cell: ({ row }) => (
+          <div className="max-w-xs">
+            <SiteBadges sites={row.original.sites as any[]} />
+          </div>
+        ),
+      },
+      {
+        id: "foreman",
+        accessorFn: (row) => row.foreman?.name ?? "",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Foreman
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.foreman?.name ?? "—"}
+          </span>
+        ),
+      },
+      {
+        id: "supervisor",
+        accessorFn: (row) => row.supervisor?.name ?? "",
+        header: "Supervisor",
+        cell: ({ row }) => row.original.supervisor?.name ?? "—",
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Status
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => <StatusPill status={row.original.status} />,
+      },
+      {
+        id: "days",
+        accessorKey: "totalWorkerDays",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <div className="text-right">
+              <button
+                className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                onClick={() => column.toggleSorting(isSorted === "asc")}
+              >
+                Days
+                {isSorted === "asc" ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : isSorted === "desc" ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          );
+        },
+        cell: ({ row }) => (
+          <div className="text-right font-semibold">
+            {row.original.totalWorkerDays ?? 0}
+          </div>
+        ),
+      },
+      {
+        id: "wages",
+        accessorKey: "totalWorkerWages",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <div className="text-right">
+              <button
+                className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                onClick={() => column.toggleSorting(isSorted === "asc")}
+              >
+                Wages
+                {isSorted === "asc" ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : isSorted === "desc" ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          );
+        },
+        cell: ({ row }) => (
+          <div className="text-right font-semibold">
+            {money(row.original.totalWorkerWages)}
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  // Column definitions for Supervisor table
+  const supColumns = useMemo<ColumnDef<SupervisorRow>[]>(
+    () => [
+      {
+        id: "fortnight",
+        accessorFn: (row) => row.startISO,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Fortnight
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {prettyRange(
+              iso10(row.original.startISO),
+              iso10(row.original.endISO),
+            )}
+          </span>
+        ),
+      },
+      {
+        id: "site",
+        header: "Site",
+        cell: ({ row }) => (
+          <div className="max-w-xs">
+            <SiteBadgeFromListRow
+              siteCode={row.original.siteCode}
+              siteName={row.original.siteName}
+            />
+          </div>
+        ),
+      },
+      {
+        id: "foreman",
+        accessorFn: (row) => row.foremanName ?? "",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Foreman
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.foremanName ?? "—"}</span>
+        ),
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Status
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => <StatusPill status={row.original.status} />,
+      },
+      {
+        id: "days",
+        accessorKey: "totalWorkerDays",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <div className="text-right">
+              <button
+                className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                onClick={() => column.toggleSorting(isSorted === "asc")}
+              >
+                Days
+                {isSorted === "asc" ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : isSorted === "desc" ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          );
+        },
+        cell: ({ row }) => (
+          <div className="text-right font-semibold">
+            {row.original.totalWorkerDays ?? 0}
+          </div>
+        ),
+      },
+      {
+        id: "wages",
+        accessorKey: "totalWorkerWages",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <div className="text-right">
+              <button
+                className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+                onClick={() => column.toggleSorting(isSorted === "asc")}
+              >
+                Wages
+                {isSorted === "asc" ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : isSorted === "desc" ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          );
+        },
+        cell: ({ row }) => (
+          <div className="text-right font-semibold">
+            {money(row.original.totalWorkerWages)}
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  // Admin table instance
+  const adminTable = useReactTable({
+    data: rowsAdmin,
+    columns: adminColumns,
+    state: {
+      sorting,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getRowId: (row, index) => row.rowKey ?? `${row.id}__${index}`,
+  });
+
+  // Supervisor table instance
+  const supTable = useReactTable({
+    data: rowsSup,
+    columns: supColumns,
+    state: {
+      sorting,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getRowId: (row, index) => row.rowKey ?? `${row.id}__${index}`,
+  });
+
+  const table = mode === "ADMIN" ? adminTable : supTable;
 
   // supervisors list (admin only)
   const [dbSupervisors, setDbSupervisors] = useState<
@@ -443,7 +841,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         (Array.isArray(payload?.timesheets) && payload.timesheets) || [];
 
       if (mode === "ADMIN") {
-        setRowsAdmin(list as AdminRow[]);
+        setRowsAdmin(ensureUniqueRowKeys(list as AdminRow[]));
         if (supervisorId !== "ALL") {
           const valid = (list as AdminRow[]).some(
             (r) => r.supervisor?.id === supervisorId,
@@ -452,7 +850,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         }
       } else {
         // supervisor list: server filters by period => no client-side filtering needed
-        setRowsSup(list as SupervisorRow[]);
+        setRowsSup(ensureUniqueRowKeys(list as SupervisorRow[]));
       }
     } catch (e: any) {
       if (e?.name === "AbortError") return;
@@ -588,21 +986,28 @@ export default function TimesheetsListClient({ mode }: Props) {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={loadList}
-            disabled={loading || !periodId}
-          >
-            Refresh
-          </Button>
+        <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
+          <div className="text-sm text-muted-foreground whitespace-nowrap">
+            Total wages:{" "}
+            <span className="font-semibold">{money(totalWages)}</span>
+          </div>
 
-          <Button
-            className="bg-sky-600 hover:bg-sky-600/90 text-white"
-            onClick={reset}
-          >
-            Reset
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={loadList}
+              disabled={loading || !periodId}
+            >
+              Refresh
+            </Button>
+
+            <Button
+              className="bg-sky-600 hover:bg-sky-600/90 text-white"
+              onClick={reset}
+            >
+              Reset
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -694,152 +1099,176 @@ export default function TimesheetsListClient({ mode }: Props) {
         ) : null}
       </div>
 
-      <div className="rounded-md border border-zinc-300/70 bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-900/40 shadow-sm">
-        <div className="p-4 flex items-center justify-between border-b border-zinc-300/70 dark:border-zinc-700/60">
-          <div className="text-sm text-muted-foreground">
-            {loading ? (
-              <Spinner className="size-4" />
-            ) : (
-              `${rows.length} timesheet${rows.length === 1 ? "" : "s"}`
-            )}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-6 flex justify-center">
-            <Spinner className="size-5" />
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">
-            No timesheets found for this filter.
-          </div>
-        ) : mode === "ADMIN" ? (
-          <div className="overflow-x-auto">
-            <Table className="border-collapse">
-              <TableHeader>
-                <TableRow className="border-b border-zinc-300/70 dark:border-zinc-700/60">
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Fortnight
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Foreman
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Supervisor
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Sites
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Status
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-right font-semibold">
-                    Days
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-right font-semibold">
-                    Wages
-                  </TableHead>
+      <div className="border bg-card">
+        <div className="overflow-x-auto">
+          <Table className="border-collapse">
+            <TableHeader className="bg-muted/60">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(rowsAdmin as AdminRow[]).map((r) => (
-                  <TableRow
-                    key={r.id}
-                    className="border-b border-zinc-300/70 dark:border-zinc-700/60 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/60 cursor-pointer transition-colors"
-                    onClick={() =>
+              ))}
+            </TableHeader>
+
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={mode === "ADMIN" ? 7 : 6}
+                    className="h-24 text-center"
+                  >
+                    <Spinner className="mx-auto size-5" />
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => {
+                  const original = row.original as AdminRow | SupervisorRow;
+                  const handleClick = () => {
+                    if (mode === "ADMIN") {
+                      const r = original as AdminRow;
                       openDetail(
                         r.id,
                         Array.isArray(r.sites) && r.sites.length
                           ? r.sites[0]?.id
                           : undefined,
-                      )
+                      );
+                    } else {
+                      const r = original as SupervisorRow;
+                      openDetail(r.id, r.siteId);
                     }
+                  };
+                  return (
+                    <TableRow
+                      key={row.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40 cursor-pointer transition-colors"
+                      onClick={handleClick}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className="border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={mode === "ADMIN" ? 7 : 6}
+                    className="h-24 text-center"
                   >
-                    <TableCell className="px-4 py-3 font-medium">
-                      {prettyRange(r.startISO, r.endISO)}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 font-medium">
-                      {r.foreman?.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      {r.supervisor?.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 max-w-xs">
-                      <SiteBadges sites={r.sites as any[]} />
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <StatusPill status={r.status} />
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-right font-semibold">
-                      {r.totalWorkerDays ?? 0}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-right font-semibold">
-                      {money(r.totalWorkerWages)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table className="border-collapse">
-              <TableHeader>
-                <TableRow className="border-b border-zinc-300/70 dark:border-zinc-700/60">
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Fortnight
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Foreman
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Site
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left font-semibold">
-                    Status
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-right font-semibold">
-                    Days
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-right font-semibold">
-                    Wages
-                  </TableHead>
+                    No timesheets found for this filter.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(rowsSup as SupervisorRow[]).map((r) => (
-                  <TableRow
-                    key={r.rowKey ?? r.id}
-                    className="border-b border-zinc-300/70 dark:border-zinc-700/60 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/60 cursor-pointer transition-colors"
-                    onClick={() => openDetail(r.id, r.siteId)}
-                  >
-                    <TableCell className="px-4 py-3 font-medium">
-                      {prettyRange(iso10(r.startISO), iso10(r.endISO))}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 font-medium">
-                      {r.foremanName ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 max-w-xs">
-                      <SiteBadgeFromListRow
-                        siteCode={r.siteCode}
-                        siteName={r.siteName}
-                      />
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <StatusPill status={r.status} />
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-right font-semibold">
-                      {r.totalWorkerDays ?? 0}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-right font-semibold">
-                      {money(r.totalWorkerWages)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between border-t px-4 py-3">
+          <div className="text-muted-foreground hidden text-sm lg:flex">
+            Showing{" "}
+            {table.getState().pagination.pageIndex *
+              table.getState().pagination.pageSize +
+              1}{" "}
+            to{" "}
+            {Math.min(
+              (table.getState().pagination.pageIndex + 1) *
+                table.getState().pagination.pageSize,
+              rows.length,
+            )}{" "}
+            of {rows.length} timesheets
           </div>
-        )}
+          <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+            <div className="hidden items-center gap-2 lg:flex">
+              <span className="text-sm font-medium">Rows per page</span>
+              <Select
+                value={String(table.getState().pagination.pageSize)}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value));
+                }}
+              >
+                <SelectTrigger className="h-8 w-20">
+                  <SelectValue
+                    placeholder={table.getState().pagination.pageSize}
+                  />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[5, 10, 25, 50, 100].map((pageSize) => (
+                    <SelectItem key={pageSize} value={String(pageSize)}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex w-fit items-center justify-center text-sm font-medium">
+              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount() || 1}
+            </div>
+            <div className="ml-auto flex items-center gap-2 lg:ml-0">
+              <Button
+                variant="outline"
+                size="icon"
+                className="hidden h-8 w-8 lg:flex"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">Go to first page</span>
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">Go to previous page</span>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">Go to next page</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="hidden h-8 w-8 lg:flex"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">Go to last page</span>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <TimesheetDetailSheet

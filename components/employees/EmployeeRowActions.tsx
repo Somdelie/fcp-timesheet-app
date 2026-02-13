@@ -1,10 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MoreHorizontal, Eye, Download, Trash2, CircleOff } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function EmployeeRowActions({
   id,
@@ -22,17 +31,14 @@ export default function EmployeeRowActions({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/employees/${id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
       if (res.ok) {
         setShowDeleteDialog(false);
         router.refresh();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to delete employee");
+        return;
       }
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Failed to delete employee");
     } catch (error) {
       console.error("Delete error:", error);
       alert("Failed to delete employee");
@@ -43,32 +49,55 @@ export default function EmployeeRowActions({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 md:justify-end">
-        <Button asChild variant="outline">
-          <Link href={`/employees/${id}`}>View</Link>
-        </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" aria-label="Row actions">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
 
-        <Button asChild variant="outline">
-          <Link href={`/api/employees/${id}/card.pdf`} download>
-            Download Card
-          </Link>
-        </Button>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem asChild>
+            <Link href={`/employees/${id}`} className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              View
+            </Link>
+          </DropdownMenuItem>
 
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setShowDeleteDialog(true)}
-          disabled={isDeleting}
-        >
-          Delete
-        </Button>
+          <DropdownMenuItem asChild>
+            <Link
+              href={`/api/employees/${id}/card.pdf`}
+              className="flex items-center gap-2"
+              download
+            >
+              <Download className="h-4 w-4" />
+              Download Card
+            </Link>
+          </DropdownMenuItem>
 
-        {!isActive && (
-          <span className="rounded-full border px-2 py-1 text-xs text-muted-foreground">
-            Inactive
-          </span>
-        )}
-      </div>
+          <DropdownMenuSeparator />
+
+          {!isActive && (
+            <div className="px-2 py-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-2">
+                <CircleOff className="h-3.5 w-3.5" />
+                Inactive
+              </span>
+            </div>
+          )}
+
+          <DropdownMenuItem
+            className="flex items-center gap-2 text-red-600 focus:text-red-600"
+            onSelect={(e) => {
+              e.preventDefault();
+              setShowDeleteDialog(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <ConfirmationDialog
         open={showDeleteDialog}
