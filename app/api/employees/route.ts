@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerAuth } from "@/lib/auth-server";
+import { requireServerAuth, type ServerAuthUser } from "@/lib/auth-server";
+import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
 import { randomBytes } from "crypto";
 
+/**
+ * Try JWT Bearer token first (mobile app), then fallback to NextAuth session (web app).
+ */
+async function getAuth(request: NextRequest): Promise<ServerAuthUser | null> {
+  // Try JWT Bearer token (mobile app)
+  const apiCtx = await getApiAuthContext(request);
+  if (apiCtx) {
+    return {
+      userId: apiCtx.user.sub,
+      role: apiCtx.user.role as ServerAuthUser["role"],
+    };
+  }
+
+  // Fallback to NextAuth session (web app)
+  try {
+    return await requireServerAuth();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireServerAuth();
+    const auth = await getAuth(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const whereScope = employeeWhereFor(auth);
 
     const searchParams = request.nextUrl.searchParams;
@@ -64,7 +89,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireServerAuth();
+    const auth = await getAuth(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json();
 
     const { firstName, lastName, faceImageUrl, isActive } = body;
@@ -132,7 +160,10 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireServerAuth();
+    const auth = await getAuth(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // Only admin can edit employees
     if (auth.role !== "ADMIN") {
