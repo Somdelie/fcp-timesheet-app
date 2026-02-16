@@ -10,6 +10,16 @@ import { writeAuditEvent } from "@/lib/audit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
 function getBearer(req: Request) {
   const h = req.headers.get("authorization") || "";
   const m = h.match(/^Bearer\s+(.+)$/i);
@@ -69,16 +79,22 @@ export async function POST(
 ) {
   const auth = await getAuth(req);
   if (!auth)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS },
+    );
   if (auth.role !== "SUPERVISOR")
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: CORS },
+    );
 
   const { id } = await ctx.params;
   const parsed = parseSupervisorTimesheetId(id);
   if (!parsed) {
     return NextResponse.json(
       { error: "Invalid id. Expected YYYY-MM-DD_YYYY-MM-DD__FOREMANID" },
-      { status: 400 },
+      { status: 400, headers: CORS },
     );
   }
 
@@ -93,7 +109,10 @@ export async function POST(
     endExclusive,
   );
   if (!access.ok)
-    return NextResponse.json({ error: access.msg }, { status: access.status });
+    return NextResponse.json(
+      { error: access.msg },
+      { status: access.status, headers: CORS },
+    );
 
   const period = await prisma.timesheetPeriod.upsert({
     where: { startDate_endDate: { startDate, endDate } },
@@ -116,7 +135,7 @@ export async function POST(
       {
         error: `Only SUBMITTED timesheets can be approved (current: ${ts.status}).`,
       },
-      { status: 400 },
+      { status: 400, headers: CORS },
     );
   }
 
@@ -165,5 +184,5 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ ok: true, ...updated });
+  return NextResponse.json({ ok: true, ...updated }, { headers: CORS });
 }

@@ -6,6 +6,16 @@ import { verifyApiToken } from "@/lib/jwt";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function normalizeEmail(v: unknown) {
   return String(v ?? "")
     .trim()
@@ -21,16 +31,25 @@ export async function GET(req: Request) {
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
 
   if (!token) {
-    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Missing token" },
+      { status: 401, headers: CORS_HEADERS },
+    );
   }
 
   const payload = await verifyApiToken(token);
   if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Invalid token" },
+      { status: 401, headers: CORS_HEADERS },
+    );
   }
 
-  if (payload.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (payload.role !== "ADMIN" && payload.role !== "SUPERVISOR") {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: CORS_HEADERS },
+    );
   }
 
   const url = new URL(req.url);
@@ -55,20 +74,23 @@ export async function GET(req: Request) {
         )
       : foremen;
 
-    return NextResponse.json({
-      ok: true,
-      foremen: filtered.map((f) => ({
-        foremanId: f.id,
-        userId: f.user.id,
-        name: f.user.name,
-        email: f.user.email,
-        createdAt: f.user.createdAt?.toISOString(),
-      })),
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        foremen: filtered.map((f) => ({
+          foremanId: f.id,
+          userId: f.user.id,
+          name: f.user.name,
+          email: f.user.email,
+          createdAt: f.user.createdAt?.toISOString(),
+        })),
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

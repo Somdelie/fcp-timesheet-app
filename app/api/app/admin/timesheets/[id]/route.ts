@@ -7,6 +7,16 @@ import { requireApiAuth } from "@/lib/apiAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: CORS_HEADERS });
+}
+
 async function getAdminOrSupervisorFromRequest(req: NextRequest) {
   // 1) Prefer API Bearer token (mobile/third-party clients)
   const apiCtx = await requireApiAuth(req, ["ADMIN", "SUPERVISOR"]);
@@ -77,7 +87,10 @@ export async function GET(
   try {
     const actor = await getAdminOrSupervisorFromRequest(req);
     if (!actor) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
 
     const url = new URL(req.url);
@@ -89,7 +102,7 @@ export async function GET(
     if (!parsed) {
       return NextResponse.json(
         { error: "Invalid timesheet id format" },
-        { status: 400 },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
@@ -103,7 +116,7 @@ export async function GET(
     } catch (e: any) {
       return NextResponse.json(
         { error: e?.message ?? "Invalid dates" },
-        { status: 400 },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
@@ -116,7 +129,10 @@ export async function GET(
     });
 
     if (!foreman) {
-      return NextResponse.json({ error: "Foreman not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Foreman not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
     }
 
     // Build 14 day columns
@@ -175,7 +191,7 @@ export async function GET(
     if (siteIds.length === 0 && scans.length === 0) {
       return NextResponse.json(
         { error: "Timesheet not found" },
-        { status: 404 },
+        { status: 404, headers: CORS_HEADERS },
       );
     }
 
@@ -256,24 +272,27 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({
-      timesheet: {
-        id,
-        startISO,
-        endISO,
-        status: "SUBMITTED",
-        foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman" },
-        supervisor,
-        sites,
-        columns,
-        rows,
+    return NextResponse.json(
+      {
+        timesheet: {
+          id,
+          startISO,
+          endISO,
+          status: "SUBMITTED",
+          foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman" },
+          supervisor,
+          sites,
+          columns,
+          rows,
+        },
       },
-    });
+      { headers: CORS_HEADERS },
+    );
   } catch (e: any) {
     console.error("Error fetching timesheet:", e);
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

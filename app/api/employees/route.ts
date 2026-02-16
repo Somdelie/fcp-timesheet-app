@@ -5,6 +5,16 @@ import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
 import { randomBytes } from "crypto";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 /**
  * Try JWT Bearer token first (mobile app), then fallback to NextAuth session (web app).
  */
@@ -30,7 +40,10 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getAuth(request);
     if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
     const whereScope = employeeWhereFor(auth);
 
@@ -66,23 +79,27 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      ok: true,
-      employees: employees.map((e) => ({
-        id: e.id,
-        firstName: e.firstName,
-        lastName: e.lastName,
-        code: e.qrCodeValue,
-        dayRate: Number(e.defaultDayRate),
-        active: e.isActive,
-        fullName: `${e.firstName} ${e.lastName}`,
-      })),
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        employees: employees.map((e) => ({
+          id: e.id,
+          firstName: e.firstName,
+          lastName: e.lastName,
+          code: e.qrCodeValue,
+          dayRate: Number(e.defaultDayRate),
+          active: e.isActive,
+          fullName: `${e.firstName} ${e.lastName}`,
+          createdAt: e.createdAt.toISOString(),
+        })),
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (error) {
     console.error("Error listing employees:", error);
     return NextResponse.json(
       { error: "Failed to list employees" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

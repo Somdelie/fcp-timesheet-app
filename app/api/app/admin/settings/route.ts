@@ -5,6 +5,16 @@ import { requireApiAuth } from "@/lib/apiAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function serializeSettings(s: any) {
   return {
     id: s.id,
@@ -23,9 +33,12 @@ function serializeSettings(s: any) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const ctx = await requireApiAuth(request, ["ADMIN"]);
+    const ctx = await requireApiAuth(request, ["ADMIN", "SUPERVISOR"]);
     if (!ctx) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
 
     let settings = await prisma.companySettings.findUnique({
@@ -39,15 +52,18 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
-      ok: true,
-      settings: serializeSettings(settings),
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        settings: serializeSettings(settings),
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (error) {
     console.error("Error fetching company settings:", error);
     return NextResponse.json(
       { error: "Failed to fetch settings" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

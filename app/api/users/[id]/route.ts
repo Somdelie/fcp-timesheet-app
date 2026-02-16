@@ -6,16 +6,32 @@ import { isUserRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireApiAuth(req);
   if (!auth)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS_HEADERS },
+    );
 
   if (!requireRole(auth, ["ADMIN", "SUPERVISOR"])) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: CORS_HEADERS },
+    );
   }
 
   const { id } = await ctx.params;
@@ -33,8 +49,12 @@ export async function GET(
     },
   });
 
-  if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ user });
+  if (!user)
+    return NextResponse.json(
+      { error: "Not found" },
+      { status: 404, headers: CORS_HEADERS },
+    );
+  return NextResponse.json({ user }, { headers: CORS_HEADERS });
 }
 
 export async function PATCH(

@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import { useMemo } from "react";
+import { Download } from "lucide-react";
+import { toast } from "react-toastify";
 import { formatCurrency } from "@/lib/formatCurrency";
+import {
+  generateTimesheetPdf,
+  downloadTimesheetPdf,
+} from "@/lib/generateTimesheetPdf";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedLoader } from "@/components/ui/animated-loader";
@@ -22,7 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// ✅ IMPORTANT: adjust this import path to where your grid model type lives
+// ✅ adjust to your real path
 import type { TimesheetGridModel } from "@/lib/timesheets/gridModel";
 
 export interface TimesheetAction {
@@ -58,23 +64,9 @@ export interface TimesheetDetailSheetProps<
   onRefreshDetail: () => Promise<void>;
   actions?: TimesheetAction[];
 
-  /**
-   * ✅ FIX: pass the SAME normalized model you use for the grid
-   * so header totals always match the grid (mobile-style columns).
-   */
   gridModel?: TimesheetGridModel | null;
-
-  /**
-   * Rendered grid component (usually <TimesheetGrid model={gridModel} />)
-   */
   gridComponent: React.ReactNode;
-
   prettyRange: (startISO: string, endISO: string) => string;
-}
-
-function toSafeErrorText(e: unknown) {
-  if (e instanceof Error) return e.message;
-  return "Request failed.";
 }
 
 function safeDiv(n: number, d: number) {
@@ -89,28 +81,51 @@ export default function TimesheetDetailSheet<
     startISO?: string;
     endISO?: string;
   },
->({
-  open,
-  onOpenChange,
-  detail,
-  loading,
-  error,
-  activeId,
-  onRetry,
-  onRefreshDetail,
-  actions = [],
-  gridModel,
-  gridComponent,
-  prettyRange,
-}: TimesheetDetailSheetProps<T>) {
+>(props: TimesheetDetailSheetProps<T>) {
+  const {
+    open,
+    onOpenChange,
+    detail,
+    loading,
+    error,
+    activeId,
+    onRetry,
+    onRefreshDetail,
+    actions = [],
+    gridModel,
+    gridComponent,
+    prettyRange,
+  } = props;
+
   const [actionLoading, setActionLoading] = React.useState<null | string>(null);
   const [actionErr, setActionErr] = React.useState<string | null>(null);
+  const [pdfGenerating, setPdfGenerating] = React.useState(false);
 
   const [reasonDialogOpen, setReasonDialogOpen] = React.useState(false);
   const [pendingActionId, setPendingActionId] = React.useState<string | null>(
     null,
   );
   const [reasonText, setReasonText] = React.useState("");
+
+  // ✅ export EXACT table look without changing your UI theme:
+  // we snapshot a cloned node (handled in exportDomToPdf)
+  const gridExportRef = React.useRef<HTMLDivElement | null>(null);
+
+  const safeGridModel = gridModel ?? ({} as any);
+  const detailStatus = (detail as any)?.status ?? "—";
+
+  const foremanDisplay = String(
+    (safeGridModel as any)?.foremanName ??
+      (detail as any)?.foremanName ??
+      (detail as any)?.foreman?.name ??
+      "—",
+  ).trim();
+
+  const contractManagerDisplay = String(
+    (detail as any)?.supervisorName ?? (detail as any)?.supervisor?.name ?? "—",
+  ).trim();
+
+  const sites = useMemo(() => (detail as any)?.sites ?? [], [detail]);
 
   const SUGGESTED_REASONS = [
     "Missing documentation",
@@ -120,15 +135,19 @@ export default function TimesheetDetailSheet<
     "Duplicate entry",
   ];
 
-  const sites = useMemo(() => (detail as any)?.sites ?? [], [detail]);
-
   async function runAction(actionId: string) {
     const action = actions.find((a) => a.id === actionId);
-    if (!action) return;
+    if (!action || !detail) return;
+
+    if (!action.canPerform(detailStatus)) {
+      toast.info("Action not available for this status");
+      return;
+    }
 
     if (action.requiresReason) {
       setPendingActionId(actionId);
       setActionErr(null);
+      setReasonText("");
       setReasonDialogOpen(true);
       return;
     }
@@ -137,68 +156,58 @@ export default function TimesheetDetailSheet<
     setActionLoading(actionId);
     try {
       await action.handler();
-      await onRefreshDetail();
-    } catch (e) {
-      setActionErr(toSafeErrorText(e));
+      toast.success(action.label);
+      await onRefreshDetail?.();
+    } catch (err) {
+      console.error(err);
+      setActionErr(err instanceof Error ? err.message : "Action failed");
+      toast.error("Action failed");
     } finally {
       setActionLoading(null);
     }
   }
 
   async function confirmRejectionWithReason() {
-    if (!pendingActionId) return;
+    const actionId = pendingActionId;
+    if (!actionId) return;
 
-    const action = actions.find((a) => a.id === pendingActionId);
+    const action = actions.find((a) => a.id === actionId);
     if (!action) return;
 
     const reason = reasonText.trim();
     if (!reason) {
-      setActionErr("Reason is required.");
+      toast.error("Please enter a reason");
       return;
     }
 
     setActionErr(null);
-    setActionLoading(pendingActionId);
-    setReasonDialogOpen(false);
-
+    setActionLoading(actionId);
     try {
       await action.handler(reason);
-      await onRefreshDetail();
+      toast.success(action.label);
+
+      setReasonDialogOpen(false);
       setReasonText("");
-    } catch (e) {
-      setActionErr(toSafeErrorText(e));
+      setPendingActionId(null);
+
+      await onRefreshDetail?.();
+    } catch (err) {
+      console.error(err);
+      setActionErr(err instanceof Error ? err.message : "Action failed");
+      toast.error("Action failed");
     } finally {
       setActionLoading(null);
-      setPendingActionId(null);
     }
   }
 
-  const detailStatus = String((detail as any)?.status ?? "").trim();
-
-  // ✅ FIX: accept either flattened strings OR nested objects OR normalized gridModel
-  const foremanDisplay =
-    String((gridModel as any)?.foremanName ?? "").trim() ||
-    String((detail as any)?.foremanName ?? "").trim() ||
-    String((detail as any)?.foreman?.name ?? "").trim() ||
-    "—";
-
-  const contractManagerDisplay =
-    String((detail as any)?.supervisorName ?? "").trim() ||
-    String((detail as any)?.supervisor?.name ?? "").trim() ||
-    "—";
-
-  /**
-   * ✅ FIX: Use the normalized model totals (same numbers the grid uses)
-   * so we match mobile: F/man totals + Team totals.
-   */
+  // ✅ totals from normalized model (same numbers grid uses)
   const foremanTotals = {
-    days: Number(gridModel?.totals?.foremanDays ?? 0),
-    pay: Number(gridModel?.totals?.foremanPay ?? 0),
+    days: Number((gridModel as any)?.totals?.foremanDays ?? 0),
+    pay: Number((gridModel as any)?.totals?.foremanPay ?? 0),
   };
-
   const teamTotals = {
-    days: Number(gridModel?.totals?.teamDays ?? 0),
-    pay: Number(gridModel?.totals?.teamPay ?? 0),
+    days: Number((gridModel as any)?.totals?.teamDays ?? 0),
+    pay: Number((gridModel as any)?.totals?.teamPay ?? 0),
   };
 
   const totalDays = foremanTotals.days + teamTotals.days;
@@ -307,6 +316,47 @@ export default function TimesheetDetailSheet<
                     Refresh Detail
                   </Button>
 
+                  {/* ✅ PDF EXPORT using pdf-lib (no CSS parsing issues) */}
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!gridModel) {
+                        toast.error("Nothing to export");
+                        return;
+                      }
+
+                      setPdfGenerating(true);
+                      try {
+                        const filename = `timesheet-${(detail as any)?.startISO || "report"}.pdf`;
+
+                        const pdfBytes = await generateTimesheetPdf(gridModel, {
+                          foremanName: foremanDisplay,
+                          supervisorName: contractManagerDisplay,
+                          siteName: sites[0]?.name,
+                          siteCode: sites[0]?.code,
+                          startISO: (detail as any)?.startISO,
+                          endISO: (detail as any)?.endISO,
+                          status: detailStatus,
+                        });
+
+                        downloadTimesheetPdf(pdfBytes, filename);
+                        toast.success("PDF downloaded");
+                      } catch (err) {
+                        console.error("PDF export failed:", err);
+                        toast.error(
+                          "PDF export failed: " +
+                            (err instanceof Error ? err.message : String(err)),
+                        );
+                      } finally {
+                        setPdfGenerating(false);
+                      }
+                    }}
+                    disabled={!gridModel || pdfGenerating}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    {pdfGenerating ? "Generating..." : "Download PDF"}
+                  </Button>
+
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Close
                   </Button>
@@ -409,9 +459,19 @@ export default function TimesheetDetailSheet<
             </div>
           ) : detail ? (
             <div className="h-[70vh] px-3 overflow-auto flex flex-col gap-4">
-              <div className="max-w-7xl">{gridComponent}</div>
-              {/* ✅ Mobile-style totals cards (driven by gridModel) */}
+              {/* ✅ DO NOT add bg-white here (keeps dark mode nice) */}
+              <div
+                ref={gridExportRef}
+                className="max-w-7xl"
+                style={{
+                  WebkitPrintColorAdjust: "exact",
+                  printColorAdjust: "exact",
+                }}
+              >
+                {gridComponent}
+              </div>
 
+              {/* Totals cards */}
               <div className="flex gap-4 flex-wrap justify-end items-stretch">
                 <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 max-w-xs text-right">
                   <div className="text-muted-foreground text-xs font-semibold">

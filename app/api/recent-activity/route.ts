@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
+import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
 
 type RecentActivityKind =
   | "TIMESHEET_SUBMITTED"
@@ -57,17 +68,47 @@ function addDays(date: Date, days: number) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-export async function GET(req: Request) {
-  let auth: Awaited<ReturnType<typeof requireServerAuth>> | null = null;
+async function getAuthFromRequest(
+  req: Request,
+): Promise<{ userId: string; role: string } | null> {
+  // First try Bearer token (for Electron/API clients)
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    try {
+      const payload = await verifyApiToken(token);
+      if (payload) {
+        return { userId: payload.sub, role: payload.role };
+      }
+    } catch {
+      // Fall through to session auth
+    }
+  }
+
+  // Fall back to session auth (for web dashboard)
   try {
-    auth = await requireServerAuth();
+    const sessionAuth = await requireServerAuth();
+    return sessionAuth;
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return null;
+  }
+}
+
+export async function GET(req: Request) {
+  const auth = await getAuthFromRequest(req);
+  if (!auth) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: corsHeaders },
+    );
   }
 
   // This endpoint is used by the web dashboard.
   if (auth.role === "FOREMAN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: corsHeaders },
+    );
   }
 
   const url = new URL(req.url);
@@ -420,5 +461,5 @@ export async function GET(req: Request) {
     .sort((a, b) => String(b.at).localeCompare(String(a.at)))
     .slice(0, limit);
 
-  return NextResponse.json({ items: out });
+  return NextResponse.json({ items: out }, { headers: corsHeaders });
 }

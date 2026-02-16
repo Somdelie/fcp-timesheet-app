@@ -8,6 +8,16 @@ import { requireApiAuth } from "@/lib/apiAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: CORS_HEADERS });
+}
+
 async function getAdminOrSupervisorFromRequest(req: NextRequest) {
   // 1) Prefer API Bearer token (mobile/third-party clients)
   const apiCtx = await requireApiAuth(req, ["ADMIN", "SUPERVISOR"]);
@@ -141,7 +151,10 @@ export async function GET(req: NextRequest) {
   try {
     const actor = await getAdminOrSupervisorFromRequest(req);
     if (!actor) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
 
     const url = new URL(req.url);
@@ -185,10 +198,13 @@ export async function GET(req: NextRequest) {
     });
 
     if (siteDays.length === 0 && scans.length === 0) {
-      return NextResponse.json({
-        timesheets: [],
-        period: { id: `${startISO}_${endISO}`, startISO, endISO },
-      });
+      return NextResponse.json(
+        {
+          timesheets: [],
+          period: { id: `${startISO}_${endISO}`, startISO, endISO },
+        },
+        { headers: CORS_HEADERS },
+      );
     }
 
     // Group sites by foreman (per-site, not aggregated)
@@ -383,15 +399,18 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => a.foreman.name.localeCompare(b.foreman.name));
 
-    return NextResponse.json({
-      timesheets,
-      period: { id: `${startISO}_${endISO}`, startISO, endISO },
-    });
+    return NextResponse.json(
+      {
+        timesheets,
+        period: { id: `${startISO}_${endISO}`, startISO, endISO },
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (e: any) {
     console.error("Error fetching timesheets:", e);
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

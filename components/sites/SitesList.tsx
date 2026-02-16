@@ -19,6 +19,7 @@ import CreateSiteForm from "./CreateSiteForm";
 import SitesTable, { type SiteRow } from "./SitesTable";
 import { requestSiteGroupPhoto } from "@/actions/sites";
 import { useUserRole } from "@/lib/user-role-context";
+import { generateSitesPdf, downloadPdfBlob } from "@/lib/generateSitesPdf";
 
 interface SitesListProps {
   initialSites: SiteRow[];
@@ -42,8 +43,28 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const [photoDueDate, setPhotoDueDate] = React.useState<string>("");
   const [photoNote, setPhotoNote] = React.useState<string>("");
   const [photoSubmitting, setPhotoSubmitting] = React.useState(false);
+  const [pdfGenerating, setPdfGenerating] = React.useState(false);
 
   React.useEffect(() => setQuery(q), [q]);
+
+  async function handleDownloadPdf() {
+    if (filtered.length === 0) {
+      toast.error("No sites to export");
+      return;
+    }
+    setPdfGenerating(true);
+    try {
+      const pdfBytes = await generateSitesPdf(filtered);
+      const filename = `sites-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      downloadPdfBlob(pdfBytes, filename);
+      toast.success("PDF downloaded");
+    } catch (err: any) {
+      console.error("PDF generation error:", err);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setPdfGenerating(false);
+    }
+  }
 
   function updateUrl(next: { q?: string; show?: "active" | "all" }) {
     const params = new URLSearchParams(sp.toString());
@@ -130,7 +151,8 @@ export default function SitesList({ initialSites }: SitesListProps) {
               <Button
                 variant="outline"
                 className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
-                // onClick={}
+                onClick={handleDownloadPdf}
+                disabled={pdfGenerating || filtered.length === 0}
               >
                 <Download className="h-4 w-4" />
               </Button>
