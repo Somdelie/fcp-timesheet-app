@@ -46,11 +46,14 @@ function toISODateUTC(d: Date) {
 }
 
 function parseId(raw: string) {
+  // Format: YYYY-MM-DD_YYYY-MM-DD_FOREMANID_SITEID
   const m = String(raw ?? "")
     .trim()
-    .match(/^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})_(.+)$/);
+    .match(
+      /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})_([a-z0-9]+)_([a-z0-9]+)$/i,
+    );
   if (!m) return null;
-  return { startISO: m[1], endISO: m[2], foremanId: m[3] };
+  return { startISO: m[1], endISO: m[2], foremanId: m[3], siteId: m[4] };
 }
 
 function startOfDayUTCFromISO(iso: string) {
@@ -94,7 +97,8 @@ export async function GET(
     }
 
     const url = new URL(req.url);
-    const siteIdFilter = url.searchParams.get("siteId");
+    // siteId is now part of the ID, not a query param
+    // const siteIdFilter = url.searchParams.get("siteId");
 
     const { id } = await ctx.params;
     const parsed = parseId(id);
@@ -106,7 +110,7 @@ export async function GET(
       );
     }
 
-    const { startISO, endISO, foremanId } = parsed;
+    const { startISO, endISO, foremanId, siteId } = parsed;
 
     let startDate: Date;
     let endDate: Date;
@@ -121,6 +125,25 @@ export async function GET(
     }
 
     const endExclusive = addDaysUTC(endDate, 1);
+
+    // Get actual timesheet status from database (per foreman + site)
+    const period = await prisma.timesheetPeriod.findUnique({
+      where: { startDate_endDate: { startDate, endDate } },
+      select: { id: true },
+    });
+
+    let timesheetStatus = "SUBMITTED";
+    if (period) {
+      const timesheet = await prisma.timesheet.findUnique({
+        where: {
+          periodId_foremanId_siteId: { periodId: period.id, foremanId, siteId },
+        },
+        select: { status: true },
+      });
+      if (timesheet) {
+        timesheetStatus = timesheet.status;
+      }
+    }
 
     // Get foreman info
     const foreman = await prisma.foreman.findUnique({
@@ -144,11 +167,11 @@ export async function GET(
     });
     const colIndex = new Map(columns.map((c, idx) => [c.iso, idx]));
 
-    // Get sites for this foreman in this period
+    // Get sites for this foreman in this period (filtered by siteId from ID)
     const siteIds = await prisma.siteDay.findMany({
       where: {
         foremanId,
-        ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
+        siteId: siteId,
         workDate: { gte: startDate, lt: endExclusive },
       },
       distinct: ["siteId"],
@@ -164,12 +187,12 @@ export async function GET(
             orderBy: [{ code: "asc" }, { name: "asc" }],
           });
 
-    // Get scans for this foreman in this period
+    // Get scans for this foreman in this period (filtered by siteId)
     const scans = await prisma.attendanceScan.findMany({
       where: {
         siteDay: {
           foremanId,
-          ...(siteIdFilter ? { siteId: siteIdFilter } : {}),
+          siteId: siteId,
           workDate: { gte: startDate, lt: endExclusive },
         },
       },
@@ -278,7 +301,7 @@ export async function GET(
           id,
           startISO,
           endISO,
-          status: "SUBMITTED",
+          status: timesheetStatus,
           foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman" },
           supervisor,
           sites,

@@ -15,7 +15,8 @@ enum UserRole {
 
 enum TimesheetStatus {
   SUBMITTED
-  APPROVED
+  ACCEPTED // Daily acceptance during fortnight
+  APPROVED // Final approval on last day
   REJECTED
   PAID
 }
@@ -141,6 +142,7 @@ model Supervisor {
 
   siteAssignments    SupervisorSiteAssignment[]
   approvedTimesheets Timesheet[]                @relation("SupervisorApprovals")
+  dayAcceptances     TimesheetDayAcceptance[]   @relation("DayAcceptances")
 
   // ✅ many-to-many supervisors <-> foremen
   foremanLinks SupervisorForeman[]
@@ -243,6 +245,7 @@ model Site {
   supervisorAssignments SupervisorSiteAssignment[]
   foremanAssignments    ForemanSiteAssignment[]
   siteDays              SiteDay[]
+  timesheets            Timesheet[]
 
   attendanceScans AttendanceScan[]
 }
@@ -497,6 +500,9 @@ model Timesheet {
   foremanId String
   foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Restrict)
 
+  siteId String?
+  site   Site?   @relation(fields: [siteId], references: [id], onDelete: Restrict)
+
   status TimesheetStatus @default(SUBMITTED)
 
   submittedAt DateTime?
@@ -516,10 +522,43 @@ model Timesheet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([periodId, foremanId])
+  dayAcceptances TimesheetDayAcceptance[]
+
+  @@unique([periodId, foremanId, siteId])
   @@index([status])
   @@index([foremanId, periodId])
   @@index([approvedBySupervisorId])
+  @@index([siteId])
+}
+
+enum DayAcceptanceStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model TimesheetDayAcceptance {
+  id String @id @default(cuid())
+
+  timesheetId String
+  timesheet   Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  workDate DateTime // The specific day being accepted/rejected
+  status   DayAcceptanceStatus @default(PENDING)
+
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+
+  acceptedBySupervisorId String?
+  acceptedBySupervisor   Supervisor? @relation("DayAcceptances", fields: [acceptedBySupervisorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([timesheetId, workDate])
+  @@index([timesheetId])
+  @@index([workDate])
 }
 
 model Account {

@@ -117,8 +117,8 @@ export async function POST(
   }
 
   // Get the timesheet
-  const timesheet = await prisma.timesheet.findUnique({
-    where: { periodId_foremanId: { periodId: period.id, foremanId } },
+  const timesheet = await prisma.timesheet.findFirst({
+    where: { periodId: period.id, foremanId },
     select: { id: true, status: true },
   });
 

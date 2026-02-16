@@ -203,21 +203,20 @@ export default function TimesheetSheet({
               ) : null}
 
               <div className="flex flex-wrap gap-2">
-                {actions.map((action) => (
-                  <Button
-                    key={action.id}
-                    variant={action.variant || "default"}
-                    disabled={
-                      !action.canPerform(detail?.status ?? "") ||
-                      actionLoading !== null
-                    }
-                    onClick={() => runAction(action.id)}
-                  >
-                    {actionLoading === action.id
-                      ? `${action.label}…`
-                      : action.label}
-                  </Button>
-                ))}
+                {actions
+                  .filter((action) => action.canPerform(detail?.status ?? ""))
+                  .map((action) => (
+                    <Button
+                      key={action.id}
+                      variant={action.variant || "default"}
+                      disabled={actionLoading !== null}
+                      onClick={() => runAction(action.id)}
+                    >
+                      {actionLoading === action.id
+                        ? `${action.label}…`
+                        : action.label}
+                    </Button>
+                  ))}
 
                 <Button
                   variant="outline"

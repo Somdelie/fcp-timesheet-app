@@ -260,8 +260,8 @@ export async function GET(req: Request) {
     }
 
     // Pull timesheet record status (if exists)
-    const ts = await prisma.timesheet.findUnique({
-      where: { periodId_foremanId: { periodId, foremanId: foreman.id } },
+    const ts = await prisma.timesheet.findFirst({
+      where: { periodId, foremanId: foreman.id },
       select: { id: true, status: true },
     });
     const id = makeSupervisorTimesheetId(startISO, endISO, foreman.id);

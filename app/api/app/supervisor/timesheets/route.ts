@@ -305,12 +305,17 @@ export async function GET(req: Request) {
       select: {
         id: true,
         foremanId: true,
+        siteId: true,
         status: true,
       },
     });
 
-    const statusByForeman = new Map(
-      timesheetRows.map((t) => [t.foremanId, { id: t.id, status: t.status }]),
+    // Map by foreman+site key since each foreman can have multiple sites
+    const statusByForemanSite = new Map(
+      timesheetRows.map((t) => [
+        `${t.foremanId}__${t.siteId ?? ""}`,
+        { id: t.id, status: t.status },
+      ]),
     );
 
     // Build response - one row per (foreman, site)
@@ -345,8 +350,6 @@ export async function GET(req: Request) {
       const foreman = siteDays[0]?.foreman;
       const foremanName = foreman?.user?.name ?? "Foreman";
 
-      const timesheet = statusByForeman.get(foremanId);
-
       for (const site of sites) {
         const key = `${foremanId}__${site.id}`;
         const totals =
@@ -354,6 +357,9 @@ export async function GET(req: Request) {
 
         // Skip sites that have no attendance scans in this period
         if (!totals.days) continue;
+
+        // Get timesheet status for this specific foreman+site combination
+        const timesheet = statusByForemanSite.get(key);
 
         const id = makeSupervisorTimesheetId(startISO, endISO, foremanId);
 

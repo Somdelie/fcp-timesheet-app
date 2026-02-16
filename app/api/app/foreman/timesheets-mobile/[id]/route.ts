@@ -104,12 +104,13 @@ export async function GET(
     });
 
     // Find or create the timesheet (same as supervisor)
-    const timesheet = await prisma.timesheet.upsert({
+    // Use findFirst + create pattern since siteId can be null
+    let timesheet = await prisma.timesheet.findFirst({
       where: {
-        periodId_foremanId: { periodId: period.id, foremanId: foreman.id },
+        periodId: period.id,
+        foremanId: foreman.id,
+        siteId: siteIdFilter ?? null,
       },
-      create: { periodId: period.id, foremanId: foreman.id },
-      update: {},
       select: {
         id: true,
         status: true,
@@ -117,6 +118,22 @@ export async function GET(
         foreman: { select: { id: true, user: { select: { name: true } } } },
       },
     });
+
+    if (!timesheet) {
+      timesheet = await prisma.timesheet.create({
+        data: {
+          periodId: period.id,
+          foremanId: foreman.id,
+          siteId: siteIdFilter ?? null,
+        },
+        select: {
+          id: true,
+          status: true,
+          submittedAt: true,
+          foreman: { select: { id: true, user: { select: { name: true } } } },
+        },
+      });
+    }
 
     const startISO = toISODateUTC(startDate);
     const endISO = toISODateUTC(endDate);

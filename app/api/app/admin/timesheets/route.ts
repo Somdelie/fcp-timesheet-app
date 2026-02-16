@@ -273,17 +273,20 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ✅ REAL STATUS: pull from Timesheet table (per foreman, same for all sites)
+    // ✅ REAL STATUS: pull from Timesheet table (per foreman + site)
     const timesheetRows = await prisma.timesheet.findMany({
       where: { periodId, foremanId: { in: foremanIds } },
       select: {
         foremanId: true,
+        siteId: true,
         status: true,
       },
     });
 
-    const statusByForeman = new Map(
-      timesheetRows.map((t) => [t.foremanId, t.status]),
+    const statusByForemanSite = new Map(
+      timesheetRows
+        .filter((t) => t.siteId)
+        .map((t) => [`${t.foremanId}__${t.siteId}`, t.status]),
     );
 
     // Supervisor derived from site assignments (per site)
@@ -339,8 +342,6 @@ export async function GET(req: NextRequest) {
       const siteMap = sitesByForeman.get(foremanId);
       const sites = siteMap ? Array.from(siteMap.values()) : [];
 
-      const timesheetStatus = statusByForeman.get(foremanId) ?? "SUBMITTED";
-
       for (const site of sites) {
         const key = `${foremanId}__${site.id}`;
         const totals =
@@ -350,9 +351,10 @@ export async function GET(req: NextRequest) {
         if (!totals.days) continue;
 
         const supervisor = supervisorsBySite.get(site.id) ?? null;
+        const timesheetStatus = statusByForemanSite.get(key) ?? "SUBMITTED";
 
         rows.push({
-          id: `${startISO}_${endISO}_${foremanId}`,
+          id: `${startISO}_${endISO}_${foremanId}_${site.id}`,
           startISO,
           endISO,
           status: timesheetStatus,

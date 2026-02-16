@@ -292,21 +292,20 @@ export default function TimesheetDetailSheet<
 
               <div className="flex items-start justify-between gap-4">
                 <div className="flex flex-wrap gap-2">
-                  {actions.map((action) => (
-                    <Button
-                      key={action.id}
-                      variant={action.variant || "default"}
-                      disabled={
-                        !action.canPerform(detailStatus) ||
-                        actionLoading !== null
-                      }
-                      onClick={() => runAction(action.id)}
-                    >
-                      {actionLoading === action.id
-                        ? `${action.label}…`
-                        : action.label}
-                    </Button>
-                  ))}
+                  {actions
+                    .filter((action) => action.canPerform(detailStatus))
+                    .map((action) => (
+                      <Button
+                        key={action.id}
+                        variant={action.variant || "default"}
+                        disabled={actionLoading !== null}
+                        onClick={() => runAction(action.id)}
+                      >
+                        {actionLoading === action.id
+                          ? `${action.label}…`
+                          : action.label}
+                      </Button>
+                    ))}
 
                   <Button
                     variant="outline"

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
-import { parseSupervisorTimesheetId } from "@/lib/timesheetId";
+import { parseTimesheetId } from "@/lib/timesheetId";
 import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
 import { writeAuditEvent } from "@/lib/audit";
 
@@ -83,17 +83,28 @@ export async function POST(
       { error: "Unauthorized" },
       { status: 401, headers: CORS },
     );
-  if (auth.role !== "SUPERVISOR")
+  if (auth.role !== "SUPERVISOR" && auth.role !== "ADMIN")
     return NextResponse.json(
       { error: "Forbidden" },
       { status: 403, headers: CORS },
     );
 
   const { id } = await ctx.params;
-  const parsed = parseSupervisorTimesheetId(id);
+  const parsed = parseTimesheetId(id);
   if (!parsed) {
     return NextResponse.json(
-      { error: "Invalid id. Expected YYYY-MM-DD_YYYY-MM-DD__FOREMANID" },
+      { error: "Invalid id. Expected YYYY-MM-DD_YYYY-MM-DD_FOREMANID_SITEID" },
+      { status: 400, headers: CORS },
+    );
+  }
+
+  // Require siteId for per-site paid marking
+  if (!parsed.siteId) {
+    return NextResponse.json(
+      {
+        error:
+          "siteId is required. Use format: YYYY-MM-DD_YYYY-MM-DD_FOREMANID_SITEID",
+      },
       { status: 400, headers: CORS },
     );
   }
@@ -102,17 +113,20 @@ export async function POST(
   const endDate = startOfDayUTC(parsed.endISO);
   const endExclusive = addDaysUTC(endDate, 1);
 
-  const access = await assertSupervisorAccess(
-    auth.userId,
-    parsed.foremanId,
-    startDate,
-    endExclusive,
-  );
-  if (!access.ok)
-    return NextResponse.json(
-      { error: access.msg },
-      { status: access.status, headers: CORS },
+  // Admins can mark any timesheet as paid; supervisors need site access check
+  if (auth.role === "SUPERVISOR") {
+    const access = await assertSupervisorAccess(
+      auth.userId,
+      parsed.foremanId,
+      startDate,
+      endExclusive,
     );
+    if (!access.ok)
+      return NextResponse.json(
+        { error: access.msg },
+        { status: access.status, headers: CORS },
+      );
+  }
 
   const period = await prisma.timesheetPeriod.upsert({
     where: { startDate_endDate: { startDate, endDate } },
@@ -123,9 +137,17 @@ export async function POST(
 
   const ts = await prisma.timesheet.upsert({
     where: {
-      periodId_foremanId: { periodId: period.id, foremanId: parsed.foremanId },
+      periodId_foremanId_siteId: {
+        periodId: period.id,
+        foremanId: parsed.foremanId,
+        siteId: parsed.siteId,
+      },
     },
-    create: { periodId: period.id, foremanId: parsed.foremanId },
+    create: {
+      periodId: period.id,
+      foremanId: parsed.foremanId,
+      siteId: parsed.siteId,
+    },
     update: {},
     select: { id: true, status: true },
   });
@@ -145,18 +167,14 @@ export async function POST(
     select: { status: true, paidAt: true },
   });
 
-  const [foremanNameRow, siteDay] = await Promise.all([
+  const [foremanNameRow, site] = await Promise.all([
     prisma.foreman.findUnique({
       where: { id: parsed.foremanId },
       select: { user: { select: { name: true } } },
     }),
-    prisma.siteDay.findFirst({
-      where: {
-        foremanId: parsed.foremanId,
-        workDate: { gte: startDate, lt: endExclusive },
-      },
-      orderBy: { workDate: "desc" },
-      select: { site: { select: { id: true, name: true } } },
+    prisma.site.findUnique({
+      where: { id: parsed.siteId! },
+      select: { id: true, name: true },
     }),
   ]);
   const foremanName = foremanNameRow?.user?.name?.trim() || "Foreman";
@@ -169,12 +187,10 @@ export async function POST(
     metadata: {
       foremanId: parsed.foremanId,
       period: { startISO: parsed.startISO, endISO: parsed.endISO },
-      siteId: siteDay?.site?.id ?? null,
-      siteName: siteDay?.site?.name ?? null,
+      siteId: site?.id ?? null,
+      siteName: site?.name ?? null,
       title: "Timesheet marked as paid",
-      description: siteDay?.site?.name
-        ? `${siteDay.site.name} - ${foremanName}`
-        : foremanName,
+      description: site?.name ? `${site.name} - ${foremanName}` : foremanName,
     },
   });
 

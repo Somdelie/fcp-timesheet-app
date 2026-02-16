@@ -919,26 +919,84 @@ export default function TimesheetsListClient({ mode }: Props) {
   const actions = useMemo((): TimesheetAction[] => {
     const base = "/api/app/supervisor";
 
-    return [
-      {
+    // Get the fortnight dates from the detail or activeId
+    let endISO: string | null = null;
+    let startISO: string | null = null;
+    if (detail) {
+      endISO = detail?.endISO ?? null;
+      startISO = detail?.startISO ?? null;
+    } else if (activeId) {
+      // Parse from activeId: YYYY-MM-DD_YYYY-MM-DD_FOREMANID_SITEID
+      const parts = activeId.split("_");
+      if (parts.length >= 2) {
+        startISO = parts[0];
+        endISO = parts[1];
+      }
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const isLastDayOrLater = endISO ? today >= endISO : false;
+    const isWithinPeriod =
+      startISO && endISO ? today >= startISO && today <= endISO : false;
+
+    const result: TimesheetAction[] = [];
+
+    // Accept Day - only during the ongoing fortnight period (before last day)
+    if (isWithinPeriod && !isLastDayOrLater) {
+      result.push({
+        id: "accept-day",
+        label: `Accept Today (${today})`,
+        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
+        handler: async () => {
+          if (!activeId) return;
+          await postJson(
+            `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
+            { date: today, action: "accept" },
+          );
+          setTimeout(() => loadList(), 300);
+          setTimeout(() => refreshDetail(), 300);
+        },
+      });
+
+      result.push({
+        id: "reject-day",
+        label: `Reject Today (${today})`,
+        variant: "destructive",
+        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
+        requiresReason: true,
+        handler: async (reason) => {
+          if (!activeId) return;
+          await postJson(
+            `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
+            { date: today, action: "reject", reason },
+          );
+          setTimeout(() => loadList(), 300);
+          setTimeout(() => refreshDetail(), 300);
+        },
+      });
+    }
+
+    // Final Approve - only on or after the last day of the fortnight
+    if (isLastDayOrLater) {
+      result.push({
         id: "approve",
-        label: "Approve",
-        canPerform: (s) => s === "SUBMITTED",
+        label: "Final Approve",
+        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
         handler: async () => {
           if (!activeId) return;
           await postJson(
             `${base}/timesheets/${encodeURIComponent(activeId)}/approve`,
           );
-          toast.success("Approved");
           setTimeout(() => loadList(), 300);
           setTimeout(() => refreshDetail(), 300);
         },
-      },
-      {
+      });
+
+      result.push({
         id: "reject",
         label: "Reject",
         variant: "destructive",
-        canPerform: (s) => s === "SUBMITTED",
+        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
         requiresReason: true,
         handler: async (reason) => {
           if (!activeId) return;
@@ -946,28 +1004,30 @@ export default function TimesheetsListClient({ mode }: Props) {
             `${base}/timesheets/${encodeURIComponent(activeId)}/reject`,
             { reason },
           );
-          toast.success("Rejected");
           setTimeout(() => loadList(), 300);
           setTimeout(() => refreshDetail(), 300);
         },
+      });
+    }
+
+    // Mark Paid - always available for approved timesheets
+    result.push({
+      id: "paid",
+      label: "Mark Paid",
+      variant: "outline",
+      canPerform: (s) => s === "APPROVED",
+      handler: async () => {
+        if (!activeId) return;
+        await postJson(
+          `${base}/timesheets/${encodeURIComponent(activeId)}/paid`,
+        );
+        setTimeout(() => loadList(), 300);
+        setTimeout(() => refreshDetail(), 300);
       },
-      {
-        id: "paid",
-        label: "Mark Paid",
-        variant: "outline",
-        canPerform: (s) => s === "APPROVED",
-        handler: async () => {
-          if (!activeId) return;
-          await postJson(
-            `${base}/timesheets/${encodeURIComponent(activeId)}/paid`,
-          );
-          toast.success("Marked paid");
-          setTimeout(() => loadList(), 300);
-          setTimeout(() => refreshDetail(), 300);
-        },
-      },
-    ];
-  }, [activeId, loadList, refreshDetail]);
+    });
+
+    return result;
+  }, [activeId, detail, loadList, refreshDetail]);
 
   const reset = () => {
     setQ("");

@@ -80,14 +80,26 @@ export async function POST(
     });
 
     // Ensure timesheet exists
-    const ts = await prisma.timesheet.upsert({
+    // Use findFirst + create pattern since siteId can be null
+    let ts = await prisma.timesheet.findFirst({
       where: {
-        periodId_foremanId: { periodId: period.id, foremanId: foreman.id },
+        periodId: period.id,
+        foremanId: foreman.id,
+        siteId: parsed.siteId ?? null,
       },
-      create: { periodId: period.id, foremanId: foreman.id },
-      update: {},
       select: { id: true, status: true },
     });
+
+    if (!ts) {
+      ts = await prisma.timesheet.create({
+        data: {
+          periodId: period.id,
+          foremanId: foreman.id,
+          siteId: parsed.siteId ?? null,
+        },
+        select: { id: true, status: true },
+      });
+    }
 
     // Block re-submission if already in terminal state (APPROVED or PAID)
     if (ts.status === "APPROVED" || ts.status === "PAID") {

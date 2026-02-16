@@ -111,15 +111,13 @@ export async function GET(
     });
 
     // Find or create the timesheet using the actual database relationship
-    const timesheet = await prisma.timesheet.upsert({
+    // Use findFirst + create pattern since siteId can be null
+    let timesheet = await prisma.timesheet.findFirst({
       where: {
-        periodId_foremanId: {
-          periodId: period.id,
-          foremanId: parsed.foremanId,
-        },
+        periodId: period.id,
+        foremanId: parsed.foremanId,
+        siteId: siteIdFilter ?? null,
       },
-      create: { periodId: period.id, foremanId: parsed.foremanId },
-      update: {},
       select: {
         id: true,
         status: true,
@@ -134,6 +132,29 @@ export async function GET(
         },
       },
     });
+
+    if (!timesheet) {
+      timesheet = await prisma.timesheet.create({
+        data: {
+          periodId: period.id,
+          foremanId: parsed.foremanId,
+          siteId: siteIdFilter ?? null,
+        },
+        select: {
+          id: true,
+          status: true,
+          submittedAt: true,
+          foremanId: true,
+          period: {
+            select: { id: true, startDate: true, endDate: true, label: true },
+          },
+          foreman: { select: { id: true, user: { select: { name: true } } } },
+          approvedBySupervisor: {
+            select: { id: true, user: { select: { name: true } } },
+          },
+        },
+      });
+    }
 
     if (!timesheet) {
       return NextResponse.json(
