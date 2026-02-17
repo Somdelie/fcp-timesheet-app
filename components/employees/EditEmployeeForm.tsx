@@ -34,7 +34,7 @@ interface EditEmployeeFormProps {
 export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const [pending, startTransition] = React.useState(false as any);
+  const [pending, startTransition] = React.useTransition();
   const [firstName, setFirstName] = React.useState(employee.firstName);
   const [lastName, setLastName] = React.useState(employee.lastName);
   const [faceImageUrl, setFaceImageUrl] = React.useState(
@@ -112,29 +112,29 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     }
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const nextFirst = firstName.trim();
     const nextLast = lastName.trim();
 
-    (startTransition as any)(async () => {
-      const payload: any = {
-        id: employee.id,
-        faceImageUrl: faceImageUrl || null,
-        isActive,
-      };
+    const payload: any = {
+      id: employee.id,
+      faceImageUrl: faceImageUrl || null,
+      isActive,
+    };
 
-      // Only allow name edits for non-foreman employees
-      if (!isForeman) {
-        payload.firstName = nextFirst;
-        payload.lastName = nextLast;
-      }
+    // Only allow name edits for non-foreman employees
+    if (!isForeman) {
+      payload.firstName = nextFirst;
+      payload.lastName = nextLast;
+    }
 
-      if (isForeman) {
-        payload.defaultDayRate = defaultDayRate || null;
-      }
+    if (isForeman) {
+      payload.defaultDayRate = defaultDayRate || null;
+    }
 
+    startTransition(async () => {
       const res = await updateEmployee(payload);
 
       if (!res.ok) {

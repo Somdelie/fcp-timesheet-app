@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 
@@ -173,6 +174,23 @@ export async function POST(req: Request) {
       const foreman = await tx.foreman.create({
         data: { userId: user.id },
         select: { id: true },
+      });
+
+      // Create linked Employee record
+      const nameParts = (name || "").trim().split(/\s+/);
+      const firstName = nameParts[0] || "Foreman";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      const qrCodeValue = randomBytes(8).toString("hex").toUpperCase();
+
+      await tx.employee.create({
+        data: {
+          firstName,
+          lastName,
+          qrCodeValue,
+          userId: user.id,
+          createdByUserId: user.id,
+          isActive: true,
+        },
       });
 
       return { user, foreman };

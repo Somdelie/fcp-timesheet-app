@@ -27,11 +27,23 @@ export async function GET(req: Request) {
   }
 
   // Return FOREMAN users (User table), plus foremanId (Foreman table)
+  // Filter to only include users with role FOREMAN and exclude those who are also assistants
   const foremen = await prisma.foreman.findMany({
+    where: {
+      user: {
+        role: "FOREMAN",
+        // Exclude users who have an employee with assistantLinks
+        NOT: {
+          employee: {
+            assistantLinks: { some: {} },
+          },
+        },
+      },
+    },
     select: {
       id: true, // Foreman.id
       userId: true, // User.id
-      user: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true, role: true } },
     },
     orderBy: { user: { name: "asc" } },
   });

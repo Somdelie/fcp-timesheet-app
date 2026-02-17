@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
 const BodySchema = z.object({
   siteId: z.string().min(1),
   employeeCode: z.string().min(1),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  address: z.string().optional().nullable(),
 });
 
 function startOfTodayLocal() {
@@ -169,8 +172,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
   if (!employee.isActive) {
+    const fullName = `${employee.firstName} ${employee.lastName}`.trim();
     return NextResponse.json(
-      { error: "Employee is inactive" },
+      {
+        error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+      },
       { status: 409 },
     );
   }
@@ -221,6 +227,9 @@ export async function POST(req: Request) {
         siteId,
         dayRateAtScan: effectiveRate,
         qrPayload: employeeCode,
+        latitude: body.data.latitude ?? null,
+        longitude: body.data.longitude ?? null,
+        address: body.data.address ?? null,
       },
       select: { id: true, scannedAt: true },
     });

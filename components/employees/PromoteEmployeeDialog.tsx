@@ -19,6 +19,7 @@ import { promoteEmployeeToForeman } from "@/actions/employees";
 interface PromoteEmployeeDialogProps {
   employeeId: string;
   employeeName: string;
+  employeePhoto?: string | null;
   isAlreadyForeman: boolean;
 }
 
@@ -30,6 +31,7 @@ interface PromotionResult {
 export default function PromoteEmployeeDialog({
   employeeId,
   employeeName,
+  employeePhoto,
   isAlreadyForeman,
 }: PromoteEmployeeDialogProps) {
   const router = useRouter();
@@ -136,6 +138,34 @@ export default function PromoteEmployeeDialog({
           </div>
         ) : (
           <div className="space-y-4 py-4">
+            {/* Employee Profile Preview */}
+            <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
+              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border bg-muted">
+                {employeePhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={employeePhoto}
+                    alt={employeeName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-orange-700 text-xl font-medium uppercase text-white">
+                    {employeeName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{employeeName}</p>
+                <p className="text-sm text-muted-foreground">
+                  Will be promoted to Foreman
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
               <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
                 A new foreman account will be created with:

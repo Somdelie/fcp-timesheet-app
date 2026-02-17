@@ -40,6 +40,10 @@ export async function POST(req: Request) {
   const siteId = String(body?.siteId ?? "");
   const workDateISO = String(body?.workDateISO ?? "");
   const scans = Array.isArray(body?.scans) ? body.scans : [];
+  const latitude = typeof body?.latitude === "number" ? body.latitude : null;
+  const longitude = typeof body?.longitude === "number" ? body.longitude : null;
+  const address =
+    typeof body?.address === "string" ? body.address.trim() || null : null;
 
   // Get forForemanId from header (preferred) or query params (legacy)
   const url = new URL(req.url);
@@ -155,6 +159,8 @@ export async function POST(req: Request) {
       qrCodeValue: true,
       isActive: true,
       defaultDayRate: true,
+      firstName: true,
+      lastName: true,
     },
   });
 
@@ -163,6 +169,8 @@ export async function POST(req: Request) {
   const results: Array<{
     qrCodeValue: string;
     status: "CREATED" | "ALREADY_SCANNED" | "UNKNOWN" | "INACTIVE";
+    employeeName?: string;
+    error?: string;
   }> = [];
 
   for (const qr of uniqueQrValues) {
@@ -173,7 +181,13 @@ export async function POST(req: Request) {
       continue;
     }
     if (!emp.isActive) {
-      results.push({ qrCodeValue: qr as string, status: "INACTIVE" });
+      const fullName = `${emp.firstName} ${emp.lastName}`.trim();
+      results.push({
+        qrCodeValue: qr as string,
+        status: "INACTIVE",
+        employeeName: fullName,
+        error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+      });
       continue;
     }
 
@@ -193,6 +207,9 @@ export async function POST(req: Request) {
         siteId,
         dayRateAtScan: effectiveRate,
         qrPayload: qr as string,
+        latitude,
+        longitude,
+        address,
       };
 
       // Add attribution fields for assistants

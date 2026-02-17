@@ -36,6 +36,23 @@ export function employeeWhereFor(auth: ServerAuthUser) {
           },
         },
       },
+      // Include employees scanned by supervisor's foremen
+      {
+        attendance: {
+          some: {
+            siteDay: {
+              foreman: {
+                supervisorLinks: {
+                  some: {
+                    supervisor: { userId: auth.userId },
+                    endsOn: null,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     ],
   };
 }

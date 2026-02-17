@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
 const BodySchema = z.object({
   siteId: z.string().min(1),
   employeeCodes: z.array(z.string().min(1)).min(1).max(500),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  address: z.string().optional().nullable(),
 });
 
 function startOfTodayLocal() {
@@ -183,6 +186,8 @@ export async function POST(req: Request) {
       qrCodeValue: true,
       isActive: true,
       defaultDayRate: true,
+      firstName: true,
+      lastName: true,
     },
   });
 
@@ -191,6 +196,11 @@ export async function POST(req: Request) {
 
   // Determine rejected (not found / inactive)
   const rejectedCodes: string[] = [];
+  const deactivatedEmployees: Array<{
+    code: string;
+    name: string;
+    error: string;
+  }> = [];
   const candidateEmployees: Array<{
     code: string;
     empId: string;
@@ -204,7 +214,12 @@ export async function POST(req: Request) {
       continue;
     }
     if (!emp.isActive) {
-      rejectedCodes.push(code); // inactive
+      const fullName = `${emp.firstName} ${emp.lastName}`.trim();
+      deactivatedEmployees.push({
+        code,
+        name: fullName,
+        error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+      });
       continue;
     }
     candidateEmployees.push({
@@ -221,6 +236,7 @@ export async function POST(req: Request) {
       duplicates: [],
       invalidCodes,
       rejectedCodes,
+      deactivatedEmployees,
     });
   }
 
@@ -250,6 +266,7 @@ export async function POST(req: Request) {
       duplicates,
       invalidCodes,
       rejectedCodes,
+      deactivatedEmployees,
     });
   }
 
@@ -268,6 +285,9 @@ export async function POST(req: Request) {
               siteId,
               dayRateAtScan: item.dayRate,
               qrPayload: item.code,
+              latitude: body.data.latitude ?? null,
+              longitude: body.data.longitude ?? null,
+              address: body.data.address ?? null,
             },
           });
           saved += 1;
@@ -294,5 +314,6 @@ export async function POST(req: Request) {
     duplicates,
     invalidCodes,
     rejectedCodes,
+    deactivatedEmployees,
   });
 }

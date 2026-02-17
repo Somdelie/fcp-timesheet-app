@@ -50,6 +50,13 @@ export async function POST(
     const formData = await req.formData();
     const file = formData.get("file");
     const requestId = String(formData.get("requestId") ?? "").trim() || null;
+    const latitudeStr = formData.get("latitude");
+    const longitudeStr = formData.get("longitude");
+    const addressStr = formData.get("address");
+
+    const latitude = latitudeStr ? parseFloat(String(latitudeStr)) : null;
+    const longitude = longitudeStr ? parseFloat(String(longitudeStr)) : null;
+    const address = addressStr ? String(addressStr).trim() || null : null;
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -68,6 +75,9 @@ export async function POST(
         cloudinaryPublicId: upload.public_id,
         uploadedByUserId: payload.sub,
         requestId: requestId ?? undefined,
+        latitude: Number.isFinite(latitude) ? latitude : null,
+        longitude: Number.isFinite(longitude) ? longitude : null,
+        address: address ?? undefined,
       },
       select: {
         id: true,
@@ -75,6 +85,8 @@ export async function POST(
         imageUrl: true,
         uploadedAt: true,
         requestId: true,
+        latitude: true,
+        longitude: true,
       },
     });
 

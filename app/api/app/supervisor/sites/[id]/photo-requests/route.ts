@@ -143,6 +143,25 @@ export async function POST(
   const todayISO = isoFromDateUTC(new Date());
   const today = startOfDayUTC(todayISO);
 
+  // Check if there's already a photo request for this site today
+  const existingRequests = await prisma.siteDayPhotoRequest.findMany({
+    where: {
+      siteDay: {
+        siteId,
+        workDate: today,
+      },
+      status: "REQUESTED",
+    },
+    select: { id: true },
+  });
+
+  if (existingRequests.length > 0) {
+    return NextResponse.json(
+      { error: "A photo request has already been sent for this site today." },
+      { status: 400 },
+    );
+  }
+
   // Get or create siteDays for all assigned foremen
   const assignedForemen = await prisma.foremanSiteAssignment.findMany({
     where: {

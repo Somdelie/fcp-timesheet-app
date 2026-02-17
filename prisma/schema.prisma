@@ -353,6 +353,11 @@ model AttendanceScan {
   // ✅ if foreman added it manually, track who
   addedByForemanId String?
 
+  // ✅ Location where scan happened (GPS coordinates from device)
+  latitude  Float?
+  longitude Float?
+  address   String?
+
   createdAt DateTime @default(now())
 
   // ✅ worker can only be booked once per day across ALL sites
@@ -403,6 +408,11 @@ model SiteDayPhoto {
   // Cloudinary public ID for cleanup
   cloudinaryPublicId String?
   uploadedAt         DateTime @default(now())
+
+  // Location where photo was taken (GPS coordinates from device)
+  latitude  Float?
+  longitude Float?
+  address   String?
 
   uploadedByUserId String?
   uploadedByUser   User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)

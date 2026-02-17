@@ -22,9 +22,12 @@ export type EmployeeDTO = {
   linkedToForemanId?: string | null; // If linked to a foreman via ForemanEmployee
 };
 
-function serializeEmployee(e: any): EmployeeDTO {
+function serializeEmployee(e: any): EmployeeDTO & { isForeman: boolean } {
   // Check if employee is an assistant to a foreman (has active ForemanAssistant link)
   const linkedToForemanId = e.assistantLinks?.[0]?.foremanId ?? null;
+  // Check if employee IS a foreman (has user with FOREMAN role and foreman record)
+  const isForeman = !!(e.user?.role === "FOREMAN" && e.user?.foreman);
+
   return {
     id: e.id,
     firstName: e.firstName,
@@ -40,6 +43,7 @@ function serializeEmployee(e: any): EmployeeDTO {
     createdByRole: e.createdByUser?.role ?? null,
     userId: e.userId ?? null,
     linkedToForemanId,
+    isForeman,
   };
 }
 
@@ -97,6 +101,12 @@ export async function listEmployees(input?: {
       isActive: true,
       createdAt: true,
       userId: true,
+      user: {
+        select: {
+          role: true,
+          foreman: { select: { id: true } },
+        },
+      },
       createdByUser: {
         select: {
           role: true,

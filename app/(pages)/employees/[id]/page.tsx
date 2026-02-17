@@ -26,6 +26,12 @@ export default async function EmployeeDetailPage({ params }) {
       createdAt: true,
       updatedAt: true,
       userId: true,
+      user: {
+        select: {
+          role: true,
+          foreman: { select: { id: true } },
+        },
+      },
       createdByUser: {
         select: {
           role: true,
@@ -54,7 +60,9 @@ export default async function EmployeeDetailPage({ params }) {
     return <div className="p-6">Employee not found</div>;
   }
 
-  const isAlreadyForeman = !!employee.userId;
+  const isForeman = !!(
+    employee.user?.role === "FOREMAN" && employee.user?.foreman
+  );
 
   return (
     <EmployeeDetailContent
@@ -71,6 +79,7 @@ export default async function EmployeeDetailPage({ params }) {
         createdByRole: employee.createdByUser?.role,
         foremanLinks: employee.foremanLinks,
         userId: employee.userId,
+        isForeman,
       }}
     />
   );

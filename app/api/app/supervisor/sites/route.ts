@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { currentFortnightSatFri } from "@/lib/fortnight";
+import { startOfDayUTC, addDaysUTC, decimalToNumber } from "@/lib/dateUtc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +101,25 @@ export async function GET(req: Request) {
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
   });
 
+  // Calculate total wages for each site for the current fortnight
+  const ft = currentFortnightSatFri(new Date());
+  const start = startOfDayUTC(ft.startISO);
+  const end = startOfDayUTC(ft.endISO);
+  const endExclusive = addDaysUTC(end, 1);
+
+  const wagesBysite = await prisma.attendanceScan.groupBy({
+    by: ["siteId"],
+    where: {
+      siteId: { in: sites.map((s) => s.id) },
+      workDate: { gte: start, lt: endExclusive },
+    },
+    _sum: { dayRateAtScan: true },
+  });
+
+  const wagesMap = new Map(
+    wagesBysite.map((w) => [w.siteId, decimalToNumber(w._sum.dayRateAtScan)]),
+  );
+
   return NextResponse.json({
     sites: sites.map((s) => ({
       id: s.id,
@@ -107,6 +128,7 @@ export async function GET(req: Request) {
       location: s.location,
       isActive: s.isActive,
       foremenCount: s.foremanAssignments.length,
+      totalWages: wagesMap.get(s.id) ?? 0,
     })),
   });
 }

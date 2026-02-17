@@ -10,6 +10,8 @@ import {
   Building2,
   NotebookIcon,
   MapPin,
+  Camera,
+  ScanLine,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SUPERVISOR" | "FOREMAN";
@@ -59,6 +61,18 @@ const menuItems: {
     href: "/sites/map",
     label: "Sites Map",
     icon: MapPin,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/site-photos",
+    label: "Photo Verifications",
+    icon: Camera,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/attendance-scans",
+    label: "Attendance Scans",
+    icon: ScanLine,
     roles: ["ADMIN"],
   },
   {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireApiAuth, requireRole } from "@/lib/api-auth";
 import { isUserRole } from "@/lib/roles";
@@ -123,8 +124,26 @@ export async function POST(req: Request) {
 
       if (roleRaw === "SUPERVISOR")
         await tx.supervisor.create({ data: { userId: created.id } });
-      if (roleRaw === "FOREMAN")
+      if (roleRaw === "FOREMAN") {
         await tx.foreman.create({ data: { userId: created.id } });
+
+        // Create linked Employee record
+        const nameParts = (name || "").trim().split(/\s+/);
+        const firstName = nameParts[0] || "Foreman";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        const qrCodeValue = randomBytes(8).toString("hex").toUpperCase();
+
+        await tx.employee.create({
+          data: {
+            firstName,
+            lastName,
+            qrCodeValue,
+            userId: created.id,
+            createdByUserId: created.id,
+            isActive: true,
+          },
+        });
+      }
 
       return created;
     });

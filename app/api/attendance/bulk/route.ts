@@ -39,6 +39,10 @@ export async function POST(req: Request) {
   const siteId = String(body?.siteId ?? "");
   const workDateISO = String(body?.workDateISO ?? "");
   const scans = Array.isArray(body?.scans) ? body.scans : [];
+  const latitude = typeof body?.latitude === "number" ? body.latitude : null;
+  const longitude = typeof body?.longitude === "number" ? body.longitude : null;
+  const address =
+    typeof body?.address === "string" ? body.address.trim() || null : null;
 
   if (!siteId || !workDateISO) {
     return NextResponse.json(
@@ -147,6 +151,9 @@ export async function POST(req: Request) {
           siteId,
           dayRateAtScan: effectiveRate,
           qrPayload: qr as string,
+          latitude,
+          longitude,
+          address,
         },
       });
       results.push({ qrCodeValue: qr as string, status: "CREATED" });

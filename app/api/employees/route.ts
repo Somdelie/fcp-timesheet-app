@@ -76,6 +76,13 @@ export async function GET(request: NextRequest) {
         faceImageUrl: true,
         isActive: true,
         createdAt: true,
+        userId: true,
+        user: {
+          select: {
+            role: true,
+            foreman: { select: { id: true } },
+          },
+        },
       },
     });
 
@@ -91,6 +98,8 @@ export async function GET(request: NextRequest) {
           active: e.isActive,
           fullName: `${e.firstName} ${e.lastName}`,
           createdAt: e.createdAt.toISOString(),
+          photoUrl: e.faceImageUrl ?? null,
+          isForeman: !!(e.user?.role === "FOREMAN" && e.user?.foreman),
         })),
       },
       { headers: CORS_HEADERS },

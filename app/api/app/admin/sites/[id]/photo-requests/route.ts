@@ -214,6 +214,25 @@ export async function POST(
   const dueAt = dueDateStr ? new Date(`${dueDateStr}T17:00:00.000Z`) : null;
 
   try {
+    // Check if there's already a photo request for this site on this day
+    const existingRequests = await prisma.siteDayPhotoRequest.findMany({
+      where: {
+        siteDay: {
+          siteId,
+          workDate,
+        },
+        status: "REQUESTED",
+      },
+      select: { id: true },
+    });
+
+    if (existingRequests.length > 0) {
+      return NextResponse.json(
+        { error: "A photo request has already been sent for this site today." },
+        { status: 400 },
+      );
+    }
+
     // Find all foremen assigned to this site on that work date
     const assignments = await prisma.foremanSiteAssignment.findMany({
       where: {

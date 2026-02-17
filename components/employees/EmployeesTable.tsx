@@ -52,6 +52,7 @@ export type Employee = {
   createdByRole?: string | null;
   userId?: string | null;
   linkedToForemanId?: string | null;
+  isForeman?: boolean;
 };
 
 function formatMoneyString(s: string) {
@@ -125,19 +126,16 @@ const columns: ColumnDef<Employee>[] = [
                   Assistant
                 </Badge>
               )}
-              {!e.linkedToForemanId &&
-                (e.createdByRole === "FOREMAN" || e.userId) && (
-                  <Badge variant="default" className="text-[11px]">
-                    Foreman
-                  </Badge>
-                )}
-              {!e.linkedToForemanId &&
-                e.createdByRole !== "FOREMAN" &&
-                !e.userId && (
-                  <Badge variant="secondary" className="text-[11px]">
-                    Individual
-                  </Badge>
-                )}
+              {!e.linkedToForemanId && e.isForeman && (
+                <Badge variant="default" className="text-[11px]">
+                  Foreman
+                </Badge>
+              )}
+              {!e.linkedToForemanId && !e.isForeman && (
+                <Badge variant="secondary" className="text-[11px]">
+                  Individual
+                </Badge>
+              )}
               {!e.isActive && (
                 <Badge variant="destructive" className="text-[11px]">
                   Inactive

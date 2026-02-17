@@ -110,28 +110,6 @@ export async function POST(
     return NextResponse.json({ ok: true, assigned: "already" });
   }
 
-  // Optional: prevent foreman being double-booked across sites at same time
-  // (If you want this rule, keep it. If not, remove this block.)
-  const activeElsewhere = await prisma.foremanSiteAssignment.findFirst({
-    where: {
-      foremanId,
-      startsOn: { lte: now },
-      OR: [{ endsOn: null }, { endsOn: { gt: now } }],
-      NOT: { siteId },
-    },
-    select: { siteId: true },
-  });
-
-  if (activeElsewhere) {
-    return NextResponse.json(
-      {
-        error:
-          "Foreman is already assigned to another site. End that assignment first.",
-      },
-      { status: 409 },
-    );
-  }
-
   // ✅ Create new assignment AND link foreman to all active supervisors at the site
   await prisma.$transaction(async (tx) => {
     // 1. Create the site assignment

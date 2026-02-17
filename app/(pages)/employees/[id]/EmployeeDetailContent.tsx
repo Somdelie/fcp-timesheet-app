@@ -22,6 +22,7 @@ interface Employee {
   createdByRole?: string | null;
   userId?: string | null;
   linkedForemanId?: string | null;
+  isForeman?: boolean;
   foremanLinks?: Array<{
     foremanId: string;
     reason?: string | null;
@@ -39,6 +40,7 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
   const [companyDefaultRate, setCompanyDefaultRate] = useState<string | null>(
     null,
   );
+  const [showImageModal, setShowImageModal] = useState(false);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -75,7 +77,13 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-4">
             {/* Avatar */}
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded border bg-muted text-lg font-medium">
+            <div
+              className="flex h-20 w-20 items-center justify-center overflow-hidden rounded border bg-muted text-lg font-medium cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => employee.faceImageUrl && setShowImageModal(true)}
+              title={
+                employee.faceImageUrl ? "Click to view full image" : undefined
+              }
+            >
               {employee.faceImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -97,16 +105,10 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
                 {employee.firstName} {employee.lastName}
               </h1>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(employee.createdByRole === "FOREMAN" ||
-                  employee.userId ||
-                  employee.foremanLinks?.length) && (
-                  <Badge variant="default">Foreman</Badge>
+                {employee.isForeman && <Badge variant="default">Foreman</Badge>}
+                {!employee.isForeman && (
+                  <Badge variant="secondary">Individual</Badge>
                 )}
-                {employee.createdByRole !== "FOREMAN" &&
-                  !employee.userId &&
-                  !employee.foremanLinks?.length && (
-                    <Badge variant="secondary">Individual</Badge>
-                  )}
                 {!employee.isActive && (
                   <Badge variant="destructive">Inactive</Badge>
                 )}
@@ -127,6 +129,7 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
             <PromoteEmployeeDialog
               employeeId={employee.id}
               employeeName={`${employee.firstName} ${employee.lastName}`}
+              employeePhoto={employee.faceImageUrl}
               isAlreadyForeman={!!employee.userId}
             />
           </div>
@@ -208,6 +211,33 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
           </div>
         </div>
       </div>
+
+      {/* Full Image Modal */}
+      {showImageModal && employee.faceImageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw]">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 text-lg font-medium"
+            >
+              ✕ Close
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={employee.faceImageUrl}
+              alt={`${employee.firstName} ${employee.lastName}`}
+              className="max-h-[85vh] max-w-full rounded-lg object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="mt-2 text-center text-white text-sm">
+              {employee.firstName} {employee.lastName}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
