@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 1800;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -51,10 +52,12 @@ async function getAuthFromRequest(req: Request) {
 export async function GET(req: Request) {
   const auth = await getAuthFromRequest(req);
   if (!auth) {
-    return NextResponse.json(
+    const res = NextResponse.json(
       { error: "Unauthorized" },
       { status: 401, headers: CORS_HEADERS },
     );
+    logApiRequest("/api/app/admin/sites", req.method, res.status);
+    return res;
   }
 
   try {
@@ -89,7 +92,7 @@ export async function GET(req: Request) {
       take: 100,
     });
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         ok: true,
         sites: sites.map((s) => ({
@@ -103,13 +106,22 @@ export async function GET(req: Request) {
           createdAt: s.createdAt.toISOString(),
         })),
       },
-      { headers: CORS_HEADERS },
+      {
+        headers: {
+          ...CORS_HEADERS,
+          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+        },
+      },
     );
+    logApiRequest("/api/app/admin/sites", req.method, res.status);
+    return res;
   } catch (e: any) {
     console.error("Error fetching sites:", e);
-    return NextResponse.json(
+    const res = NextResponse.json(
       { error: "Failed to fetch sites" },
       { status: 500, headers: CORS_HEADERS },
     );
+    logApiRequest("/api/app/admin/sites", req.method, res.status);
+    return res;
   }
 }

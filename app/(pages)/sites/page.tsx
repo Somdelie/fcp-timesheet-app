@@ -2,6 +2,8 @@
 import SitesList from "@/components/sites/SitesList";
 import { listSites } from "@/actions/sites";
 
+export const revalidate = 300;
+
 export default async function SitesPage({
   searchParams,
 }: {

@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { getUserByEmail } from "@/actions/user";
 import EditUserInfoForm from "@/components/auth/EditUserInfoForm";
 
+export const revalidate = 60;
+
 export default async function ProfilePage(props) {
   const session = await getServerSession(authOptions);
 

@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { verifyApiToken } from "@/lib/jwt";
+import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,18 +98,34 @@ async function getAuthFromRequest(
 export async function GET(req: Request) {
   const auth = await getAuthFromRequest(req);
   if (!auth) {
-    return NextResponse.json(
+    const res = NextResponse.json(
       { error: "Unauthorized" },
-      { status: 401, headers: corsHeaders },
+      {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Cache-Control": "private, max-age=30",
+        },
+      },
     );
+    logApiRequest("/api/recent-activity", req.method, res.status);
+    return res;
   }
 
   // This endpoint is used by the web dashboard.
   if (auth.role === "FOREMAN") {
-    return NextResponse.json(
+    const res = NextResponse.json(
       { error: "Forbidden" },
-      { status: 403, headers: corsHeaders },
+      {
+        status: 403,
+        headers: {
+          ...corsHeaders,
+          "Cache-Control": "private, max-age=30",
+        },
+      },
     );
+    logApiRequest("/api/recent-activity", req.method, res.status);
+    return res;
   }
 
   const url = new URL(req.url);
@@ -461,5 +478,16 @@ export async function GET(req: Request) {
     .sort((a, b) => String(b.at).localeCompare(String(a.at)))
     .slice(0, limit);
 
-  return NextResponse.json({ items: out }, { headers: corsHeaders });
+  const res = NextResponse.json(
+    { items: out },
+    {
+      headers: {
+        ...corsHeaders,
+        // User-scoped; cache briefly in the browser only.
+        "Cache-Control": "private, max-age=30",
+      },
+    },
+  );
+  logApiRequest("/api/recent-activity", req.method, res.status);
+  return res;
 }

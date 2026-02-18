@@ -4,9 +4,10 @@ import { verifyApiToken } from "@/lib/jwt";
 import { toISODate } from "@/lib/workdate";
 import { addDaysUTC, isoFromDateUTC } from "@/lib/dateUtc";
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,10 +35,12 @@ async function getAuthFromRequest(req: Request) {
 export async function GET(req: Request) {
   const auth = await getAuthFromRequest(req);
   if (!auth) {
-    return NextResponse.json(
+    const res = NextResponse.json(
       { error: "Unauthorized" },
       { status: 401, headers: corsHeaders },
     );
+    logApiRequest("/api/dashboard", req.method, res.status);
+    return res;
   }
 
   const url = new URL(req.url);
@@ -46,25 +49,60 @@ export async function GET(req: Request) {
   try {
     switch (dataType) {
       case "metrics":
-        return NextResponse.json(await getDashboardMetrics(auth), {
-          headers: corsHeaders,
-        });
+        return withLog(
+          req,
+          NextResponse.json(await getDashboardMetrics(auth), {
+            headers: {
+              ...corsHeaders,
+              "Cache-Control":
+                "public, s-maxage=60, stale-while-revalidate=300",
+            },
+          }),
+        );
       case "weekly-attendance":
-        return NextResponse.json(await getWeeklyAttendanceData(auth), {
-          headers: corsHeaders,
-        });
+        return withLog(
+          req,
+          NextResponse.json(await getWeeklyAttendanceData(auth), {
+            headers: {
+              ...corsHeaders,
+              "Cache-Control":
+                "public, s-maxage=60, stale-while-revalidate=300",
+            },
+          }),
+        );
       case "timesheet-status":
-        return NextResponse.json(await getTimesheetStatusData(auth), {
-          headers: corsHeaders,
-        });
+        return withLog(
+          req,
+          NextResponse.json(await getTimesheetStatusData(auth), {
+            headers: {
+              ...corsHeaders,
+              "Cache-Control":
+                "public, s-maxage=60, stale-while-revalidate=300",
+            },
+          }),
+        );
       case "site-activity":
-        return NextResponse.json(await getSiteActivityData(auth), {
-          headers: corsHeaders,
-        });
+        return withLog(
+          req,
+          NextResponse.json(await getSiteActivityData(auth), {
+            headers: {
+              ...corsHeaders,
+              "Cache-Control":
+                "public, s-maxage=60, stale-while-revalidate=300",
+            },
+          }),
+        );
       case "photo-verification":
-        return NextResponse.json(await getPhotoVerificationData(auth), {
-          headers: corsHeaders,
-        });
+        return withLog(
+          req,
+          NextResponse.json(await getPhotoVerificationData(auth), {
+            headers: {
+              ...corsHeaders,
+              "Cache-Control":
+                "public, s-maxage=60, stale-while-revalidate=300",
+            },
+          }),
+        );
       case "all":
         const [
           metrics,
@@ -79,29 +117,49 @@ export async function GET(req: Request) {
           getSiteActivityData(auth),
           getPhotoVerificationData(auth),
         ]);
-        return NextResponse.json(
-          {
-            metrics,
-            weeklyAttendance,
-            timesheetStatus,
-            siteActivity,
-            photoVerification,
-          },
-          { headers: corsHeaders },
+        return withLog(
+          req,
+          NextResponse.json(
+            {
+              metrics,
+              weeklyAttendance,
+              timesheetStatus,
+              siteActivity,
+              photoVerification,
+            },
+            {
+              headers: {
+                ...corsHeaders,
+                "Cache-Control":
+                  "public, s-maxage=60, stale-while-revalidate=300",
+              },
+            },
+          ),
         );
       default:
-        return NextResponse.json(
-          { error: "Invalid type parameter" },
-          { status: 400, headers: corsHeaders },
+        return withLog(
+          req,
+          NextResponse.json(
+            { error: "Invalid type parameter" },
+            { status: 400, headers: corsHeaders },
+          ),
         );
     }
   } catch (error) {
     console.error("Dashboard API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500, headers: corsHeaders },
+    return withLog(
+      req,
+      NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500, headers: corsHeaders },
+      ),
     );
   }
+}
+
+function withLog(req: Request, res: NextResponse) {
+  logApiRequest("/api/dashboard", req.method, res.status);
+  return res;
 }
 
 async function getDashboardMetrics(auth: { sub: string; role: string }) {

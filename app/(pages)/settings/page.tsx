@@ -48,7 +48,6 @@ function isSaturdayISO(iso: string) {
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, {
-    cache: "no-store",
     headers: { accept: "application/json" },
   });
   const payload = await res.json().catch(() => null);

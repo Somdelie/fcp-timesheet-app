@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { addDaysUTC } from "@/lib/dateUtc";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 1800;
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -122,7 +122,14 @@ export async function GET(req: Request) {
     ([id, name]) => ({ id, name }),
   );
 
-  return NextResponse.json({ photos: result, foremen, supervisors });
+  return NextResponse.json(
+    { photos: result, foremen, supervisors },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+      },
+    },
+  );
 
   return NextResponse.json({ photos: result });
 }

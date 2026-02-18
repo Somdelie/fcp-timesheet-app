@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiAuth } from "@/lib/apiAuth";
+import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 1800;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -52,18 +53,27 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         ok: true,
         settings: serializeSettings(settings),
       },
-      { headers: CORS_HEADERS },
+      {
+        headers: {
+          ...CORS_HEADERS,
+          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+        },
+      },
     );
+    logApiRequest("/api/app/admin/settings", request.method, res.status);
+    return res;
   } catch (error) {
     console.error("Error fetching company settings:", error);
-    return NextResponse.json(
+    const res = NextResponse.json(
       { error: "Failed to fetch settings" },
       { status: 500, headers: CORS_HEADERS },
     );
+    logApiRequest("/api/app/admin/settings", request.method, res.status);
+    return res;
   }
 }

@@ -38,13 +38,6 @@ import {
   Clock,
   Loader,
 } from "lucide-react";
-import {
-  getDashboardMetrics,
-  getWeeklyAttendanceData,
-  getTimesheetStatusData,
-  getSiteActivityData,
-  getPhotoVerificationData,
-} from "@/actions/dashboard";
 import { useUserRole } from "@/lib/user-role-context";
 import type { UserRole } from "@/lib/roles";
 
@@ -146,55 +139,141 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const role = useUserRole();
 
+  const ADMIN_CACHE_KEY = "dashboard-admin-v1";
+  const SUP_CACHE_KEY = "dashboard-supervisor-v1";
+
   useEffect(() => {
-    const loadRecentActivity = async (): Promise<RecentActivityItem[]> => {
-      const res = await fetch(`/api/recent-activity?limit=8`, {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        // Hide activity if unauthorized or forbidden for this role.
-        if (res.status === 401 || res.status === 403) return [];
-        throw new Error(`Recent activity failed (${res.status})`);
-      }
-
-      const json = (await res.json().catch(() => null)) as {
-        items?: RecentActivityItem[];
-      } | null;
-      return Array.isArray(json?.items) ? json!.items! : [];
-    };
-
     const loadData = async () => {
       try {
         if (role === "ADMIN") {
-          const [metricsRes, weekly, timesheet, site, photo, activity] =
-            await Promise.all([
-              getDashboardMetrics(),
-              getWeeklyAttendanceData(),
-              getTimesheetStatusData(),
-              getSiteActivityData(),
-              getPhotoVerificationData(),
-              loadRecentActivity(),
-            ]);
+          const now = Date.now();
 
-          setMetrics(metricsRes);
-          setWeeklyData(weekly);
-          setTimesheetData(timesheet);
-          setSiteData(site);
-          setPhotoData(photo);
-          setRecentActivity(activity);
+          try {
+            const cachedRaw =
+              typeof window !== "undefined"
+                ? window.localStorage.getItem(ADMIN_CACHE_KEY)
+                : null;
+            if (cachedRaw) {
+              const cached = JSON.parse(cachedRaw) as {
+                ts: number;
+                payload: any;
+              } | null;
+              if (cached && now - cached.ts < 30 * 60_000) {
+                const json = cached.payload ?? {};
+                setMetrics(json.metrics ?? null);
+                setWeeklyData(json.weeklyAttendance ?? null);
+                setTimesheetData(json.timesheetStatus ?? null);
+                setSiteData(json.siteActivity ?? null);
+                setPhotoData(json.photoVerification ?? null);
+                setRecentActivity(
+                  Array.isArray(json.recentActivity) ? json.recentActivity : [],
+                );
+                return;
+              }
+            }
+          } catch {
+            // ignore localStorage errors
+          }
+
+          const res = await fetch("/api/app/admin/dashboard", {
+            cache: "no-store",
+            credentials: "include",
+            headers: { accept: "application/json" },
+          });
+
+          if (!res.ok) {
+            throw new Error(`Dashboard aggregate failed (${res.status})`);
+          }
+
+          const json = (await res.json().catch(() => null)) as {
+            metrics?: any;
+            weeklyAttendance?: any;
+            timesheetStatus?: any;
+            siteActivity?: any;
+            photoVerification?: any;
+            recentActivity?: RecentActivityItem[];
+          } | null;
+
+          setMetrics(json?.metrics ?? null);
+          setWeeklyData(json?.weeklyAttendance ?? null);
+          setTimesheetData(json?.timesheetStatus ?? null);
+          setSiteData(json?.siteActivity ?? null);
+          setPhotoData(json?.photoVerification ?? null);
+          setRecentActivity(
+            Array.isArray(json?.recentActivity) ? json!.recentActivity! : [],
+          );
+
+          try {
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(
+                ADMIN_CACHE_KEY,
+                JSON.stringify({ ts: now, payload: json ?? {} }),
+              );
+            }
+          } catch {
+            // ignore localStorage errors
+          }
         } else if (role === "SUPERVISOR") {
-          const [weekly, timesheet, site, activity] = await Promise.all([
-            getWeeklyAttendanceData(),
-            getTimesheetStatusData(),
-            getSiteActivityData(),
-            loadRecentActivity(),
-          ]);
+          const now = Date.now();
 
-          setWeeklyData(weekly);
-          setTimesheetData(timesheet);
-          setSiteData(site);
-          setRecentActivity(activity);
+          try {
+            const cachedRaw =
+              typeof window !== "undefined"
+                ? window.localStorage.getItem(SUP_CACHE_KEY)
+                : null;
+            if (cachedRaw) {
+              const cached = JSON.parse(cachedRaw) as {
+                ts: number;
+                payload: any;
+              } | null;
+              if (cached && now - cached.ts < 30 * 60_000) {
+                const json = cached.payload ?? {};
+                setWeeklyData(json.weeklyAttendance ?? null);
+                setTimesheetData(json.timesheetStatus ?? null);
+                setSiteData(json.siteActivity ?? null);
+                setPhotoData(json.photoVerification ?? null);
+                setRecentActivity([]);
+                return;
+              }
+            }
+          } catch {
+            // ignore localStorage errors
+          }
+
+          const res = await fetch("/api/dashboard?type=all", {
+            cache: "no-store",
+            credentials: "include",
+            headers: { accept: "application/json" },
+          });
+
+          if (!res.ok) {
+            throw new Error(`Dashboard data failed (${res.status})`);
+          }
+
+          const json = (await res.json().catch(() => null)) as {
+            metrics?: any;
+            weeklyAttendance?: any;
+            timesheetStatus?: any;
+            siteActivity?: any;
+            photoVerification?: any;
+          } | null;
+
+          setWeeklyData(json?.weeklyAttendance ?? null);
+          setTimesheetData(json?.timesheetStatus ?? null);
+          setSiteData(json?.siteActivity ?? null);
+          setPhotoData(json?.photoVerification ?? null);
+          setRecentActivity([]);
+
+          try {
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(
+                SUP_CACHE_KEY,
+                JSON.stringify({ ts: now, payload: json ?? {} }),
+              );
+            }
+          } catch {
+            // ignore localStorage errors
+          }
         } else {
           // FOREMAN or other roles: no heavy dashboard data needed
         }

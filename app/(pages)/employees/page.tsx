@@ -1,5 +1,7 @@
 import EmployeesList from "@/components/employees/EmployeesList";
 
+export const revalidate = 300;
+
 interface EmployeesPageProps {
   searchParams?: {
     q?: string;

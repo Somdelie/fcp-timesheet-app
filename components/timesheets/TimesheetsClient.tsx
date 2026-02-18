@@ -953,7 +953,6 @@ export default function TimesheetsListClient({ mode }: Props) {
             `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
             { date: today, action: "accept" },
           );
-          setTimeout(() => loadList(), 300);
           setTimeout(() => refreshDetail(), 300);
         },
       });
@@ -970,7 +969,6 @@ export default function TimesheetsListClient({ mode }: Props) {
             `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
             { date: today, action: "reject", reason },
           );
-          setTimeout(() => loadList(), 300);
           setTimeout(() => refreshDetail(), 300);
         },
       });
@@ -987,7 +985,6 @@ export default function TimesheetsListClient({ mode }: Props) {
           await postJson(
             `${base}/timesheets/${encodeURIComponent(activeId)}/approve`,
           );
-          setTimeout(() => loadList(), 300);
           setTimeout(() => refreshDetail(), 300);
         },
       });
@@ -1004,7 +1001,6 @@ export default function TimesheetsListClient({ mode }: Props) {
             `${base}/timesheets/${encodeURIComponent(activeId)}/reject`,
             { reason },
           );
-          setTimeout(() => loadList(), 300);
           setTimeout(() => refreshDetail(), 300);
         },
       });
@@ -1021,7 +1017,6 @@ export default function TimesheetsListClient({ mode }: Props) {
         await postJson(
           `${base}/timesheets/${encodeURIComponent(activeId)}/paid`,
         );
-        setTimeout(() => loadList(), 300);
         setTimeout(() => refreshDetail(), 300);
       },
     });

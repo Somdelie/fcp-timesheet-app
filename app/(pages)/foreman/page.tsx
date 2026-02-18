@@ -2,7 +2,7 @@ import { getAllForemen } from "@/actions/user";
 import { requireServerAuth } from "@/lib/auth-server";
 import { ForemanContent } from "./ForemanContent";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function ForemanPage() {
   const auth = await requireServerAuth();
