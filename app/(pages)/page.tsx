@@ -1066,6 +1066,7 @@ export default function HomePage() {
                     <Link
                       key={index}
                       href={action.href}
+                      prefetch={false}
                       className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
                     >
                       <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
