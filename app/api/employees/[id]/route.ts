@@ -1,14 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerAuth } from "@/lib/auth-server";
+import { requireServerAuth, type ServerAuthUser } from "@/lib/auth-server";
+import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
+
+// Force recompile - supports Bearer token auth for desktop app
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
+/**
+ * Try JWT Bearer token first (mobile app), then fallback to NextAuth session (web app).
+ */
+async function getAuth(request: NextRequest): Promise<ServerAuthUser | null> {
+  // Try JWT Bearer token (mobile app)
+  const apiCtx = await getApiAuthContext(request);
+  if (apiCtx) {
+    return {
+      userId: apiCtx.user.sub,
+      role: apiCtx.user.role as ServerAuthUser["role"],
+    };
+  }
+
+  // Fallback to NextAuth session (web app)
+  try {
+    return await requireServerAuth();
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await requireServerAuth();
+    const auth = await getAuth(request);
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
     const whereScope = employeeWhereFor(auth);
     const { id } = await params;
 
@@ -26,34 +65,70 @@ export async function GET(
         faceImageUrl: true,
         isActive: true,
         createdAt: true,
+        updatedAt: true,
+        userId: true,
+        user: {
+          select: {
+            role: true,
+            foreman: { select: { id: true } },
+          },
+        },
+        foremanLinks: {
+          select: {
+            foremanId: true,
+            reason: true,
+            foreman: {
+              select: {
+                id: true,
+                user: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     if (!employee) {
       return NextResponse.json(
         { error: "Employee not found" },
-        { status: 404 },
+        { status: 404, headers: CORS_HEADERS },
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      employee: {
-        id: employee.id,
-        firstName: employee.firstName,
-        lastName: employee.lastName,
-        code: employee.qrCodeValue,
-        phone: null, // Add phone field if it exists in your schema
-        dayRate: Number(employee.defaultDayRate),
-        active: employee.isActive,
-        fullName: `${employee.firstName} ${employee.lastName}`,
+    const isForeman = !!(
+      employee.user?.role === "FOREMAN" && employee.user?.foreman
+    );
+
+    return NextResponse.json(
+      {
+        ok: true,
+        employee: {
+          id: employee.id,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          code: employee.qrCodeValue,
+          phone: null,
+          dayRate: Number(employee.defaultDayRate),
+          faceImageUrl: employee.faceImageUrl,
+          active: employee.isActive,
+          fullName: `${employee.firstName} ${employee.lastName}`,
+          createdAt: employee.createdAt.toISOString(),
+          updatedAt: employee.updatedAt.toISOString(),
+          isForeman,
+          foremanLinks: employee.foremanLinks,
+        },
       },
-    });
+      { headers: CORS_HEADERS },
+    );
   } catch (error) {
     console.error("Error fetching employee:", error);
     return NextResponse.json(
       { error: "Failed to fetch employee" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }
@@ -63,7 +138,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await requireServerAuth();
+    const auth = await getAuth(request);
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
     const whereScope = employeeWhereFor(auth);
     const { id } = await params;
 
@@ -78,7 +159,7 @@ export async function DELETE(
     if (!employee) {
       return NextResponse.json(
         { error: "Employee not found" },
-        { status: 404 },
+        { status: 404, headers: CORS_HEADERS },
       );
     }
 
@@ -88,12 +169,12 @@ export async function DELETE(
       data: { isActive: false },
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
   } catch (error) {
     console.error("Error deleting employee:", error);
     return NextResponse.json(
       { error: "Failed to delete employee" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

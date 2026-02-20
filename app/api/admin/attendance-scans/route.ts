@@ -7,15 +7,31 @@ import { addDaysUTC } from "@/lib/dateUtc";
 export const runtime = "nodejs";
 export const revalidate = 1800;
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const user = session?.user as any;
 
   if (!user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS_HEADERS },
+    );
   }
   if (user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: CORS_HEADERS },
+    );
   }
 
   const url = new URL(req.url);
@@ -161,6 +177,7 @@ export async function GET(req: Request) {
     { scans: result, sites, foremen, supervisors },
     {
       headers: {
+        ...CORS_HEADERS,
         "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
       },
     },

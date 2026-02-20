@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { resolveActingForeman } from "@/lib/resolveActingForeman";
@@ -217,10 +217,10 @@ export async function POST(req: Request) {
 
       // Determine scan attribution based on whether this is an assistant or real foreman
       const scanData: Prisma.AttendanceScanCreateInput = {
-        siteDayId: siteDay.id,
-        employeeId: emp.id,
+        siteDay: { connect: { id: siteDay.id } },
+        employee: { connect: { id: emp.id } },
         workDate,
-        siteId,
+        site: { connect: { id: siteId } },
         dayRateAtScan: effectiveRate,
         qrPayload: qr as string,
         latitude,

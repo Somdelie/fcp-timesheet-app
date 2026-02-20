@@ -8,7 +8,17 @@ import { decimalToNumber } from "@/lib/dateUtc";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function getAdminFromRequest(req: Request) {
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
+async function getAuthFromRequest(req: Request) {
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.slice(7).trim()
@@ -16,16 +26,22 @@ async function getAdminFromRequest(req: Request) {
 
   if (token) {
     const payload = await verifyApiToken(token);
-    if (payload && payload.role === "ADMIN") {
-      return { id: payload.sub, role: "ADMIN" as const };
+    if (
+      payload &&
+      (payload.role === "ADMIN" || payload.role === "SUPERVISOR")
+    ) {
+      return { id: payload.sub, role: payload.role as "ADMIN" | "SUPERVISOR" };
     }
   }
 
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
 
-  if (session?.user && role === "ADMIN") {
-    return { id: (session.user as any).id as string, role: "ADMIN" as const };
+  if (session?.user && (role === "ADMIN" || role === "SUPERVISOR")) {
+    return {
+      id: (session.user as any).id as string,
+      role: role as "ADMIN" | "SUPERVISOR",
+    };
   }
 
   return null;
@@ -36,9 +52,12 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await getAdminFromRequest(req);
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await getAuthFromRequest(req);
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
 
     const { id } = await ctx.params;
@@ -60,7 +79,10 @@ export async function GET(
     });
 
     if (!site) {
-      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Site not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
     }
 
     const foremanAssignments = await prisma.foremanSiteAssignment.findMany({
@@ -113,42 +135,170 @@ export async function GET(
       0,
     );
 
-    return NextResponse.json({
-      ok: true,
-      site: {
-        id: site.id,
-        name: site.name,
-        code: site.code,
-        location: site.location,
-        address: site.address,
-        latitude: site.latitude,
-        longitude: site.longitude,
-        isActive: site.isActive,
-        createdAt: site.createdAt.toISOString(),
+    return NextResponse.json(
+      {
+        ok: true,
+        site: {
+          id: site.id,
+          name: site.name,
+          code: site.code,
+          location: site.location,
+          address: site.address,
+          latitude: site.latitude,
+          longitude: site.longitude,
+          isActive: site.isActive,
+          createdAt: site.createdAt.toISOString(),
+        },
+        totalProjectWages,
+        foremen: foremanAssignments.map((a) => ({
+          foremanId: a.foremanId,
+          userId: a.foreman.userId,
+          name: a.foreman.user?.name ?? a.foreman.user?.email ?? "Foreman",
+          email: a.foreman.user?.email ?? null,
+          startsOn: a.startsOn.toISOString(),
+          endsOn: a.endsOn ? a.endsOn.toISOString() : null,
+        })),
+        supervisors: supervisorAssignments.map((a) => ({
+          userId: a.supervisor.userId,
+          name:
+            a.supervisor.user?.name ?? a.supervisor.user?.email ?? "Supervisor",
+          email: a.supervisor.user?.email ?? null,
+          startsOn: a.startsOn.toISOString(),
+          endsOn: a.endsOn ? a.endsOn.toISOString() : null,
+        })),
       },
-      totalProjectWages,
-      foremen: foremanAssignments.map((a) => ({
-        foremanId: a.foremanId,
-        userId: a.foreman.userId,
-        name: a.foreman.user?.name ?? a.foreman.user?.email ?? "Foreman",
-        email: a.foreman.user?.email ?? null,
-        startsOn: a.startsOn.toISOString(),
-        endsOn: a.endsOn ? a.endsOn.toISOString() : null,
-      })),
-      supervisors: supervisorAssignments.map((a) => ({
-        userId: a.supervisor.userId,
-        name:
-          a.supervisor.user?.name ?? a.supervisor.user?.email ?? "Supervisor",
-        email: a.supervisor.user?.email ?? null,
-        startsOn: a.startsOn.toISOString(),
-        endsOn: a.endsOn ? a.endsOn.toISOString() : null,
-      })),
-    });
+      { headers: CORS_HEADERS },
+    );
   } catch (e: any) {
     console.error("Error fetching admin site detail:", e);
     return NextResponse.json(
       { error: "Failed to fetch site" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await getAuthFromRequest(req);
+    if (!auth || auth.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
+
+    const { id } = await ctx.params;
+
+    const site = await prisma.site.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!site) {
+      return NextResponse.json(
+        { error: "Site not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
+    }
+
+    const body = await req.json();
+    const { name, code, location, address, latitude, longitude, isActive } =
+      body;
+
+    // Validate name if provided
+    if (name !== undefined && typeof name === "string" && !name.trim()) {
+      return NextResponse.json(
+        { error: "Site name cannot be empty" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    // Validate latitude and longitude if provided
+    if (latitude !== undefined && latitude !== null) {
+      const lat = Number(latitude);
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        return NextResponse.json(
+          { error: "Latitude must be between -90 and 90" },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+    }
+
+    if (longitude !== undefined && longitude !== null) {
+      const lon = Number(longitude);
+      if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+        return NextResponse.json(
+          { error: "Longitude must be between -180 and 180" },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined)
+      updateData.name = typeof name === "string" ? name.trim() : name;
+    if (code !== undefined)
+      updateData.code = typeof code === "string" ? code.trim() || null : code;
+    if (location !== undefined)
+      updateData.location =
+        typeof location === "string" ? location.trim() || null : location;
+    if (address !== undefined)
+      updateData.address =
+        typeof address === "string" ? address.trim() || null : address;
+    if (latitude !== undefined)
+      updateData.latitude = latitude !== null ? Number(latitude) : null;
+    if (longitude !== undefined)
+      updateData.longitude = longitude !== null ? Number(longitude) : null;
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+
+    const updatedSite = await prisma.site.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        location: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        site: {
+          id: updatedSite.id,
+          name: updatedSite.name,
+          code: updatedSite.code,
+          location: updatedSite.location,
+          address: updatedSite.address,
+          latitude: updatedSite.latitude,
+          longitude: updatedSite.longitude,
+          isActive: updatedSite.isActive,
+          createdAt: updatedSite.createdAt.toISOString(),
+        },
+      },
+      { headers: CORS_HEADERS },
+    );
+  } catch (e: any) {
+    console.error("Error updating site:", e);
+    if (String(e?.code) === "P2002") {
+      return NextResponse.json(
+        { error: "Site code must be unique" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to update site" },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }
