@@ -23,9 +23,12 @@ async function getAuth(req: Request) {
     return { userId: payload.sub, role: payload.role };
   }
   const session = await getServerSession(authOptions);
-  const u = session?.user as any;
+  const u = session?.user as
+    | { id?: unknown; role?: unknown }
+    | null
+    | undefined;
   if (!u?.id) return null;
-  return { userId: u.id as string, role: u.role as string };
+  return { userId: String(u.id), role: String(u.role) };
 }
 
 function startOfDayUTC(d: Date) {
@@ -55,9 +58,9 @@ function parsePeriodId(raw: string | null) {
 function decimalToNumber(v: unknown): number {
   if (v == null) return 0;
   if (typeof v === "number") return v;
-  const anyV = v as any;
-  if (typeof anyV?.toNumber === "function") return anyV.toNumber();
-  const n = Number(v);
+  const decimalLike = v as { toNumber?: () => number };
+  if (typeof decimalLike.toNumber === "function") return decimalLike.toNumber();
+  const n = Number(v as number | string);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -332,10 +335,12 @@ export async function GET(req: Request) {
       timesheets: filtered,
       period: { id: `${startISO}_${endISO}`, startISO, endISO },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Error fetching foreman timesheets (mobile):", e);
     return NextResponse.json(
-      { error: e?.message ?? "Server error" },
+      {
+        error: e instanceof Error && e.message ? e.message : "Server error",
+      },
       { status: 500 },
     );
   }

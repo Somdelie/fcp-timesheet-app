@@ -235,33 +235,7 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
     });
   }, [isDark]);
 
-  // Update markers when sites or selection changes
-  React.useEffect(() => {
-    if (!mapRef.current || !mapInitializedRef.current) return;
-
-    updateMarkers(
-      mapRef.current,
-      filteredSites,
-      selectedSite?.id || null,
-      hoveredId,
-    );
-  }, [filteredSites, selectedSite, hoveredId]);
-
-  // Reconcile markers when filtering changes (adds/removes markers)
-  React.useEffect(() => {
-    if (!mapRef.current || !mapInitializedRef.current) return;
-    addMarkersToMap(mapRef.current, filteredSites);
-  }, [filteredSites]);
-
-  // Clear selection if it no longer matches the filtered list
-  React.useEffect(() => {
-    if (!selectedSite) return;
-    if (!filteredSites.some((s) => s.id === selectedSite.id)) {
-      setSelectedSite(null);
-    }
-  }, [filteredSites, selectedSite]);
-
-  const addMarkersToMap = (map: mapboxgl.Map, sitesToAdd: SiteMapMarker[]) => {
+  function addMarkersToMap(map: mapboxgl.Map, sitesToAdd: SiteMapMarker[]) {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current.clear();
 
@@ -291,14 +265,14 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
 
       markersRef.current.set(site.id, marker);
     });
-  };
+  }
 
-  const updateMarkers = (
+  function updateMarkers(
     map: mapboxgl.Map,
     sitesToUpdate: SiteMapMarker[],
     selectedId: string | null,
     hoveredId: string | null,
-  ) => {
+  ) {
     sitesToUpdate.forEach((site) => {
       const marker = markersRef.current.get(site.id);
       if (marker) {
@@ -318,7 +292,33 @@ export default function SitesMap({ sites }: { sites: SiteMapMarker[] }) {
         );
       }
     });
-  };
+  }
+
+  // Update markers when sites or selection changes
+  React.useEffect(() => {
+    if (!mapRef.current || !mapInitializedRef.current) return;
+
+    updateMarkers(
+      mapRef.current,
+      filteredSites,
+      selectedSite?.id || null,
+      hoveredId,
+    );
+  }, [filteredSites, selectedSite, hoveredId]);
+
+  // Reconcile markers when filtering changes (adds/removes markers)
+  React.useEffect(() => {
+    if (!mapRef.current || !mapInitializedRef.current) return;
+    addMarkersToMap(mapRef.current, filteredSites);
+  }, [filteredSites]);
+
+  // Clear selection if it no longer matches the filtered list
+  React.useEffect(() => {
+    if (!selectedSite) return;
+    if (!filteredSites.some((s) => s.id === selectedSite.id)) {
+      setSelectedSite(null);
+    }
+  }, [filteredSites, selectedSite]);
 
   const handleReset = () => {
     setSelectedSite(null);

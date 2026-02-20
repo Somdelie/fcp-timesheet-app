@@ -3,12 +3,12 @@ import type { TimesheetGridModel } from "./gridModel";
 type GridRow = TimesheetGridModel["rows"][number];
 type Totals = TimesheetGridModel["totals"];
 
-function safeStr(v: any) {
+function safeStr(v: unknown) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
 
-function safeNum(v: any) {
-  const n = Number(v ?? 0);
+function safeNum(v: unknown) {
+  const n = Number((v as number | string | null | undefined) ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -20,8 +20,9 @@ function safeNum(v: any) {
  * - detail.timesheet.foreman...
  * - detail.foremanName
  */
-function extractForemanName(detail: any): string {
-  const d = detail?.timesheet ?? detail;
+function extractForemanName(detail: unknown): string {
+  const anyDetail = detail as { timesheet?: unknown } | undefined;
+  const d = (anyDetail?.timesheet as unknown) ?? detail;
 
   const candidates = [
     d?.foreman?.name,
@@ -35,47 +36,68 @@ function extractForemanName(detail: any): string {
 }
 
 export function normalizeTimesheetToGrid(detail: unknown): TimesheetGridModel {
-  const raw = detail as any;
-  const d = raw?.timesheet ?? raw;
+  const raw = detail as { timesheet?: unknown } | undefined;
+  const d = (raw?.timesheet as unknown) ?? raw;
 
   const foremanName = extractForemanName(d);
 
   const columns: TimesheetGridModel["columns"] = (d?.columns ?? []).map(
-    (c: any) => {
+    (c: unknown) => {
+      const col = c as {
+        iso?: unknown;
+        day?: unknown;
+        dayLabel?: unknown;
+        dateLabel?: unknown;
+        date?: unknown;
+      };
       const iso = safeStr(c?.iso);
       const fallbackDay = safeStr(c?.day);
       const fallbackDate = iso.includes("-") ? iso.split("-")[2] : "";
 
       return {
         iso,
-        dayLabel: safeStr(c?.dayLabel ?? fallbackDay),
-        dateLabel: safeStr(c?.dateLabel ?? c?.date ?? fallbackDate),
+        dayLabel: safeStr(col.dayLabel ?? fallbackDay),
+        dateLabel: safeStr(col.dateLabel ?? col.date ?? fallbackDate),
       };
     },
   );
 
   const colLen = columns.length;
 
-  const rows: TimesheetGridModel["rows"] = (d?.rows ?? []).map((r: any) => {
-    const label = safeStr(r?.label ?? r?.fullName ?? "—").trim();
+  const rows: TimesheetGridModel["rows"] = (d?.rows ?? []).map((r: unknown) => {
+    const row = r as {
+      id?: unknown;
+      employeeId?: unknown;
+      label?: unknown;
+      fullName?: unknown;
+      dayRate?: unknown;
+      present?: unknown;
+      daysWorked?: unknown;
+      pay?: unknown;
+      isForeman?: unknown;
+    };
+
+    const label = safeStr(row.label ?? row.fullName ?? "—").trim();
 
     // Decide foreman row:
     // 1) If API already flags it, use that.
     // 2) Else compare names to foremanName (your mobile logic).
     const isForeman =
-      typeof r?.isForeman === "boolean"
-        ? r.isForeman
+      typeof row.isForeman === "boolean"
+        ? row.isForeman
         : foremanName
           ? label === foremanName
           : false;
 
     return {
-      id: safeStr(r?.id ?? r?.employeeId),
+      id: safeStr(row.id ?? row.employeeId),
       label,
-      dayRate: safeNum(r?.dayRate),
-      present: Array.isArray(r?.present) ? r.present.slice(0, colLen) : [],
-      daysWorked: safeNum(r?.daysWorked),
-      pay: safeNum(r?.pay),
+      dayRate: safeNum(row.dayRate),
+      present: Array.isArray(row.present)
+        ? (row.present as boolean[]).slice(0, colLen)
+        : [],
+      daysWorked: safeNum(row.daysWorked),
+      pay: safeNum(row.pay),
       isForeman,
     };
   });

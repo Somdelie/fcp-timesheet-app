@@ -19,10 +19,13 @@ export function weekdayShortLocal(iso: string) {
   return d.toLocaleDateString(undefined, { weekday: "short" });
 }
 
-export function decimalToNumber(v: any): number {
+export function decimalToNumber(v: unknown): number {
   if (v == null) return 0;
   if (typeof v === "number") return v;
-  if (typeof v?.toNumber === "function") return v.toNumber();
-  const n = Number(v);
+  const maybeDecimal = v as { toNumber?: () => number };
+  if (typeof maybeDecimal.toNumber === "function") {
+    return maybeDecimal.toNumber();
+  }
+  const n = Number(v as number | string);
   return Number.isFinite(n) ? n : 0;
 }

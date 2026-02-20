@@ -7,6 +7,7 @@ import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const revalidate = 1800;
 
 const CACHE_HEADERS = {

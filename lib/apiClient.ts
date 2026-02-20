@@ -63,8 +63,10 @@ export async function apiAdminForemenList({
     }
 
     return await res.json();
-  } catch (e: any) {
-    return { ok: false, error: e?.message || "Network error" };
+  } catch (e: unknown) {
+    const message =
+      e instanceof Error && e.message ? e.message : "Network error";
+    return { ok: false, error: message };
   }
 }
 
@@ -111,8 +113,10 @@ export async function apiAdminCreateForeman({
     }
 
     return await res.json();
-  } catch (e: any) {
-    return { ok: false, error: e?.message || "Network error" };
+  } catch (e: unknown) {
+    const message =
+      e instanceof Error && e.message ? e.message : "Network error";
+    return { ok: false, error: message };
   }
 }
 
@@ -152,8 +156,10 @@ export async function apiAdminEmployees({
     }
 
     return await res.json();
-  } catch (e: any) {
-    return { ok: false, error: e?.message || "Network error" };
+  } catch (e: unknown) {
+    const message =
+      e instanceof Error && e.message ? e.message : "Network error";
+    return { ok: false, error: message };
   }
 }
 
@@ -212,7 +218,9 @@ export async function apiAdminCreateAssistantForForeman({
     }
 
     return await res.json();
-  } catch (e: any) {
-    return { ok: false, error: e?.message || "Network error" };
+  } catch (e: unknown) {
+    const message =
+      e instanceof Error && e.message ? e.message : "Network error";
+    return { ok: false, error: message };
   }
 }

@@ -1,4 +1,4 @@
-let counters = new Map<string, number>();
+const counters = new Map<string, number>();
 
 export function logApiRequest(path: string, method: string, status: number) {
   const key = `${method.toUpperCase()} ${path}`;

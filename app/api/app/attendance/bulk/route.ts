@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { resolveActingForeman } from "@/lib/resolveActingForeman";
@@ -30,20 +31,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let body: any;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const siteId = String(body?.siteId ?? "");
-  const workDateISO = String(body?.workDateISO ?? "");
-  const scans = Array.isArray(body?.scans) ? body.scans : [];
-  const latitude = typeof body?.latitude === "number" ? body.latitude : null;
-  const longitude = typeof body?.longitude === "number" ? body.longitude : null;
+  const json = body as {
+    siteId?: unknown;
+    workDateISO?: unknown;
+    scans?: Array<{ qrCodeValue?: string | null }> | unknown;
+    latitude?: unknown;
+    longitude?: unknown;
+    address?: unknown;
+  };
+
+  const siteId = String(json.siteId ?? "");
+  const workDateISO = String(json.workDateISO ?? "");
+  const scans = Array.isArray(json.scans)
+    ? (json.scans as Array<{ qrCodeValue?: string | null }>)
+    : [];
+  const latitude = typeof json.latitude === "number" ? json.latitude : null;
+  const longitude = typeof json.longitude === "number" ? json.longitude : null;
   const address =
-    typeof body?.address === "string" ? body.address.trim() || null : null;
+    typeof json.address === "string" ? json.address.trim() || null : null;
 
   // Get forForemanId from header (preferred) or query params (legacy)
   const url = new URL(req.url);
@@ -115,9 +127,13 @@ export async function POST(req: Request) {
         data: { siteId, foremanId: actingForemanId, workDate },
         select: { id: true, foremanId: true, isLocked: true, siteId: true },
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const code =
+        typeof e === "object" && e && "code" in e
+          ? String((e as { code?: unknown }).code)
+          : null;
       // If another request created the SiteDay concurrently, re-fetch it
-      if (e?.code === "P2002") {
+      if (code === "P2002") {
         siteDay = await prisma.siteDay.findFirst({
           where: { foremanId: actingForemanId, siteId, workDate },
           select: { id: true, foremanId: true, isLocked: true, siteId: true },
@@ -139,7 +155,7 @@ export async function POST(req: Request) {
   }
 
   const qrValues = scans
-    .map((s: any) => String(s?.qrCodeValue ?? "").trim())
+    .map((s) => String(s.qrCodeValue ?? "").trim())
     .filter(Boolean);
 
   // optional local dedupe to reduce DB churn
@@ -200,7 +216,7 @@ export async function POST(req: Request) {
       }
 
       // Determine scan attribution based on whether this is an assistant or real foreman
-      const scanData: any = {
+      const scanData: Prisma.AttendanceScanCreateInput = {
         siteDayId: siteDay.id,
         employeeId: emp.id,
         workDate,
@@ -222,12 +238,14 @@ export async function POST(req: Request) {
         scanData.scanType = "REGULAR";
       }
 
-      await prisma.attendanceScan.create({
-        data: scanData,
-      });
+      await prisma.attendanceScan.create({ data: scanData });
       results.push({ qrCodeValue: qr as string, status: "CREATED" });
-    } catch (e: any) {
-      if (String(e?.code) === "P2002") {
+    } catch (e: unknown) {
+      const code =
+        typeof e === "object" && e && "code" in e
+          ? String((e as { code?: unknown }).code)
+          : null;
+      if (code === "P2002") {
         results.push({ qrCodeValue: qr as string, status: "ALREADY_SCANNED" });
         continue;
       }
