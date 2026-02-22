@@ -57,9 +57,9 @@ export async function POST(
       { error: "Unauthorized" },
       { status: 401, headers: CORS },
     );
-  if (auth.role !== "SUPERVISOR" && auth.role !== "ADMIN")
+  if (auth.role !== "SUPERVISOR")
     return NextResponse.json(
-      { error: "Forbidden" },
+      { error: "Forbidden - only supervisors can accept timesheets" },
       { status: 403, headers: CORS },
     );
 

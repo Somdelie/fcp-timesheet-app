@@ -48,7 +48,7 @@ export async function GET(
       { error: "Unauthorized" },
       { status: 401, headers: CORS },
     );
-  if (auth.role !== "SUPERVISOR" && auth.role !== "ADMIN")
+  if (auth.role !== "SUPERVISOR")
     return NextResponse.json(
       { error: "Forbidden" },
       { status: 403, headers: CORS },

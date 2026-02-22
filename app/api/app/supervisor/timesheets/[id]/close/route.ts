@@ -41,7 +41,10 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (auth.role !== "SUPERVISOR") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden - only supervisors can close timesheets" },
+      { status: 403 },
+    );
   }
 
   const supervisor = await prisma.supervisor.findUnique({

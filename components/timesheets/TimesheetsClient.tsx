@@ -917,6 +917,11 @@ export default function TimesheetsListClient({ mode }: Props) {
   }, [activeId, activeSiteId, openDetail]);
 
   const actions = useMemo((): TimesheetAction[] => {
+    // Only supervisors can accept/approve timesheets - admins can only view
+    if (mode === "ADMIN") {
+      return [];
+    }
+
     const base = "/api/app/supervisor";
 
     // Get the fortnight dates from the detail or activeId
@@ -1022,7 +1027,7 @@ export default function TimesheetsListClient({ mode }: Props) {
     });
 
     return result;
-  }, [activeId, detail, loadList, refreshDetail]);
+  }, [mode, activeId, detail, loadList, refreshDetail]);
 
   const reset = () => {
     setQ("");
