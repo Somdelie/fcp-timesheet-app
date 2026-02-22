@@ -165,9 +165,7 @@ export default function TimesheetSheet({
               </div>
 
               <div className="flex flex-col gap-1 border-l-2 border-card px-4 flex-1">
-                <div className="text-sm text-muted-foreground">
-                  Contract Manager:
-                </div>
+                <div className="text-sm text-muted-foreground">Manager:</div>
                 <div className="font-medium py-1 border rounded px-3">
                   {detail.supervisor?.name ?? "—"}
                 </div>

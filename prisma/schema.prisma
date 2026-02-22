@@ -7,6 +7,448 @@ datasource db {
   provider = "postgresql"
 }
 
+/// *
+///  * AUTH / PEOPLE
+model User {
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  name                 String?
+  role                 UserRole
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  password             String
+  phone                String?
+  accounts             Account[]
+  auditEvents          AuditEvent[]
+  employees            Employee[]
+  employee             Employee?             @relation("EmployeeUser")
+  foreman              Foreman?
+  photoVerifications   PhotoVerification[]
+  pushTokens           PushToken[]
+  sessions             Session[]
+  siteDayPhotos        SiteDayPhoto[]
+  siteDayPhotoRequests SiteDayPhotoRequest[]
+  supervisor           Supervisor?
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// *
+///  * WORKER / EMPLOYEE
+///  * Added:
+///  * - faceImageUrl + metadata so admin can visually verify later.
+///  * - faceEmbedding optional placeholder if you later do ML matching.
+model Employee {
+  id              String             @id @default(cuid())
+  firstName       String
+  lastName        String
+  qrCodeValue     String             @unique
+  defaultDayRate  Decimal?           @db.Decimal(12, 2)
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdByUserId String?
+  faceImageUrl    String?
+  userId          String?            @unique
+  idNumber        String?
+  attendance      AttendanceScan[]
+  createdByUser   User?              @relation(fields: [createdByUserId], references: [id])
+  user            User?              @relation("EmployeeUser", fields: [userId], references: [id])
+  assistantLinks  ForemanAssistant[] @relation("AssistantToForemen")
+  foremanLinks    ForemanEmployee[]
+  photoDetections PhotoDetection[]
+}
+
+model Supervisor {
+  id                 String                     @id @default(cuid())
+  userId             String                     @unique
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  user               User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foremanLinks       SupervisorForeman[]
+  siteAssignments    SupervisorSiteAssignment[]
+  approvedTimesheets Timesheet[]                @relation("SupervisorApprovals")
+  dayAcceptances     TimesheetDayAcceptance[]   @relation("DayAcceptances")
+}
+
+model Foreman {
+  id              String                  @id @default(cuid())
+  userId          String                  @unique
+  defaultDayRate  Decimal?                @db.Decimal(12, 2)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assistants      ForemanAssistant[]
+  employeeLinks   ForemanEmployee[]
+  siteAssignments ForemanSiteAssignment[]
+  siteDays        SiteDay[]
+  supervisorLinks SupervisorForeman[]
+  timesheets      Timesheet[]
+}
+
+model ForemanAssistant {
+  foremanId  String
+  employeeId String
+  startsOn   DateTime  @default(now())
+  endsOn     DateTime?
+  createdAt  DateTime  @default(now())
+  employee   Employee  @relation("AssistantToForemen", fields: [employeeId], references: [id], onDelete: Cascade)
+  foreman    Foreman   @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+
+  @@id([foremanId, employeeId])
+  @@index([employeeId])
+}
+
+model ForemanEmployee {
+  foremanId  String
+  employeeId String
+  reason     String?
+  createdAt  DateTime @default(now())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  foreman    Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+
+  @@id([foremanId, employeeId])
+  @@index([employeeId])
+}
+
+model SupervisorForeman {
+  supervisorId String
+  foremanId    String
+  startsOn     DateTime   @default(now())
+  endsOn       DateTime?
+  createdAt    DateTime   @default(now())
+  foreman      Foreman    @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  supervisor   Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@id([supervisorId, foremanId, startsOn])
+  @@index([supervisorId])
+  @@index([foremanId])
+}
+
+/// *
+///  * SITES + ASSIGNMENTS
+model Site {
+  id                    String                     @id @default(cuid())
+  name                  String
+  code                  String?                    @unique
+  location              String?
+  isActive              Boolean                    @default(true)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  address               String?
+  latitude              Float?
+  longitude             Float?
+  attendanceScans       AttendanceScan[]
+  foremanAssignments    ForemanSiteAssignment[]
+  siteDays              SiteDay[]
+  supervisorAssignments SupervisorSiteAssignment[]
+  timesheets            Timesheet[]
+}
+
+model SupervisorSiteAssignment {
+  id           String     @id @default(cuid())
+  supervisorId String
+  siteId       String
+  startsOn     DateTime   @default(now())
+  endsOn       DateTime?
+  createdAt    DateTime   @default(now())
+  site         Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  supervisor   Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@unique([supervisorId, siteId, startsOn])
+  @@index([supervisorId])
+  @@index([siteId])
+}
+
+model ForemanSiteAssignment {
+  id        String    @id @default(cuid())
+  foremanId String
+  siteId    String
+  startsOn  DateTime  @default(now())
+  endsOn    DateTime?
+  createdAt DateTime  @default(now())
+  foreman   Foreman   @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([foremanId, siteId, startsOn])
+  @@index([foremanId])
+  @@index([siteId])
+}
+
+/// *
+///  * DAILY SHEET (per site per day)
+model SiteDay {
+  id            String                @id @default(cuid())
+  siteId        String
+  foremanId     String
+  workDate      DateTime
+  isLocked      Boolean               @default(false)
+  lockedAt      DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  readyToSubmit Boolean               @default(false)
+  scans         AttendanceScan[]
+  foreman       Foreman               @relation(fields: [foremanId], references: [id])
+  site          Site                  @relation(fields: [siteId], references: [id])
+  photos        SiteDayPhoto[]
+  photoRequests SiteDayPhotoRequest[]
+
+  @@unique([siteId, foremanId, workDate])
+  @@index([foremanId, workDate])
+  @@index([siteId, workDate])
+}
+
+/// *
+///  * SCANS
+model AttendanceScan {
+  id               String       @id @default(cuid())
+  siteDayId        String
+  employeeId       String
+  workDate         DateTime
+  siteId           String
+  scannedAt        DateTime     @default(now())
+  dayRateAtScan    Decimal      @db.Decimal(12, 2)
+  qrPayload        String?
+  createdAt        DateTime     @default(now())
+  addedByForemanId String?
+  manualReason     String?
+  overtimeType     OvertimeType @default(NONE)
+  scanType         ScanType     @default(REGULAR)
+  latitude         Float?
+  longitude        Float?
+  address          String?
+  employee         Employee     @relation(fields: [employeeId], references: [id])
+  siteDay          SiteDay      @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+  site             Site         @relation(fields: [siteId], references: [id])
+
+  @@unique([employeeId, workDate])
+  @@unique([siteDayId, employeeId])
+  @@index([siteId, workDate])
+  @@index([siteDayId])
+  @@index([scannedAt])
+  @@index([scanType])
+}
+
+/// *
+///  * RANDOM GROUP PHOTO REQUESTS + SUBMISSIONS
+///  * Request: system/admin asks foreman to upload a group photo for a day.
+///  * Photo: foreman uploads one or more photos.
+model SiteDayPhotoRequest {
+  id                String             @id @default(cuid())
+  siteDayId         String
+  status            PhotoRequestStatus @default(REQUESTED)
+  requestedAt       DateTime           @default(now())
+  dueAt             DateTime?
+  requestedByUserId String?
+  note              String?
+  siteDayPhotos     SiteDayPhoto[]
+  requestedByUser   User?              @relation(fields: [requestedByUserId], references: [id])
+  siteDay           SiteDay            @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+
+  @@index([siteDayId, status])
+  @@index([requestedAt])
+}
+
+model SiteDayPhoto {
+  id                 String               @id @default(cuid())
+  siteDayId          String
+  imageUrl           String
+  uploadedAt         DateTime             @default(now())
+  uploadedByUserId   String?
+  requestId          String?
+  cloudinaryPublicId String?
+  latitude           Float?
+  longitude          Float?
+  address            String?
+  detections         PhotoDetection[]
+  verification       PhotoVerification?
+  request            SiteDayPhotoRequest? @relation(fields: [requestId], references: [id])
+  siteDay            SiteDay              @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+  uploadedByUser     User?                @relation(fields: [uploadedByUserId], references: [id])
+
+  @@index([siteDayId, uploadedAt])
+  @@index([requestId])
+}
+
+/// *
+///  * OPTIONAL: store verification outcome + who checked it.
+///  * This supports manual checks now, and ML-assisted checks later.
+model PhotoVerification {
+  id                      String                  @id @default(cuid())
+  photoId                 String                  @unique
+  status                  PhotoVerificationStatus @default(PENDING)
+  verifiedByUserId        String?
+  verifiedAt              DateTime?
+  notes                   String?
+  bookedCount             Int?
+  detectedCount           Int?
+  missingCount            Int?
+  suspectedImpersonations Int?
+  photo                   SiteDayPhoto            @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  verifiedByUser          User?                   @relation(fields: [verifiedByUserId], references: [id])
+
+  @@index([status])
+  @@index([verifiedAt])
+}
+
+/// *
+///  * OPTIONAL: who appears in a group photo (manual tags now, ML later)
+///  * If later you run face detection/matching, you can write rows here.
+///  * For manual verification, admin can tag "this is employee X" per photo.
+model PhotoDetection {
+  id         String       @id @default(cuid())
+  photoId    String
+  employeeId String?
+  data       Json?
+  isManual   Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  employee   Employee?    @relation(fields: [employeeId], references: [id])
+  photo      SiteDayPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@index([photoId])
+  @@index([employeeId])
+}
+
+/// *
+///  * TIMESHEETS (fortnight)
+model TimesheetPeriod {
+  id         String      @id @default(cuid())
+  startDate  DateTime
+  endDate    DateTime
+  label      String?
+  createdAt  DateTime    @default(now())
+  timesheets Timesheet[]
+
+  @@unique([startDate, endDate])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model Timesheet {
+  id                     String                   @id @default(cuid())
+  periodId               String
+  foremanId              String
+  status                 TimesheetStatus          @default(SUBMITTED)
+  submittedAt            DateTime?
+  approvedAt             DateTime?
+  rejectedAt             DateTime?
+  paidAt                 DateTime?
+  approvedBySupervisorId String?
+  rejectionReason        String?
+  totalWorkerWages       Decimal?                 @db.Decimal(14, 2)
+  totalWorkerDays        Int?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  siteId                 String?
+  approvedBySupervisor   Supervisor?              @relation("SupervisorApprovals", fields: [approvedBySupervisorId], references: [id])
+  foreman                Foreman                  @relation(fields: [foremanId], references: [id])
+  period                 TimesheetPeriod          @relation(fields: [periodId], references: [id])
+  site                   Site?                    @relation(fields: [siteId], references: [id], onDelete: Restrict)
+  dayAcceptances         TimesheetDayAcceptance[]
+
+  @@unique([periodId, foremanId, siteId])
+  @@index([status])
+  @@index([foremanId, periodId])
+  @@index([approvedBySupervisorId])
+  @@index([siteId])
+}
+
+model TimesheetDayAcceptance {
+  id                     String              @id @default(cuid())
+  timesheetId            String
+  workDate               DateTime
+  status                 DayAcceptanceStatus @default(PENDING)
+  acceptedAt             DateTime?
+  rejectedAt             DateTime?
+  rejectionReason        String?
+  acceptedBySupervisorId String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  acceptedBySupervisor   Supervisor?         @relation("DayAcceptances", fields: [acceptedBySupervisorId], references: [id])
+  timesheet              Timesheet           @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  @@unique([timesheetId, workDate])
+  @@index([timesheetId])
+  @@index([workDate])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+/// *
+///  * COMPANY SETTINGS
+model CompanySettings {
+  id                     String   @id @default("singleton")
+  defaultEmployeeDayRate Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+/// *
+///  * AUDIT TRAIL
+model AuditEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entity      String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id])
+
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([actorUserId])
+}
+
+model TimesheetYear {
+  year      Int      @id
+  anchorSat DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum UserRole {
   ADMIN
   SUPERVISOR
@@ -15,10 +457,10 @@ enum UserRole {
 
 enum TimesheetStatus {
   SUBMITTED
-  ACCEPTED // Daily acceptance during fortnight
-  APPROVED // Final approval on last day
+  APPROVED
   REJECTED
   PAID
+  ACCEPTED
 }
 
 enum PhotoRequestStatus {
@@ -36,615 +478,18 @@ enum PhotoVerificationStatus {
 }
 
 enum ScanType {
-  REGULAR // Normal QR scan
-  MANUAL // Manually added by foreman
+  REGULAR
+  MANUAL
 }
 
 enum OvertimeType {
-  NONE // No overtime
-  HALF_DAY // 4 hours
-  FULL_DAY // 8 hours
-}
-
-/**
- * AUTH / PEOPLE
- */
-model User {
-  id       String   @id @default(cuid())
-  email    String   @unique
-  password String
-  name     String?
-  phone    String?
-  role     UserRole
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  supervisor Supervisor?
-  foreman    Foreman?
-
-  // ✅ optional: if promoted to foreman, can be linked to an employee record
-  employee Employee? @relation("EmployeeUser")
-
-  auditEvents AuditEvent[]
-
-  employees Employee[]
-
-  siteDayPhotoRequests SiteDayPhotoRequest[]
-
-  siteDayPhotos SiteDayPhoto[]
-
-  photoVerifications PhotoVerification[]
-
-  sessions Session[]
-
-  accounts Account[]
-
-  pushTokens PushToken[]
-}
-
-model PushToken {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  platform  String?
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-/**
- * WORKER / EMPLOYEE
- * Added:
- * - faceImageUrl + metadata so admin can visually verify later.
- * - faceEmbedding optional placeholder if you later do ML matching.
- */
-model Employee {
-  id             String   @id @default(cuid())
-  firstName      String
-  lastName       String
-  faceImageUrl   String?
-  qrCodeValue    String   @unique
-  defaultDayRate Decimal? @db.Decimal(12, 2)
-  idNumber       String? // Optional: ID/passport number, required on frontend later
-
-  // ... face fields
-
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // ✅ who created/added this employee record
-  createdByUserId String?
-  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
-
-  // ✅ optional: if employee is promoted to foreman, they have their own user account
-  userId String? @unique
-  user   User?   @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
-
-  attendance      AttendanceScan[]
-  photoDetections PhotoDetection[]
-
-  // ✅ many-to-many with foremen for visibility + booking
-  foremanLinks ForemanEmployee[]
-
-  // ✅ many-to-many: this employee as assistant to multiple foremen
-  assistantLinks ForemanAssistant[] @relation("AssistantToForemen")
-}
-
-model Supervisor {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  siteAssignments    SupervisorSiteAssignment[]
-  approvedTimesheets Timesheet[]                @relation("SupervisorApprovals")
-  dayAcceptances     TimesheetDayAcceptance[]   @relation("DayAcceptances")
-
-  // ✅ many-to-many supervisors <-> foremen
-  foremanLinks SupervisorForeman[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Foreman {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  siteAssignments ForemanSiteAssignment[]
-  siteDays        SiteDay[]
-  timesheets      Timesheet[]
-
-  defaultDayRate Decimal? @db.Decimal(12, 2)
-
-  // ✅ many-to-many supervisors <-> foremen
-  supervisorLinks SupervisorForeman[]
-
-  // ✅ many-to-many foremen <-> employees
-  employeeLinks ForemanEmployee[]
-
-  // ✅ many-to-many foremen <-> assistant employees
-  assistants ForemanAssistant[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ForemanAssistant {
-  foremanId  String
-  employeeId String
-
-  foreman  Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
-  employee Employee @relation("AssistantToForemen", fields: [employeeId], references: [id], onDelete: Cascade)
-
-  // When did this assistance assignment start?
-  startsOn DateTime  @default(now())
-  endsOn   DateTime?
-
-  createdAt DateTime @default(now())
-
-  @@id([foremanId, employeeId])
-  @@index([employeeId])
-}
-
-model ForemanEmployee {
-  foremanId  String
-  employeeId String
-
-  foreman  Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  // "created" or "booked" (optional)
-  reason    String?
-  createdAt DateTime @default(now())
-
-  @@id([foremanId, employeeId])
-  @@index([employeeId])
-}
-
-model SupervisorForeman {
-  supervisorId String
-  foremanId    String
-
-  supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-  foreman    Foreman    @relation(fields: [foremanId], references: [id], onDelete: Cascade)
-
-  startsOn DateTime  @default(now())
-  endsOn   DateTime?
-
-  createdAt DateTime @default(now())
-
-  @@id([supervisorId, foremanId, startsOn])
-  @@index([supervisorId])
-  @@index([foremanId])
-}
-
-/**
- * SITES + ASSIGNMENTS
- */
-model Site {
-  id       String  @id @default(cuid())
-  name     String
-  code     String? @unique
-  location String?
-
-  // Optional: map/address data (nullable so existing DB rows are unaffected)
-  address   String?
-  latitude  Float?
-  longitude Float?
-  isActive  Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  supervisorAssignments SupervisorSiteAssignment[]
-  foremanAssignments    ForemanSiteAssignment[]
-  siteDays              SiteDay[]
-  timesheets            Timesheet[]
-
-  attendanceScans AttendanceScan[]
-}
-
-model SupervisorSiteAssignment {
-  id           String     @id @default(cuid())
-  supervisorId String
-  supervisor   Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
-
-  siteId String
-  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-
-  startsOn DateTime  @default(now())
-  endsOn   DateTime?
-
-  createdAt DateTime @default(now())
-
-  @@unique([supervisorId, siteId, startsOn])
-  @@index([supervisorId])
-  @@index([siteId])
-}
-
-model ForemanSiteAssignment {
-  id        String  @id @default(cuid())
-  foremanId String
-  foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Cascade)
-
-  siteId String
-  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
-
-  startsOn DateTime  @default(now())
-  endsOn   DateTime?
-
-  createdAt DateTime @default(now())
-
-  @@unique([foremanId, siteId, startsOn])
-  @@index([foremanId])
-  @@index([siteId])
-}
-
-/**
- * DAILY SHEET (per site per day)
- */
-model SiteDay {
-  id String @id @default(cuid())
-
-  siteId String
-  site   Site   @relation(fields: [siteId], references: [id], onDelete: Restrict)
-
-  foremanId String
-  foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Restrict)
-
-  workDate DateTime
-
-  isLocked      Boolean   @default(false)
-  lockedAt      DateTime?
-  readyToSubmit Boolean   @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  scans AttendanceScan[]
-
-  // ✅ Random photo workflow additions
-  photoRequests SiteDayPhotoRequest[]
-  photos        SiteDayPhoto[]
-
-  @@unique([siteId, foremanId, workDate])
-  @@index([foremanId, workDate])
-  @@index([siteId, workDate])
-}
-
-/**
- * SCANS
- */
-model AttendanceScan {
-  id String @id @default(cuid())
-
-  siteDayId String
-  siteDay   SiteDay @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
-
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-
-  // denormalized for constraints/reporting
-  workDate DateTime
-  siteId   String
-  site     Site     @relation(fields: [siteId], references: [id], onDelete: Restrict)
-
-  scannedAt DateTime @default(now())
-
-  dayRateAtScan Decimal @db.Decimal(12, 2)
-
-  qrPayload String?
-
-  // ✅ whether this is a regular QR scan or manually added
-  scanType ScanType @default(REGULAR)
-
-  // ✅ if manual, why was it added?
-  manualReason String?
-
-  // ✅ overtime tracking
-  overtimeType OvertimeType @default(NONE)
-
-  // ✅ if foreman added it manually, track who
-  addedByForemanId String?
-
-  // ✅ Location where scan happened (GPS coordinates from device)
-  latitude  Float?
-  longitude Float?
-  address   String?
-
-  createdAt DateTime @default(now())
-
-  // ✅ worker can only be booked once per day across ALL sites
-  @@unique([employeeId, workDate])
-  // ✅ no duplicates in same SiteDay
-  @@unique([siteDayId, employeeId])
-  @@index([siteId, workDate])
-  @@index([siteDayId])
-  @@index([scannedAt])
-  @@index([scanType])
-}
-
-/**
- * RANDOM GROUP PHOTO REQUESTS + SUBMISSIONS
- * Request: system/admin asks foreman to upload a group photo for a day.
- * Photo: foreman uploads one or more photos.
- */
-model SiteDayPhotoRequest {
-  id String @id @default(cuid())
-
-  siteDayId String
-  siteDay   SiteDay @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
-
-  status PhotoRequestStatus @default(REQUESTED)
-
-  requestedAt DateTime  @default(now())
-  dueAt       DateTime?
-
-  requestedByUserId String?
-  requestedByUser   User?   @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
-
-  note          String?
-  siteDayPhotos SiteDayPhoto[]
-
-  @@index([siteDayId, status])
-  @@index([requestedAt])
-}
-
-model SiteDayPhoto {
-  id String @id @default(cuid())
-
-  siteDayId String
-  siteDay   SiteDay @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
-
-  // Storage pointer (S3/R2/etc)
-  imageUrl String
-
-  // Cloudinary public ID for cleanup
-  cloudinaryPublicId String?
-  uploadedAt         DateTime @default(now())
-
-  // Location where photo was taken (GPS coordinates from device)
-  latitude  Float?
-  longitude Float?
-  address   String?
-
-  uploadedByUserId String?
-  uploadedByUser   User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
-
-  // Optional: link back to the request that triggered it
-  requestId String?
-  request   SiteDayPhotoRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
-
-  // Verification workflow
-  verification PhotoVerification?
-
-  detections PhotoDetection[]
-
-  @@index([siteDayId, uploadedAt])
-  @@index([requestId])
-}
-
-/**
- * OPTIONAL: store verification outcome + who checked it.
- * This supports manual checks now, and ML-assisted checks later.
- */
-model PhotoVerification {
-  id String @id @default(cuid())
-
-  photoId String       @unique
-  photo   SiteDayPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
-
-  status PhotoVerificationStatus @default(PENDING)
-
-  verifiedByUserId String?
-  verifiedByUser   User?   @relation(fields: [verifiedByUserId], references: [id], onDelete: SetNull)
-
-  verifiedAt DateTime?
-  notes      String?
-
-  // High-level summary fields (useful for admin dashboard)
-  bookedCount             Int?
-  detectedCount           Int?
-  missingCount            Int?
-  suspectedImpersonations Int?
-
-  @@index([status])
-  @@index([verifiedAt])
-}
-
-/**
- * OPTIONAL: who appears in a group photo (manual tags now, ML later)
- * If later you run face detection/matching, you can write rows here.
- * For manual verification, admin can tag "this is employee X" per photo.
- */
-model PhotoDetection {
-  id String @id @default(cuid())
-
-  photoId String
-  photo   SiteDayPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
-
-  employeeId String?
-  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-
-  // e.g. bounding box, confidence, embedding id — keep flexible
-  data Json?
-
-  // Manual vs automated flag
-  isManual Boolean @default(false)
-
-  createdAt DateTime @default(now())
-
-  @@index([photoId])
-  @@index([employeeId])
-}
-
-/**
- * TIMESHEETS (fortnight)
- */
-model TimesheetPeriod {
-  id        String   @id @default(cuid())
-  startDate DateTime
-  endDate   DateTime
-  label     String?
-
-  createdAt  DateTime    @default(now())
-  timesheets Timesheet[]
-
-  @@unique([startDate, endDate])
-  @@index([startDate])
-  @@index([endDate])
-}
-
-model Timesheet {
-  id String @id @default(cuid())
-
-  periodId String
-  period   TimesheetPeriod @relation(fields: [periodId], references: [id], onDelete: Restrict)
-
-  foremanId String
-  foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Restrict)
-
-  siteId String?
-  site   Site?   @relation(fields: [siteId], references: [id], onDelete: Restrict)
-
-  status TimesheetStatus @default(SUBMITTED)
-
-  submittedAt DateTime?
-  approvedAt  DateTime?
-  rejectedAt  DateTime?
-  paidAt      DateTime?
-
-  approvedBySupervisorId String?
-  approvedBySupervisor   Supervisor? @relation("SupervisorApprovals", fields: [approvedBySupervisorId], references: [id], onDelete: SetNull)
-
-  rejectionReason String?
-
-  // Optional cached totals
-  totalWorkerWages Decimal? @db.Decimal(14, 2)
-  totalWorkerDays  Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  dayAcceptances TimesheetDayAcceptance[]
-
-  @@unique([periodId, foremanId, siteId])
-  @@index([status])
-  @@index([foremanId, periodId])
-  @@index([approvedBySupervisorId])
-  @@index([siteId])
+  NONE
+  HALF_DAY
+  FULL_DAY
 }
 
 enum DayAcceptanceStatus {
   PENDING
   ACCEPTED
   REJECTED
-}
-
-model TimesheetDayAcceptance {
-  id String @id @default(cuid())
-
-  timesheetId String
-  timesheet   Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
-
-  workDate DateTime // The specific day being accepted/rejected
-  status   DayAcceptanceStatus @default(PENDING)
-
-  acceptedAt      DateTime?
-  rejectedAt      DateTime?
-  rejectionReason String?
-
-  acceptedBySupervisorId String?
-  acceptedBySupervisor   Supervisor? @relation("DayAcceptances", fields: [acceptedBySupervisorId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([timesheetId, workDate])
-  @@index([timesheetId])
-  @@index([workDate])
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-/**
- * COMPANY SETTINGS
- */
-model CompanySettings {
-  id String @id @default("singleton")
-
-  // Default day rate for regular employees (not foreman)
-  defaultEmployeeDayRate Decimal @default(0) @db.Decimal(12, 2)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-/**
- * AUDIT TRAIL
- */
-model AuditEvent {
-  id          String  @id @default(cuid())
-  actorUserId String?
-  actor       User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-
-  action   String
-  entity   String
-  entityId String?
-
-  metadata Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([action])
-  @@index([entity, entityId])
-  @@index([actorUserId])
-}
-
-model TimesheetYear {
-  year      Int      @id
-  anchorSat DateTime // must be a Saturday, UTC midnight
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

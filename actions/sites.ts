@@ -31,6 +31,15 @@ function isValidLongitude(n: number) {
 }
 
 function serializeSite(s: any) {
+  // Get supervisor name from first active assignment
+  const supervisorName =
+    s.supervisorAssignments?.[0]?.supervisor?.user?.name ?? null;
+  // Calculate total wages from all attendance scans
+  const totalWages = (s.attendanceScans ?? []).reduce(
+    (sum: number, scan: { dayRateAtScan: unknown }) =>
+      sum + (Number(scan.dayRateAtScan) || 0),
+    0,
+  );
   return {
     id: s.id,
     name: s.name,
@@ -44,6 +53,8 @@ function serializeSite(s: any) {
       s.createdAt instanceof Date
         ? s.createdAt.toISOString()
         : String(s.createdAt),
+    supervisorName,
+    totalWages,
   };
 }
 
@@ -103,6 +114,24 @@ export async function listSites(input?: {
       longitude: true,
       isActive: true,
       createdAt: true,
+      supervisorAssignments: {
+        select: {
+          supervisor: {
+            select: {
+              user: {
+                select: { name: true },
+              },
+            },
+          },
+        },
+        orderBy: { startsOn: "desc" },
+        take: 1,
+      },
+      attendanceScans: {
+        select: {
+          dayRateAtScan: true,
+        },
+      },
     },
   });
 

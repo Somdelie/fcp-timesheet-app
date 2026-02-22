@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { Search, Plus, Download } from "lucide-react";
+import { Search, Plus, Download, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,11 @@ import CreateSiteForm from "./CreateSiteForm";
 import SitesTable, { type SiteRow } from "./SitesTable";
 import { requestSiteGroupPhoto } from "@/actions/sites";
 import { useUserRole } from "@/lib/user-role-context";
-import { generateSitesPdf, downloadPdfBlob } from "@/lib/generateSitesPdf";
+import {
+  generateSitesPdf,
+  downloadPdfBlob,
+  printSites,
+} from "@/lib/generateSitesPdf";
 
 interface SitesListProps {
   initialSites: SiteRow[];
@@ -155,6 +159,20 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 disabled={pdfGenerating || filtered.length === 0}
               >
                 <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+                onClick={() => {
+                  if (filtered.length === 0) {
+                    toast.error("No sites to print");
+                    return;
+                  }
+                  printSites(filtered);
+                }}
+                disabled={filtered.length === 0}
+              >
+                <Printer className="h-4 w-4" />
               </Button>
             </div>
             {/* <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">

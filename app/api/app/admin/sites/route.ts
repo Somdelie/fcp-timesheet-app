@@ -87,6 +87,26 @@ export async function GET(req: Request) {
         longitude: true,
         isActive: true,
         createdAt: true,
+        supervisorAssignments: {
+          select: {
+            supervisor: {
+              select: {
+                user: {
+                  select: { name: true },
+                },
+              },
+            },
+            startsOn: true,
+            endsOn: true,
+          },
+          orderBy: { startsOn: "desc" },
+          take: 1,
+        },
+        attendanceScans: {
+          select: {
+            dayRateAtScan: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -95,16 +115,29 @@ export async function GET(req: Request) {
     const res = NextResponse.json(
       {
         ok: true,
-        sites: sites.map((s) => ({
-          id: s.id,
-          name: s.name,
-          code: s.code,
-          location: s.location,
-          latitude: s.latitude,
-          longitude: s.longitude,
-          isActive: s.isActive,
-          createdAt: s.createdAt.toISOString(),
-        })),
+        sites: sites.map((s) => {
+          // Get supervisor name from first active assignment
+          const supervisorName =
+            s.supervisorAssignments[0]?.supervisor?.user?.name ?? null;
+          // Calculate total wages from all attendance scans
+          const totalWages = s.attendanceScans.reduce(
+            (sum: number, scan: { dayRateAtScan: unknown }) =>
+              sum + (Number(scan.dayRateAtScan) || 0),
+            0,
+          );
+          return {
+            id: s.id,
+            name: s.name,
+            code: s.code,
+            location: s.location,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            isActive: s.isActive,
+            createdAt: s.createdAt.toISOString(),
+            supervisorName,
+            totalWages,
+          };
+        }),
       },
       {
         headers: {

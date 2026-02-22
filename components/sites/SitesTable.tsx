@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
   flexRender,
   getCoreRowModel,
@@ -26,7 +27,8 @@ import {
   ChevronsRight,
   Hash,
   Building2,
-  MapPin,
+  User,
+  Wallet,
   CalendarDays,
 } from "lucide-react";
 
@@ -63,6 +65,8 @@ export type SiteRow = {
   location: string | null;
   isActive: boolean;
   createdAt: string;
+  supervisorName: string | null;
+  totalWages: number;
 };
 
 function classNames(...xs: Array<string | false | undefined | null>) {
@@ -270,17 +274,33 @@ export default function SitesTable({
         ),
       },
       {
-        id: "location",
-        accessorKey: "location",
-        size: 250,
+        id: "supervisorName",
+        accessorKey: "supervisorName",
+        size: 180,
         header: () => (
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-orange-600" />
-            Location
+            <User className="h-4 w-4 text-violet-600" />
+            Supervisor
           </div>
         ),
         cell: ({ row }) => (
-          <span className="text-sm">{row.original.location ?? "—"}</span>
+          <span className="text-sm">{row.original.supervisorName ?? "—"}</span>
+        ),
+      },
+      {
+        id: "totalWages",
+        accessorKey: "totalWages",
+        size: 130,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-emerald-600" />
+            Total Wages
+          </div>
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm font-medium">
+            {formatCurrency(row.original.totalWages ?? 0)}
+          </span>
         ),
       },
       {

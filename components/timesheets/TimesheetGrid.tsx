@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useMemo } from "react";
 import { CircleCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatCurrency";
 
 // ✅ Use the real normalized model shape
@@ -65,7 +64,7 @@ function cellBase(cls?: string) {
 function headBase(cls?: string) {
   return [
     "px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap border-r border-muted-foreground border-2",
-    "bg-sky-50/60 dark:bg-zinc-800/30 text-zinc-700 dark:text-zinc-200 text-left",
+    "bg-zinc-100/60 dark:bg-zinc-800/30 text-zinc-700 dark:text-zinc-200 text-left",
     cls ?? "",
   ].join(" ");
 }
@@ -188,7 +187,7 @@ export default function TimesheetGrid({
         <div className="overflow-x-auto pb-4">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-muted-foreground dark:border-muted-foreground bg-sky-600 dark:bg-card text-white">
+              <tr className="border-b border-muted-foreground dark:border-muted-foreground bg-zinc-600 dark:bg-card text-white">
                 <th className={[headBase(), W_NAME].join(" ")}>Full Name</th>
 
                 {columns.map((c) => (
@@ -288,7 +287,7 @@ export default function TimesheetGrid({
                       className={[
                         cellBase("font-medium"),
                         W_NAME,
-                        isForeman ? "bg-sky-50/70 dark:bg-sky-600/50" : "",
+                        isForeman ? "bg-zinc-200/70 dark:bg-zinc-600/50" : "",
                       ].join(" ")}
                     >
                       <div className="flex items-center gap-2">
@@ -304,7 +303,7 @@ export default function TimesheetGrid({
                         <td
                           key={`${r.id}-${columns[idx]?.iso ?? idx}`}
                           className={[
-                            cellBase("text-center"),
+                            cellBase("text-center relative"),
                             W_DAY,
                             p
                               ? "bg-emerald-500 dark:bg-green-500"
@@ -312,13 +311,29 @@ export default function TimesheetGrid({
                           ].join(" ")}
                         >
                           {p ? (
-                            <CircleCheck className="inline-block h-5 w-5 text-emerald-600" />
+                            <CircleCheck className="inline-block h-5 w-5 text-white" />
                           ) : (
-                            <img
-                              src="/absent.svg"
-                              alt="Absent"
-                              className="inline-block h-5 w-5"
-                            />
+                            <svg
+                              className="absolute w-full h-full"
+                              style={{
+                                top: 5,
+                                right: 5,
+                                bottom: 5,
+                                left: 5,
+                                width: "calc(100% - 10px)",
+                                height: "calc(100% - 10px)",
+                              }}
+                              preserveAspectRatio="none"
+                            >
+                              <line
+                                x1="100%"
+                                y1="0"
+                                x2="0"
+                                y2="100%"
+                                stroke="#dc2626"
+                                strokeWidth="2"
+                              />
+                            </svg>
                           )}
                         </td>
                       );
@@ -327,7 +342,7 @@ export default function TimesheetGrid({
                     <td
                       className={[
                         cellBase(
-                          "text-center bg-sky-600/70 dark:bg-amber-950/20",
+                          "text-center bg-zinc-300/70 dark:bg-zinc-700/40",
                         ),
                         W_TDAYS,
                       ].join(" ")}
@@ -338,7 +353,7 @@ export default function TimesheetGrid({
                     <td
                       className={[
                         cellBase(
-                          "text-center bg-sky-600/70 dark:bg-amber-950/20",
+                          "text-center bg-zinc-300/70 dark:bg-zinc-700/40",
                         ),
                         W_TDAYS,
                       ].join(" ")}
@@ -349,7 +364,7 @@ export default function TimesheetGrid({
                     <td
                       className={[
                         cellBase(
-                          "text-center bg-sky-600/70 dark:bg-emerald-950/20",
+                          "text-center bg-zinc-300/70 dark:bg-zinc-700/40",
                         ),
                         W_TPAY,
                       ].join(" ")}
@@ -360,7 +375,7 @@ export default function TimesheetGrid({
                     <td
                       className={[
                         cellBase(
-                          "text-center bg-sky-600/70 dark:bg-emerald-950/20",
+                          "text-center bg-zinc-300/70 dark:bg-zinc-700/40",
                         ),
                         W_TPAY,
                       ].join(" ")}
@@ -371,8 +386,8 @@ export default function TimesheetGrid({
                 );
               })}
 
-              {/* TOTAL row (mobile style) */}
-              <tr className="bg-sky-600/70 dark:bg-card ">
+              {/* TOTAL row */}
+              <tr className="bg-zinc-400/70 dark:bg-card ">
                 <td
                   className={[
                     cellBase("font-extrabold text-zinc-700 dark:text-zinc-200"),
@@ -386,7 +401,7 @@ export default function TimesheetGrid({
                   <td
                     key={`t-${c.iso}`}
                     className={[
-                      "px-3 py-2 text-sm whitespace-nowrap text-zinc-700 dark:text-zinc-200 border-b-2 border-muted-foreground bg-sky-700/70 dark:bg-card",
+                      "px-3 py-2 text-sm whitespace-nowrap text-zinc-700 dark:text-zinc-200 border-b-2 border-muted-foreground bg-zinc-400/70 dark:bg-card",
                       W_DAY,
                     ].join(" ")}
                   ></td>

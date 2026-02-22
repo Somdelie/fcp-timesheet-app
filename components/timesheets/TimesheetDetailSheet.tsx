@@ -2,13 +2,10 @@
 
 import * as React from "react";
 import { useMemo } from "react";
-import { Download } from "lucide-react";
+import { Printer } from "lucide-react";
 import { toast } from "react-toastify";
 import { formatCurrency } from "@/lib/formatCurrency";
-import {
-  generateTimesheetPdf,
-  downloadTimesheetPdf,
-} from "@/lib/generateTimesheetPdf";
+import { printTimesheet } from "@/lib/generateTimesheetPdf";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedLoader } from "@/components/ui/animated-loader";
@@ -99,7 +96,6 @@ export default function TimesheetDetailSheet<
 
   const [actionLoading, setActionLoading] = React.useState<null | string>(null);
   const [actionErr, setActionErr] = React.useState<string | null>(null);
-  const [pdfGenerating, setPdfGenerating] = React.useState(false);
 
   const [reasonDialogOpen, setReasonDialogOpen] = React.useState(false);
   const [pendingActionId, setPendingActionId] = React.useState<string | null>(
@@ -249,9 +245,7 @@ export default function TimesheetDetailSheet<
               </div>
 
               <div className="flex flex-col gap-1 border-l-2 border-card px-4 flex-1">
-                <div className="text-sm text-muted-foreground">
-                  Contract Manager
-                </div>
+                <div className="text-sm text-muted-foreground">Manager</div>
                 <div className="font-medium py-1 border rounded px-3">
                   {contractManagerDisplay}
                 </div>
@@ -315,45 +309,28 @@ export default function TimesheetDetailSheet<
                     Refresh Detail
                   </Button>
 
-                  {/* ✅ PDF EXPORT using pdf-lib (no CSS parsing issues) */}
+                  {/* ✅ PRINT button - opens print preview window */}
                   <Button
                     variant="outline"
-                    onClick={async () => {
+                    onClick={() => {
                       if (!gridModel) {
-                        toast.error("Nothing to export");
+                        toast.error("Nothing to print");
                         return;
                       }
 
-                      setPdfGenerating(true);
-                      try {
-                        const filename = `timesheet-${(detail as any)?.startISO || "report"}.pdf`;
-
-                        const pdfBytes = await generateTimesheetPdf(gridModel, {
-                          foremanName: foremanDisplay,
-                          supervisorName: contractManagerDisplay,
-                          siteName: sites[0]?.name,
-                          siteCode: sites[0]?.code,
-                          startISO: (detail as any)?.startISO,
-                          endISO: (detail as any)?.endISO,
-                          status: detailStatus,
-                        });
-
-                        downloadTimesheetPdf(pdfBytes, filename);
-                        toast.success("PDF downloaded");
-                      } catch (err) {
-                        console.error("PDF export failed:", err);
-                        toast.error(
-                          "PDF export failed: " +
-                            (err instanceof Error ? err.message : String(err)),
-                        );
-                      } finally {
-                        setPdfGenerating(false);
-                      }
+                      printTimesheet(gridModel, {
+                        foremanName: foremanDisplay,
+                        contractManagerName: contractManagerDisplay,
+                        startDate: (detail as any)?.startISO,
+                        endDate: (detail as any)?.endISO,
+                        sites: sites,
+                        status: detailStatus,
+                      });
                     }}
-                    disabled={!gridModel || pdfGenerating}
+                    disabled={!gridModel}
                   >
-                    <Download className="h-4 w-4 mr-1" />
-                    {pdfGenerating ? "Generating..." : "Download PDF"}
+                    <Printer className="h-4 w-4 mr-1" />
+                    Print
                   </Button>
 
                   <Button variant="outline" onClick={() => onOpenChange(false)}>

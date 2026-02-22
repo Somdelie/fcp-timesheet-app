@@ -27,23 +27,24 @@ function truncateText(
   return t;
 }
 
-// Web-matched color palette from your Tailwind theme
+// Web-matched color palette from your Tailwind theme (zinc scheme)
 const colors = {
   // Background colors - match your web table
   white: rgb(1, 1, 1),
   cardBg: rgb(0.996, 0.996, 0.996),
-  headerBg: rgb(0.02, 0.47, 0.76), // sky-600 (header)
-  headerBgLight: rgb(0.94, 0.97, 1), // sky-50/60
+  headerBg: rgb(0.32, 0.32, 0.35), // zinc-600 (header)
+  headerBgLight: rgb(0.95, 0.95, 0.96), // zinc-100/60
 
   // Row backgrounds - match web row alternation
-  foremanRowBg: rgb(0.94, 0.97, 1), // sky-50/70 for foreman
+  foremanRowBg: rgb(0.9, 0.9, 0.91), // zinc-200/70 for foreman
   evenRowBg: rgb(0.996, 0.996, 0.996), // white/off-white for even
   oddRowBg: rgb(1, 1, 1), // pure white for odd
 
-  // Summary column backgrounds - match web amber/emerald sections
-  amberBg: rgb(1, 0.98, 0.92), // amber-50/70
-  emeraldBg: rgb(0.94, 0.99, 0.96), // emerald-50/70
-  totalRowBg: rgb(0.02, 0.47, 0.76), // sky-600/70 for totals
+  // Summary column backgrounds - match web zinc scheme
+  amberBg: rgb(1, 0.98, 0.92), // amber-50/70 (header only)
+  emeraldBg: rgb(0.94, 0.99, 0.96), // emerald-50/70 (header only)
+  summaryBg: rgb(0.78, 0.78, 0.8), // zinc-300/70 for summary cells
+  totalRowBg: rgb(0.7, 0.7, 0.72), // zinc-400/70 for totals
 
   // Day cell colors - match web present/absent
   presentBg: rgb(0.13, 0.72, 0.53), // emerald-500 (green checkmark)
@@ -437,14 +438,13 @@ export async function generateTimesheetPdf(
     ];
 
     for (const cell of summaryCells) {
-      // Sky-blue background for summary columns (matching web)
+      // Zinc background for summary columns (matching web)
       pg.drawRectangle({
         x: xPos,
         y: rowY,
         width: cell.width,
         height: rowHeight,
-        color: rgb(0.02, 0.47, 0.76),
-        opacity: 0.7,
+        color: colors.summaryBg,
       });
 
       const cellText = truncateText(
@@ -454,8 +454,8 @@ export async function generateTimesheetPdf(
         fontSize - 1,
       );
 
-      // Zero values display in rose/red, non-zero in white
-      const textColor = cell.isZero ? colors.rose600 : colors.textWhite;
+      // Zero values display in rose/red, non-zero in dark text
+      const textColor = cell.isZero ? colors.rose600 : colors.textPrimary;
 
       pg.drawText(cellText, {
         x:
@@ -492,14 +492,13 @@ export async function generateTimesheetPdf(
   function drawTotalRow(pg: PDFPage, startY: number): number {
     const rowY = startY - rowHeight;
 
-    // Total row background - dark sky-600 (matching web)
+    // Total row background - zinc-400/70 (matching web)
     pg.drawRectangle({
       x: margin,
       y: rowY,
       width: tableWidth,
       height: rowHeight,
       color: colors.totalRowBg,
-      opacity: 0.7,
     });
 
     let xPos = margin;
@@ -522,8 +521,7 @@ export async function generateTimesheetPdf(
         y: rowY,
         width: dayColWidth,
         height: rowHeight,
-        color: rgb(0.02, 0.51, 0.8),
-        opacity: 0.7,
+        color: colors.totalRowBg,
       });
       xPos += dayColWidth;
     }
@@ -571,7 +569,7 @@ export async function generateTimesheetPdf(
         y: textY,
         size: fontSize,
         font: fontBold,
-        color: colors.textWhite,
+        color: colors.textPrimary,
       });
       xPos += cell.width;
     }
@@ -723,5 +721,439 @@ export function downloadTimesheetPdf(pdfBytes: Uint8Array, filename: string) {
         "Unable to download PDF. Please check your browser settings.",
       );
     }
+  }
+}
+
+// ============ HTML PRINT FUNCTIONS (matching desktop app) ============
+
+export interface TimesheetPrintMeta {
+  foremanName?: string;
+  contractManagerName?: string;
+  startDate?: string;
+  endDate?: string;
+  sites?: Array<{ code?: string; name?: string }>;
+  status?: string;
+}
+
+function escapeHTML(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Generate printable HTML for timesheet (matching desktop app)
+ */
+export function generateTimesheetPrintHTML(
+  model: TimesheetGridModel,
+  meta?: TimesheetPrintMeta,
+): string {
+  const formatCurrencyHtml = (n: number) =>
+    `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Build main table headers
+  const tableHeaders = `
+    <tr>
+      <th class="name-col">Full Name</th>
+      ${model.columns.map((c) => `<th class="day-col">${c.dayLabel}<br/>${c.dateLabel}</th>`).join("")}
+      <th class="num-col">F/man Days</th>
+      <th class="num-col">Man/Days</th>
+      <th class="num-col">F/man Pay</th>
+      <th class="num-col">Team Pay</th>
+    </tr>
+  `;
+
+  // Sort rows: foreman first, then alphabetically
+  const foremanName = model.foremanName || meta?.foremanName || "";
+  const sortedRows = [...model.rows].sort((a, b) => {
+    const aF =
+      a.isForeman || (foremanName && a.label.trim() === foremanName.trim())
+        ? 0
+        : 1;
+    const bF =
+      b.isForeman || (foremanName && b.label.trim() === foremanName.trim())
+        ? 0
+        : 1;
+    if (aF !== bF) return aF - bF;
+    return a.label.localeCompare(b.label);
+  });
+
+  const tableRows = sortedRows
+    .map((row) => {
+      const isForeman =
+        row.isForeman ||
+        (foremanName && row.label.trim() === foremanName.trim());
+      const rowClass = isForeman ? "foreman-row" : "";
+
+      const foremanDays = isForeman ? row.daysWorked : 0;
+      const teamDays = isForeman ? 0 : row.daysWorked;
+      const foremanPay = isForeman ? row.pay : 0;
+      const teamPay = isForeman ? 0 : row.pay;
+
+      return `
+      <tr class="${rowClass}">
+        <td class="name-col">${isForeman ? "👨‍💼 " : ""}${escapeHTML(row.label)}</td>
+        ${row.present.map((p) => `<td class="day-col ${p ? "present" : "absent"}">${p ? "✓" : ""}</td>`).join("")}
+        <td class="num-col summary-col ${foremanDays === 0 ? "zero-val" : ""}">${foremanDays}</td>
+        <td class="num-col summary-col ${teamDays === 0 ? "zero-val" : ""}">${teamDays}</td>
+        <td class="num-col summary-col ${foremanPay === 0 ? "zero-val" : ""}">${foremanPay > 0 ? formatCurrencyHtml(foremanPay) : "0"}</td>
+        <td class="num-col summary-col ${teamPay === 0 ? "zero-val" : ""}">${teamPay > 0 ? formatCurrencyHtml(teamPay) : "0"}</td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  const totals = model.totals;
+
+  // Total row
+  const totalRow = `
+    <tr class="total-row">
+      <td class="name-col">TOTAL</td>
+      ${model.columns.map(() => `<td class="day-col total-day"></td>`).join("")}
+      <td class="num-col summary-col">${totals.foremanDays}</td>
+      <td class="num-col summary-col">${totals.teamDays}</td>
+      <td class="num-col summary-col">${formatCurrencyHtml(totals.foremanPay)}</td>
+      <td class="num-col summary-col">${formatCurrencyHtml(totals.teamPay)}</td>
+    </tr>
+  `;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Timesheet - ${meta?.startDate ?? "Export"}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+          font-size: 12px; 
+          color: #27272a;
+          background: #fafafa;
+          min-height: 100vh;
+        }
+        
+        /* Content */
+        .content {
+          padding: 24px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 20px;
+        }
+        h1 { 
+          font-size: 24px; 
+          font-weight: 700;
+          color: #18181b;
+          margin-bottom: 4px;
+        }
+        .subtitle {
+          font-size: 13px;
+          color: #71717a;
+        }
+        .actions {
+          display: flex;
+          gap: 8px;
+        }
+        .btn {
+          padding: 8px 16px;
+          border-radius: 4px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.15s;
+          border: 1px solid #e4e4e7;
+          background: white;
+          color: #18181b;
+        }
+        .btn:hover {
+          background: #f4f4f5;
+          border-color: #d4d4d8;
+        }
+        .btn-primary {
+          background: #16a34a;
+          border-color: #16a34a;
+          color: white;
+        }
+        .btn-primary:hover {
+          background: #15803d;
+          border-color: #15803d;
+        }
+        
+        /* Meta info cards */
+        .meta-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .meta-card {
+          background: white;
+          border: 1px solid #e4e4e7;
+          border-radius: 4px;
+          padding: 12px 16px;
+        }
+        .meta-card-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          color: #71717a;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+        .meta-card-value {
+          font-size: 14px;
+          font-weight: 500;
+          color: #18181b;
+        }
+        
+        /* Table */
+        .table-container {
+          background: white;
+          border: 2px solid #52525b;
+          border-radius: 4px;
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        table.main-table { 
+          width: 100%; 
+          border-collapse: collapse;
+        }
+        .main-table th, .main-table td { 
+          border: 2px solid #52525b;
+          padding: 10px 12px; 
+          text-align: center;
+          font-size: 12px;
+        }
+        .main-table th { 
+          background: #52525b; 
+          font-weight: 600;
+          color: white;
+          text-transform: uppercase;
+          font-size: 11px;
+        }
+        .main-table .name-col { 
+          text-align: left; 
+          min-width: 180px;
+          font-weight: 500;
+        }
+        .main-table .day-col { 
+          width: 45px;
+          padding: 8px 4px;
+        }
+        .main-table .num-col { 
+          text-align: center; 
+          min-width: 80px;
+        }
+        .main-table .summary-col {
+          background: #d4d4d8;
+          font-weight: 600;
+        }
+        .main-table .zero-val {
+          color: #dc2626;
+          font-weight: 800;
+        }
+        .main-table .present { 
+          background: #22c55e; 
+          color: white;
+          font-weight: bold;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .main-table .absent { 
+          background-color: #fecaca;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cline x1='85' y1='15' x2='15' y2='85' stroke='%23dc2626' stroke-width='6'/%3E%3C/svg%3E");
+          background-size: 100% 100%;
+          background-repeat: no-repeat;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .main-table .foreman-row { 
+          background: #e4e4e7; 
+        }
+        .main-table .foreman-row .name-col {
+          font-weight: 700;
+        }
+        .main-table .foreman-row td.absent {
+          background-color: #fecaca;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cline x1='85' y1='15' x2='15' y2='85' stroke='%23dc2626' stroke-width='6'/%3E%3C/svg%3E");
+          background-size: 100% 100%;
+          background-repeat: no-repeat;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .main-table .total-row {
+          background: #a1a1aa;
+          font-weight: 700;
+        }
+        .main-table .total-row .name-col {
+          font-weight: 800;
+        }
+        .main-table .total-row .total-day {
+          background: #a1a1aa;
+        }
+        .main-table .total-row .summary-col {
+          background: #a1a1aa;
+        }
+        
+        /* Legend */
+        .legend {
+          padding: 12px 16px;
+          font-size: 12px;
+          color: #71717a;
+          border-top: 1px solid #e4e4e7;
+        }
+        
+        /* Totals */
+        .totals-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+        .totals-card {
+          background: white;
+          border: 1px solid #e4e4e7;
+          border-radius: 4px;
+          padding: 16px;
+        }
+        .totals-card.grand {
+          background: #18181b;
+          border-color: #18181b;
+        }
+        .totals-card.grand .totals-label,
+        .totals-card.grand .totals-value {
+          color: white;
+        }
+        .totals-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          color: #71717a;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        .totals-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 4px;
+        }
+        .totals-value {
+          font-size: 14px;
+          font-weight: 600;
+          color: #18181b;
+        }
+        
+        @media print {
+          body { background: white; }
+          .content { padding: 0; max-width: none; }
+          .actions { display: none; }
+          .meta-card, .table-container, .totals-card { 
+            border: 1px solid #666; 
+            box-shadow: none;
+          }
+          .main-table th, .main-table td {
+            padding: 6px 8px;
+            border: 1px solid #666;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          .main-table .present,
+          .main-table .absent,
+          .main-table .summary-col,
+          .main-table .total-row,
+          .main-table th {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="content">
+        <div class="header">
+          <div>
+            <h1>Timesheet Report</h1>
+            <p class="subtitle">${meta?.startDate && meta?.endDate ? `${meta.startDate} to ${meta.endDate}` : "Export"}</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="print-btn">
+              🖨️ Print
+            </button>
+            <button class="btn" id="close-btn">
+              Close
+            </button>
+          </div>
+        </div>
+        
+        <div class="meta-cards">
+          ${meta?.foremanName ? `<div class="meta-card"><div class="meta-card-label">Foreman</div><div class="meta-card-value">${escapeHTML(meta.foremanName)}</div></div>` : ""}
+          ${meta?.contractManagerName ? `<div class="meta-card"><div class="meta-card-label">Manager</div><div class="meta-card-value">${escapeHTML(meta.contractManagerName)}</div></div>` : ""}
+          ${meta?.sites?.length ? `<div class="meta-card"><div class="meta-card-label">Sites</div><div class="meta-card-value">${escapeHTML(meta.sites.map((s) => [s.code, s.name].filter(Boolean).join(" - ")).join(", "))}</div></div>` : ""}
+          ${meta?.status ? `<div class="meta-card"><div class="meta-card-label">Status</div><div class="meta-card-value">${escapeHTML(meta.status)}</div></div>` : ""}
+        </div>
+        
+        <div class="table-container">
+          <table class="main-table">
+            <thead>${tableHeaders}</thead>
+            <tbody>${tableRows}${totalRow}</tbody>
+          </table>
+          <div class="legend">
+            ✅ Present = scanned that day • ❌ Absent = no scan
+          </div>
+        </div>
+        
+        <div class="totals-grid">
+          <div class="totals-card">
+            <div class="totals-label">Foreman</div>
+            <div class="totals-row"><span>Days</span><span class="totals-value">${totals.foremanDays}</span></div>
+            <div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.foremanPay)}</span></div>
+          </div>
+          <div class="totals-card">
+            <div class="totals-label">Team</div>
+            <div class="totals-row"><span>Days</span><span class="totals-value">${totals.teamDays}</span></div>
+            <div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.teamPay)}</span></div>
+          </div>
+          <div class="totals-card grand">
+            <div class="totals-label">Grand Total</div>
+            <div class="totals-row"><span>Days</span><span class="totals-value">${totals.totalDays}</span></div>
+            <div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.totalPay)}</span></div>
+          </div>
+        </div>
+      </div>
+      
+      <script>
+        document.getElementById('close-btn').addEventListener('click', function() {
+          window.close();
+        });
+        document.getElementById('print-btn').addEventListener('click', function() {
+          window.print();
+        });
+      </script>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Open print preview in new window (matching desktop app)
+ */
+export function printTimesheet(
+  model: TimesheetGridModel,
+  meta?: TimesheetPrintMeta,
+): void {
+  const html = generateTimesheetPrintHTML(model, meta);
+  const printWindow = window.open("", "_blank", "width=1100,height=800");
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    // Auto-trigger print after a short delay
+    setTimeout(() => {
+      printWindow.print();
+    }, 300);
   }
 }
