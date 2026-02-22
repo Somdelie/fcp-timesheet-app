@@ -167,8 +167,7 @@ export async function POST(
     data: {
       status: "REJECTED",
       rejectedAt: new Date(),
-      rejectionReason:
-        auth.role === "ADMIN" ? "Rejected by admin" : "Rejected by supervisor",
+      rejectionReason: "Rejected by supervisor",
       approvedAt: null,
       approvedBySupervisorId: null,
     },
