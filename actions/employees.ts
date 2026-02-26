@@ -138,6 +138,13 @@ export async function createEmployee(input: {
 }) {
   const auth = await requireServerAuth();
 
+  // Verify the user exists before using as createdByUserId
+  const userExists = await prisma.user.findUnique({
+    where: { id: auth.userId },
+    select: { id: true },
+  });
+  const createdByUserId = userExists ? auth.userId : null;
+
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
 
@@ -152,7 +159,10 @@ export async function createEmployee(input: {
   const settings = await prisma.companySettings.findUnique({
     where: { id: "singleton" },
   });
-  const dayRate = settings?.defaultEmployeeDayRate || "0";
+  // Convert to string for consistent Decimal handling
+  const dayRate = settings?.defaultEmployeeDayRate
+    ? String(settings.defaultEmployeeDayRate)
+    : "0";
 
   const MAX_TRIES = 5;
 
@@ -169,7 +179,7 @@ export async function createEmployee(input: {
             faceImageUrl,
             isActive,
             defaultDayRate: dayRate as any,
-            createdByUserId: auth.userId,
+            createdByUserId,
           },
           select: {
             id: true,
@@ -224,6 +234,7 @@ export async function createEmployee(input: {
 
       return { ok: true as const, employee: serializeEmployee(created) };
     } catch (e: any) {
+      console.error("Error creating employee:", e);
       if (String(e?.code) === "P2002") {
         const target = e?.meta?.target;
         const t = Array.isArray(target)
@@ -236,7 +247,11 @@ export async function createEmployee(input: {
           error: "Employee violates a unique constraint.",
         };
       }
-      return { ok: false as const, error: "Failed to create employee." };
+      const message = e instanceof Error ? e.message : String(e);
+      return {
+        ok: false as const,
+        error: `Failed to create employee: ${message}`,
+      };
     }
   }
 

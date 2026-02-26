@@ -20,6 +20,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Printer,
+  Download,
 } from "lucide-react";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
@@ -50,6 +52,13 @@ import TimesheetDetailSheet, {
 import TimesheetGrid from "@/components/timesheets/TimesheetGrid";
 import { normalizeTimesheetToGrid } from "@/lib/timesheets/normalizeTimesheetDetail";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  generateForemanSummaryPdf,
+  downloadTimesheetPdf,
+  printForemanSummary,
+  type ForemanSummaryData,
+  type ForemanTimesheetData,
+} from "@/lib/generateTimesheetPdf";
 
 type RoleMode = "ADMIN" | "SUPERVISOR";
 
@@ -69,6 +78,10 @@ type AdminRow = {
   supervisor?: { id: string; name: string } | null;
   totalWorkerDays?: number | null;
   totalWorkerWages?: number | null;
+  foremanDays?: number | null;
+  foremanWages?: number | null;
+  teamDays?: number | null;
+  teamWages?: number | null;
   sites?: Array<{ id: string; code?: string | null; name: string }>;
   rowKey?: string;
 };
@@ -282,6 +295,14 @@ export default function TimesheetsListClient({ mode }: Props) {
   const [detailErr, setDetailErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
 
+  // Foreman totals section collapsed/expanded
+  const [foremanTotalsExpanded, setForemanTotalsExpanded] = useState(false);
+
+  // Foreman PDF generation state
+  const [foremanPdfGenerating, setForemanPdfGenerating] = useState<
+    string | null
+  >(null);
+
   const totalWages = useMemo(() => {
     const list = mode === "ADMIN" ? rowsAdmin : rowsSup;
     return list.reduce(
@@ -289,6 +310,181 @@ export default function TimesheetsListClient({ mode }: Props) {
       0,
     );
   }, [mode, rowsAdmin, rowsSup]);
+
+  // Foreman totals: group all sites by foreman and sum wages for quick overview (ADMIN only)
+  const foremanTotals = useMemo(() => {
+    if (mode !== "ADMIN") return [];
+    const map = new Map<
+      string,
+      {
+        foremanId: string;
+        foremanName: string;
+        sitesCount: number;
+        siteIds: string[];
+        foremanDays: number;
+        foremanWages: number;
+        teamDays: number;
+        teamWages: number;
+        grandTotal: number;
+      }
+    >();
+    for (const row of rowsAdmin) {
+      const id = row.foreman?.id ?? "unknown";
+      const name = row.foreman?.name ?? "Unknown";
+      const existing = map.get(id) ?? {
+        foremanId: id,
+        foremanName: name,
+        sitesCount: 0,
+        siteIds: [],
+        foremanDays: 0,
+        foremanWages: 0,
+        teamDays: 0,
+        teamWages: 0,
+        grandTotal: 0,
+      };
+      // Collect site IDs
+      if (row.sites) {
+        for (const site of row.sites) {
+          if (!existing.siteIds.includes(site.id)) {
+            existing.siteIds.push(site.id);
+          }
+        }
+      }
+      existing.sitesCount = existing.siteIds.length;
+      existing.foremanDays += Number(row.foremanDays ?? 0);
+      existing.foremanWages += Number(row.foremanWages ?? 0);
+      existing.teamDays += Number(row.teamDays ?? 0);
+      existing.teamWages += Number(row.teamWages ?? 0);
+      existing.grandTotal += Number(row.totalWorkerWages ?? 0);
+      map.set(id, existing);
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.foremanName.localeCompare(b.foremanName),
+    );
+  }, [mode, rowsAdmin]);
+
+  // Handler for generating foreman summary PDF/Print
+  const handleForemanPdfAction = useCallback(
+    async (
+      foremanData: (typeof foremanTotals)[0],
+      action: "print" | "download",
+    ) => {
+      if (!periodId) {
+        toast.error("No period selected");
+        return;
+      }
+
+      setForemanPdfGenerating(foremanData.foremanId);
+
+      try {
+        // Fetch timesheet details for each site
+        const timesheets: ForemanTimesheetData[] = [];
+        const siteBreakdown: ForemanSummaryData["sites"] = [];
+
+        for (const siteId of foremanData.siteIds) {
+          const timesheetId = `${periodId}_${foremanData.foremanId}_${siteId}`;
+          const url = `/api/app/admin/timesheets/${encodeURIComponent(timesheetId)}?siteId=${encodeURIComponent(siteId)}`;
+
+          const res = await fetch(url, {
+            cache: "no-store",
+            credentials: "include",
+            headers: { accept: "application/json" },
+          });
+
+          if (!res.ok) {
+            console.warn(`Failed to fetch timesheet for site ${siteId}`);
+            continue;
+          }
+
+          const payload = await res.json();
+          const tsDetail = payload?.timesheet ?? payload;
+
+          if (!tsDetail) continue;
+
+          const gridData = normalizeTimesheetToGrid(tsDetail as any);
+
+          // Find site info from rowsAdmin
+          const siteRow = rowsAdmin.find(
+            (r) =>
+              r.foreman?.id === foremanData.foremanId &&
+              r.sites?.some((s) => s.id === siteId),
+          );
+          const siteInfo = siteRow?.sites?.find((s) => s.id === siteId);
+
+          timesheets.push({
+            siteId,
+            siteName: siteInfo?.name ?? tsDetail.sites?.[0]?.name ?? "Site",
+            siteCode: siteInfo?.code ?? tsDetail.sites?.[0]?.code,
+            gridModel: gridData,
+            supervisorName: siteRow?.supervisor?.name,
+          });
+
+          // Add to site breakdown
+          siteBreakdown.push({
+            siteId,
+            siteName: siteInfo?.name ?? "Site",
+            siteCode: siteInfo?.code ?? undefined,
+            foremanDays: Number(siteRow?.foremanDays ?? 0),
+            foremanWages: Number(siteRow?.foremanWages ?? 0),
+            teamDays: Number(siteRow?.teamDays ?? 0),
+            teamWages: Number(siteRow?.teamWages ?? 0),
+            totalWages: Number(siteRow?.totalWorkerWages ?? 0),
+          });
+        }
+
+        if (timesheets.length === 0) {
+          toast.error("No timesheet data found for this foreman");
+          return;
+        }
+
+        // Parse period dates
+        const [startISO, endISO] = periodId.split("_");
+
+        const summaryData: ForemanSummaryData = {
+          foremanId: foremanData.foremanId,
+          foremanName: foremanData.foremanName,
+          startISO: startISO ?? "",
+          endISO: endISO ?? "",
+          sitesCount: foremanData.sitesCount,
+          foremanDays: foremanData.foremanDays,
+          foremanWages: foremanData.foremanWages,
+          teamDays: foremanData.teamDays,
+          teamWages: foremanData.teamWages,
+          grandTotal: foremanData.grandTotal,
+          sites: siteBreakdown,
+        };
+
+        if (action === "download") {
+          const pdfBytes = await generateForemanSummaryPdf(
+            summaryData,
+            timesheets,
+          );
+          const filename = `foreman-summary-${foremanData.foremanName.replace(/\s+/g, "-")}-${startISO}.pdf`;
+          downloadTimesheetPdf(pdfBytes, filename);
+          toast.success("PDF downloaded");
+        } else {
+          // Print
+          const printData = timesheets.map((ts) => ({
+            gridModel: ts.gridModel,
+            meta: {
+              foremanName: foremanData.foremanName,
+              contractManagerName: ts.supervisorName,
+              startDate: startISO,
+              endDate: endISO,
+              sites: [{ code: ts.siteCode, name: ts.siteName }],
+            },
+          }));
+          printForemanSummary(summaryData, printData);
+        }
+      } catch (err: any) {
+        console.error("Foreman PDF generation error:", err);
+        toast.error(err?.message ?? "Failed to generate PDF");
+      } finally {
+        setForemanPdfGenerating(null);
+      }
+    },
+    [periodId, rowsAdmin],
+  );
 
   // ✅ normalized grid model (same for admin + supervisor)
   const gridModel = useMemo(() => {
@@ -1159,6 +1355,142 @@ export default function TimesheetsListClient({ mode }: Props) {
         ) : null}
       </div>
 
+      {/* Foreman Totals Summary - quick view of what to pay each foreman */}
+      {mode === "ADMIN" && foremanTotals.length > 0 && !loading && (
+        <div className="rounded border bg-card overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+            onClick={() => setForemanTotalsExpanded(!foremanTotalsExpanded)}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">Foreman Totals</span>
+              <Badge variant="secondary" className="text-xs">
+                {foremanTotals.length} foremen
+              </Badge>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                Grand Total:{" "}
+                {money(foremanTotals.reduce((s, f) => s + f.grandTotal, 0))}
+              </span>
+            </div>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
+                foremanTotalsExpanded ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          <div
+            className="grid transition-all duration-300 ease-in-out"
+            style={{
+              gridTemplateRows: foremanTotalsExpanded ? "1fr" : "0fr",
+            }}
+          >
+            <div className="overflow-hidden">
+              <div className="border-t max-h-72 overflow-y-auto overflow-x-auto">
+                <Table className="border-collapse min-w-200">
+                  <TableHeader className="bg-muted/60 sticky top-0">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="px-3 py-2 text-xs font-semibold border border-zinc-200 dark:border-zinc-700">
+                        Foreman
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-center border border-zinc-200 dark:border-zinc-700">
+                        Sites
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Foreman Days
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Foreman Amount
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Team Days
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Team Amount
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Grand Total
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-center border border-zinc-200 dark:border-zinc-700">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {foremanTotals.map((ft) => (
+                      <TableRow
+                        key={ft.foremanId}
+                        className="hover:bg-muted/30"
+                      >
+                        <TableCell className="px-3 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-700">
+                          {ft.foremanName}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-center border border-zinc-200 dark:border-zinc-700">
+                          {ft.sitesCount}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                          {ft.foremanDays}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                          {money(ft.foremanWages)}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                          {ft.teamDays}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                          {money(ft.teamWages)}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right font-bold text-emerald-600 dark:text-emerald-400 border border-zinc-200 dark:border-zinc-700">
+                          {money(ft.grandTotal)}
+                        </TableCell>
+                        <TableCell className="px-2 py-1 border border-zinc-200 dark:border-zinc-700">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              disabled={foremanPdfGenerating === ft.foremanId}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleForemanPdfAction(ft, "print");
+                              }}
+                              title="Print"
+                            >
+                              {foremanPdfGenerating === ft.foremanId ? (
+                                <Spinner className="h-4 w-4" />
+                              ) : (
+                                <Printer className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              disabled={foremanPdfGenerating === ft.foremanId}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleForemanPdfAction(ft, "download");
+                              }}
+                              title="Download PDF"
+                            >
+                              {foremanPdfGenerating === ft.foremanId ? (
+                                <Spinner className="h-4 w-4" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="border bg-card">
         <div className="overflow-x-auto">
           <Table className="border-collapse">

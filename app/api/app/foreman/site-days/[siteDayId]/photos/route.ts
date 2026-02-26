@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { uploadImageFile, getSecureUrl } from "@/lib/cloudinary";
+import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,21 +23,38 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const payload = await verifyApiToken(token);
-    if (!payload || payload.role !== "FOREMAN") {
+    if (!payload) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Allow FOREMAN and EMPLOYEE roles - assistants are employees who can act for foremen
+    if (payload.role !== "FOREMAN" && payload.role !== "EMPLOYEE") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const foreman = await prisma.foreman.findUnique({
-      where: { userId: payload.sub },
-      select: { id: true },
-    });
-    if (!foreman)
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Support x-acting-foreman-id header for assistants
+    const actingForemanIdHeader =
+      req.headers.get("x-acting-foreman-id")?.trim() || null;
+
+    // Resolve whether user is a real foreman or an assistant acting on behalf of a foreman
+    const resolved = await resolveActingForeman(
+      payload.sub,
+      actingForemanIdHeader,
+    );
+    if (!resolved.ok) {
+      return NextResponse.json(
+        { error: resolved.error },
+        { status: resolved.status },
+      );
+    }
+
+    const actingForemanId = resolved.foremanId!;
 
     const { siteDayId } = await ctx.params;
 
+    // Check siteDay ownership against the resolved foreman ID
     const siteDay = await prisma.siteDay.findFirst({
-      where: { id: siteDayId, foremanId: foreman.id },
+      where: { id: siteDayId, foremanId: actingForemanId },
       select: { id: true },
     });
 

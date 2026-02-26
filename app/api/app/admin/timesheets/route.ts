@@ -226,10 +226,15 @@ export async function GET(req: NextRequest) {
 
     const foremanIds = Array.from(new Set(siteDays.map((sd) => sd.foremanId)));
 
-    // Compute totals per (foreman, site)
+    // Compute totals per (foreman, site) - separate foreman vs team
     const scansByForemanSite = new Map<
       string,
-      Array<{ date: string; wage: number; employeeId: string }>
+      Array<{
+        date: string;
+        wage: number;
+        employeeId: string;
+        isForeman: boolean;
+      }>
     >();
 
     for (const scan of scans) {
@@ -246,30 +251,58 @@ export async function GET(req: NextRequest) {
 
       const key = `${foremanId}__${siteId}`;
       const list = scansByForemanSite.get(key) ?? [];
-      list.push({ date: dateISO, wage: rate, employeeId: scan.employeeId });
+      list.push({
+        date: dateISO,
+        wage: rate,
+        employeeId: scan.employeeId,
+        isForeman: scan.employeeId === foremanId,
+      });
       scansByForemanSite.set(key, list);
     }
 
     const totalsByForemanSite = new Map<
       string,
-      { days: number; wages: number }
+      {
+        days: number;
+        wages: number;
+        foremanDays: number;
+        foremanWages: number;
+        teamDays: number;
+        teamWages: number;
+      }
     >();
 
     for (const [key, list] of scansByForemanSite.entries()) {
       const uniquePairs = new Set<string>();
+      const foremanPairs = new Set<string>();
+      const teamPairs = new Set<string>();
       let totalWages = 0;
+      let foremanWages = 0;
+      let teamWages = 0;
 
       for (const s of list) {
         const pairKey = `${s.employeeId}-${s.date}`;
         if (!uniquePairs.has(pairKey)) {
           uniquePairs.add(pairKey);
           totalWages += s.wage;
+
+          if (s.isForeman) {
+            foremanPairs.add(pairKey);
+            foremanWages += s.wage;
+          } else {
+            teamPairs.add(pairKey);
+            teamWages += s.wage;
+          }
         }
       }
 
       totalsByForemanSite.set(key, {
         days: uniquePairs.size,
         wages: totalWages,
+        foremanDays: foremanPairs.size,
+        foremanWages,
+        teamDays: teamPairs.size,
+        teamWages,
       });
     }
 
@@ -331,6 +364,10 @@ export async function GET(req: NextRequest) {
       supervisor: { id: string; name: string } | null;
       totalWorkerDays: number;
       totalWorkerWages: number;
+      foremanDays: number;
+      foremanWages: number;
+      teamDays: number;
+      teamWages: number;
       sites: SiteLite[];
     }> = [];
 
@@ -345,7 +382,15 @@ export async function GET(req: NextRequest) {
       for (const site of sites) {
         const key = `${foremanId}__${site.id}`;
         const totals =
-          totalsByForemanSite.get(key) || ({ days: 0, wages: 0 } as const);
+          totalsByForemanSite.get(key) ||
+          ({
+            days: 0,
+            wages: 0,
+            foremanDays: 0,
+            foremanWages: 0,
+            teamDays: 0,
+            teamWages: 0,
+          } as const);
 
         // Skip sites that have no attendance scans in this period
         if (!totals.days) continue;
@@ -362,6 +407,10 @@ export async function GET(req: NextRequest) {
           supervisor,
           totalWorkerDays: totals.days,
           totalWorkerWages: totals.wages,
+          foremanDays: totals.foremanDays,
+          foremanWages: totals.foremanWages,
+          teamDays: totals.teamDays,
+          teamWages: totals.teamWages,
           sites: [site],
         });
       }

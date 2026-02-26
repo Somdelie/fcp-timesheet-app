@@ -23,7 +23,8 @@ export async function GET(req: Request) {
   if (!payload)
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
-  if (payload.role !== "FOREMAN") {
+  // Allow FOREMAN and EMPLOYEE roles - assistants are employees who can act for foremen
+  if (payload.role !== "FOREMAN" && payload.role !== "EMPLOYEE") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -33,7 +34,11 @@ export async function GET(req: Request) {
   const dateISO =
     String(url.searchParams.get("dateISO") ?? "") ||
     String(url.searchParams.get("workDateISO") ?? "");
-  const forForemanId = url.searchParams.get("forForemanId");
+  // Support both query param and header for foreman ID
+  const forForemanId =
+    url.searchParams.get("forForemanId") ||
+    req.headers.get("x-acting-foreman-id")?.trim() ||
+    null;
 
   if (!siteId || !dateISO) {
     return NextResponse.json(

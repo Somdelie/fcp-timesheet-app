@@ -130,23 +130,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify the user exists before using as createdByUserId
+    const userExists = await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { id: true },
+    });
+    const createdByUserId = userExists ? auth.userId : null;
+
     const qrCodeValue = randomBytes(8).toString("hex").toUpperCase();
 
     // Get default day rate from company settings
     const settings = await prisma.companySettings.findUnique({
       where: { id: "singleton" },
     });
-    const dayRate = settings?.defaultEmployeeDayRate || "0";
+    // Convert to string for consistent Decimal handling
+    const dayRate = settings?.defaultEmployeeDayRate
+      ? String(settings.defaultEmployeeDayRate)
+      : "0";
 
     const employee = await prisma.employee.create({
       data: {
         firstName,
         lastName,
-        defaultDayRate: dayRate as any,
+        defaultDayRate: dayRate,
         faceImageUrl: faceImageUrl ?? null,
         isActive: isActive !== false,
         qrCodeValue,
-        createdByUserId: auth.userId,
+        createdByUserId,
       },
       select: {
         id: true,
