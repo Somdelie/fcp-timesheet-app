@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
 import { verifyApiToken } from "@/lib/jwt";
+import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -173,6 +174,18 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Failed to create scans" },
         { status: 500 },
+      );
+    }
+  }
+
+  // If any scans were created, best-effort ensure a photo request exists
+  if (results.some((r) => r.status === "CREATED")) {
+    try {
+      await ensureSiteDayPhotoRequestForSiteDay(siteDay.id);
+    } catch (e) {
+      console.error(
+        "Failed to ensure SiteDayPhotoRequest for server bulk attendance",
+        e,
       );
     }
   }

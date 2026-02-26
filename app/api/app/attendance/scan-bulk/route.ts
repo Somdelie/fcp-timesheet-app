@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { z } from "zod";
+import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -306,6 +307,18 @@ export async function POST(req: Request) {
       { error: "Failed to save batch" },
       { status: 500 },
     );
+  }
+
+  // If any scans were created, best-effort ensure a photo request exists
+  if (saved > 0) {
+    try {
+      await ensureSiteDayPhotoRequestForSiteDay(siteDay.id);
+    } catch (e) {
+      console.error(
+        "Failed to ensure SiteDayPhotoRequest for scan-bulk attendance",
+        e,
+      );
+    }
   }
 
   return NextResponse.json({

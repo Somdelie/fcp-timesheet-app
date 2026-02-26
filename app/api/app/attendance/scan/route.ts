@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
 import { requireServerAuth } from "@/lib/auth-server";
 import { z } from "zod";
+import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -241,6 +242,13 @@ export async function POST(req: Request) {
       },
       select: { id: true, scannedAt: true },
     });
+
+    // Best-effort: ensure there is a photo request for this SiteDay
+    try {
+      await ensureSiteDayPhotoRequestForSiteDay(siteDay.id);
+    } catch (e) {
+      console.error("Failed to ensure SiteDayPhotoRequest for scan", e);
+    }
 
     return NextResponse.json({
       ok: true,
