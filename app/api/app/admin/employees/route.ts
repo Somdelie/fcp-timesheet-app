@@ -4,7 +4,9 @@ import { verifyApiToken } from "@/lib/jwt";
 import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
-export const revalidate = 1800;
+// Employees change frequently; disable long caching so new employees
+// appear immediately in admin tools and apps.
+export const revalidate = 0;
 
 /**
  * GET /api/app/admin/employees
@@ -69,7 +71,7 @@ export async function GET(req: Request) {
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+          "Cache-Control": "no-store",
         },
       },
     );

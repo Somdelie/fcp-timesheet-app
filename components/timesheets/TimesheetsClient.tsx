@@ -1344,6 +1344,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         gridModel={gridModel as any}
         gridComponent={gridNode}
         prettyRange={prettyRange}
+        mode={mode}
       />
     </div>
   );

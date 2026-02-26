@@ -10,6 +10,14 @@ import { printTimesheet } from "@/lib/generateTimesheetPdf";
 import { Button } from "@/components/ui/button";
 import { AnimatedLoader } from "@/components/ui/animated-loader";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -64,6 +72,9 @@ export interface TimesheetDetailSheetProps<
   gridModel?: TimesheetGridModel | null;
   gridComponent: React.ReactNode;
   prettyRange: (startISO: string, endISO: string) => string;
+
+  // Optional: distinguish admin vs supervisor for UI controls
+  mode?: "ADMIN" | "SUPERVISOR";
 }
 
 function safeDiv(n: number, d: number) {
@@ -92,6 +103,7 @@ export default function TimesheetDetailSheet<
     gridModel,
     gridComponent,
     prettyRange,
+    mode,
   } = props;
 
   const [actionLoading, setActionLoading] = React.useState<null | string>(null);
@@ -102,6 +114,29 @@ export default function TimesheetDetailSheet<
     null,
   );
   const [reasonText, setReasonText] = React.useState("");
+
+  // Manage Deductions dialog (ADMIN only)
+  const [deductionDialogOpen, setDeductionDialogOpen] = React.useState(false);
+  const [deductionSubmitting, setDeductionSubmitting] = React.useState(false);
+  const [deductionEmployeeId, setDeductionEmployeeId] =
+    React.useState<string>("");
+  const [deductionType, setDeductionType] = React.useState<"CASH" | "PRODUCT">(
+    "CASH",
+  );
+  const [deductionApplyTo, setDeductionApplyTo] = React.useState<
+    "CURRENT" | "NEXT"
+  >("CURRENT");
+  const [deductionAmount, setDeductionAmount] = React.useState<string>("");
+  const [deductionProductId, setDeductionProductId] =
+    React.useState<string>("");
+  const [deductionQuantity, setDeductionQuantity] = React.useState<string>("1");
+  const [deductionNote, setDeductionNote] = React.useState<string>("");
+
+  const [productOptions, setProductOptions] = React.useState<
+    { id: string; name: string; price: string }[]
+  >([]);
+  const [productOptionsLoading, setProductOptionsLoading] =
+    React.useState(false);
 
   // ✅ export EXACT table look without changing your UI theme:
   // we snapshot a cloned node (handled in exportDomToPdf)
@@ -122,6 +157,17 @@ export default function TimesheetDetailSheet<
   ).trim();
 
   const sites = useMemo(() => (detail as any)?.sites ?? [], [detail]);
+
+  const employeeOptions = useMemo(() => {
+    const rows = (gridModel as any)?.rows ?? [];
+    if (!Array.isArray(rows)) return [] as Array<{ id: string; label: string }>;
+    return rows.map((r: any) => ({
+      id: String(r?.id ?? r?.employeeId ?? ""),
+      label: String(r?.label ?? r?.fullName ?? "Employee").trim() || "Employee",
+    }));
+  }, [gridModel]);
+
+  const foremanId = (detail as any)?.foreman?.id as string | undefined;
 
   const SUGGESTED_REASONS = [
     "Missing documentation",
@@ -196,6 +242,45 @@ export default function TimesheetDetailSheet<
     }
   }
 
+  React.useEffect(() => {
+    if (!deductionDialogOpen || deductionType !== "PRODUCT") return;
+
+    setProductOptionsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/app/admin/products", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            accept: "application/json",
+          },
+        });
+
+        const json = await res.json().catch(() => null as any);
+        if (!res.ok) {
+          const msg =
+            json?.error ||
+            json?.message ||
+            `Failed to load products (${res.status})`;
+          throw new Error(msg);
+        }
+
+        if (json?.ok && Array.isArray(json.products)) {
+          setProductOptions(json.products);
+        } else {
+          setProductOptions([]);
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error(
+          err instanceof Error ? err.message : "Failed to load products",
+        );
+      } finally {
+        setProductOptionsLoading(false);
+      }
+    })();
+  }, [deductionDialogOpen, deductionType]);
+
   // ✅ totals from normalized model (same numbers grid uses)
   const foremanTotals = {
     days: Number((gridModel as any)?.totals?.foremanDays ?? 0),
@@ -208,6 +293,17 @@ export default function TimesheetDetailSheet<
 
   const totalDays = foremanTotals.days + teamTotals.days;
   const totalPay = foremanTotals.pay + teamTotals.pay;
+
+  // Optional deductions + net pay from detail payload (admin view)
+  const totalsFromDetail = (detail as any)?.totals as
+    | { totalDeductions?: number; netPay?: number; totalPay?: number }
+    | undefined;
+
+  const totalDeductions = Number(totalsFromDetail?.totalDeductions ?? 0);
+  const netPay =
+    typeof totalsFromDetail?.netPay === "number"
+      ? Number(totalsFromDetail?.netPay)
+      : totalPay - totalDeductions;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -308,6 +404,22 @@ export default function TimesheetDetailSheet<
                   >
                     Refresh Detail
                   </Button>
+
+                  {mode === "ADMIN" &&
+                  employeeOptions.length > 0 &&
+                  foremanId ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (!deductionEmployeeId && employeeOptions[0]) {
+                          setDeductionEmployeeId(employeeOptions[0].id);
+                        }
+                        setDeductionDialogOpen(true);
+                      }}
+                    >
+                      Add Deduction
+                    </Button>
+                  ) : null}
 
                   {/* ✅ PRINT button - opens print preview window */}
                   <Button
@@ -411,6 +523,245 @@ export default function TimesheetDetailSheet<
           </DialogContent>
         </Dialog>
 
+        {/* ADD DEDUCTION DIALOG (ADMIN) */}
+        <Dialog
+          open={deductionDialogOpen}
+          onOpenChange={(open) => {
+            setDeductionDialogOpen(open);
+            if (!open) {
+              setDeductionSubmitting(false);
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Deduction</DialogTitle>
+              <DialogDescription>
+                Create a cash or product deduction for a worker under this
+                foreman.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Employee</label>
+                <Select
+                  value={deductionEmployeeId}
+                  onValueChange={setDeductionEmployeeId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employeeOptions.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Type</label>
+                  <Select
+                    value={deductionType}
+                    onValueChange={(v) =>
+                      setDeductionType(v as "CASH" | "PRODUCT")
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                      <SelectItem value="PRODUCT">Product</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Apply To</label>
+                  <Select
+                    value={deductionApplyTo}
+                    onValueChange={(v) =>
+                      setDeductionApplyTo(v as "CURRENT" | "NEXT")
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CURRENT">Current fortnight</SelectItem>
+                      <SelectItem value="NEXT">Next fortnight</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {deductionType === "CASH" ? (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Amount</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={deductionAmount}
+                    onChange={(e) => setDeductionAmount(e.target.value)}
+                    placeholder="e.g. 100.00"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Product</label>
+                    <Select
+                      value={deductionProductId}
+                      onValueChange={(v) => setDeductionProductId(v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={
+                            productOptionsLoading
+                              ? "Loading products…"
+                              : "Select a product"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productOptions.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} ({formatCurrency(Number(p.price))})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Quantity</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={deductionQuantity}
+                      onChange={(e) => setDeductionQuantity(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Note</label>
+                <Textarea
+                  value={deductionNote}
+                  onChange={(e) => setDeductionNote(e.target.value)}
+                  placeholder="Optional note about this deduction"
+                  className="min-h-20"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeductionDialogOpen(false)}
+                disabled={deductionSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!foremanId) {
+                    toast.error("Missing foreman id for deduction");
+                    return;
+                  }
+                  if (!deductionEmployeeId) {
+                    toast.error("Please select an employee");
+                    return;
+                  }
+
+                  setDeductionSubmitting(true);
+                  try {
+                    const payload: any = {
+                      employeeId: deductionEmployeeId,
+                      foremanId,
+                      type: deductionType,
+                      applyTo: deductionApplyTo,
+                      note: deductionNote.trim() || undefined,
+                    };
+
+                    if (deductionType === "CASH") {
+                      if (!deductionAmount.trim()) {
+                        toast.error("Please enter an amount");
+                        setDeductionSubmitting(false);
+                        return;
+                      }
+                      payload.amount = deductionAmount.trim();
+                    } else {
+                      if (!deductionProductId.trim()) {
+                        toast.error(
+                          "Product ID is required for product deductions",
+                        );
+                        setDeductionSubmitting(false);
+                        return;
+                      }
+                      const qty = parseInt(deductionQuantity || "0", 10);
+                      if (!Number.isFinite(qty) || qty <= 0) {
+                        toast.error("Quantity must be a positive integer");
+                        setDeductionSubmitting(false);
+                        return;
+                      }
+                      payload.productId = deductionProductId.trim();
+                      payload.quantity = qty;
+                    }
+
+                    const res = await fetch("/api/app/admin/deductions", {
+                      method: "POST",
+                      credentials: "include",
+                      headers: {
+                        "content-type": "application/json",
+                        accept: "application/json",
+                      },
+                      body: JSON.stringify(payload),
+                    });
+
+                    const json = await res.json().catch(() => null as any);
+                    if (!res.ok) {
+                      const msg =
+                        json?.error ||
+                        json?.message ||
+                        `Failed to create deduction (${res.status})`;
+                      throw new Error(msg);
+                    }
+
+                    toast.success("Deduction added");
+                    setDeductionDialogOpen(false);
+                    setDeductionAmount("");
+                    setDeductionProductId("");
+                    setDeductionQuantity("1");
+                    setDeductionNote("");
+
+                    await onRefreshDetail?.();
+                  } catch (err) {
+                    console.error(err);
+                    toast.error(
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to create deduction",
+                    );
+                  } finally {
+                    setDeductionSubmitting(false);
+                  }
+                }}
+                disabled={deductionSubmitting}
+              >
+                {deductionSubmitting ? "Saving…" : "Save Deduction"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* GRID/DETAIL CONTENT */}
         <div className="mt-4">
           {loading ? (
@@ -457,19 +808,33 @@ export default function TimesheetDetailSheet<
                     Total amount to be paid to {foremanDisplay}:
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 font-semibold">
-                    {formatCurrency(totalPay)}
+                    {formatCurrency(netPay)}
                   </div>
                 </div>
 
                 <div className="flex gap-4 flex-wrap justify-end">
                   <div className="text-sm border rounded px-3 py-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                     <div className="text-muted-foreground text-xs font-semibold">
-                      TOTAL
+                      TOTAL (GROSS)
                     </div>
                     <div className="font-medium mt-1">
                       {totalDays} days • {formatCurrency(totalPay)}
                     </div>
                   </div>
+
+                  {totalDeductions > 0 ? (
+                    <div className="text-sm border rounded px-3 py-2 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+                      <div className="text-muted-foreground text-xs font-semibold">
+                        DEDUCTIONS
+                      </div>
+                      <div className="font-medium mt-1">
+                        Total deductions: {formatCurrency(totalDeductions)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Net pay: {formatCurrency(netPay)}
+                      </div>
+                    </div>
+                  ) : null}
 
                   {foremanTotals.days > 0 ? (
                     <div className="text-sm border rounded px-3 py-2 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">

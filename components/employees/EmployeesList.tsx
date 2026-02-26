@@ -1,5 +1,6 @@
 import CreateEmployeeForm from "@/components/employees/CreateEmployeeForm";
 import EmployeesTable from "@/components/employees/EmployeesTable";
+import EmployeesRefreshButton from "@/components/employees/EmployeesRefreshButton";
 import { listEmployees } from "@/actions/employees";
 
 export default async function EmployeesList({
@@ -34,7 +35,10 @@ export default async function EmployeesList({
             Workers visible to you based on your role.
           </p>
         </div>
-        <CreateEmployeeForm />
+        <div className="flex items-center gap-2">
+          <EmployeesRefreshButton />
+          <CreateEmployeeForm />
+        </div>
       </div>
 
       {/* Empty state */}

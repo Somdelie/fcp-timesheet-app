@@ -12,6 +12,8 @@ import {
   MapPin,
   Camera,
   ScanLine,
+  Package,
+  ShoppingCart,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SUPERVISOR" | "FOREMAN";
@@ -56,6 +58,18 @@ const menuItems: {
     label: "Sites",
     icon: Building2,
     roles: ["ADMIN", "SUPERVISOR", "FOREMAN"],
+  },
+  {
+    href: "/products",
+    label: "Products",
+    icon: Package,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/orders",
+    label: "Orders",
+    icon: ShoppingCart,
+    roles: ["ADMIN"],
   },
   {
     href: "/sites/map",

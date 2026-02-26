@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
 import { verifyApiToken } from "@/lib/jwt";
 import { resolveActingForeman } from "@/lib/resolveActingForeman";
 
@@ -208,7 +209,14 @@ export async function POST(req: Request) {
     }
 
     try {
-      const effectiveRate = emp.defaultDayRate || defaultRate;
+      const effectiveRate = (await resolveEmployeeDayRate({
+        employeeId: emp.id,
+        workDate,
+        siteId,
+        foremanId: actingForemanId,
+        employeeDefaultRate: emp.defaultDayRate,
+        companyDefaultRate: defaultRate,
+      })) as any;
 
       if (!effectiveRate) {
         results.push({ qrCodeValue: qr as string, status: "UNKNOWN" });

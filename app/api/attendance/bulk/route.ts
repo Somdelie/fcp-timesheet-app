@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
 import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
@@ -136,7 +137,14 @@ export async function POST(req: Request) {
     }
 
     try {
-      const effectiveRate = emp.defaultDayRate || defaultRate;
+      const effectiveRate = (await resolveEmployeeDayRate({
+        employeeId: emp.id,
+        workDate,
+        siteId,
+        foremanId: foreman.id,
+        employeeDefaultRate: emp.defaultDayRate,
+        companyDefaultRate: defaultRate,
+      })) as any;
 
       if (!effectiveRate) {
         results.push({ qrCodeValue: qr as string, status: "UNKNOWN" });

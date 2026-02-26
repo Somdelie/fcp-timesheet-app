@@ -1,3 +1,15 @@
+// prisma/schema.prisma
+//
+// Timesheet Tracker — Workforce Attendance System
+// Notes:
+// - You said you will RESET data, so we can reshape relations safely.
+// - Changes included (as requested):
+//   ✅ Deductions: per employee under a specific foreman, created by admin, optional product-based, optional cash-based
+//   ✅ Deductions are calculated from CURRENT product price (no snapshot stored)
+//   ✅ Ability to apply deduction to CURRENT or NEXT fortnight
+//   ✅ Add scan-out support (IN/OUT) without breaking existing ScanType (REGULAR/MANUAL)
+// - Everything else is kept as-is from your schema (only necessary edits applied).
+
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -7,28 +19,53 @@ datasource db {
   provider = "postgresql"
 }
 
-/// *
-///  * AUTH / PEOPLE
+//
+// ============================
+// AUTH / PEOPLE
+// ============================
+
 model User {
-  id                   String                @id @default(cuid())
-  email                String                @unique
-  name                 String?
-  role                 UserRole
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  password             String
-  phone                String?
-  accounts             Account[]
-  auditEvents          AuditEvent[]
-  employees            Employee[]
-  employee             Employee?             @relation("EmployeeUser")
-  foreman              Foreman?
-  photoVerifications   PhotoVerification[]
-  pushTokens           PushToken[]
-  sessions             Session[]
+  id       String   @id @default(cuid())
+  email    String   @unique
+  name     String?
+  role     UserRole
+  password String
+  phone    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Auth.js / NextAuth tables
+  accounts Account[]
+  sessions Session[]
+
+  // Audit trail
+  auditEvents AuditEvent[]
+
+  // Employee creation linkage (optional)
+  employees Employee[] @relation("UserCreatedEmployees")
+
+  // Optional: a user can be linked to exactly one Employee record
+  employee Employee? @relation("EmployeeUser")
+
+  // Optional: a user can be linked to exactly one Foreman/Supervisor record
+  foreman    Foreman?
+  supervisor Supervisor?
+
+  // Photos workflow
   siteDayPhotos        SiteDayPhoto[]
   siteDayPhotoRequests SiteDayPhotoRequest[]
-  supervisor           Supervisor?
+  photoVerifications   PhotoVerification[]
+
+  // Push notifications
+  pushTokens PushToken[]
+
+  // ✅ NEW: who created admin deductions
+  createdDeductions        Deduction[]               @relation("DeductionCreatedByUser")
+  employeeDayRateOverrides EmployeeDayRateOverride[]
+
+  // Product orders created by this admin/user
+  productOrders ProductOrder[]
 }
 
 model PushToken {
@@ -38,84 +75,143 @@ model PushToken {
   platform  String?
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-/// *
-///  * WORKER / EMPLOYEE
-///  * Added:
-///  * - faceImageUrl + metadata so admin can visually verify later.
-///  * - faceEmbedding optional placeholder if you later do ML matching.
+//
+// ============================
+// WORKER / EMPLOYEE
+// ============================
+
 model Employee {
-  id              String             @id @default(cuid())
-  firstName       String
-  lastName        String
-  qrCodeValue     String             @unique
-  defaultDayRate  Decimal?           @db.Decimal(12, 2)
-  isActive        Boolean            @default(true)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id        String @id @default(cuid())
+  firstName String
+  lastName  String
+
+  // QR / identity
+  qrCodeValue String  @unique
+  idNumber    String?
+
+  // Pay defaults
+  defaultDayRate Decimal? @db.Decimal(12, 2)
+  isActive       Boolean  @default(true)
+
+  // Optional face photo used for admin verification later
+  faceImageUrl String?
+
+  // Optional link to a login account (rare, but you already have it)
+  userId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Who created this employee (optional)
   createdByUserId String?
-  faceImageUrl    String?
-  userId          String?            @unique
-  idNumber        String?
-  attendance      AttendanceScan[]
-  createdByUser   User?              @relation(fields: [createdByUserId], references: [id])
-  user            User?              @relation("EmployeeUser", fields: [userId], references: [id])
-  assistantLinks  ForemanAssistant[] @relation("AssistantToForemen")
-  foremanLinks    ForemanEmployee[]
+
+  // Relations
+  attendance    AttendanceScan[]
+  createdByUser User?            @relation("UserCreatedEmployees", fields: [createdByUserId], references: [id])
+  user          User?            @relation("EmployeeUser", fields: [userId], references: [id])
+
+  // Assistants: employees that act as assistants for foremen
+  assistantLinks ForemanAssistant[] @relation("AssistantToForemen")
+
+  // Employees assigned to foremen
+  foremanLinks ForemanEmployee[]
+
+  // Group photo detections (manual now / ML later)
   photoDetections PhotoDetection[]
+
+  // ✅ NEW: real deductions rows (per employee, per foreman)
+  deductions Deduction[]
+
+  // ✅ NEW: day-rate overrides (temporary or site-specific)
+  rateOverrides EmployeeDayRateOverride[]
+
+  @@index([isActive])
+  @@index([lastName, firstName])
 }
 
 model Supervisor {
-  id                 String                     @id @default(cuid())
-  userId             String                     @unique
-  createdAt          DateTime                   @default(now())
-  updatedAt          DateTime                   @updatedAt
-  user               User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  foremanLinks       SupervisorForeman[]
-  siteAssignments    SupervisorSiteAssignment[]
-  approvedTimesheets Timesheet[]                @relation("SupervisorApprovals")
-  dayAcceptances     TimesheetDayAcceptance[]   @relation("DayAcceptances")
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Assignments / links
+  foremanLinks    SupervisorForeman[]
+  siteAssignments SupervisorSiteAssignment[]
+
+  // Timesheets / approvals
+  approvedTimesheets Timesheet[]              @relation("SupervisorApprovals")
+  dayAcceptances     TimesheetDayAcceptance[] @relation("DayAcceptances")
 }
 
 model Foreman {
-  id              String                  @id @default(cuid())
-  userId          String                  @unique
-  defaultDayRate  Decimal?                @db.Decimal(12, 2)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assistants      ForemanAssistant[]
-  employeeLinks   ForemanEmployee[]
+  id     String @id @default(cuid())
+  userId String @unique
+
+  defaultDayRate Decimal? @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Assistants and workers under this foreman
+  assistants    ForemanAssistant[]
+  employeeLinks ForemanEmployee[]
+
+  // Sites and days
   siteAssignments ForemanSiteAssignment[]
   siteDays        SiteDay[]
+
+  // Supervisor relationships
   supervisorLinks SupervisorForeman[]
-  timesheets      Timesheet[]
+
+  // Timesheets per period (+ optional per site)
+  timesheets Timesheet[]
+
+  // ✅ NEW: deductions created against workers under this foreman
+  deductions Deduction[]
+
+  // ✅ NEW: product orders created for this foreman
+  productOrders ProductOrder[]
+
+  // ✅ NEW: site + foreman day rate overrides
+  siteDayRateOverrides SiteForemanDayRateOverride[]
 }
 
+// A link between a foreman and an employee who is acting as assistant for that foreman.
+// NOTE: You use Employee here (assistant is an employee record).
 model ForemanAssistant {
   foremanId  String
   employeeId String
   startsOn   DateTime  @default(now())
   endsOn     DateTime?
   createdAt  DateTime  @default(now())
-  employee   Employee  @relation("AssistantToForemen", fields: [employeeId], references: [id], onDelete: Cascade)
-  foreman    Foreman   @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+
+  employee Employee @relation("AssistantToForemen", fields: [employeeId], references: [id], onDelete: Cascade)
+  foreman  Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
 
   @@id([foremanId, employeeId])
   @@index([employeeId])
 }
 
+// A link between a foreman and an employee who is assigned to work under that foreman.
 model ForemanEmployee {
   foremanId  String
   employeeId String
   reason     String?
   createdAt  DateTime @default(now())
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  foreman    Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  foreman  Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
 
   @@id([foremanId, employeeId])
   @@index([employeeId])
@@ -124,50 +220,127 @@ model ForemanEmployee {
 model SupervisorForeman {
   supervisorId String
   foremanId    String
-  startsOn     DateTime   @default(now())
+  startsOn     DateTime  @default(now())
   endsOn       DateTime?
-  createdAt    DateTime   @default(now())
-  foreman      Foreman    @relation(fields: [foremanId], references: [id], onDelete: Cascade)
-  supervisor   Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+
+  foreman    Foreman    @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
 
   @@id([supervisorId, foremanId, startsOn])
   @@index([supervisorId])
   @@index([foremanId])
 }
 
-/// *
-///  * SITES + ASSIGNMENTS
+//
+// ============================
+// SITES + ASSIGNMENTS
+// ============================
+
 model Site {
-  id                    String                     @id @default(cuid())
-  name                  String
-  code                  String?                    @unique
-  location              String?
-  isActive              Boolean                    @default(true)
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  address               String?
-  latitude              Float?
-  longitude             Float?
+  id        String  @id @default(cuid())
+  name      String
+  code      String? @unique
+  location  String?
+  address   String?
+  latitude  Float?
+  longitude Float?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   attendanceScans       AttendanceScan[]
   foremanAssignments    ForemanSiteAssignment[]
-  siteDays              SiteDay[]
   supervisorAssignments SupervisorSiteAssignment[]
+  siteDays              SiteDay[]
   timesheets            Timesheet[]
+  // Optional: site-specific employee day rate overrides
+  rateOverrides         EmployeeDayRateOverride[]
+
+  // ✅ NEW: site + foreman day rate overrides
+  foremanRateOverrides SiteForemanDayRateOverride[]
+
+  @@index([isActive])
+  @@index([name])
 }
 
 model SupervisorSiteAssignment {
-  id           String     @id @default(cuid())
+  id           String    @id @default(cuid())
   supervisorId String
   siteId       String
-  startsOn     DateTime   @default(now())
+  startsOn     DateTime  @default(now())
   endsOn       DateTime?
-  createdAt    DateTime   @default(now())
-  site         Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  supervisor   Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+
+  site       Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
 
   @@unique([supervisorId, siteId, startsOn])
   @@index([supervisorId])
   @@index([siteId])
+}
+
+//
+// Employee day rate overrides
+// - Allows temporary or site-specific day rates (e.g. Limpopo trip, Cape Town crew)
+// - If multiple apply, site-specific beats global, and latest startsOn wins.
+//
+model EmployeeDayRateOverride {
+  id String @id @default(cuid())
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Optional: restrict this rate to a specific site (e.g. Cape Town site)
+  siteId String?
+  site   Site?   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  // Effective window (inclusive)
+  startsOn DateTime
+  endsOn   DateTime?
+
+  // Override day rate for this window
+  dayRate Decimal @db.Decimal(12, 2)
+
+  reason          String?
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId, startsOn])
+  @@index([siteId, startsOn])
+}
+
+// Site + foreman day rate overrides
+// Applies to all employees scanned under a foreman on a specific site.
+model SiteForemanDayRateOverride {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  foremanId String
+  foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+
+  // Effective window (inclusive)
+  startsOn DateTime
+  endsOn   DateTime?
+
+  // Override day rate for this window
+  dayRate Decimal @db.Decimal(12, 2)
+
+  reason          String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([foremanId])
+  @@index([siteId, foremanId, startsOn])
 }
 
 model ForemanSiteAssignment {
@@ -177,59 +350,86 @@ model ForemanSiteAssignment {
   startsOn  DateTime  @default(now())
   endsOn    DateTime?
   createdAt DateTime  @default(now())
-  foreman   Foreman   @relation(fields: [foremanId], references: [id], onDelete: Cascade)
-  site      Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  foreman Foreman @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  site    Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@unique([foremanId, siteId, startsOn])
   @@index([foremanId])
   @@index([siteId])
 }
 
-/// *
-///  * DAILY SHEET (per site per day)
+//
+// ============================
+// DAILY SHEET (per site per day)
+// ============================
+
 model SiteDay {
-  id            String                @id @default(cuid())
-  siteId        String
-  foremanId     String
-  workDate      DateTime
-  isLocked      Boolean               @default(false)
+  id        String   @id @default(cuid())
+  siteId    String
+  foremanId String
+  workDate  DateTime
+
+  readyToSubmit Boolean   @default(false)
+  isLocked      Boolean   @default(false)
   lockedAt      DateTime?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  readyToSubmit Boolean               @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   scans         AttendanceScan[]
-  foreman       Foreman               @relation(fields: [foremanId], references: [id])
-  site          Site                  @relation(fields: [siteId], references: [id])
   photos        SiteDayPhoto[]
   photoRequests SiteDayPhotoRequest[]
+
+  foreman Foreman @relation(fields: [foremanId], references: [id])
+  site    Site    @relation(fields: [siteId], references: [id])
 
   @@unique([siteId, foremanId, workDate])
   @@index([foremanId, workDate])
   @@index([siteId, workDate])
 }
 
-/// *
-///  * SCANS
+//
+// ============================
+// SCANS
+// ============================
+//
+// You already have ScanType = REGULAR | MANUAL.
+// ✅ We add ScanDirection = IN | OUT for scan-out support.
+//
 model AttendanceScan {
-  id               String       @id @default(cuid())
-  siteDayId        String
-  employeeId       String
-  workDate         DateTime
-  siteId           String
-  scannedAt        DateTime     @default(now())
-  dayRateAtScan    Decimal      @db.Decimal(12, 2)
+  id         String   @id @default(cuid())
+  siteDayId  String
+  employeeId String
+  workDate   DateTime
+  siteId     String
+
+  scannedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  // Pay snapshot at scan time
+  dayRateAtScan Decimal @db.Decimal(12, 2)
+
+  // Optional extra info
   qrPayload        String?
-  createdAt        DateTime     @default(now())
   addedByForemanId String?
   manualReason     String?
   overtimeType     OvertimeType @default(NONE)
-  scanType         ScanType     @default(REGULAR)
-  latitude         Float?
-  longitude        Float?
-  address          String?
-  employee         Employee     @relation(fields: [employeeId], references: [id])
-  siteDay          SiteDay      @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
-  site             Site         @relation(fields: [siteId], references: [id])
+
+  // Existing:
+  scanType ScanType @default(REGULAR)
+
+  // ✅ NEW: scan in vs scan out
+  direction ScanDirection @default(IN)
+
+  // Location
+  latitude  Float?
+  longitude Float?
+  address   String?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  siteDay  SiteDay  @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+  site     Site     @relation(fields: [siteId], references: [id])
 
   @@unique([employeeId, workDate])
   @@unique([siteDayId, employeeId])
@@ -237,12 +437,14 @@ model AttendanceScan {
   @@index([siteDayId])
   @@index([scannedAt])
   @@index([scanType])
+  @@index([direction])
 }
 
-/// *
-///  * RANDOM GROUP PHOTO REQUESTS + SUBMISSIONS
-///  * Request: system/admin asks foreman to upload a group photo for a day.
-///  * Photo: foreman uploads one or more photos.
+//
+// ============================
+// RANDOM GROUP PHOTO REQUESTS + SUBMISSIONS
+// ============================
+
 model SiteDayPhotoRequest {
   id                String             @id @default(cuid())
   siteDayId         String
@@ -251,82 +453,88 @@ model SiteDayPhotoRequest {
   dueAt             DateTime?
   requestedByUserId String?
   note              String?
-  siteDayPhotos     SiteDayPhoto[]
-  requestedByUser   User?              @relation(fields: [requestedByUserId], references: [id])
-  siteDay           SiteDay            @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+
+  siteDayPhotos   SiteDayPhoto[]
+  requestedByUser User?          @relation(fields: [requestedByUserId], references: [id])
+  siteDay         SiteDay        @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
 
   @@index([siteDayId, status])
   @@index([requestedAt])
 }
 
 model SiteDayPhoto {
-  id                 String               @id @default(cuid())
+  id                 String   @id @default(cuid())
   siteDayId          String
   imageUrl           String
-  uploadedAt         DateTime             @default(now())
+  uploadedAt         DateTime @default(now())
   uploadedByUserId   String?
   requestId          String?
   cloudinaryPublicId String?
-  latitude           Float?
-  longitude          Float?
-  address            String?
-  detections         PhotoDetection[]
-  verification       PhotoVerification?
-  request            SiteDayPhotoRequest? @relation(fields: [requestId], references: [id])
-  siteDay            SiteDay              @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
-  uploadedByUser     User?                @relation(fields: [uploadedByUserId], references: [id])
+
+  // Location captured at upload time
+  latitude  Float?
+  longitude Float?
+  address   String?
+
+  detections   PhotoDetection[]
+  verification PhotoVerification?
+
+  request        SiteDayPhotoRequest? @relation(fields: [requestId], references: [id])
+  siteDay        SiteDay              @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+  uploadedByUser User?                @relation(fields: [uploadedByUserId], references: [id])
 
   @@index([siteDayId, uploadedAt])
   @@index([requestId])
 }
 
-/// *
-///  * OPTIONAL: store verification outcome + who checked it.
-///  * This supports manual checks now, and ML-assisted checks later.
 model PhotoVerification {
-  id                      String                  @id @default(cuid())
-  photoId                 String                  @unique
-  status                  PhotoVerificationStatus @default(PENDING)
-  verifiedByUserId        String?
-  verifiedAt              DateTime?
-  notes                   String?
+  id      String                  @id @default(cuid())
+  photoId String                  @unique
+  status  PhotoVerificationStatus @default(PENDING)
+
+  verifiedByUserId String?
+  verifiedAt       DateTime?
+  notes            String?
+
   bookedCount             Int?
   detectedCount           Int?
   missingCount            Int?
   suspectedImpersonations Int?
-  photo                   SiteDayPhoto            @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  verifiedByUser          User?                   @relation(fields: [verifiedByUserId], references: [id])
+
+  photo          SiteDayPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  verifiedByUser User?        @relation(fields: [verifiedByUserId], references: [id])
 
   @@index([status])
   @@index([verifiedAt])
 }
 
-/// *
-///  * OPTIONAL: who appears in a group photo (manual tags now, ML later)
-///  * If later you run face detection/matching, you can write rows here.
-///  * For manual verification, admin can tag "this is employee X" per photo.
 model PhotoDetection {
-  id         String       @id @default(cuid())
+  id         String   @id @default(cuid())
   photoId    String
   employeeId String?
   data       Json?
-  isManual   Boolean      @default(false)
-  createdAt  DateTime     @default(now())
-  employee   Employee?    @relation(fields: [employeeId], references: [id])
-  photo      SiteDayPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  isManual   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  employee Employee?    @relation(fields: [employeeId], references: [id])
+  photo    SiteDayPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
 
   @@index([photoId])
   @@index([employeeId])
 }
 
-/// *
-///  * TIMESHEETS (fortnight)
+//
+// ============================
+// TIMESHEETS (fortnight)
+// ============================
+
 model TimesheetPeriod {
-  id         String      @id @default(cuid())
-  startDate  DateTime
-  endDate    DateTime
-  label      String?
-  createdAt  DateTime    @default(now())
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  label     String?
+  createdAt DateTime @default(now())
+
   timesheets Timesheet[]
 
   @@unique([startDate, endDate])
@@ -335,26 +543,36 @@ model TimesheetPeriod {
 }
 
 model Timesheet {
-  id                     String                   @id @default(cuid())
-  periodId               String
-  foremanId              String
-  status                 TimesheetStatus          @default(SUBMITTED)
-  submittedAt            DateTime?
-  approvedAt             DateTime?
-  rejectedAt             DateTime?
-  paidAt                 DateTime?
+  id        String  @id @default(cuid())
+  periodId  String
+  foremanId String
+  siteId    String?
+
+  status TimesheetStatus @default(SUBMITTED)
+
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  paidAt      DateTime?
+
   approvedBySupervisorId String?
   rejectionReason        String?
-  totalWorkerWages       Decimal?                 @db.Decimal(14, 2)
-  totalWorkerDays        Int?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  siteId                 String?
-  approvedBySupervisor   Supervisor?              @relation("SupervisorApprovals", fields: [approvedBySupervisorId], references: [id])
-  foreman                Foreman                  @relation(fields: [foremanId], references: [id])
-  period                 TimesheetPeriod          @relation(fields: [periodId], references: [id])
-  site                   Site?                    @relation(fields: [siteId], references: [id], onDelete: Restrict)
-  dayAcceptances         TimesheetDayAcceptance[]
+
+  totalWorkerWages Decimal? @db.Decimal(14, 2)
+  totalWorkerDays  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  approvedBySupervisor Supervisor?     @relation("SupervisorApprovals", fields: [approvedBySupervisorId], references: [id])
+  foreman              Foreman         @relation(fields: [foremanId], references: [id])
+  period               TimesheetPeriod @relation(fields: [periodId], references: [id])
+  site                 Site?           @relation(fields: [siteId], references: [id], onDelete: Restrict)
+
+  dayAcceptances TimesheetDayAcceptance[]
+
+  // ✅ NEW: deductions can be linked to a specific timesheet once applied
+  deductions Deduction[]
 
   @@unique([periodId, foremanId, siteId])
   @@index([status])
@@ -364,23 +582,157 @@ model Timesheet {
 }
 
 model TimesheetDayAcceptance {
-  id                     String              @id @default(cuid())
-  timesheetId            String
-  workDate               DateTime
-  status                 DayAcceptanceStatus @default(PENDING)
+  id          String              @id @default(cuid())
+  timesheetId String
+  workDate    DateTime
+  status      DayAcceptanceStatus @default(PENDING)
+
   acceptedAt             DateTime?
   rejectedAt             DateTime?
   rejectionReason        String?
   acceptedBySupervisorId String?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  acceptedBySupervisor   Supervisor?         @relation("DayAcceptances", fields: [acceptedBySupervisorId], references: [id])
-  timesheet              Timesheet           @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  acceptedBySupervisor Supervisor? @relation("DayAcceptances", fields: [acceptedBySupervisorId], references: [id])
+  timesheet            Timesheet   @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
 
   @@unique([timesheetId, workDate])
   @@index([timesheetId])
   @@index([workDate])
 }
+
+//
+// ============================
+// PRODUCTS + DEDUCTIONS (ADMIN ONLY)
+// ============================
+//
+// Products are global items with a current price.
+// Deductions are "transactions" against a worker under a specific foreman.
+// Total is calculated from CURRENT product price (product.price * quantity) or cash amount.
+// Deductions can apply to CURRENT or NEXT period.
+//
+// IMPORTANT (your requirement):
+// - We do NOT store a snapshot of product price.
+// - That means changing product price later changes historical deduction totals too.
+//
+
+model Product {
+  id       String  @id @default(cuid())
+  name     String
+  price    Decimal @db.Decimal(12, 2)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Used by product-based deductions
+  deductions Deduction[]
+
+  // Used by product orders
+  orderItems ProductOrderItem[]
+
+  @@index([isActive])
+  @@index([name])
+}
+
+model Deduction {
+  id String @id @default(cuid())
+
+  // CASH = direct money deduction (damage, late, etc.)
+  // PRODUCT = deduction based on product.price * quantity
+  type DeductionType
+
+  // Apply in current or next fortnight
+  applyTo DeductionApplyTo @default(CURRENT)
+
+  // The worker being deducted
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // The foreman this worker is under (and who ordered / caused this deduction)
+  foremanId String
+  foreman   Foreman @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+
+  // ✅ Who created the deduction (ADMIN user)
+  createdByUserId String
+  createdByUser   User   @relation("DeductionCreatedByUser", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  // Optional: once the deduction is applied to payroll, you can attach it to a timesheet
+  timesheetId String?
+  timesheet   Timesheet? @relation(fields: [timesheetId], references: [id], onDelete: SetNull)
+
+  // Product-based deductions (optional)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  quantity  Int? // required when type=PRODUCT
+
+  // Optional: link back to the originating product order item, if any
+  orderItemId String?
+  orderItem   ProductOrderItem? @relation(fields: [orderItemId], references: [id])
+
+  // Cash amount OR optional manual amount if needed
+  amount Decimal? @db.Decimal(12, 2)
+
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId, createdAt])
+  @@index([foremanId, createdAt])
+  @@index([timesheetId])
+  @@index([productId])
+  @@index([applyTo])
+  @@index([type])
+}
+
+// ============================
+// PRODUCT ORDERS
+// ============================
+
+model ProductOrder {
+  id              String             @id @default(cuid())
+  foremanId       String
+  foreman         Foreman            @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdByUser   User               @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  status          ProductOrderStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items ProductOrderItem[]
+
+  @@index([foremanId, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@index([status])
+}
+
+model ProductOrderItem {
+  id        String       @id @default(cuid())
+  orderId   String
+  order     ProductOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product      @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal      @db.Decimal(12, 2)
+  note      String?
+
+  // Deductions created against this order item
+  deductions Deduction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+//
+// ============================
+// AUTH.JS / NEXTAUTH TABLES
+// ============================
 
 model Account {
   id                String  @id @default(cuid())
@@ -395,7 +747,8 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -405,7 +758,8 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -416,8 +770,11 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/// *
-///  * COMPANY SETTINGS
+//
+// ============================
+// COMPANY SETTINGS + AUDIT
+// ============================
+
 model CompanySettings {
   id                     String   @id @default("singleton")
   defaultEmployeeDayRate Decimal  @default(0) @db.Decimal(12, 2)
@@ -425,8 +782,6 @@ model CompanySettings {
   updatedAt              DateTime @updatedAt
 }
 
-/// *
-///  * AUDIT TRAIL
 model AuditEvent {
   id          String   @id @default(cuid())
   actorUserId String?
@@ -435,7 +790,8 @@ model AuditEvent {
   entityId    String?
   metadata    Json?
   createdAt   DateTime @default(now())
-  actor       User?    @relation(fields: [actorUserId], references: [id])
+
+  actor User? @relation(fields: [actorUserId], references: [id])
 
   @@index([action])
   @@index([entity, entityId])
@@ -448,6 +804,11 @@ model TimesheetYear {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+//
+// ============================
+// ENUMS
+// ============================
 
 enum UserRole {
   ADMIN
@@ -477,9 +838,16 @@ enum PhotoVerificationStatus {
   REJECTED
 }
 
+// Existing: REGULAR scan vs MANUAL scan
 enum ScanType {
   REGULAR
   MANUAL
+}
+
+// ✅ NEW: supports scan-out without breaking ScanType
+enum ScanDirection {
+  IN
+  OUT
 }
 
 enum OvertimeType {
@@ -492,4 +860,22 @@ enum DayAcceptanceStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+// ✅ NEW: deductions
+enum DeductionType {
+  CASH
+  PRODUCT
+}
+
+enum DeductionApplyTo {
+  CURRENT
+  NEXT
+}
+
+enum ProductOrderStatus {
+  PENDING
+  PARTIALLY_APPLIED
+  APPLIED
+  CANCELLED
 }

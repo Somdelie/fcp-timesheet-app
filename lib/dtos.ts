@@ -44,7 +44,14 @@ export type TimesheetDetailDto = {
   sites: SiteMini[];
   columns: TimesheetColumnDto[];
   rows: TimesheetRowDto[];
-  totals?: { totalDays: number; totalPay: number };
+  totals?: {
+    totalDays: number;
+    totalPay: number;
+
+    // Optional: total deductions and net pay for this timesheet
+    totalDeductions?: number;
+    netPay?: number;
+  };
 };
 
 export type TimesheetPeriodOption = {
@@ -96,6 +103,10 @@ export type TimesheetDetailDto2 = {
   totals?: {
     totalDays: number;
     totalPay: number;
+
+    // Optional: total deductions and net pay for this timesheet
+    totalDeductions?: number;
+    netPay?: number;
   };
 };
 

@@ -269,6 +269,70 @@ export async function GET(
         };
       });
 
+    // Compute gross totals from rows
+    const grossTotals = rows.reduce(
+      (acc, r) => {
+        acc.totalDays += r.daysWorked;
+        acc.totalPay += r.pay;
+        return acc;
+      },
+      { totalDays: 0, totalPay: 0 },
+    );
+
+    // DEDUCTIONS
+    // For this timesheet period (startDate..endDate) for this foreman/site,
+    // we apply deductions as follows:
+    // - applyTo = CURRENT  => createdAt inside this period
+    // - applyTo = NEXT     => createdAt inside the PREVIOUS 14-day period
+
+    const prevPeriodStart = addDaysUTC(startDate, -14);
+    const prevPeriodEnd = addDaysUTC(startDate, -1);
+
+    const employeeIds = rows.map((r) => r.employeeId);
+
+    let totalDeductions = 0;
+
+    if (employeeIds.length > 0) {
+      const deductions = await prisma.deduction.findMany({
+        where: {
+          foremanId,
+          employeeId: { in: employeeIds },
+          OR: [
+            {
+              applyTo: "CURRENT",
+              createdAt: { gte: startDate, lt: endExclusive },
+            },
+            {
+              applyTo: "NEXT",
+              createdAt: { gte: prevPeriodStart, lte: prevPeriodEnd },
+            },
+          ],
+        },
+        select: {
+          type: true,
+          amount: true,
+          quantity: true,
+          product: {
+            select: { price: true },
+          },
+        },
+      });
+
+      for (const d of deductions) {
+        if (d.type === "CASH") {
+          totalDeductions += decimalToNumber(d.amount);
+        } else if (d.type === "PRODUCT") {
+          const qty = Number(d.quantity ?? 0);
+          const price = decimalToNumber(d.product?.price ?? 0);
+          if (qty > 0 && price > 0) {
+            totalDeductions += qty * price;
+          }
+        }
+      }
+    }
+
+    const netPay = grossTotals.totalPay - totalDeductions;
+
     // Get supervisor for this foreman (derived from site assignments)
     // If foreman is assigned to a site, and supervisor is assigned to that same site,
     // then they supervise the foreman for that site
@@ -307,6 +371,12 @@ export async function GET(
           sites,
           columns,
           rows,
+          totals: {
+            totalDays: grossTotals.totalDays,
+            totalPay: grossTotals.totalPay,
+            totalDeductions,
+            netPay,
+          },
         },
       },
       { headers: CORS_HEADERS },

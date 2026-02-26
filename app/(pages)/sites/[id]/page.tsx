@@ -8,6 +8,7 @@ import SiteAssignmentsPanel from "@/components/sites/SiteAssignmentsPanel";
 import SiteBookingPanel from "@/components/sites/SiteBookingPanel";
 import SiteTotalsPanel from "@/components/sites/SiteTotalsPanel";
 import EditSiteLocationDialog from "@/components/sites/EditSiteLocationDialog";
+import SiteForemanRatesPanel from "@/components/sites/SiteForemanRatesPanel";
 import { ArrowLeft, CheckCircle, MapPin, Hash } from "lucide-react";
 import Link from "next/link";
 
@@ -206,6 +207,13 @@ export default async function SiteManagePage({
             supervisorOptions={supervisorOptions}
             foremanOptions={foremanOptions}
           />
+
+          {auth.role === "ADMIN" && (
+            <SiteForemanRatesPanel
+              siteId={site.id}
+              foremanOptions={foremanOptions}
+            />
+          )}
 
           {/* <SiteBookingPanel siteId={site.id} /> */}
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
 import { requireServerAuth } from "@/lib/auth-server";
 import { z } from "zod";
 
@@ -195,7 +196,14 @@ export async function POST(req: Request) {
     }
   }
 
-  const effectiveRate = employee.defaultDayRate || defaultRate;
+  const effectiveRate = (await resolveEmployeeDayRate({
+    employeeId: employee.id,
+    workDate,
+    siteId,
+    foremanId: assigned.foremanId,
+    employeeDefaultRate: employee.defaultDayRate,
+    companyDefaultRate: defaultRate,
+  })) as any;
   if (!effectiveRate) {
     return NextResponse.json(
       { error: "No day rate configured for employee" },
