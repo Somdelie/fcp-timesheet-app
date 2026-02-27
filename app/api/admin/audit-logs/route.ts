@@ -23,7 +23,9 @@ export async function GET(req: Request) {
   const search = url.searchParams.get("search")?.trim() || "";
   const actionFilter = url.searchParams.get("action")?.trim() || "";
 
-  const where: any = { action: { not: "PAGE_VISIT" } };
+  const where: any = {
+    action: { notIn: ["PAGE_VISIT", "TIMESHEET_DAY_ACCEPTED"] },
+  };
   if (search) {
     where.OR = [
       { entity: { contains: search, mode: "insensitive" } },
@@ -57,7 +59,7 @@ export async function GET(req: Request) {
     prisma.auditEvent.count({ where }),
     // Distinct actions for filter dropdown (exclude legacy PAGE_VISIT)
     prisma.auditEvent.findMany({
-      where: { action: { not: "PAGE_VISIT" } },
+      where: { action: { notIn: ["PAGE_VISIT", "TIMESHEET_DAY_ACCEPTED"] } },
       distinct: ["action"],
       select: { action: true },
       orderBy: { action: "asc" },

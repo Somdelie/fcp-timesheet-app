@@ -194,6 +194,20 @@ export async function POST(
         );
       }
 
+      writeAuditEvent({
+        actorUserId: admin.id,
+        action: "FOREMAN_DAY_RATE_CHANGE",
+        entity: "Site",
+        entityId: siteId,
+        metadata: {
+          siteId,
+          foremanId,
+          overrideId: json.id,
+          change: "closed_override",
+          endsOn: endsOnStr,
+        },
+      });
+
       return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
     }
 

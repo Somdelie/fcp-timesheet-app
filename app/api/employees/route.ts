@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth, type ServerAuthUser } from "@/lib/auth-server";
 import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
+import { writeAuditEvent } from "@/lib/audit";
 import { randomBytes } from "crypto";
 
 const CORS_HEADERS = {
@@ -269,6 +270,21 @@ export async function PUT(request: NextRequest) {
         createdAt: true,
       },
     });
+
+    if (defaultDayRate !== undefined && isForemanUser) {
+      writeAuditEvent({
+        actorUserId: auth.userId,
+        action: "FOREMAN_DAY_RATE_CHANGE",
+        entity: "Employee",
+        entityId: id,
+        metadata: {
+          employeeId: id,
+          employeeName: `${existing.firstName} ${existing.lastName}`,
+          previousDayRate: Number(existing.defaultDayRate),
+          newDayRate: Number(defaultDayRate),
+        },
+      });
+    }
 
     return NextResponse.json({
       ok: true,

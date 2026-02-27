@@ -157,6 +157,19 @@ export async function POST(
         );
       }
 
+      writeAuditEvent({
+        actorUserId: admin.id,
+        action: "EMPLOYEE_DAY_RATE_CHANGE",
+        entity: "Employee",
+        entityId: employeeId,
+        metadata: {
+          employeeId,
+          overrideId: json.id,
+          change: "closed_override",
+          endsOn: endsOnStr,
+        },
+      });
+
       return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
     }
 
