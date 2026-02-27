@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signApiToken } from "@/lib/jwt";
+import { writeAuditEvent } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +64,14 @@ export async function POST(req: Request) {
     sub: user.id,
     email: user.email,
     role: user.role,
+  });
+
+  writeAuditEvent({
+    actorUserId: user.id,
+    action: "LOGIN",
+    entity: "User",
+    entityId: user.id,
+    metadata: { email: user.email, role: user.role, source: "web" },
   });
 
   return NextResponse.json(

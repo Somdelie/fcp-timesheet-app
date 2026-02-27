@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireApiAuth } from "@/lib/apiAuth";
 import { authOptions } from "@/lib/auth";
+import { writeAuditEvent } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -204,6 +205,20 @@ export async function POST(
         startsOn: true,
         endsOn: true,
         dayRate: true,
+      },
+    });
+
+    writeAuditEvent({
+      actorUserId: admin.id,
+      action: "EMPLOYEE_DAY_RATE_CHANGE",
+      entity: "Employee",
+      entityId: employeeId,
+      metadata: {
+        employeeId,
+        siteId: data.siteId ?? null,
+        dayRate: data.dayRate,
+        startsOn: data.startsOn,
+        endsOn: data.endsOn ?? null,
       },
     });
 

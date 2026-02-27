@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader,
+  LogIn,
+  Globe,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -321,6 +323,7 @@ export default function SettingsPage() {
     action: string;
     entity: string;
     entityId: string | null;
+    entityName: string | null;
     metadata: any;
     createdAt: string;
     actor: {
@@ -339,10 +342,23 @@ export default function SettingsPage() {
   const [auditActionFilter, setAuditActionFilter] = useState("");
   const [auditLoading, setAuditLoading] = useState(false);
 
+  type RecentLogin = {
+    id: string;
+    action: string;
+    createdAt: string;
+    actor: {
+      id: string;
+      name: string | null;
+      email: string;
+      role: string;
+    } | null;
+  };
+  const [recentLogins, setRecentLogins] = useState<RecentLogin[]>([]);
+
   const fetchAuditLogs = async (page = 1, search = "", action = "") => {
     setAuditLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: "25" });
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
       if (search) params.set("search", search);
       if (action) params.set("action", action);
       const data = await getJson<{
@@ -351,12 +367,14 @@ export default function SettingsPage() {
         page: number;
         totalPages: number;
         actions: string[];
+        recentLogins: RecentLogin[];
       }>(`/api/admin/audit-logs?${params}`);
       setAuditLogs(data.logs);
       setAuditTotal(data.total);
       setAuditPage(data.page);
       setAuditTotalPages(data.totalPages);
       setAuditActions(data.actions);
+      setRecentLogins(data.recentLogins ?? []);
     } catch (err: any) {
       toast.error(err?.message || "Failed to load audit logs");
     } finally {
@@ -891,6 +909,68 @@ export default function SettingsPage() {
 
           {/* Activity Logs */}
           <TabsContent value="logs" className="space-y-4">
+            {/* Recent Logins / App Opens */}
+            {recentLogins.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <LogIn className="h-5 w-5" />
+                    <div>
+                      <CardTitle className="text-base">
+                        Recent Logins &amp; App Opens
+                      </CardTitle>
+                      <CardDescription>
+                        Last 10 admin sessions on the web app.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg divide-y">
+                    {recentLogins.map((l) => (
+                      <div
+                        key={l.id}
+                        className="px-4 py-2.5 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {l.action === "LOGIN" ? (
+                            <LogIn className="h-4 w-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Globe className="h-4 w-4 text-blue-500 shrink-0" />
+                          )}
+                          <span className="text-sm font-medium truncate">
+                            {l.actor?.name || l.actor?.email || "Unknown"}
+                          </span>
+                          {l.actor?.role && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1 py-0"
+                            >
+                              {l.actor.role}
+                            </Badge>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1 py-0 font-mono"
+                          >
+                            {l.action === "LOGIN" ? "Login" : "Opened App"}
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(l.createdAt).toLocaleString("en-ZA", {
+                            month: "short",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -980,9 +1060,11 @@ export default function SettingsPage() {
                             </Badge>
                             <span className="text-sm font-medium truncate">
                               {log.entity}
-                              {log.entityId
-                                ? ` #${log.entityId.slice(0, 8)}`
-                                : ""}
+                              {log.entityName
+                                ? ` — ${log.entityName}`
+                                : log.entityId
+                                  ? ` #${log.entityId.slice(0, 8)}`
+                                  : ""}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
@@ -1002,8 +1084,34 @@ export default function SettingsPage() {
                           {log.metadata &&
                             typeof log.metadata === "object" &&
                             Object.keys(log.metadata).length > 0 && (
-                              <p className="text-xs text-muted-foreground font-mono truncate max-w-md">
-                                {JSON.stringify(log.metadata)}
+                              <p className="text-xs text-muted-foreground truncate max-w-lg">
+                                {(() => {
+                                  const m = log.metadata;
+                                  const parts: string[] = [];
+                                  if (m.siteName)
+                                    parts.push(`Site: ${m.siteName}`);
+                                  if (m.employeeName)
+                                    parts.push(`Employee: ${m.employeeName}`);
+                                  if (m.foremanName)
+                                    parts.push(`Foreman: ${m.foremanName}`);
+                                  if (m.dayRate)
+                                    parts.push(`Rate: R${m.dayRate}`);
+                                  if (m.path) parts.push(m.path);
+                                  if (m.reason)
+                                    parts.push(`Reason: ${m.reason}`);
+                                  if (parts.length > 0)
+                                    return parts.join(" · ");
+                                  // Fallback: show JSON but exclude resolved name keys
+                                  const {
+                                    siteName,
+                                    employeeName,
+                                    foremanName,
+                                    ...rest
+                                  } = m;
+                                  return Object.keys(rest).length > 0
+                                    ? JSON.stringify(rest)
+                                    : null;
+                                })()}
                               </p>
                             )}
                         </div>
