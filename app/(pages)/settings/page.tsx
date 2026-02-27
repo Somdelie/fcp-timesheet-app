@@ -10,6 +10,11 @@ import {
   Users,
   MapPin,
   FileCheck,
+  ScrollText,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Loader,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -26,6 +31,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   getCompanySettings,
@@ -303,6 +315,55 @@ export default function SettingsPage() {
     return "saved" as const;
   }, [anchorISO, anchorInputISO, isLoadingAnchor]);
 
+  // ── Activity Logs state ──
+  type AuditLogEntry = {
+    id: string;
+    action: string;
+    entity: string;
+    entityId: string | null;
+    metadata: any;
+    createdAt: string;
+    actor: {
+      id: string;
+      name: string | null;
+      email: string;
+      role: string;
+    } | null;
+  };
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotalPages, setAuditTotalPages] = useState(1);
+  const [auditActions, setAuditActions] = useState<string[]>([]);
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditActionFilter, setAuditActionFilter] = useState("");
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const fetchAuditLogs = async (page = 1, search = "", action = "") => {
+    setAuditLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: "25" });
+      if (search) params.set("search", search);
+      if (action) params.set("action", action);
+      const data = await getJson<{
+        logs: AuditLogEntry[];
+        total: number;
+        page: number;
+        totalPages: number;
+        actions: string[];
+      }>(`/api/admin/audit-logs?${params}`);
+      setAuditLogs(data.logs);
+      setAuditTotal(data.total);
+      setAuditPage(data.page);
+      setAuditTotalPages(data.totalPages);
+      setAuditActions(data.actions);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load audit logs");
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-muted/30">
       <div className="flex-1 p-6 space-y-6">
@@ -331,6 +392,14 @@ export default function SettingsPage() {
             <TabsTrigger value="fortnight">Fortnight Generator</TabsTrigger>
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger
+              value="logs"
+              onClick={() => {
+                if (auditLogs.length === 0) fetchAuditLogs();
+              }}
+            >
+              Activity Logs
+            </TabsTrigger>
           </TabsList>
 
           {/* General */}
@@ -816,6 +885,177 @@ export default function SettingsPage() {
                     </Button>
                   </Link>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Activity Logs */}
+          <TabsContent value="logs" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <ScrollText className="h-5 w-5" />
+                  <div>
+                    <CardTitle>Activity Logs</CardTitle>
+                    <CardDescription>
+                      Track who did what and when across the admin system.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by user, action, or entity…"
+                      value={auditSearch}
+                      onChange={(e) => setAuditSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          setAuditPage(1);
+                          fetchAuditLogs(1, auditSearch, auditActionFilter);
+                        }
+                      }}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select
+                    value={auditActionFilter}
+                    onValueChange={(v) => {
+                      const val = v === "__all__" ? "" : v;
+                      setAuditActionFilter(val);
+                      setAuditPage(1);
+                      fetchAuditLogs(1, auditSearch, val);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="All actions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All actions</SelectItem>
+                      {auditActions.map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {a}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      fetchAuditLogs(auditPage, auditSearch, auditActionFilter)
+                    }
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    Search
+                  </Button>
+                </div>
+
+                {/* Results */}
+                {auditLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : auditLogs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-12">
+                    No audit logs found.
+                  </p>
+                ) : (
+                  <div className="border rounded-lg divide-y">
+                    {auditLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2"
+                      >
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono"
+                            >
+                              {log.action}
+                            </Badge>
+                            <span className="text-sm font-medium truncate">
+                              {log.entity}
+                              {log.entityId
+                                ? ` #${log.entityId.slice(0, 8)}`
+                                : ""}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            by{" "}
+                            <span className="font-medium text-foreground">
+                              {log.actor?.name || log.actor?.email || "System"}
+                            </span>
+                            {log.actor?.role && (
+                              <Badge
+                                variant="secondary"
+                                className="ml-1 text-[10px] px-1 py-0"
+                              >
+                                {log.actor.role}
+                              </Badge>
+                            )}
+                          </p>
+                          {log.metadata &&
+                            typeof log.metadata === "object" &&
+                            Object.keys(log.metadata).length > 0 && (
+                              <p className="text-xs text-muted-foreground font-mono truncate max-w-md">
+                                {JSON.stringify(log.metadata)}
+                              </p>
+                            )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(log.createdAt).toLocaleString("en-ZA", {
+                            year: "numeric",
+                            month: "short",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Pagination */}
+                {auditTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      {auditTotal} total log{auditTotal !== 1 ? "s" : ""} · Page{" "}
+                      {auditPage} of {auditTotalPages}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={auditPage <= 1}
+                        onClick={() => {
+                          const p = auditPage - 1;
+                          setAuditPage(p);
+                          fetchAuditLogs(p, auditSearch, auditActionFilter);
+                        }}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={auditPage >= auditTotalPages}
+                        onClick={() => {
+                          const p = auditPage + 1;
+                          setAuditPage(p);
+                          fetchAuditLogs(p, auditSearch, auditActionFilter);
+                        }}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
