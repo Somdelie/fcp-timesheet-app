@@ -291,6 +291,17 @@ export async function GET(
     const employeeIds = rows.map((r) => r.employeeId);
 
     let totalDeductions = 0;
+    let deductionItems: {
+      id: string;
+      type: string;
+      applyTo: string;
+      amount: number;
+      quantity: number | null;
+      productName: string | null;
+      employeeName: string;
+      note: string | null;
+      createdAt: string;
+    }[] = [];
 
     if (employeeIds.length > 0) {
       const deductions = await prisma.deduction.findMany({
@@ -309,25 +320,50 @@ export async function GET(
           ],
         },
         select: {
+          id: true,
           type: true,
+          applyTo: true,
           amount: true,
           quantity: true,
+          note: true,
+          createdAt: true,
+          employee: {
+            select: { firstName: true, lastName: true },
+          },
           product: {
-            select: { price: true },
+            select: { name: true, price: true },
           },
         },
       });
 
-      for (const d of deductions) {
+      deductionItems = deductions.map((d) => {
+        let computedAmount = 0;
         if (d.type === "CASH") {
-          totalDeductions += decimalToNumber(d.amount);
+          computedAmount = decimalToNumber(d.amount);
         } else if (d.type === "PRODUCT") {
-          const qty = Number(d.quantity ?? 0);
-          const price = decimalToNumber(d.product?.price ?? 0);
-          if (qty > 0 && price > 0) {
-            totalDeductions += qty * price;
+          if (d.amount != null && decimalToNumber(d.amount) > 0) {
+            computedAmount = decimalToNumber(d.amount);
+          } else {
+            const qty = Number(d.quantity ?? 0);
+            const price = decimalToNumber(d.product?.price ?? 0);
+            computedAmount = qty > 0 && price > 0 ? qty * price : 0;
           }
         }
+        return {
+          id: d.id,
+          type: d.type,
+          applyTo: d.applyTo,
+          amount: computedAmount,
+          quantity: d.quantity,
+          productName: d.product?.name ?? null,
+          employeeName: `${d.employee.firstName} ${d.employee.lastName}`.trim(),
+          note: d.note ?? null,
+          createdAt: d.createdAt.toISOString(),
+        };
+      });
+
+      for (const d of deductionItems) {
+        totalDeductions += d.amount;
       }
     }
 
@@ -377,6 +413,7 @@ export async function GET(
             totalDeductions,
             netPay,
           },
+          deductions: deductionItems,
         },
       },
       { headers: CORS_HEADERS },

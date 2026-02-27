@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth, type ServerAuthUser } from "@/lib/auth-server";
 import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
+import { deleteImage } from "@/lib/cloudinary";
 
 // Force recompile - supports Bearer token auth for desktop app
 const CORS_HEADERS = {
@@ -154,6 +155,7 @@ export async function DELETE(
         id,
         ...whereScope,
       },
+      select: { id: true, faceImageUrl: true },
     });
 
     if (!employee) {
@@ -161,6 +163,15 @@ export async function DELETE(
         { error: "Employee not found" },
         { status: 404, headers: CORS_HEADERS },
       );
+    }
+
+    // Delete face image from Cloudinary if present
+    if (employee.faceImageUrl) {
+      const match = employee.faceImageUrl.match(
+        /\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/,
+      );
+      const publicId = match?.[1] ?? null;
+      if (publicId) await deleteImage(publicId).catch(() => {});
     }
 
     // Soft delete by marking as inactive

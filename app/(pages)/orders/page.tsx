@@ -1,4 +1,5 @@
-import OrdersPOS, { type AdminForemanDto } from "@/components/orders/OrdersPOS";
+import OrdersPageClient from "@/components/orders/OrdersPageClient";
+import type { AdminForemanDto } from "@/components/orders/OrdersPOS";
 import type { AdminProductDto } from "@/components/products/ProductsList";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
@@ -48,7 +49,7 @@ export default async function OrdersPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
-      <OrdersPOS foremen={foremen} products={products} />
+      <OrdersPageClient foremen={foremen} products={products} />
     </div>
   );
 }

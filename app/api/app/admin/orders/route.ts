@@ -143,6 +143,9 @@ export async function POST(req: NextRequest) {
       items.push(createdItem);
     }
 
+    // Orders stay PENDING until deductions are created from the timesheet
+    // deduction workflow
+
     return NextResponse.json(
       {
         ok: true,
@@ -216,6 +219,9 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: { createdAt: "desc" },
       include: {
+        foreman: {
+          select: { user: { select: { name: true, email: true } } },
+        },
         items: {
           include: {
             product: { select: { name: true } },
@@ -235,6 +241,7 @@ export async function GET(req: NextRequest) {
     const list = rows.map((o) => ({
       id: o.id,
       foremanId: o.foremanId,
+      foremanName: o.foreman?.user?.name ?? o.foreman?.user?.email ?? "Unknown",
       status: o.status,
       createdAt: o.createdAt.toISOString(),
       items: o.items.map((i) => ({

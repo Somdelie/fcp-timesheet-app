@@ -50,9 +50,13 @@ const CreateDeductionSchema = z.object({
   foremanId: z.string().min(1),
   type: z.enum(["CASH", "PRODUCT"]),
   applyTo: z.enum(["CURRENT", "NEXT"]).optional().default("CURRENT"),
-  // PRODUCT
+  // PRODUCT (manual)
   productId: z.string().min(1).optional(),
   quantity: z.number().int().positive().optional(),
+  // PRODUCT (from order) — creates deductions for all items in the order
+  orderId: z.string().min(1).optional(),
+  // Split order deduction across fortnights (1 = full this fortnight, 2 = half now + half next)
+  splitFortnights: z.number().int().min(1).max(2).optional().default(1),
   // CASH or manual amount override
   amount: z.union([z.string(), z.number()]).optional(),
   note: z.string().max(2000).optional(),
@@ -119,7 +123,143 @@ export async function POST(req: NextRequest) {
     let productId: string | null = null;
     let quantity: number | null = null;
 
-    if (data.type === "PRODUCT") {
+    if (data.type === "PRODUCT" && data.orderId) {
+      // ── ORDER-BASED DEDUCTION ──────────────────────────────────
+      // Create one deduction per order item and mark the order APPLIED
+      const order = await prisma.productOrder.findUnique({
+        where: { id: data.orderId },
+        include: {
+          items: {
+            include: {
+              product: { select: { id: true, name: true, price: true } },
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        return NextResponse.json(
+          { error: "Order not found" },
+          { status: 404, headers: CORS_HEADERS },
+        );
+      }
+      if (order.foremanId !== data.foremanId) {
+        return NextResponse.json(
+          { error: "Order does not belong to this foreman" },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+      if (order.status !== "PENDING") {
+        return NextResponse.json(
+          { error: "Order has already been applied or cancelled" },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+
+      const splitFortnights = data.splitFortnights ?? 1;
+      const createdDeductions = [];
+      for (const item of order.items) {
+        const priceNum = Number(
+          (item.unitPrice as any).toString?.() ?? item.unitPrice,
+        );
+        const fullAmount = priceNum * item.quantity;
+
+        if (splitFortnights === 2) {
+          // Split: half CURRENT, half NEXT
+          const half1 = Math.floor(fullAmount * 100) / 200; // first half (floor)
+          const half2 = fullAmount - half1; // remainder gets any rounding cent
+          const money1 = parseMoneyToDecimalString(half1);
+          const money2 = parseMoneyToDecimalString(half2);
+          const noteBase =
+            data.note?.trim() ||
+            `Order #${order.id.slice(-6)} – ${item.product?.name ?? "product"}`;
+
+          for (const [applyTo, money] of [
+            ["CURRENT", money1],
+            ["NEXT", money2],
+          ] as const) {
+            const d = await prisma.deduction.create({
+              data: {
+                type: "PRODUCT",
+                applyTo,
+                employeeId: data.employeeId,
+                foremanId: data.foremanId,
+                createdByUserId: admin.id,
+                productId: item.productId,
+                quantity: item.quantity,
+                amount: money as any,
+                orderItemId: item.id,
+                note: `${noteBase} (${applyTo === "CURRENT" ? "1/2" : "2/2"})`,
+              },
+              select: {
+                id: true,
+                type: true,
+                applyTo: true,
+                employeeId: true,
+                foremanId: true,
+                productId: true,
+                quantity: true,
+                amount: true,
+                note: true,
+                createdAt: true,
+              },
+            });
+            createdDeductions.push(d);
+          }
+        } else {
+          // Full deduction in chose fortnight
+          const money = parseMoneyToDecimalString(fullAmount);
+          const d = await prisma.deduction.create({
+            data: {
+              type: "PRODUCT",
+              applyTo: data.applyTo ?? "CURRENT",
+              employeeId: data.employeeId,
+              foremanId: data.foremanId,
+              createdByUserId: admin.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              amount: money as any,
+              orderItemId: item.id,
+              note:
+                data.note?.trim() ||
+                `Order #${order.id.slice(-6)} – ${item.product?.name ?? "product"}`,
+            },
+            select: {
+              id: true,
+              type: true,
+              applyTo: true,
+              employeeId: true,
+              foremanId: true,
+              productId: true,
+              quantity: true,
+              amount: true,
+              note: true,
+              createdAt: true,
+            },
+          });
+          createdDeductions.push(d);
+        }
+      }
+
+      // Mark order as applied
+      await prisma.productOrder.update({
+        where: { id: order.id },
+        data: { status: "APPLIED" },
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          deductions: createdDeductions.map((d) => ({
+            ...d,
+            amount: d.amount?.toString?.() ?? String(d.amount ?? "0"),
+          })),
+          orderApplied: order.id,
+        },
+        { headers: CORS_HEADERS },
+      );
+    } else if (data.type === "PRODUCT") {
+      // ── MANUAL PRODUCT DEDUCTION ───────────────────────────────
       if (!data.productId || !data.quantity) {
         return NextResponse.json(
           { error: "productId and quantity are required for PRODUCT" },

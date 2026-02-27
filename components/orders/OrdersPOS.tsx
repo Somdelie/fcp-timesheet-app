@@ -3,6 +3,8 @@
 import * as React from "react";
 import { toast } from "react-toastify";
 
+import { Check, ChevronsUpDown } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,11 +22,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { AdminProductDto } from "@/components/products/ProductsList";
 
 export interface AdminForemanDto {
-  id: string; // foreman.id
+  id: string;
   userId: string;
   name: string;
   email: string;
@@ -33,6 +49,7 @@ export interface AdminForemanDto {
 interface OrdersPOSProps {
   foremen: AdminForemanDto[];
   products: AdminProductDto[];
+  onOrderCreated?: () => void;
 }
 
 type CartItem = {
@@ -43,10 +60,15 @@ type CartItem = {
   note: string;
 };
 
-export default function OrdersPOS({ foremen, products }: OrdersPOSProps) {
+export default function OrdersPOS({
+  foremen,
+  products,
+  onOrderCreated,
+}: OrdersPOSProps) {
   const [selectedForemanId, setSelectedForemanId] = React.useState<string>(
     foremen[0]?.id ?? "",
   );
+  const [foremanOpen, setForemanOpen] = React.useState(false);
   const [productSearch, setProductSearch] = React.useState("");
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
@@ -150,6 +172,7 @@ export default function OrdersPOS({ foremen, products }: OrdersPOSProps) {
 
       toast.success("Order created");
       setCart([]);
+      onOrderCreated?.();
     } catch (err) {
       console.error(err);
       toast.error(
@@ -166,86 +189,182 @@ export default function OrdersPOS({ foremen, products }: OrdersPOSProps) {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Create Product Order</h1>
-        <p className="text-sm text-muted-foreground">
-          Record products taken by a foreman so they can later be applied as
-          deductions on worker timesheets.
-        </p>
+    <div className="min-h-screen bg-[#F5F4F0] dark:bg-[#111110] font-mono">
+      {/* Top header bar */}
+      <div className="border-b-2 border-black dark:border-zinc-700 bg-black text-white px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-400">
+            Admin
+          </span>
+          <span className="text-zinc-600">/</span>
+          <span className="text-sm font-bold tracking-wide uppercase">
+            Product Order Entry
+          </span>
+        </div>
+        {cart.length > 0 && (
+          <span className="text-[10px] tracking-widest text-zinc-400 uppercase">
+            {cart.length} item{cart.length !== 1 ? "s" : ""} in order
+          </span>
+        )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {/* Left: foreman + cart */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Foreman</label>
-            <Select
-              value={selectedForemanId}
-              onValueChange={(value) => setSelectedForemanId(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select foreman" />
-              </SelectTrigger>
-              <SelectContent>
-                {foremen.length === 0 ? (
-                  <SelectItem value="" disabled>
-                    No foremen found
-                  </SelectItem>
-                ) : (
-                  foremen.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.name || f.email}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {selectedForeman ? (
-              <p className="text-xs text-muted-foreground">
-                Creating order for:{" "}
-                <span className="font-medium">
-                  {selectedForeman.name || selectedForeman.email}
-                </span>
-              </p>
-            ) : null}
-          </div>
+      <div className="max-w-350 mx-auto p-6">
+        {/* Page title block */}
+        <div className="border-b-2 border-black dark:border-zinc-700 pb-4 mb-6">
+          <p className="text-[11px] tracking-[0.15em] text-zinc-500 dark:text-zinc-500 uppercase mb-1">
+            Record products taken by foreman — applied as deductions on worker
+            timesheets
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Order items</h2>
-              <div className="text-xs text-muted-foreground">
-                Total: {formatCurrency(cartTotal)}
+        {/* Main grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border-2 border-black dark:border-zinc-700">
+          {/* LEFT PANEL */}
+          <div className="border-r-2 border-black dark:border-zinc-700">
+            {/* Foreman selector */}
+            <div className="border-b-2 border-black dark:border-zinc-700 p-5 bg-white dark:bg-[#1A1A18]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 bg-black dark:bg-zinc-400" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400">
+                  Assign Foreman
+                </span>
+              </div>
+              <Popover open={foremanOpen} onOpenChange={setForemanOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={foremanOpen}
+                    className="w-full justify-between rounded-none border-2 border-black dark:border-zinc-600 h-10 text-sm font-medium focus:ring-0 focus:ring-offset-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    <span className="truncate">
+                      {selectedForemanId
+                        ? foremen.find((f) => f.id === selectedForemanId)
+                            ?.name ||
+                          foremen.find((f) => f.id === selectedForemanId)
+                            ?.email ||
+                          "Select foreman"
+                        : "Select foreman"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-none border-2 border-black dark:border-zinc-600 dark:bg-[#1A1A18]">
+                  <Command className="font-mono">
+                    <CommandInput
+                      placeholder="Search foreman..."
+                      className="text-sm"
+                    />
+                    <CommandList>
+                      <CommandEmpty>No foreman found.</CommandEmpty>
+                      <CommandGroup>
+                        {foremen.map((f) => (
+                          <CommandItem
+                            key={f.id}
+                            value={f.name || f.email}
+                            onSelect={() => {
+                              setSelectedForemanId(f.id);
+                              setForemanOpen(false);
+                            }}
+                            className="rounded-none font-mono text-sm dark:text-zinc-100"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedForemanId === f.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {f.name || f.email}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {selectedForeman && (
+                <div className="mt-2.5 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500" />
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tracking-wide">
+                    Order assigned to{" "}
+                    <span className="font-bold text-black dark:text-zinc-100">
+                      {selectedForeman.name || selectedForeman.email}
+                    </span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Order items section header */}
+            <div className="border-b border-zinc-200 dark:border-zinc-700 px-5 py-3 bg-[#F5F4F0] dark:bg-[#161614] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-black dark:bg-zinc-400" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400">
+                  Order Items
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
+                  Total
+                </span>
+                <span className="text-base font-bold tabular-nums text-black dark:text-zinc-100">
+                  {formatCurrency(cartTotal)}
+                </span>
               </div>
             </div>
 
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="w-20">Qty</TableHead>
-                    <TableHead className="w-24">Price</TableHead>
-                    <TableHead className="w-24">Line total</TableHead>
-                    <TableHead className="w-40">Note</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cart.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center text-muted-foreground text-sm"
-                      >
-                        No items in order yet
-                      </TableCell>
+            {/* Cart table */}
+            <div className="bg-white dark:bg-[#1A1A18] overflow-x-auto">
+              {cart.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-2 text-center">
+                  <div className="w-8 h-8 border-2 border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-300 dark:text-zinc-600 text-lg">
+                    ∅
+                  </div>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
+                    No items added yet
+                  </p>
+                  <p className="text-[11px] text-zinc-300 dark:text-zinc-600">
+                    Click "Add" on a product from the right panel
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-2 border-black dark:border-zinc-600 hover:bg-transparent dark:hover:bg-transparent">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 pl-5">
+                        Product
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-20 text-right">
+                        Qty
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-24 text-right">
+                        Unit
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-24 text-right">
+                        Total
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-36">
+                        Note
+                      </TableHead>
+                      <TableHead className="w-10" />
                     </TableRow>
-                  ) : (
-                    cart.map((item) => (
-                      <TableRow key={item.productId}>
-                        <TableCell>{item.productName}</TableCell>
-                        <TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {cart.map((item, idx) => (
+                      <TableRow
+                        key={item.productId}
+                        className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${
+                          idx % 2 === 0
+                            ? "bg-white dark:bg-[#1A1A18]"
+                            : "bg-[#FAFAF8] dark:bg-[#161614]"
+                        }`}
+                      >
+                        <TableCell className="py-2.5 pl-5 text-sm font-medium text-black dark:text-zinc-100">
+                          {item.productName}
+                        </TableCell>
+                        <TableCell className="py-2 pr-2">
                           <Input
                             type="number"
                             min={1}
@@ -258,100 +377,196 @@ export default function OrdersPOS({ foremen, products }: OrdersPOSProps) {
                                 Math.max(1, Math.floor(n)),
                               );
                             }}
-                            className="h-8 w-20"
+                            className="h-7 w-16 rounded-none border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-sm text-right tabular-nums px-2 bg-white dark:bg-[#111110] dark:text-zinc-100"
                           />
                         </TableCell>
-                        <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-2.5 text-sm tabular-nums text-zinc-500 dark:text-zinc-400 text-right pr-3">
+                          {formatCurrency(item.unitPrice)}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-sm font-semibold tabular-nums text-black dark:text-zinc-100 text-right pr-3">
                           {formatCurrency(item.unitPrice * item.quantity)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-2">
                           <Input
                             value={item.note}
                             onChange={(e) =>
                               updateNote(item.productId, e.target.value)
                             }
-                            placeholder="Optional note"
-                            className="h-8"
+                            placeholder="Note…"
+                            className="h-7 rounded-none border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-xs px-2 bg-white dark:bg-[#111110] dark:text-zinc-100 dark:placeholder:text-zinc-600"
                           />
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                        <TableCell className="py-2 pr-3 text-center">
+                          <button
                             onClick={() => removeFromCart(item.productId)}
+                            className="text-zinc-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 transition-colors text-lg leading-none font-light"
+                            aria-label="Remove item"
                           >
                             ×
-                          </Button>
+                          </button>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </div>
 
-            <div className="flex justify-end">
-              <Button
+            {/* Submit bar */}
+            <div className="border-t-2 border-black dark:border-zinc-700 p-4 bg-black dark:bg-[#0A0A09] flex items-center justify-between gap-4">
+              <div className="text-white">
+                {cart.length > 0 ? (
+                  <div>
+                    <div className="text-[10px] tracking-widest text-zinc-500 uppercase">
+                      Order Total
+                    </div>
+                    <div className="text-xl font-bold tabular-nums">
+                      {formatCurrency(cartTotal)}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-zinc-600 tracking-wide">
+                    No items in order
+                  </span>
+                )}
+              </div>
+              <button
                 onClick={handleCreateOrder}
                 disabled={submitting || !selectedForemanId || cart.length === 0}
+                className={`
+                  px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase transition-all
+                  ${
+                    submitting || !selectedForemanId || cart.length === 0
+                      ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                      : "bg-white text-black hover:bg-yellow-400 hover:text-black active:scale-95"
+                  }
+                `}
               >
-                {submitting ? "Saving order…" : "Create Order"}
-              </Button>
+                {submitting ? "Saving…" : "Confirm Order →"}
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Right: product picker */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Products</h2>
-            <Input
-              placeholder="Search products…"
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              className="max-w-xs"
-            />
-          </div>
+          {/* RIGHT PANEL — Product Picker */}
+          <div className="flex flex-col min-h-0">
+            {/* Product picker header */}
+            <div className="border-b-2 border-black dark:border-zinc-700 p-5 bg-[#F5F4F0] dark:bg-[#161614] flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-1.5 h-1.5 bg-black dark:bg-zinc-400" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400">
+                  Product Catalogue
+                </span>
+                <span className="text-[10px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                  ({filteredProducts.length})
+                </span>
+              </div>
+              <div className="flex-1 sm:flex sm:justify-end">
+                <Input
+                  placeholder="Search products…"
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="rounded-none border-2 border-black dark:border-zinc-600 focus:ring-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 text-sm h-9 w-full sm:max-w-72 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                />
+              </div>
+            </div>
 
-          <div className="border rounded-md max-h-120 overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-24">Price</TableHead>
-                  <TableHead className="w-20" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-center text-muted-foreground text-sm"
-                    >
-                      No products found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProducts.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.name}</TableCell>
-                      <TableCell>{formatCurrency(Number(p.price))}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => addToCart(p)}
-                        >
-                          Add
-                        </Button>
-                      </TableCell>
+            {/* Product table */}
+            <div
+              className="overflow-auto flex-1 bg-white dark:bg-[#1A1A18]"
+              style={{ maxHeight: "520px" }}
+            >
+              {filteredProducts.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-2">
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
+                    No products found
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="sticky top-0 z-10">
+                    <TableRow className="border-b-2 border-black dark:border-zinc-600 bg-[#F5F4F0] dark:bg-[#161614] hover:bg-[#F5F4F0] dark:hover:bg-[#161614]">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 pl-5">
+                        Product Name
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-28 text-right">
+                        Unit Price
+                      </TableHead>
+                      <TableHead className="w-24 text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 text-right pr-5">
+                        Action
+                      </TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((p, idx) => {
+                      const inCart = cart.find((c) => c.productId === p.id);
+                      return (
+                        <TableRow
+                          key={p.id}
+                          className={`border-b border-zinc-100 dark:border-zinc-800 transition-colors group cursor-default
+                            ${
+                              inCart
+                                ? "bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                : idx % 2 === 0
+                                  ? "bg-white dark:bg-[#1A1A18] hover:bg-yellow-50 dark:hover:bg-zinc-800/40"
+                                  : "bg-[#FAFAF8] dark:bg-[#161614] hover:bg-yellow-50 dark:hover:bg-zinc-800/40"
+                            }`}
+                        >
+                          <TableCell className="py-3 pl-5">
+                            <div className="flex items-center gap-2">
+                              {inCart && (
+                                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 shrink-0" />
+                              )}
+                              <span className="text-sm font-medium text-black dark:text-zinc-100">
+                                {p.name}
+                              </span>
+                            </div>
+                            {inCart && (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 tracking-wider mt-0.5 ml-3.5 block">
+                                ×{inCart.quantity} in order
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3 text-sm tabular-nums font-semibold text-zinc-700 dark:text-zinc-300 text-right pr-4">
+                            {formatCurrency(Number(p.price))}
+                          </TableCell>
+                          <TableCell className="py-3 text-right pr-5">
+                            <button
+                              onClick={() => addToCart(p)}
+                              className={`
+                                text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border transition-all active:scale-95
+                                ${
+                                  inCart
+                                    ? "border-emerald-400 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500"
+                                    : "border-black dark:border-zinc-500 text-black dark:text-zinc-200 hover:bg-black hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black"
+                                }
+                              `}
+                            >
+                              {inCart ? "+ Add" : "Add"}
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            {/* Bottom legend */}
+            <div className="border-t border-zinc-200 dark:border-zinc-700 px-5 py-3 bg-[#F5F4F0] dark:bg-[#161614] flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 bg-emerald-500" />
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
+                  Already in order
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 border border-zinc-400 dark:border-zinc-600" />
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
+                  Available
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

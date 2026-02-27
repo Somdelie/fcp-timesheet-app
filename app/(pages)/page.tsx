@@ -113,8 +113,8 @@ const lineChartConfig = {
   sites: { label: "Active Sites", color: "#2ba3c1" },
 } satisfies ChartConfig;
 
-const barChartConfig = {
-  count: { label: "Timesheets", color: "#1e5a8a" },
+const wagesChartConfig = {
+  wages: { label: "Wages (R)", color: "#e11d48" },
 } satisfies ChartConfig;
 
 const siteChartConfig = {
@@ -130,7 +130,7 @@ const photoChartConfig = {
 export default function HomePage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [weeklyData, setWeeklyData] = useState<any>(null);
-  const [timesheetData, setTimesheetData] = useState<any>(null);
+  const [topWagesData, setTopWagesData] = useState<any>(null);
   const [siteData, setSiteData] = useState<any>(null);
   const [photoData, setPhotoData] = useState<any>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
@@ -139,8 +139,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const role = useUserRole();
 
-  const ADMIN_CACHE_KEY = "dashboard-admin-v1";
-  const SUP_CACHE_KEY = "dashboard-supervisor-v1";
+  const ADMIN_CACHE_KEY = "dashboard-admin-v2";
+  const SUP_CACHE_KEY = "dashboard-supervisor-v2";
 
   useEffect(() => {
     const loadData = async () => {
@@ -162,7 +162,7 @@ export default function HomePage() {
                 const json = cached.payload ?? {};
                 setMetrics(json.metrics ?? null);
                 setWeeklyData(json.weeklyAttendance ?? null);
-                setTimesheetData(json.timesheetStatus ?? null);
+                setTopWagesData(json.topSiteWages ?? null);
                 setSiteData(json.siteActivity ?? null);
                 setPhotoData(json.photoVerification ?? null);
                 setRecentActivity(
@@ -188,7 +188,7 @@ export default function HomePage() {
           const json = (await res.json().catch(() => null)) as {
             metrics?: any;
             weeklyAttendance?: any;
-            timesheetStatus?: any;
+            topSiteWages?: any;
             siteActivity?: any;
             photoVerification?: any;
             recentActivity?: RecentActivityItem[];
@@ -196,7 +196,7 @@ export default function HomePage() {
 
           setMetrics(json?.metrics ?? null);
           setWeeklyData(json?.weeklyAttendance ?? null);
-          setTimesheetData(json?.timesheetStatus ?? null);
+          setTopWagesData(json?.topSiteWages ?? null);
           setSiteData(json?.siteActivity ?? null);
           setPhotoData(json?.photoVerification ?? null);
           setRecentActivity(
@@ -229,7 +229,7 @@ export default function HomePage() {
               if (cached && now - cached.ts < 30 * 60_000) {
                 const json = cached.payload ?? {};
                 setWeeklyData(json.weeklyAttendance ?? null);
-                setTimesheetData(json.timesheetStatus ?? null);
+                setTopWagesData(json.topSiteWages ?? null);
                 setSiteData(json.siteActivity ?? null);
                 setPhotoData(json.photoVerification ?? null);
                 setRecentActivity([]);
@@ -253,13 +253,13 @@ export default function HomePage() {
           const json = (await res.json().catch(() => null)) as {
             metrics?: any;
             weeklyAttendance?: any;
-            timesheetStatus?: any;
+            topSiteWages?: any;
             siteActivity?: any;
             photoVerification?: any;
           } | null;
 
           setWeeklyData(json?.weeklyAttendance ?? null);
-          setTimesheetData(json?.timesheetStatus ?? null);
+          setTopWagesData(json?.topSiteWages ?? null);
           setSiteData(json?.siteActivity ?? null);
           setPhotoData(json?.photoVerification ?? null);
           setRecentActivity([]);
@@ -299,7 +299,7 @@ export default function HomePage() {
   }
 
   const weeklyAttendanceData = weeklyData || [];
-  const timesheetStatusData = timesheetData || [];
+  const topSiteWagesData = topWagesData || [];
   const siteActivityData = siteData || [];
   const photoVerificationData = photoData || [];
 
@@ -364,34 +364,51 @@ export default function HomePage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Timesheet Status (My Sites)</CardTitle>
+                <CardTitle>Top 5 Site Wages (My Sites)</CardTitle>
                 <CardDescription>
-                  Current status of timesheets you manage.
+                  Total wages across your sites.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {timesheetStatusData.length === 0 ? (
+                {topSiteWagesData.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    No timesheet data yet for your sites.
+                    No wage data yet for your sites.
                   </p>
                 ) : (
                   <ChartContainer
-                    config={barChartConfig}
+                    config={wagesChartConfig}
                     className="h-full w-full"
                   >
-                    <BarChart data={timesheetStatusData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <BarChart data={topSiteWagesData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis
-                        dataKey="status"
+                        type="number"
                         tickLine={false}
                         axisLine={false}
+                        tickFormatter={(v: number) =>
+                          `R${(v / 1000).toFixed(0)}k`
+                        }
                       />
-                      <YAxis tickLine={false} axisLine={false} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <YAxis
+                        type="category"
+                        dataKey="site"
+                        tickLine={false}
+                        axisLine={false}
+                        width={100}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            formatter={(value) =>
+                              `R${Number(value).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
+                            }
+                          />
+                        }
+                      />
                       <Bar
-                        dataKey="count"
-                        fill="var(--color-count)"
-                        radius={[8, 8, 0, 0]}
+                        dataKey="wages"
+                        fill="var(--color-wages)"
+                        radius={[0, 8, 8, 0]}
                       />
                     </BarChart>
                   </ChartContainer>
@@ -406,7 +423,7 @@ export default function HomePage() {
               <CardHeader>
                 <CardTitle>Top Sites by Activity</CardTitle>
                 <CardDescription>
-                  Worker count and scans across your sites.
+                  Worker scans this fortnight across your sites.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -882,28 +899,56 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Timesheet Status */}
+          {/* Top 5 Site Wages */}
           <Card className="max-h-75 flex flex-col">
             <CardHeader className="pb-2">
-              <CardTitle>Timesheet Status</CardTitle>
-              <CardDescription>
-                Current status of timesheet submissions
-              </CardDescription>
+              <CardTitle>Top 5 Site Wages</CardTitle>
+              <CardDescription>Total wages by site</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-0">
-              <ChartContainer config={barChartConfig} className="h-full w-full">
-                <BarChart data={timesheetStatusData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="status" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar
-                    dataKey="count"
-                    fill="var(--color-count)"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ChartContainer>
+              {topSiteWagesData.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No wage data available.
+                </p>
+              ) : (
+                <ChartContainer
+                  config={wagesChartConfig}
+                  className="h-full w-full"
+                >
+                  <BarChart data={topSiteWagesData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v: number) =>
+                        `R${(v / 1000).toFixed(0)}k`
+                      }
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="site"
+                      tickLine={false}
+                      axisLine={false}
+                      width={100}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value) =>
+                            `R${Number(value).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
+                          }
+                        />
+                      }
+                    />
+                    <Bar
+                      dataKey="wages"
+                      fill="var(--color-wages)"
+                      radius={[0, 8, 8, 0]}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -915,7 +960,7 @@ export default function HomePage() {
             <CardHeader className="pb-2">
               <CardTitle>Top Sites by Activity</CardTitle>
               <CardDescription>
-                Worker count and photo submissions by site
+                Worker scans this fortnight by site
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-0">

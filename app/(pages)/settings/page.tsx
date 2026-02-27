@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Settings as SettingsIcon, Copy, Check } from "lucide-react";
+import Link from "next/link";
+import {
+  Settings as SettingsIcon,
+  Copy,
+  Check,
+  Trash2,
+  Users,
+  MapPin,
+  FileCheck,
+} from "lucide-react";
 import { toast } from "react-toastify";
 
 import {
@@ -321,6 +330,7 @@ export default function SettingsPage() {
             <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="fortnight">Fortnight Generator</TabsTrigger>
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
+            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
 
           {/* General */}
@@ -737,6 +747,74 @@ export default function SettingsPage() {
 
                 <div className="flex justify-end">
                   <Button onClick={handleSave}>Save Changes</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Maintenance */}
+          <TabsContent value="maintenance" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Database Cleanup</CardTitle>
+                <CardDescription>
+                  Remove inactive records and prune old data to keep the
+                  database lean and performant.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-orange-500" />
+                      <span className="font-medium text-sm">
+                        Inactive Employees
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Employees with no attendance scans for 2+ months are
+                      permanently removed. They can re-register if needed.
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-sm">
+                        Inactive Sites
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Sites with no scans for 6+ months are deleted along with
+                      all related assignments and records.
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <FileCheck className="h-4 w-4 text-green-500" />
+                      <span className="font-medium text-sm">
+                        Prune Paid Timesheets
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Remove raw scan data for timesheets already marked as
+                      PAID. Save the PDF locally first.
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Preview counts and run cleanup tasks from the dedicated
+                    cleanup page.
+                  </p>
+                  <Link href="/admin/cleanup">
+                    <Button variant="destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Open Cleanup
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

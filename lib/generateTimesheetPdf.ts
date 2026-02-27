@@ -1747,7 +1747,7 @@ export function generateForemanSummaryPrintHTML(
         <div class="info-row">
           <span class="label">Total Sites:</span>
           <span class="value">${summary.sitesCount}</span>
-          <span class="label" style="margin-left: 60px;">Grand Total:</span>
+          <span class="label" style="margin-left: 60px;">Net Pay:</span>
           <span class="value grand-total">${formatCurrencySummary(summary.grandTotal)}</span>
         </div>
       </div>

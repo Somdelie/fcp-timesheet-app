@@ -73,7 +73,7 @@ export async function GET(req: Request) {
       case "timesheet-status":
         return withLog(
           req,
-          NextResponse.json(await getTimesheetStatusData(auth), {
+          NextResponse.json(await getTopSiteWages(auth), {
             headers: {
               ...corsHeaders,
               "Cache-Control":
@@ -107,13 +107,13 @@ export async function GET(req: Request) {
         const [
           metrics,
           weeklyAttendance,
-          timesheetStatus,
+          topSiteWages,
           siteActivity,
           photoVerification,
         ] = await Promise.all([
           getDashboardMetrics(auth),
           getWeeklyAttendanceData(auth),
-          getTimesheetStatusData(auth),
+          getTopSiteWages(auth),
           getSiteActivityData(auth),
           getPhotoVerificationData(auth),
         ]);
@@ -123,7 +123,7 @@ export async function GET(req: Request) {
             {
               metrics,
               weeklyAttendance,
-              timesheetStatus,
+              topSiteWages,
               siteActivity,
               photoVerification,
             },
@@ -282,7 +282,7 @@ async function getWeeklyAttendanceData(auth: { sub: string; role: string }) {
   });
 }
 
-async function getTimesheetStatusData(auth: { sub: string; role: string }) {
+async function getTopSiteWages(auth: { sub: string; role: string }) {
   let foremanFilter: any = {};
   if (auth.role === "SUPERVISOR") {
     const supervisor = await prisma.supervisor.findUnique({
@@ -301,34 +301,61 @@ async function getTimesheetStatusData(auth: { sub: string; role: string }) {
     if (foremanIds.length > 0) {
       foremanFilter = { foremanId: { in: foremanIds } };
     } else {
-      return [
-        { status: "Submitted", count: 0 },
-        { status: "Approved", count: 0 },
-        { status: "Rejected", count: 0 },
-        { status: "Paid", count: 0 },
-      ];
+      return [];
     }
   }
 
-  const [submitted, approved, rejected, paid] = await Promise.all([
-    prisma.timesheet.count({
-      where: { status: "SUBMITTED", ...foremanFilter },
-    }),
-    prisma.timesheet.count({ where: { status: "APPROVED", ...foremanFilter } }),
-    prisma.timesheet.count({ where: { status: "REJECTED", ...foremanFilter } }),
-    prisma.timesheet.count({ where: { status: "PAID", ...foremanFilter } }),
-  ]);
+  const rows = await prisma.timesheet.groupBy({
+    by: ["siteId"],
+    where: {
+      siteId: { not: null },
+      totalWorkerWages: { not: null },
+      ...foremanFilter,
+    },
+    _sum: { totalWorkerWages: true },
+    orderBy: { _sum: { totalWorkerWages: "desc" } },
+    take: 5,
+  });
 
-  return [
-    { status: "Submitted", count: submitted },
-    { status: "Approved", count: approved },
-    { status: "Rejected", count: rejected },
-    { status: "Paid", count: paid },
-  ];
+  if (rows.length === 0) return [];
+
+  const siteIds = rows.map((r) => r.siteId!).filter(Boolean);
+  const sites = await prisma.site.findMany({
+    where: { id: { in: siteIds } },
+    select: { id: true, name: true },
+  });
+  const nameMap = new Map(sites.map((s) => [s.id, s.name]));
+
+  return rows.map((r) => ({
+    site: nameMap.get(r.siteId!) ?? "Unknown",
+    wages: Number(r._sum.totalWorkerWages ?? 0),
+  }));
 }
 
 async function getSiteActivityData(auth: { sub: string; role: string }) {
-  let siteFilter: any = { isActive: true };
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const year = today.getUTCFullYear();
+  const yearRow = await prisma.timesheetYear.findUnique({
+    where: { year },
+    select: { anchorSat: true },
+  });
+
+  let fnStart: Date;
+  let fnEnd: Date;
+  if (yearRow?.anchorSat) {
+    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
+    fnStart = fortnight.startDate;
+    fnEnd = addDaysUTC(fortnight.startDate, 14);
+  } else {
+    const backToSat = (today.getUTCDay() + 1) % 7;
+    fnStart = addDaysUTC(today, -backToSat - 7);
+    fnEnd = addDaysUTC(fnStart, 14);
+  }
+
+  // Scope to supervisor's sites if needed
+  let siteIdFilter: string[] | undefined;
   if (auth.role === "SUPERVISOR") {
     const supervisor = await prisma.supervisor.findUnique({
       where: { userId: auth.sub },
@@ -343,32 +370,33 @@ async function getSiteActivityData(auth: { sub: string; role: string }) {
     });
 
     const siteIds = supervisor?.siteAssignments.map((a) => a.siteId) ?? [];
-    if (siteIds.length > 0) {
-      siteFilter = { ...siteFilter, id: { in: siteIds } };
-    } else {
-      return [];
-    }
+    if (siteIds.length === 0) return [];
+    siteIdFilter = siteIds;
   }
 
-  const sites = await prisma.site.findMany({
-    where: siteFilter,
-    take: 5,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      _count: {
-        select: {
-          siteDays: true,
-          attendanceScans: true,
-        },
-      },
+  const scanGroups = await prisma.attendanceScan.groupBy({
+    by: ["siteId"],
+    where: {
+      workDate: { gte: fnStart, lt: fnEnd },
+      ...(siteIdFilter ? { siteId: { in: siteIdFilter } } : {}),
     },
+    _count: { _all: true },
+    orderBy: { _count: { siteId: "desc" } },
+    take: 5,
   });
 
-  return sites.map((site) => ({
-    site: site.name,
-    workers: site._count.attendanceScans,
+  if (scanGroups.length === 0) return [];
+
+  const siteIds = scanGroups.map((g) => g.siteId);
+  const sites = await prisma.site.findMany({
+    where: { id: { in: siteIds } },
+    select: { id: true, name: true },
+  });
+  const nameMap = new Map(sites.map((s) => [s.id, s.name]));
+
+  return scanGroups.map((g) => ({
+    site: nameMap.get(g.siteId) ?? "Unknown",
+    workers: g._count._all,
     photos: 0,
   }));
 }

@@ -10,13 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -25,7 +18,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MapPin, QrCode, UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Check,
+  ChevronsUpDown,
+  Loader2,
+  MapPin,
+  QrCode,
+  UserPlus,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Scan {
   id: string;
@@ -89,6 +104,9 @@ export default function AdminAttendanceScansPage() {
   const [selectedSiteId, setSelectedSiteId] = useState<string>("");
   const [selectedForemanId, setSelectedForemanId] = useState<string>("");
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
+  const [siteOpen, setSiteOpen] = useState(false);
+  const [foremanOpen, setForemanOpen] = useState(false);
+  const [supervisorOpen, setSupervisorOpen] = useState(false);
 
   const loadScans = async (
     siteId?: string,
@@ -126,20 +144,23 @@ export default function AdminAttendanceScansPage() {
   }, []);
 
   const handleSiteChange = (value: string) => {
-    const newValue = value === "all" ? "" : value;
+    const newValue = value === selectedSiteId ? "" : value;
     setSelectedSiteId(newValue);
+    setSiteOpen(false);
     loadScans(newValue, selectedForemanId, selectedSupervisorId);
   };
 
   const handleForemanChange = (value: string) => {
-    const newValue = value === "all" ? "" : value;
+    const newValue = value === selectedForemanId ? "" : value;
     setSelectedForemanId(newValue);
+    setForemanOpen(false);
     loadScans(selectedSiteId, newValue, selectedSupervisorId);
   };
 
   const handleSupervisorChange = (value: string) => {
-    const newValue = value === "all" ? "" : value;
+    const newValue = value === selectedSupervisorId ? "" : value;
     setSelectedSupervisorId(newValue);
+    setSupervisorOpen(false);
     loadScans(selectedSiteId, selectedForemanId, newValue);
   };
 
@@ -157,60 +178,195 @@ export default function AdminAttendanceScansPage() {
         <CardContent>
           {/* Filters */}
           <div className="mb-6 flex flex-wrap gap-4">
-            <div className="w-48">
-              <Select
-                value={selectedSiteId || "all"}
-                onValueChange={handleSiteChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Sites" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {sites.map((site) => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-48">
-              <Select
-                value={selectedForemanId || "all"}
-                onValueChange={handleForemanChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Foremen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Foremen</SelectItem>
-                  {foremen.map((foreman) => (
-                    <SelectItem key={foreman.id} value={foreman.id}>
-                      {foreman.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-48">
-              <Select
-                value={selectedSupervisorId || "all"}
-                onValueChange={handleSupervisorChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Supervisors" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Supervisors</SelectItem>
-                  {supervisors.map((supervisor) => (
-                    <SelectItem key={supervisor.id} value={supervisor.id}>
-                      {supervisor.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Popover open={siteOpen} onOpenChange={setSiteOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={siteOpen}
+                  className="w-52 justify-between font-normal"
+                >
+                  {selectedSiteId
+                    ? (sites.find((s) => s.id === selectedSiteId)?.name ??
+                      "All Sites")
+                    : "All Sites"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search sites…" />
+                  <CommandList>
+                    <CommandEmpty>No sites found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="__all_sites__"
+                        keywords={["all", "sites"]}
+                        onSelect={() => {
+                          setSelectedSiteId("");
+                          setSiteOpen(false);
+                          loadScans(
+                            "",
+                            selectedForemanId,
+                            selectedSupervisorId,
+                          );
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            !selectedSiteId ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        All Sites
+                      </CommandItem>
+                      {sites.map((site) => (
+                        <CommandItem
+                          key={site.id}
+                          value={site.id}
+                          keywords={[site.name]}
+                          onSelect={() => handleSiteChange(site.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedSiteId === site.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {site.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            <Popover open={foremanOpen} onOpenChange={setForemanOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={foremanOpen}
+                  className="w-52 justify-between font-normal"
+                >
+                  {selectedForemanId
+                    ? (foremen.find((f) => f.id === selectedForemanId)?.name ??
+                      "All Foremen")
+                    : "All Foremen"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search foremen…" />
+                  <CommandList>
+                    <CommandEmpty>No foremen found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="__all_foremen__"
+                        keywords={["all", "foremen"]}
+                        onSelect={() => {
+                          setSelectedForemanId("");
+                          setForemanOpen(false);
+                          loadScans(selectedSiteId, "", selectedSupervisorId);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            !selectedForemanId ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        All Foremen
+                      </CommandItem>
+                      {foremen.map((foreman) => (
+                        <CommandItem
+                          key={foreman.id}
+                          value={foreman.id}
+                          keywords={[foreman.name]}
+                          onSelect={() => handleForemanChange(foreman.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedForemanId === foreman.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {foreman.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            <Popover open={supervisorOpen} onOpenChange={setSupervisorOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={supervisorOpen}
+                  className="w-52 justify-between font-normal"
+                >
+                  {selectedSupervisorId
+                    ? (supervisors.find((s) => s.id === selectedSupervisorId)
+                        ?.name ?? "All Supervisors")
+                    : "All Supervisors"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search supervisors…" />
+                  <CommandList>
+                    <CommandEmpty>No supervisors found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="__all_supervisors__"
+                        keywords={["all", "supervisors"]}
+                        onSelect={() => {
+                          setSelectedSupervisorId("");
+                          setSupervisorOpen(false);
+                          loadScans(selectedSiteId, selectedForemanId, "");
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            !selectedSupervisorId ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        All Supervisors
+                      </CommandItem>
+                      {supervisors.map((supervisor) => (
+                        <CommandItem
+                          key={supervisor.id}
+                          value={supervisor.id}
+                          keywords={[supervisor.name]}
+                          onSelect={() => handleSupervisorChange(supervisor.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedSupervisorId === supervisor.id
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          {supervisor.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {loading ? (

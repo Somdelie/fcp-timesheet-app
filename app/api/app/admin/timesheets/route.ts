@@ -332,7 +332,11 @@ export async function GET(req: NextRequest) {
         where: { siteId: { in: siteIdsInPeriod } },
         select: {
           supervisor: {
-            select: { id: true, user: { select: { name: true } } },
+            select: {
+              id: true,
+              userId: true,
+              user: { select: { name: true } },
+            },
           },
           siteId: true,
         },
@@ -341,9 +345,62 @@ export async function GET(req: NextRequest) {
     const supervisorsBySite = new Map<string, { id: string; name: string }>();
     for (const a of supervisorSiteAssignments) {
       supervisorsBySite.set(a.siteId, {
-        id: a.supervisor.id,
+        // Use userId (User table ID) so it matches the supervisor dropdown values
+        id: a.supervisor.userId,
         name: a.supervisor.user?.name ?? "Supervisor",
       });
+    }
+
+    // ✅ DEDUCTIONS: batch-query all deductions for foremen in this period
+    // Same logic as detail API:
+    //   applyTo=CURRENT => createdAt inside this period
+    //   applyTo=NEXT    => createdAt inside the PREVIOUS 14-day period
+    const prevPeriodStart = addDaysUTC(startDate, -14);
+    const prevPeriodEnd = addDaysUTC(startDate, -1);
+
+    const allDeductions =
+      foremanIds.length > 0
+        ? await prisma.deduction.findMany({
+            where: {
+              foremanId: { in: foremanIds },
+              OR: [
+                {
+                  applyTo: "CURRENT",
+                  createdAt: { gte: startDate, lt: endExclusive },
+                },
+                {
+                  applyTo: "NEXT",
+                  createdAt: { gte: prevPeriodStart, lte: prevPeriodEnd },
+                },
+              ],
+            },
+            select: {
+              foremanId: true,
+              type: true,
+              amount: true,
+              quantity: true,
+              product: { select: { price: true } },
+            },
+          })
+        : [];
+
+    // Sum deductions per foreman
+    const deductionsByForeman = new Map<string, number>();
+    for (const d of allDeductions) {
+      let amt = 0;
+      if (d.type === "CASH") {
+        amt = decimalToNumber(d.amount);
+      } else if (d.type === "PRODUCT") {
+        const qty = Number(d.quantity ?? 0);
+        const price = decimalToNumber(d.product?.price ?? 0);
+        if (qty > 0 && price > 0) amt = qty * price;
+      }
+      if (amt > 0) {
+        deductionsByForeman.set(
+          d.foremanId,
+          (deductionsByForeman.get(d.foremanId) ?? 0) + amt,
+        );
+      }
     }
 
     // Build response - one row per (foreman, site)
@@ -368,6 +425,7 @@ export async function GET(req: NextRequest) {
       foremanWages: number;
       teamDays: number;
       teamWages: number;
+      totalDeductions: number;
       sites: SiteLite[];
     }> = [];
 
@@ -411,6 +469,7 @@ export async function GET(req: NextRequest) {
           foremanWages: totals.foremanWages,
           teamDays: totals.teamDays,
           teamWages: totals.teamWages,
+          totalDeductions: deductionsByForeman.get(foremanId) ?? 0,
           sites: [site],
         });
       }

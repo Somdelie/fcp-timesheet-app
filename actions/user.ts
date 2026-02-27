@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
+import { deleteImage } from "@/lib/cloudinary";
 
 export type UserRole = "ADMIN" | "SUPERVISOR" | "FOREMAN";
 
@@ -256,7 +257,22 @@ export async function getAllForemen() {
 // delete user by id
 export async function deleteUserById(id: string) {
   try {
-    // ✅ Simple deletion without transaction
+    // Clean up linked employee face image from Cloudinary
+    const linkedEmployee = await prisma.employee.findFirst({
+      where: { userId: id },
+      select: { faceImageUrl: true },
+    });
+
+    if (linkedEmployee?.faceImageUrl) {
+      const match = linkedEmployee.faceImageUrl.match(
+        /\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/,
+      );
+      const publicId = match?.[1] ?? null;
+      if (publicId) {
+        await deleteImage(publicId).catch(() => {});
+      }
+    }
+
     await prisma.session.deleteMany({ where: { userId: id } });
     await prisma.account.deleteMany({ where: { userId: id } });
     await prisma.user.delete({ where: { id } });

@@ -54,6 +54,7 @@ import { normalizeTimesheetToGrid } from "@/lib/timesheets/normalizeTimesheetDet
 import { Spinner } from "@/components/ui/spinner";
 import {
   generateForemanSummaryPdf,
+  generateTimesheetPdf,
   downloadTimesheetPdf,
   printForemanSummary,
   type ForemanSummaryData,
@@ -82,6 +83,7 @@ type AdminRow = {
   foremanWages?: number | null;
   teamDays?: number | null;
   teamWages?: number | null;
+  totalDeductions?: number | null;
   sites?: Array<{ id: string; code?: string | null; name: string }>;
   rowKey?: string;
 };
@@ -325,6 +327,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         foremanWages: number;
         teamDays: number;
         teamWages: number;
+        totalDeductions: number;
         grandTotal: number;
       }
     >();
@@ -340,6 +343,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         foremanWages: 0,
         teamDays: 0,
         teamWages: 0,
+        totalDeductions: 0,
         grandTotal: 0,
       };
       // Collect site IDs
@@ -355,7 +359,13 @@ export default function TimesheetsListClient({ mode }: Props) {
       existing.foremanWages += Number(row.foremanWages ?? 0);
       existing.teamDays += Number(row.teamDays ?? 0);
       existing.teamWages += Number(row.teamWages ?? 0);
-      existing.grandTotal += Number(row.totalWorkerWages ?? 0);
+      // Deductions are per-foreman (same value on every site row), so take the max
+      existing.totalDeductions = Math.max(
+        existing.totalDeductions,
+        Number(row.totalDeductions ?? 0),
+      );
+      existing.grandTotal =
+        existing.foremanWages + existing.teamWages - existing.totalDeductions;
       map.set(id, existing);
     }
     return Array.from(map.values()).sort((a, b) =>
@@ -1113,12 +1123,7 @@ export default function TimesheetsListClient({ mode }: Props) {
   }, [activeId, activeSiteId, openDetail]);
 
   const actions = useMemo((): TimesheetAction[] => {
-    // Only supervisors can accept/approve timesheets - admins can only view
-    if (mode === "ADMIN") {
-      return [];
-    }
-
-    const base = "/api/app/supervisor";
+    const base = mode === "ADMIN" ? "/api/app/admin" : "/api/app/supervisor";
 
     // Get the fortnight dates from the detail or activeId
     let endISO: string | null = null;
@@ -1135,79 +1140,82 @@ export default function TimesheetsListClient({ mode }: Props) {
       }
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const isLastDayOrLater = endISO ? today >= endISO : false;
-    const isWithinPeriod =
-      startISO && endISO ? today >= startISO && today <= endISO : false;
-
     const result: TimesheetAction[] = [];
 
-    // Accept Day - only during the ongoing fortnight period (before last day)
-    if (isWithinPeriod && !isLastDayOrLater) {
-      result.push({
-        id: "accept-day",
-        label: `Accept Today (${today})`,
-        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
-        handler: async () => {
-          if (!activeId) return;
-          await postJson(
-            `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
-            { date: today, action: "accept" },
-          );
-          setTimeout(() => refreshDetail(), 300);
-        },
-      });
+    // Supervisor-only actions (accept day, approve, reject)
+    if (mode === "SUPERVISOR") {
+      const today = new Date().toISOString().slice(0, 10);
+      const isLastDayOrLater = endISO ? today >= endISO : false;
+      const isWithinPeriod =
+        startISO && endISO ? today >= startISO && today <= endISO : false;
 
-      result.push({
-        id: "reject-day",
-        label: `Reject Today (${today})`,
-        variant: "destructive",
-        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
-        requiresReason: true,
-        handler: async (reason) => {
-          if (!activeId) return;
-          await postJson(
-            `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
-            { date: today, action: "reject", reason },
-          );
-          setTimeout(() => refreshDetail(), 300);
-        },
-      });
-    }
+      // Accept Day - only during the ongoing fortnight period (before last day)
+      if (isWithinPeriod && !isLastDayOrLater) {
+        result.push({
+          id: "accept-day",
+          label: `Accept Today (${today})`,
+          canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
+          handler: async () => {
+            if (!activeId) return;
+            await postJson(
+              `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
+              { date: today, action: "accept" },
+            );
+            setTimeout(() => refreshDetail(), 300);
+          },
+        });
 
-    // Final Approve - only on or after the last day of the fortnight
-    if (isLastDayOrLater) {
-      result.push({
-        id: "approve",
-        label: "Final Approve",
-        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
-        handler: async () => {
-          if (!activeId) return;
-          await postJson(
-            `${base}/timesheets/${encodeURIComponent(activeId)}/approve`,
-          );
-          setTimeout(() => refreshDetail(), 300);
-        },
-      });
+        result.push({
+          id: "reject-day",
+          label: `Reject Today (${today})`,
+          variant: "destructive",
+          canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
+          requiresReason: true,
+          handler: async (reason) => {
+            if (!activeId) return;
+            await postJson(
+              `${base}/timesheets/${encodeURIComponent(activeId)}/accept-day`,
+              { date: today, action: "reject", reason },
+            );
+            setTimeout(() => refreshDetail(), 300);
+          },
+        });
+      }
 
-      result.push({
-        id: "reject",
-        label: "Reject",
-        variant: "destructive",
-        canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
-        requiresReason: true,
-        handler: async (reason) => {
-          if (!activeId) return;
-          await postJson(
-            `${base}/timesheets/${encodeURIComponent(activeId)}/reject`,
-            { reason },
-          );
-          setTimeout(() => refreshDetail(), 300);
-        },
-      });
-    }
+      // Final Approve - only on or after the last day of the fortnight
+      if (isLastDayOrLater) {
+        result.push({
+          id: "approve",
+          label: "Final Approve",
+          canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
+          handler: async () => {
+            if (!activeId) return;
+            await postJson(
+              `${base}/timesheets/${encodeURIComponent(activeId)}/approve`,
+            );
+            setTimeout(() => refreshDetail(), 300);
+          },
+        });
 
-    // Mark Paid - always available for approved timesheets
+        result.push({
+          id: "reject",
+          label: "Reject",
+          variant: "destructive",
+          canPerform: (s) => s === "SUBMITTED" || s === "ACCEPTED",
+          requiresReason: true,
+          handler: async (reason) => {
+            if (!activeId) return;
+            await postJson(
+              `${base}/timesheets/${encodeURIComponent(activeId)}/reject`,
+              { reason },
+            );
+            setTimeout(() => refreshDetail(), 300);
+          },
+        });
+      }
+    } // end supervisor-only actions
+
+    // Mark Paid - available for both ADMIN and SUPERVISOR
     result.push({
       id: "paid",
       label: "Mark Paid",
@@ -1215,6 +1223,35 @@ export default function TimesheetsListClient({ mode }: Props) {
       canPerform: (s) => s === "APPROVED",
       handler: async () => {
         if (!activeId) return;
+
+        // Generate and download PDF archive before marking as paid
+        if (gridModel) {
+          try {
+            const dto = (detail as any)?.timesheet ?? detail;
+            const foremanName =
+              dto?.foremanName ?? dto?.foreman?.user?.name ?? "Foreman";
+            const siteName = dto?.sites?.[0]?.name ?? dto?.siteName ?? "Site";
+            const siteCode = dto?.sites?.[0]?.code ?? dto?.siteCode ?? "";
+
+            const pdfBytes = await generateTimesheetPdf(gridModel, {
+              foremanName,
+              siteName,
+              siteCode,
+              startISO: startISO ?? undefined,
+              endISO: endISO ?? undefined,
+              status: "PAID",
+            });
+
+            const filename = `timesheet-${foremanName.replace(/\s+/g, "-")}-${siteName.replace(/\s+/g, "-")}-${startISO ?? "period"}.pdf`;
+            downloadTimesheetPdf(pdfBytes, filename);
+          } catch (pdfErr) {
+            console.error("PDF generation failed:", pdfErr);
+            toast.error(
+              "Failed to generate PDF archive. Timesheet will still be marked as paid.",
+            );
+          }
+        }
+
         await postJson(
           `${base}/timesheets/${encodeURIComponent(activeId)}/paid`,
         );
@@ -1223,7 +1260,7 @@ export default function TimesheetsListClient({ mode }: Props) {
     });
 
     return result;
-  }, [mode, activeId, detail, loadList, refreshDetail]);
+  }, [mode, activeId, detail, gridModel, loadList, refreshDetail]);
 
   const reset = () => {
     setQ("");
@@ -1370,9 +1407,20 @@ export default function TimesheetsListClient({ mode }: Props) {
               </Badge>
               <span className="text-sm text-muted-foreground">•</span>
               <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                Grand Total:{" "}
+                Net Pay Total:{" "}
                 {money(foremanTotals.reduce((s, f) => s + f.grandTotal, 0))}
               </span>
+              {foremanTotals.reduce((s, f) => s + f.totalDeductions, 0) > 0 && (
+                <>
+                  <span className="text-sm text-muted-foreground">•</span>
+                  <span className="text-sm text-amber-600 dark:text-amber-400">
+                    Deductions:{" "}
+                    {money(
+                      foremanTotals.reduce((s, f) => s + f.totalDeductions, 0),
+                    )}
+                  </span>
+                </>
+              )}
             </div>
             <ChevronDown
               className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
@@ -1410,7 +1458,10 @@ export default function TimesheetsListClient({ mode }: Props) {
                         Team Amount
                       </TableHead>
                       <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
-                        Grand Total
+                        Deductions
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Net Pay
                       </TableHead>
                       <TableHead className="px-3 py-2 text-xs font-semibold text-center border border-zinc-200 dark:border-zinc-700">
                         Actions
@@ -1440,6 +1491,15 @@ export default function TimesheetsListClient({ mode }: Props) {
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
                           {money(ft.teamWages)}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                          {ft.totalDeductions > 0 ? (
+                            <span className="text-amber-600 dark:text-amber-400">
+                              -{money(ft.totalDeductions)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-right font-bold text-emerald-600 dark:text-emerald-400 border border-zinc-200 dark:border-zinc-700">
                           {money(ft.grandTotal)}
