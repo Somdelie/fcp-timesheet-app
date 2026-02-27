@@ -263,7 +263,11 @@ export default function EmployeesTable({ data }: { data: Employee[] }) {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                  className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/40 ${
+                    (row.original as Employee).isForeman
+                      ? "bg-sky-50/60 dark:bg-sky-900/30"
+                      : ""
+                  }`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell

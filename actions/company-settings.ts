@@ -95,31 +95,19 @@ export async function updateCompanySettings(input: {
       });
     }
 
-    // Update employees:
-    // 1. Regular employees created by non-foremen (no userId)
-    // 2. Assistants (have ForemanAssistant link)
-    // But exclude foremen promoted from employees (have userId but NO ForemanAssistant link)
-    const foremanIds = await tx.foreman
-      .findMany({
-        select: { userId: true },
-      })
-      .then((f) => f.map((x) => x.userId));
-
+    // Update employees' default day rate:
+    // - Apply new company default to all employees that are NOT foremen
+    //   (employees promoted to foreman have a linked user with FOREMAN role
+    //   and should keep their manually managed rate).
     await tx.employee.updateMany({
       where: {
         OR: [
+          { userId: null }, // regular workers & assistants without user accounts
           {
-            // Regular employees created by non-foremen
-            createdByUserId: {
-              notIn: foremanIds,
-            },
-            userId: null,
-          },
-          {
-            // Assistants (have active ForemanAssistant link)
-            assistantLinks: {
-              some: {
-                endsOn: null, // Only active assistant links
+            // employees with a linked user that is not a foreman
+            user: {
+              role: {
+                not: "FOREMAN",
               },
             },
           },
