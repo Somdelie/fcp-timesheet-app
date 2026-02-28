@@ -226,6 +226,23 @@ export async function GET(req: NextRequest) {
 
     const foremanIds = Array.from(new Set(siteDays.map((sd) => sd.foremanId)));
 
+    // Resolve each Foreman's Employee ID (Foreman.id ≠ Employee.id; they share the same User)
+    const foremanRecords = foremanIds.length
+      ? await prisma.foreman.findMany({
+          where: { id: { in: foremanIds } },
+          select: {
+            id: true,
+            user: { select: { employee: { select: { id: true } } } },
+          },
+        })
+      : [];
+    const foremanIdToEmployeeId = new Map<string, string>();
+    for (const f of foremanRecords) {
+      if (f.user?.employee?.id) {
+        foremanIdToEmployeeId.set(f.id, f.user.employee.id);
+      }
+    }
+
     // Compute totals per (foreman, site) - separate foreman vs team
     const scansByForemanSite = new Map<
       string,
@@ -255,7 +272,9 @@ export async function GET(req: NextRequest) {
         date: dateISO,
         wage: rate,
         employeeId: scan.employeeId,
-        isForeman: scan.employeeId === foremanId,
+        isForeman:
+          scan.employeeId ===
+          (foremanIdToEmployeeId.get(foremanId) ?? foremanId),
       });
       scansByForemanSite.set(key, list);
     }
