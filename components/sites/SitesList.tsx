@@ -35,9 +35,8 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const role = useUserRole();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
-  const q = sp.get("q") ?? "";
   const show = (sp.get("show") ?? "active") as "active" | "all";
-  const [query, setQuery] = React.useState(q);
+  const [query, setQuery] = React.useState("");
 
   const [photoDialogOpen, setPhotoDialogOpen] = React.useState(false);
   const [photoSite, setPhotoSite] = React.useState<SiteRow | null>(null);
@@ -48,8 +47,6 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const [photoNote, setPhotoNote] = React.useState<string>("");
   const [photoSubmitting, setPhotoSubmitting] = React.useState(false);
   const [pdfGenerating, setPdfGenerating] = React.useState(false);
-
-  React.useEffect(() => setQuery(q), [q]);
 
   async function handleDownloadPdf() {
     if (filtered.length === 0) {
@@ -70,18 +67,23 @@ export default function SitesList({ initialSites }: SitesListProps) {
     }
   }
 
-  function updateUrl(next: { q?: string; show?: "active" | "all" }) {
-    const params = new URLSearchParams(sp.toString());
-    if (next.q !== undefined) {
-      const v = next.q.trim();
-      if (v) params.set("q", v);
-      else params.delete("q");
-    }
+  function updateUrl(next: { show?: "active" | "all" }) {
+    const params = new URLSearchParams();
     if (next.show) params.set("show", next.show);
     router.push(`/sites?${params.toString()}`);
   }
 
-  const filtered = initialSites;
+  /** Pure client-side filtering — instant, no server round-trips */
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return initialSites;
+    return initialSites.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.code && s.code.toLowerCase().includes(q)) ||
+        (s.location && s.location.toLowerCase().includes(q)),
+    );
+  }, [initialSites, query]);
 
   async function handleSubmitPhotoRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -145,9 +147,6 @@ export default function SitesList({ initialSites }: SitesListProps) {
                   id="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") updateUrl({ q: query });
-                  }}
                   placeholder="Search by name, code, location..."
                   className="h-10 pl-9 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
                 />

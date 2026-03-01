@@ -21,6 +21,7 @@ import {
   Check,
   XCircle,
   MapPin,
+  Trash2,
 } from "lucide-react";
 
 interface SitePhoto {
@@ -119,6 +120,7 @@ export default function AdminSitePhotosPage() {
   const [selectedForemanId, setSelectedForemanId] = useState<string>("");
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
   const [verifying, setVerifying] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const loadPhotos = async (foremanId?: string, supervisorId?: string) => {
     setLoading(true);
@@ -185,6 +187,34 @@ export default function AdminSitePhotosPage() {
       toast.error(err.message || "Failed to update verification status");
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleDelete = async (photoId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this photo? This cannot be undone.",
+      )
+    )
+      return;
+    setDeleting(photoId);
+    try {
+      const res = await fetch(`/api/admin/site-day-photos/${photoId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete photo");
+      }
+      toast.success("Photo deleted");
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      if (selectedPhoto?.id === photoId) {
+        setSelectedPhoto(null);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete photo");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -352,6 +382,23 @@ export default function AdminSitePhotosPage() {
                         )}
                       </span>
                     </div>
+
+                    {/* Delete button - top right corner, behind status badge */}
+                    <button
+                      className="absolute right-2 top-10 z-10 rounded-full bg-red-600/80 p-1.5 text-white opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
+                      title="Delete photo"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(photo.id);
+                      }}
+                      disabled={deleting === photo.id}
+                    >
+                      {deleting === photo.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -472,7 +519,35 @@ export default function AdminSitePhotosPage() {
                         )}
                         Accept
                       </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(selectedPhoto.id)}
+                        disabled={deleting === selectedPhoto.id}
+                      >
+                        {deleting === selectedPhoto.id ? (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-1 h-4 w-4" />
+                        )}
+                        Delete
+                      </Button>
                     </div>
+                  )}
+                  {selectedPhoto.verificationStatus !== "PENDING" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(selectedPhoto.id)}
+                      disabled={deleting === selectedPhoto.id}
+                    >
+                      {deleting === selectedPhoto.id ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-1 h-4 w-4" />
+                      )}
+                      Delete
+                    </Button>
                   )}
                 </div>
               </div>

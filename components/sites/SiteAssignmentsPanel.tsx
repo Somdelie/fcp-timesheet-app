@@ -282,7 +282,7 @@ export default function SiteAssignmentsPanel({
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="max-h-[300px] space-y-2 overflow-y-auto pr-1">
               {supervisors.map((s) => (
                 <AssignmentRow
                   key={s.id}
@@ -368,7 +368,7 @@ export default function SiteAssignmentsPanel({
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="max-h-[300px] space-y-2 overflow-y-auto pr-1">
               {foremen.map((f) => (
                 <AssignmentRow
                   key={f.id}

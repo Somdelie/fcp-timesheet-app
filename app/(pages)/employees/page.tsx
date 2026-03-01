@@ -19,7 +19,7 @@ export default async function EmployeesPage({
   const show = sp?.show === "all" ? "all" : "active";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4 overflow-hidden">
+    <div className="mx-auto flex flex-col min-h-0 max-w-7xl space-y-4">
       <EmployeesList q={q} show={show} />
     </div>
   );

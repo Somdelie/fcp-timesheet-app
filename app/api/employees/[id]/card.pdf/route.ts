@@ -576,11 +576,16 @@ export async function GET(_req: Request, ctx: RouteContext) {
   const ab = new ArrayBuffer(pdfBytes.byteLength);
   new Uint8Array(ab).set(pdfBytes as unknown as Uint8Array);
 
+  // Sanitise name for use in a filename (strip non-ASCII / special chars)
+  const safeName = `${employee.firstName}_${employee.lastName}`
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_");
+
   return new Response(ab, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="worker-card-${employee.id}.pdf"`,
+      "Content-Disposition": `attachment; filename="${safeName}_Card.pdf"`,
       "Cache-Control": "no-store",
     },
   });

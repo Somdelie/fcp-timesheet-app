@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { Download, Loader2 } from "lucide-react";
 import EditEmployeeForm from "@/components/employees/EditEmployeeForm";
 import PromoteEmployeeDialog from "@/components/employees/PromoteEmployeeDialog";
 import { getCompanySettings } from "@/actions/company-settings";
@@ -41,6 +41,7 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
     null,
   );
   const [showImageModal, setShowImageModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -69,6 +70,58 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
   // Determine effective day rate
   const effectiveRate = employee.defaultDayRate || companyDefaultRate;
   const isUsingCompanyDefault = !employee.defaultDayRate;
+
+  /** Download card with Save-As file picker when supported */
+  const handleDownloadCard = useCallback(async () => {
+    setIsDownloading(true);
+    try {
+      const safeName = `${employee.firstName}_${employee.lastName}`
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_+/g, "_");
+      const filename = `${safeName}_Card.pdf`;
+
+      const res = await fetch(`/api/employees/${employee.id}/card.pdf`);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+
+      // Try File System Access API (lets user pick folder/name)
+      if ("showSaveFilePicker" in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: filename,
+            types: [
+              {
+                description: "PDF Document",
+                accept: { "application/pdf": [".pdf"] },
+              },
+            ],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          setIsDownloading(false);
+          return;
+        } catch {
+          // User cancelled – fall through to normal download
+        }
+      }
+
+      // Fallback: normal browser download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Download error:", err);
+      alert("Failed to download card");
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [employee]);
 
   return (
     <div className="mx-auto max-w-7xl p-4 ">
@@ -118,10 +171,17 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href={`/api/employees/${employee.id}/card.pdf`} download>
-                Download Card
-              </Link>
+            <Button
+              onClick={handleDownloadCard}
+              disabled={isDownloading}
+              className="gap-1.5"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isDownloading ? "Downloading…" : "Download Card"}
             </Button>
 
             <EditEmployeeForm employee={employee} />

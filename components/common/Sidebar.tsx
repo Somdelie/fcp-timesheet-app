@@ -119,9 +119,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role }) => {
         isOpen ? "w-64" : "w-16"
       }`}
     >
-      <div className="flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* header with logo / icon */}
-        <div className="mb-2 flex h-14 items-center justify-center border-b bg-white">
+        <div className="mb-2 flex h-14 shrink-0 items-center justify-center border-b bg-white">
           {isOpen ? (
             <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
           ) : (
@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role }) => {
           )}
         </div>
         {/* navigation */}
-        <nav className="space-y-1 px-2">
+        <nav className="flex-1 overflow-y-auto space-y-1 px-2 pb-4">
           {menuItems
             .filter((item) => item.roles.includes(role))
             .map((item) => {

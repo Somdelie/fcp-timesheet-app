@@ -18,6 +18,7 @@ import {
   Camera,
   MoreHorizontal,
   CheckCircle,
+  Trash2,
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
@@ -56,7 +57,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
-import { markSiteFinished } from "@/actions/sites";
+import { markSiteFinished, deleteSite } from "@/actions/sites";
 
 export type SiteRow = {
   id: string;
@@ -120,6 +121,8 @@ function SiteRowActions({
   const router = useRouter();
   const [showFinishDialog, setShowFinishDialog] = React.useState(false);
   const [isFinishing, setIsFinishing] = React.useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handleMarkFinished = async () => {
     setIsFinishing(true);
@@ -136,6 +139,24 @@ function SiteRowActions({
       toast.error(err?.message || "Failed to mark site as finished");
     } finally {
       setIsFinishing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await deleteSite(site.id);
+      if (!res.ok) {
+        toast.error(res.error || "Failed to delete site");
+        return;
+      }
+      toast.success("Site deleted");
+      setShowDeleteDialog(false);
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete site");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -183,6 +204,17 @@ function SiteRowActions({
                   Mark Finished
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setShowDeleteDialog(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
@@ -196,6 +228,17 @@ function SiteRowActions({
         onConfirm={handleMarkFinished}
         isLoading={isFinishing}
         confirmText="Mark Finished"
+      />
+
+      <ConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Site?"
+        description={`This will permanently delete "${site.name}" and all its related data (assignments, site days, attendance scans, etc.). This action cannot be undone.`}
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        confirmText="Delete"
+        variant="destructive"
       />
     </>
   );

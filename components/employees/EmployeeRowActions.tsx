@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Eye, Download, Trash2, CircleOff } from "lucide-react";
+import {
+  MoreHorizontal,
+  Eye,
+  Download,
+  Trash2,
+  CircleOff,
+  FolderOpen,
+  Loader2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
@@ -15,18 +23,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/** Sanitise for filename */
+function safeFilename(first: string, last: string) {
+  return `${first}_${last}`.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_");
+}
+
 export default function EmployeeRowActions({
   id,
+  firstName,
+  lastName,
   qrCodeValue,
   isActive,
 }: {
   id: string;
+  firstName: string;
+  lastName: string;
   qrCodeValue: string;
   isActive: boolean;
 }) {
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -47,6 +65,54 @@ export default function EmployeeRowActions({
     }
   };
 
+  /** Download card with folder-picker when supported */
+  const handleDownloadCard = async () => {
+    setIsDownloading(true);
+    try {
+      const filename = `${safeFilename(firstName, lastName)}_Card.pdf`;
+      const res = await fetch(`/api/employees/${id}/card.pdf`);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+
+      // Try File System Access API (lets user pick folder)
+      if ("showSaveFilePicker" in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: filename,
+            types: [
+              {
+                description: "PDF Document",
+                accept: { "application/pdf": [".pdf"] },
+              },
+            ],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          setIsDownloading(false);
+          return;
+        } catch {
+          // User cancelled or API not available – fall through
+        }
+      }
+
+      // Fallback: normal browser download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Download error:", err);
+      alert("Failed to download card");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -64,15 +130,20 @@ export default function EmployeeRowActions({
             </Link>
           </DropdownMenuItem>
 
-          <DropdownMenuItem asChild>
-            <Link
-              href={`/api/employees/${id}/card.pdf`}
-              className="flex items-center gap-2"
-              download
-            >
+          <DropdownMenuItem
+            className="flex items-center gap-2"
+            disabled={isDownloading}
+            onSelect={(e) => {
+              e.preventDefault();
+              handleDownloadCard();
+            }}
+          >
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
               <Download className="h-4 w-4" />
-              Download Card
-            </Link>
+            )}
+            Download Card
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

@@ -7,23 +7,10 @@ import { requireAuth } from "@/lib/auth";
 
 export const revalidate = 0;
 
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
+export default async function ProductsPage() {
   await requireAuth({ roles: ["ADMIN"] });
 
-  const sp = await searchParams;
-  const q = sp?.q ?? "";
-
-  const where: any = {};
-  if (q.trim()) {
-    where.name = { contains: q.trim(), mode: "insensitive" };
-  }
-
   const rows = await prisma.product.findMany({
-    where,
     orderBy: { name: "asc" },
     select: {
       id: true,

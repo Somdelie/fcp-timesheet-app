@@ -18,6 +18,8 @@ export type EmployeeDTO = {
   isActive: boolean;
   createdAt: string;
   createdByRole?: string | null; // ADMIN, SUPERVISOR, or FOREMAN
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
   userId?: string | null; // If employee has been promoted to foreman
   linkedToForemanId?: string | null; // If linked to a foreman via ForemanEmployee
 };
@@ -41,6 +43,8 @@ function serializeEmployee(e: any): EmployeeDTO & { isForeman: boolean } {
         ? e.createdAt.toISOString()
         : String(e.createdAt),
     createdByRole: e.createdByUser?.role ?? null,
+    createdByUserId: e.createdByUserId ?? null,
+    createdByUserName: e.createdByUser?.name ?? null,
     userId: e.userId ?? null,
     linkedToForemanId,
     isForeman,
@@ -66,6 +70,7 @@ function generateEmployeeQrValue() {
 export async function listEmployees(input?: {
   q?: string;
   show?: "active" | "all";
+  createdByUserId?: string;
   take?: number;
 }) {
   const auth = await requireServerAuth();
@@ -74,11 +79,13 @@ export async function listEmployees(input?: {
   const q = (input?.q ?? "").trim();
   const onlyActive = (input?.show ?? "active") !== "all";
   const take = Math.min(Math.max(input?.take ?? 500, 1), 1000);
+  const createdByUserId = input?.createdByUserId || undefined;
 
   const employees = await prisma.employee.findMany({
     where: {
       ...whereScope,
       ...(onlyActive ? { isActive: true } : {}),
+      ...(createdByUserId ? { createdByUserId } : {}),
       ...(q
         ? {
             OR: [
@@ -107,8 +114,11 @@ export async function listEmployees(input?: {
           foreman: { select: { id: true } },
         },
       },
+      createdByUserId: true,
       createdByUser: {
         select: {
+          id: true,
+          name: true,
           role: true,
         },
       },
@@ -532,4 +542,40 @@ export async function removeEmployeeForemanLink(input: {
 
   revalidatePath("/employees");
   return { ok: true as const, message: "Employee foreman link removed." };
+}
+
+/**
+ * Return the distinct users who have created at least one employee.
+ * Used for the "Created by" filter dropdown on the employees page.
+ */
+export async function listEmployeeCreators() {
+  const auth = await requireServerAuth();
+  const whereScope = employeeWhereFor(auth);
+
+  const creators = await prisma.employee.findMany({
+    where: {
+      ...whereScope,
+      createdByUserId: { not: null },
+    },
+    select: {
+      createdByUserId: true,
+      createdByUser: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        },
+      },
+    },
+    distinct: ["createdByUserId"],
+    orderBy: { createdByUser: { name: "asc" } },
+  });
+
+  return creators
+    .filter((c) => c.createdByUser)
+    .map((c) => ({
+      id: c.createdByUser!.id,
+      name: c.createdByUser!.name ?? c.createdByUser!.id,
+      role: c.createdByUser!.role,
+    }));
 }

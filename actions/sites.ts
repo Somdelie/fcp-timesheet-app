@@ -610,3 +610,48 @@ export async function markSiteFinished(siteId: string) {
     return { ok: false as const, error: "Failed to mark site as finished." };
   }
 }
+
+/**
+ * Delete a site (hard delete; admin only).
+ * Because the schema uses onDelete: Cascade on relations,
+ * all related assignments, site-days, attendance scans, etc. will be removed.
+ */
+export async function deleteSite(siteId: string) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Only admin can delete sites." };
+  }
+
+  const id = clean(siteId);
+  if (!id) return { ok: false as const, error: "Site is required." };
+
+  try {
+    const site = await prisma.site.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+    if (!site) return { ok: false as const, error: "Site not found." };
+
+    await prisma.site.delete({ where: { id } });
+
+    await writeAuditEvent({
+      actorUserId: auth.userId,
+      action: "SITE_DELETED",
+      entity: "Site",
+      entityId: id,
+      metadata: {
+        siteId: id,
+        siteName: site.name,
+        title: "Site deleted",
+        description: site.name,
+      },
+    });
+
+    revalidatePath("/sites");
+
+    return { ok: true as const };
+  } catch (e: any) {
+    console.error("[deleteSite] Error:", e);
+    return { ok: false as const, error: "Failed to delete site." };
+  }
+}

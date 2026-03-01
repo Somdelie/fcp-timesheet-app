@@ -42,7 +42,7 @@ export function AppShell({ children, role }: AppShellProps) {
               onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
               role={role}
             />
-            <main className="flex-1 overflow-auto w-full py-3 px-4">
+            <main className="flex-1 overflow-auto w-full py-3 px-4 min-h-0">
               {children}
             </main>
           </div>
