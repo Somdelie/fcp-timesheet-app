@@ -3,13 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -96,6 +98,145 @@ export async function GET(req: Request) {
     console.error("Error listing users:", e);
     return NextResponse.json(
       { error: "Failed to list users" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+// POST /api/app/admin/users — Create a new FOREMAN user
+export async function POST(req: Request) {
+  try {
+    const auth = await getAuthFromRequest(req);
+    if (!auth || auth.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Unauthorized – admin only" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
+
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const { name, email, password, dayRate, supervisorId } = body;
+
+    // Validation
+    if (!name || typeof name !== "string" || name.trim().length < 2) {
+      return NextResponse.json(
+        { error: "Name must be at least 2 characters." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+    if (
+      !email ||
+      typeof email !== "string" ||
+      !email.includes("@") ||
+      email.trim().length < 3
+    ) {
+      return NextResponse.json(
+        { error: "Please enter a valid email." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+    if (!password || typeof password !== "string" || password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+    if (!dayRate || Number(dayRate) <= 0) {
+      return NextResponse.json(
+        { error: "Day rate must be greater than 0." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+    if (!supervisorId || typeof supervisorId !== "string") {
+      return NextResponse.json(
+        { error: "Supervisor is required." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const emailNorm = email.trim().toLowerCase();
+    const nameNorm = name.trim();
+    const passwordHash = await bcrypt.hash(password, 12);
+    const dayRateDecimal = parseFloat(String(dayRate));
+
+    // Create user
+    const created = await prisma.user.create({
+      data: {
+        email: emailNorm,
+        name: nameNorm,
+        role: "FOREMAN",
+        password: passwordHash,
+      },
+      select: { id: true, email: true, name: true, role: true },
+    });
+
+    // Create foreman record
+    try {
+      const foreman = await prisma.foreman.create({
+        data: {
+          userId: created.id,
+          defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
+        },
+      });
+
+      // Link to supervisor
+      try {
+        await prisma.supervisorForeman.create({
+          data: {
+            supervisorId,
+            foremanId: foreman.id,
+            startsOn: new Date(),
+          },
+        });
+      } catch (err) {
+        console.error("[create-foreman] Failed to link supervisor:", err);
+      }
+
+      // Create employee profile
+      const token = randomBytes(8).toString("hex").toUpperCase();
+      const qrCodeValue = `EMP-${token}`;
+      try {
+        await prisma.employee.create({
+          data: {
+            firstName: nameNorm.split(" ")[0] || nameNorm,
+            lastName: nameNorm.split(" ").slice(1).join(" ") || "",
+            defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
+            qrCodeValue,
+            createdByUserId: created.id,
+            userId: created.id,
+            isActive: true,
+          },
+        });
+      } catch (err) {
+        console.error("[create-foreman] Failed to create employee:", err);
+      }
+    } catch (err) {
+      console.error("[create-foreman] Failed to create foreman record:", err);
+    }
+
+    return NextResponse.json(
+      { ok: true, user: created },
+      { status: 201, headers: CORS_HEADERS },
+    );
+  } catch (e: any) {
+    console.error("Create foreman error:", e);
+    if (String(e?.code) === "P2002") {
+      return NextResponse.json(
+        { error: "Email already exists." },
+        { status: 409, headers: CORS_HEADERS },
+      );
+    }
+    return NextResponse.json(
+      { error: e.message || "Failed to create user." },
       { status: 500, headers: CORS_HEADERS },
     );
   }

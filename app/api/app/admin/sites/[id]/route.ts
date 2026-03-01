@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -298,6 +298,45 @@ export async function PATCH(
     }
     return NextResponse.json(
       { error: "Failed to update site" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  try {
+    const auth = await getAuthFromRequest(req);
+    if (!auth || auth.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
+
+    const { id } = await ctx.params;
+
+    const site = await prisma.site.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+
+    if (!site) {
+      return NextResponse.json(
+        { error: "Site not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
+    }
+
+    await prisma.site.delete({ where: { id } });
+
+    return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+  } catch (e: any) {
+    console.error("Error deleting site:", e);
+    return NextResponse.json(
+      { error: "Failed to delete site" },
       { status: 500, headers: CORS_HEADERS },
     );
   }

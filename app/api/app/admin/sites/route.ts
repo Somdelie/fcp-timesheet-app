@@ -158,3 +158,71 @@ export async function GET(req: Request) {
     return res;
   }
 }
+
+export async function POST(req: Request) {
+  const auth = await getAuthFromRequest(req);
+  if (!auth || auth.role !== "ADMIN") {
+    const res = NextResponse.json(
+      { error: "Unauthorized – admin only" },
+      { status: 401, headers: CORS_HEADERS },
+    );
+    logApiRequest("/api/app/admin/sites", req.method, res.status);
+    return res;
+  }
+
+  try {
+    const body = await req.json();
+    const name = (body.name ?? "").toString().trim();
+    const code = (body.code ?? "").toString().trim() || null;
+    const location = (body.location ?? "").toString().trim() || null;
+    const address = (body.address ?? "").toString().trim() || null;
+
+    if (!name) {
+      const res = NextResponse.json(
+        { error: "Site name is required." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+      logApiRequest("/api/app/admin/sites", req.method, res.status);
+      return res;
+    }
+
+    const site = await prisma.site.create({
+      data: { name, code, location, address, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        location: true,
+        address: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    const res = NextResponse.json(
+      {
+        ok: true,
+        site: { ...site, createdAt: site.createdAt.toISOString() },
+      },
+      { status: 201, headers: CORS_HEADERS },
+    );
+    logApiRequest("/api/app/admin/sites", req.method, res.status);
+    return res;
+  } catch (e: any) {
+    if (String(e?.code) === "P2002") {
+      const res = NextResponse.json(
+        { error: "Site code must be unique." },
+        { status: 409, headers: CORS_HEADERS },
+      );
+      logApiRequest("/api/app/admin/sites", req.method, res.status);
+      return res;
+    }
+    console.error("Error creating site:", e);
+    const res = NextResponse.json(
+      { error: "Failed to create site" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+    logApiRequest("/api/app/admin/sites", req.method, res.status);
+    return res;
+  }
+}
