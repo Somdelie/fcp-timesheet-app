@@ -66,8 +66,10 @@ export async function GET(
         qrCodeValue: true,
         defaultDayRate: true,
         faceImageUrl: true,
+        phone: true,
         isActive: true,
         createdByUserId: true,
+        user: { select: { phone: true } },
       },
     });
 
@@ -91,6 +93,7 @@ export async function GET(
         firstName: employee.firstName,
         lastName: employee.lastName,
         code: employee.qrCodeValue,
+        phone: employee.phone ?? employee.user?.phone ?? null,
         dayRate: Number(employee.defaultDayRate),
         active: employee.isActive,
         fullName: `${employee.firstName} ${employee.lastName}`,
@@ -170,8 +173,14 @@ export async function PUT(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const body = await req.json();
-    const { firstName, lastName, defaultDayRate, faceImageUrl, isActive } =
-      body;
+    const {
+      firstName,
+      lastName,
+      defaultDayRate,
+      faceImageUrl,
+      isActive,
+      phone,
+    } = body;
     const employee = await prisma.employee.findUnique({
       where: { id },
       select: { createdByUserId: true },
@@ -200,6 +209,7 @@ export async function PUT(
         }),
         ...(faceImageUrl !== undefined && { faceImageUrl }),
         ...(isActive !== undefined && { isActive }),
+        ...(phone !== undefined && { phone: (phone ?? "").trim() || null }),
       },
       select: {
         id: true,
@@ -208,8 +218,10 @@ export async function PUT(
         qrCodeValue: true,
         defaultDayRate: true,
         faceImageUrl: true,
+        phone: true,
         isActive: true,
         createdAt: true,
+        user: { select: { phone: true } },
       },
     });
 
@@ -220,6 +232,7 @@ export async function PUT(
         firstName: updatedEmployee.firstName,
         lastName: updatedEmployee.lastName,
         code: updatedEmployee.qrCodeValue,
+        phone: updatedEmployee.phone ?? updatedEmployee.user?.phone ?? null,
         dayRate: Number(updatedEmployee.defaultDayRate),
         active: updatedEmployee.isActive,
         fullName: `${updatedEmployee.firstName} ${updatedEmployee.lastName}`,

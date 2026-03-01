@@ -94,6 +94,7 @@ model Employee {
   // QR / identity
   qrCodeValue String  @unique
   idNumber    String?
+  phone       String?
 
   // Pay defaults
   defaultDayRate Decimal? @db.Decimal(12, 2)

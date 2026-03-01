@@ -77,10 +77,12 @@ export async function GET(request: NextRequest) {
         faceImageUrl: true,
         isActive: true,
         createdAt: true,
+        phone: true,
         userId: true,
         user: {
           select: {
             role: true,
+            phone: true,
             foreman: { select: { id: true } },
           },
         },
@@ -100,6 +102,7 @@ export async function GET(request: NextRequest) {
           fullName: `${e.firstName} ${e.lastName}`,
           createdAt: e.createdAt.toISOString(),
           photoUrl: e.faceImageUrl ?? null,
+          phone: e.phone ?? e.user?.phone ?? null,
           isForeman: !!(e.user?.role === "FOREMAN" && e.user?.foreman),
         })),
       },
@@ -122,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
     const body = await request.json();
 
-    const { firstName, lastName, faceImageUrl, isActive } = body;
+    const { firstName, lastName, faceImageUrl, isActive, phone } = body;
 
     if (!firstName || !lastName) {
       return NextResponse.json(
@@ -153,6 +156,7 @@ export async function POST(request: NextRequest) {
       data: {
         firstName,
         lastName,
+        phone: phone || null,
         defaultDayRate: dayRate,
         faceImageUrl: faceImageUrl ?? null,
         isActive: isActive !== false,
@@ -208,8 +212,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, firstName, lastName, defaultDayRate, faceImageUrl, isActive } =
-      body;
+    const {
+      id,
+      firstName,
+      lastName,
+      defaultDayRate,
+      faceImageUrl,
+      isActive,
+      phone,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
@@ -239,6 +250,7 @@ export async function PUT(request: NextRequest) {
       ...(lastName && { lastName }),
       ...(faceImageUrl !== undefined && { faceImageUrl }),
       ...(isActive !== undefined && { isActive }),
+      ...(phone !== undefined && { phone: (phone ?? "").trim() || null }),
     };
 
     // Only allow day rate edit if it's a foreman user
@@ -266,8 +278,10 @@ export async function PUT(request: NextRequest) {
         qrCodeValue: true,
         defaultDayRate: true,
         faceImageUrl: true,
+        phone: true,
         isActive: true,
         createdAt: true,
+        user: { select: { phone: true } },
       },
     });
 
@@ -293,6 +307,7 @@ export async function PUT(request: NextRequest) {
         firstName: employee.firstName,
         lastName: employee.lastName,
         code: employee.qrCodeValue,
+        phone: employee.phone ?? employee.user?.phone ?? null,
         dayRate: Number(employee.defaultDayRate),
         active: employee.isActive,
         fullName: `${employee.firstName} ${employee.lastName}`,

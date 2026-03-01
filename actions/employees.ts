@@ -17,6 +17,7 @@ export type EmployeeDTO = {
   faceImageUrl: string | null;
   isActive: boolean;
   createdAt: string;
+  phone?: string | null;
   createdByRole?: string | null; // ADMIN, SUPERVISOR, or FOREMAN
   createdByUserId?: string | null;
   createdByUserName?: string | null;
@@ -38,6 +39,7 @@ function serializeEmployee(e: any): EmployeeDTO & { isForeman: boolean } {
     defaultDayRate: e.defaultDayRate ? String(e.defaultDayRate) : null, // ✅ Decimal -> string or null
     faceImageUrl: e.faceImageUrl ?? null,
     isActive: Boolean(e.isActive),
+    phone: e.phone ?? e.user?.phone ?? null,
     createdAt:
       e.createdAt instanceof Date
         ? e.createdAt.toISOString()
@@ -107,10 +109,12 @@ export async function listEmployees(input?: {
       faceImageUrl: true,
       isActive: true,
       createdAt: true,
+      phone: true,
       userId: true,
       user: {
         select: {
           role: true,
+          phone: true,
           foreman: { select: { id: true } },
         },
       },
@@ -143,6 +147,7 @@ export async function listEmployees(input?: {
 export async function createEmployee(input: {
   firstName: string;
   lastName: string;
+  phone?: string | null;
   faceImageUrl?: string | null;
   isActive?: boolean;
 }) {
@@ -163,6 +168,7 @@ export async function createEmployee(input: {
   if (!lastName) return { ok: false as const, error: "Last name is required." };
 
   const faceImageUrl = (input.faceImageUrl ?? "").trim() || null;
+  const phone = (input.phone ?? "").trim() || null;
   const isActive = input.isActive ?? true;
 
   // Get default day rate from company settings
@@ -185,6 +191,7 @@ export async function createEmployee(input: {
           data: {
             firstName,
             lastName,
+            phone,
             qrCodeValue,
             faceImageUrl,
             isActive,
@@ -198,6 +205,7 @@ export async function createEmployee(input: {
             qrCodeValue: true,
             defaultDayRate: true,
             faceImageUrl: true,
+            phone: true,
             isActive: true,
             createdAt: true,
             createdByUser: {
@@ -278,6 +286,7 @@ export async function updateEmployee(input: {
   faceImageUrl?: string | null;
   isActive?: boolean;
   defaultDayRate?: string | null;
+  phone?: string | null;
 }) {
   const auth = await requireServerAuth();
   const whereScope = employeeWhereFor(auth);
@@ -297,6 +306,8 @@ export async function updateEmployee(input: {
   }
   if (input.faceImageUrl !== undefined)
     data.faceImageUrl = (input.faceImageUrl ?? "").trim() || null;
+  if (input.phone !== undefined)
+    data.phone = (input.phone ?? "").trim() || null;
   if (input.isActive !== undefined) data.isActive = input.isActive;
 
   const canSee = await prisma.employee.findFirst({
@@ -339,11 +350,17 @@ export async function updateEmployee(input: {
       qrCodeValue: true,
       defaultDayRate: true,
       faceImageUrl: true,
+      phone: true,
       isActive: true,
       createdAt: true,
       createdByUser: {
         select: {
           role: true,
+        },
+      },
+      user: {
+        select: {
+          phone: true,
         },
       },
       foremanLinks: {

@@ -64,12 +64,14 @@ export async function GET(
         qrCodeValue: true,
         defaultDayRate: true,
         faceImageUrl: true,
+        phone: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
         userId: true,
         user: {
           select: {
+            phone: true,
             role: true,
             foreman: { select: { id: true } },
           },
@@ -112,7 +114,7 @@ export async function GET(
           firstName: employee.firstName,
           lastName: employee.lastName,
           code: employee.qrCodeValue,
-          phone: null,
+          phone: employee.phone ?? employee.user?.phone ?? null,
           dayRate: Number(employee.defaultDayRate),
           faceImageUrl: employee.faceImageUrl,
           active: employee.isActive,

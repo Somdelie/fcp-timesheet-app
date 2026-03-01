@@ -107,6 +107,12 @@ export async function GET(req: Request) {
         defaultDayRate: true,
         faceImageUrl: true,
         isActive: true,
+        phone: true,
+        user: {
+          select: {
+            phone: true,
+          },
+        },
       },
     });
 
@@ -117,6 +123,7 @@ export async function GET(req: Request) {
       dayRate: Number(e.defaultDayRate),
       active: e.isActive,
       faceImageUrl: e.faceImageUrl ?? null,
+      phone: e.phone ?? e.user?.phone ?? null,
     }));
 
     return NextResponse.json({ employees: items });
@@ -159,6 +166,7 @@ export async function POST(req: Request) {
 
     const firstName = clean(body.firstName);
     const lastName = clean(body.lastName);
+    const phone = clean(body.phone) || null;
     const isActive = body.active !== undefined ? Boolean(body.active) : true;
 
     if (!firstName)
@@ -189,6 +197,7 @@ export async function POST(req: Request) {
             data: {
               firstName,
               lastName,
+              phone,
               qrCodeValue,
               defaultDayRate: dayRateStr as any,
               faceImageUrl: null,

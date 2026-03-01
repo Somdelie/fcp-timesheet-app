@@ -34,6 +34,7 @@ const employeeSchema = z.object({
     .string()
     .min(2, "Last name must be at least 2 characters.")
     .max(60, "Max 60 characters."),
+  phone: z.string().max(30, "Max 30 characters.").optional(),
   faceImageUrl: z.string().max(500, "Max 500 characters.").optional(),
 });
 
@@ -65,6 +66,7 @@ export default function CreateEmployeeForm() {
     defaultValues: {
       firstName: "",
       lastName: "",
+      phone: "",
       faceImageUrl: "",
     },
   });
@@ -73,6 +75,7 @@ export default function CreateEmployeeForm() {
     form.reset({
       firstName: "",
       lastName: "",
+      phone: "",
       faceImageUrl: "",
     });
     setLastQr(null);
@@ -146,6 +149,7 @@ export default function CreateEmployeeForm() {
       const res = await createEmployee({
         firstName: values.firstName,
         lastName: values.lastName,
+        phone: values.phone || null,
         faceImageUrl: values.faceImageUrl || null,
         isActive: true,
       });
@@ -233,6 +237,26 @@ export default function CreateEmployeeForm() {
                       id="lastName"
                       aria-invalid={fieldState.invalid}
                       placeholder="e.g. Dlamini"
+                      autoComplete="off"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="phone"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
+                    <Input
+                      {...field}
+                      id="phone"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="e.g. 0821234567"
                       autoComplete="off"
                     />
                     {fieldState.invalid && (

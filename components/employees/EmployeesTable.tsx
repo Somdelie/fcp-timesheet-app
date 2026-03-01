@@ -42,6 +42,7 @@ import {
   ChevronsRight,
   Download,
   Loader2,
+  Phone,
 } from "lucide-react";
 import EmployeeRowActions from "@/components/employees/EmployeeRowActions";
 
@@ -54,6 +55,7 @@ export type Employee = {
   faceImageUrl: string | null;
   isActive: boolean;
   createdAt: string;
+  phone?: string | null;
   createdByRole?: string | null;
   createdByUserId?: string | null;
   createdByUserName?: string | null;
@@ -244,6 +246,19 @@ const columns: ColumnDef<Employee>[] = [
         </div>
       );
     },
+  },
+  {
+    id: "phone",
+    accessorKey: "phone",
+    header: () => (
+      <div className="flex items-center gap-2">
+        <Phone className="h-4 w-4 text-violet-600" />
+        Phone
+      </div>
+    ),
+    cell: ({ row }) => (
+      <span className="text-sm">{row.original.phone || "\u2014"}</span>
+    ),
   },
   {
     id: "dayRate",
