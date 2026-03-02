@@ -9,6 +9,16 @@ import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function startOfDayUTC(dateISO: string) {
   const d = new Date(`${dateISO}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid workDateISO");

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -45,7 +45,7 @@ async function getAdminFromRequest(req: NextRequest) {
 }
 
 const OverrideCreateSchema = z.object({
-  startsOn: z.string().min(1), // ISO date (yyyy-mm-dd)
+  startsOn: z.string().optional().nullable(), // ISO date (yyyy-mm-dd) – defaults to today
   endsOn: z.string().optional().nullable(), // ISO date or null
   dayRate: z.number().positive(),
   reason: z.string().optional().nullable(),
@@ -96,22 +96,23 @@ export async function GET(
     }
 
     const foremanId = await resolveForemanIdForRequest(req);
-    if (!foremanId) {
-      return NextResponse.json(
-        { error: "foremanId or foremanUserId is required" },
-        { status: 400, headers: CORS_HEADERS },
-      );
+
+    // If foremanId is provided, filter by foreman; otherwise return all for site
+    const where: any = { siteId };
+    if (foremanId) {
+      where.foremanId = foremanId;
     }
 
     const rows = await prisma.siteForemanDayRateOverride.findMany({
-      where: { siteId, foremanId },
+      where,
       orderBy: { startsOn: "desc" },
-      select: {
-        id: true,
-        startsOn: true,
-        endsOn: true,
-        dayRate: true,
-        reason: true,
+      include: {
+        foreman: {
+          select: {
+            id: true,
+            user: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -120,6 +121,8 @@ export async function GET(
         ok: true,
         overrides: rows.map((o) => ({
           id: o.id,
+          foremanId: o.foremanId,
+          foremanName: o.foreman?.user?.name ?? "Unknown",
           startsOn: o.startsOn.toISOString(),
           endsOn: o.endsOn ? o.endsOn.toISOString() : null,
           dayRate: (o.dayRate as any).toString?.() ?? String(o.dayRate ?? "0"),
@@ -164,15 +167,24 @@ export async function POST(
       );
     }
 
-    const foremanId = await resolveForemanIdForRequest(req);
+    const json = await req.json().catch(() => null as any);
+
+    // Resolve foremanId from query param OR body
+    let foremanId = await resolveForemanIdForRequest(req);
+    if (
+      !foremanId &&
+      json &&
+      typeof json.foremanId === "string" &&
+      json.foremanId.trim()
+    ) {
+      foremanId = json.foremanId.trim();
+    }
     if (!foremanId) {
       return NextResponse.json(
         { error: "foremanId or foremanUserId is required" },
         { status: 400, headers: CORS_HEADERS },
       );
     }
-
-    const json = await req.json().catch(() => null as any);
 
     // Close existing override
     if (json && typeof json.id === "string" && json.id) {
@@ -221,7 +233,10 @@ export async function POST(
 
     const data = body.data;
 
-    const startsOnDate = new Date(`${data.startsOn}T00:00:00.000Z`);
+    // Default startsOn to today if not provided
+    const startsOnStr =
+      data.startsOn?.trim() || new Date().toISOString().slice(0, 10);
+    const startsOnDate = new Date(`${startsOnStr}T00:00:00.000Z`);
     if (Number.isNaN(startsOnDate.getTime())) {
       return NextResponse.json(
         { error: "Invalid startsOn date" },
@@ -292,7 +307,7 @@ export async function POST(
         siteId,
         foremanId,
         dayRate: data.dayRate,
-        startsOn: data.startsOn,
+        startsOn: startsOnStr,
         endsOn: data.endsOn ?? null,
         reason: data.reason ?? null,
       },
@@ -316,6 +331,107 @@ export async function POST(
   } catch (e: any) {
     console.error(
       "/api/app/admin/sites/[id]/foreman-day-rate-overrides POST error",
+      e,
+    );
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+// DELETE /api/app/admin/sites/[id]/foreman-day-rate-overrides
+// Delete an override by id, or delete all active overrides for a foreman on this site
+export async function DELETE(
+  req: NextRequest,
+  segment: { params: Promise<{ id: string }> },
+) {
+  try {
+    const admin = await getAdminFromRequest(req);
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
+
+    const { id: siteId } = await segment.params;
+    if (!siteId) {
+      return NextResponse.json(
+        { error: "Site id is required" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const json = await req.json().catch(() => null as any);
+
+    // Delete a specific override by id
+    if (json && typeof json.id === "string" && json.id) {
+      const deleted = await prisma.siteForemanDayRateOverride.deleteMany({
+        where: { id: json.id, siteId },
+      });
+
+      if (deleted.count === 0) {
+        return NextResponse.json(
+          { error: "Override not found" },
+          { status: 404, headers: CORS_HEADERS },
+        );
+      }
+
+      writeAuditEvent({
+        actorUserId: admin.id,
+        action: "FOREMAN_DAY_RATE_CHANGE",
+        entity: "Site",
+        entityId: siteId,
+        metadata: {
+          siteId,
+          overrideId: json.id,
+          change: "deleted_override",
+        },
+      });
+
+      return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+    }
+
+    // Delete all active overrides for a foreman on this site
+    let foremanId = await resolveForemanIdForRequest(req);
+    if (
+      !foremanId &&
+      json &&
+      typeof json.foremanId === "string" &&
+      json.foremanId.trim()
+    ) {
+      foremanId = json.foremanId.trim();
+    }
+
+    if (!foremanId) {
+      return NextResponse.json(
+        { error: "id or foremanId is required" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const deleted = await prisma.siteForemanDayRateOverride.deleteMany({
+      where: { siteId, foremanId, endsOn: null },
+    });
+
+    writeAuditEvent({
+      actorUserId: admin.id,
+      action: "FOREMAN_DAY_RATE_CHANGE",
+      entity: "Site",
+      entityId: siteId,
+      metadata: {
+        siteId,
+        foremanId,
+        change: "deleted_all_active_overrides",
+        deletedCount: deleted.count,
+      },
+    });
+
+    return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+  } catch (e: any) {
+    console.error(
+      "/api/app/admin/sites/[id]/foreman-day-rate-overrides DELETE error",
       e,
     );
     return NextResponse.json(

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -48,6 +48,17 @@ async function getAdminFromRequest(req: NextRequest) {
 const CreateProductSchema = z.object({
   name: z.string().min(1).max(200),
   price: z.union([z.string(), z.number()]),
+});
+
+const UpdateProductSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(200).optional(),
+  price: z.union([z.string(), z.number()]).optional(),
+  isActive: z.boolean().optional(),
+});
+
+const DeleteProductSchema = z.object({
+  id: z.string().min(1),
 });
 
 // GET /api/app/admin/products
@@ -169,6 +180,119 @@ export async function POST(req: NextRequest) {
     );
   } catch (e: any) {
     console.error("/api/app/admin/products POST error", e);
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+// PATCH /api/app/admin/products
+// Update a product (name, price, isActive)
+export async function PATCH(req: NextRequest) {
+  try {
+    const admin = await getAdminFromRequest(req);
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
+
+    const json = await req.json().catch(() => null as any);
+    const body = UpdateProductSchema.safeParse(json);
+
+    if (!body.success) {
+      return NextResponse.json(
+        { error: "Invalid payload" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const { id, name, price, isActive } = body.data;
+
+    // Build update data
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (price !== undefined) {
+      const priceNum = Number(String(price).replace(",", "."));
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        return NextResponse.json(
+          { error: "Price must be a positive number" },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+      updateData.price = priceNum as any;
+    }
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "Nothing to update" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        product: {
+          id: updated.id,
+          name: updated.name,
+          price:
+            (updated.price as any).toString?.() ?? String(updated.price ?? "0"),
+          isActive: updated.isActive,
+        },
+      },
+      { headers: CORS_HEADERS },
+    );
+  } catch (e: any) {
+    console.error("/api/app/admin/products PATCH error", e);
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
+}
+
+// DELETE /api/app/admin/products
+// Permanently delete a product
+export async function DELETE(req: NextRequest) {
+  try {
+    const admin = await getAdminFromRequest(req);
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
+    }
+
+    const json = await req.json().catch(() => null as any);
+    const body = DeleteProductSchema.safeParse(json);
+
+    if (!body.success) {
+      return NextResponse.json(
+        { error: "Invalid payload – id is required" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    await prisma.product.delete({ where: { id: body.data.id } });
+
+    return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+  } catch (e: any) {
+    console.error("/api/app/admin/products DELETE error", e);
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
       { status: 500, headers: CORS_HEADERS },
