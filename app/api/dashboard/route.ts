@@ -283,7 +283,29 @@ async function getWeeklyAttendanceData(auth: { sub: string; role: string }) {
 }
 
 async function getTopSiteWages(auth: { sub: string; role: string }) {
-  let foremanFilter: any = {};
+  // Determine current fortnight range
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const year = today.getUTCFullYear();
+  const yearRow = await prisma.timesheetYear.findUnique({
+    where: { year },
+    select: { anchorSat: true },
+  });
+
+  let fnStart: Date;
+  let fnEnd: Date;
+  if (yearRow?.anchorSat) {
+    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
+    fnStart = fortnight.startDate;
+    fnEnd = addDaysUTC(fortnight.startDate, 14);
+  } else {
+    const backToSat = (today.getUTCDay() + 1) % 7;
+    fnStart = addDaysUTC(today, -backToSat);
+    fnEnd = addDaysUTC(fnStart, 14);
+  }
+
+  let siteFilter: any = {};
   if (auth.role === "SUPERVISOR") {
     const supervisor = await prisma.supervisor.findUnique({
       where: { userId: auth.sub },
@@ -298,28 +320,39 @@ async function getTopSiteWages(auth: { sub: string; role: string }) {
     const foremanIds =
       supervisor?.foremanLinks.map((link) => link.foremanId) ?? [];
 
-    if (foremanIds.length > 0) {
-      foremanFilter = { foremanId: { in: foremanIds } };
-    } else {
-      return [];
-    }
+    if (foremanIds.length === 0) return [];
+
+    // Get sites assigned to these foremen
+    const siteAssignments = await prisma.siteDay.findMany({
+      where: {
+        foremanId: { in: foremanIds },
+        workDate: { gte: fnStart, lt: fnEnd },
+      },
+      select: { siteId: true },
+      distinct: ["siteId"],
+    });
+
+    const siteIds = siteAssignments.map((s) => s.siteId);
+    if (siteIds.length === 0) return [];
+
+    siteFilter = { siteId: { in: siteIds } };
   }
 
-  const rows = await prisma.timesheet.groupBy({
+  // Sum dayRateAtScan from attendance scans grouped by site (top 5)
+  const rows = await prisma.attendanceScan.groupBy({
     by: ["siteId"],
     where: {
-      siteId: { not: null },
-      totalWorkerWages: { not: null },
-      ...foremanFilter,
+      workDate: { gte: fnStart, lt: fnEnd },
+      ...siteFilter,
     },
-    _sum: { totalWorkerWages: true },
-    orderBy: { _sum: { totalWorkerWages: "desc" } },
+    _sum: { dayRateAtScan: true },
+    orderBy: { _sum: { dayRateAtScan: "desc" } },
     take: 5,
   });
 
   if (rows.length === 0) return [];
 
-  const siteIds = rows.map((r) => r.siteId!).filter(Boolean);
+  const siteIds = rows.map((r) => r.siteId).filter(Boolean);
   const sites = await prisma.site.findMany({
     where: { id: { in: siteIds } },
     select: { id: true, name: true },
@@ -327,8 +360,8 @@ async function getTopSiteWages(auth: { sub: string; role: string }) {
   const nameMap = new Map(sites.map((s) => [s.id, s.name]));
 
   return rows.map((r) => ({
-    site: nameMap.get(r.siteId!) ?? "Unknown",
-    wages: Number(r._sum.totalWorkerWages ?? 0),
+    site: nameMap.get(r.siteId) ?? "Unknown",
+    wages: Number(r._sum.dayRateAtScan ?? 0),
   }));
 }
 

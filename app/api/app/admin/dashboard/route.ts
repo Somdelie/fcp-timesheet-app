@@ -154,21 +154,42 @@ async function getWeeklyAttendanceData() {
 }
 
 async function getTopSiteWages() {
-  // Sum totalWorkerWages for all timesheets grouped by site (top 5)
-  const rows = await prisma.timesheet.groupBy({
+  // Determine current fortnight range
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const year = today.getUTCFullYear();
+  const yearRow = await prisma.timesheetYear.findUnique({
+    where: { year },
+    select: { anchorSat: true },
+  });
+
+  let fnStart: Date;
+  let fnEnd: Date;
+  if (yearRow?.anchorSat) {
+    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
+    fnStart = fortnight.startDate;
+    fnEnd = addDaysUTC(fortnight.startDate, 14);
+  } else {
+    const backToSat = (today.getUTCDay() + 1) % 7;
+    fnStart = addDaysUTC(today, -backToSat);
+    fnEnd = addDaysUTC(fnStart, 14);
+  }
+
+  // Sum dayRateAtScan from attendance scans grouped by site (top 5)
+  const rows = await prisma.attendanceScan.groupBy({
     by: ["siteId"],
     where: {
-      siteId: { not: null },
-      totalWorkerWages: { not: null },
+      workDate: { gte: fnStart, lt: fnEnd },
     },
-    _sum: { totalWorkerWages: true },
-    orderBy: { _sum: { totalWorkerWages: "desc" } },
+    _sum: { dayRateAtScan: true },
+    orderBy: { _sum: { dayRateAtScan: "desc" } },
     take: 5,
   });
 
   if (rows.length === 0) return [];
 
-  const siteIds = rows.map((r) => r.siteId!).filter(Boolean);
+  const siteIds = rows.map((r) => r.siteId).filter(Boolean);
   const sites = await prisma.site.findMany({
     where: { id: { in: siteIds } },
     select: { id: true, name: true },
@@ -176,8 +197,8 @@ async function getTopSiteWages() {
   const nameMap = new Map(sites.map((s) => [s.id, s.name]));
 
   return rows.map((r) => ({
-    site: nameMap.get(r.siteId!) ?? "Unknown",
-    wages: Number(r._sum.totalWorkerWages ?? 0),
+    site: nameMap.get(r.siteId) ?? "Unknown",
+    wages: Number(r._sum.dayRateAtScan ?? 0),
   }));
 }
 

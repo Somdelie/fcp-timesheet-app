@@ -5,6 +5,17 @@ import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
 import { deleteImage } from "@/lib/cloudinary";
 
+/** Return a phone string only if it looks like a real phone number (not an email). */
+function sanitizePhone(
+  ...candidates: (string | null | undefined)[]
+): string | null {
+  for (const v of candidates) {
+    const s = (v ?? "").trim();
+    if (s && !s.includes("@")) return s;
+  }
+  return null;
+}
+
 // Force recompile - supports Bearer token auth for desktop app
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +125,7 @@ export async function GET(
           firstName: employee.firstName,
           lastName: employee.lastName,
           code: employee.qrCodeValue,
-          phone: employee.phone ?? employee.user?.phone ?? null,
+          phone: sanitizePhone(employee.phone, employee.user?.phone),
           dayRate: Number(employee.defaultDayRate),
           faceImageUrl: employee.faceImageUrl,
           active: employee.isActive,

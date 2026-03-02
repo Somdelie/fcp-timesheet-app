@@ -11,6 +11,17 @@ function getBearer(req: Request) {
   return m?.[1] ?? null;
 }
 
+/** Return a phone string only if it looks like a real phone number (not an email). */
+function sanitizePhone(
+  ...candidates: (string | null | undefined)[]
+): string | null {
+  for (const v of candidates) {
+    const s = (v ?? "").trim();
+    if (s && !s.includes("@")) return s;
+  }
+  return null;
+}
+
 async function getForemanAccess(userId: string, employeeId: string) {
   const foreman = await prisma.foreman.findUnique({
     where: { userId },
@@ -93,7 +104,7 @@ export async function GET(
         firstName: employee.firstName,
         lastName: employee.lastName,
         code: employee.qrCodeValue,
-        phone: employee.phone ?? employee.user?.phone ?? null,
+        phone: sanitizePhone(employee.phone, employee.user?.phone),
         dayRate: Number(employee.defaultDayRate),
         active: employee.isActive,
         fullName: `${employee.firstName} ${employee.lastName}`,
@@ -232,7 +243,10 @@ export async function PUT(
         firstName: updatedEmployee.firstName,
         lastName: updatedEmployee.lastName,
         code: updatedEmployee.qrCodeValue,
-        phone: updatedEmployee.phone ?? updatedEmployee.user?.phone ?? null,
+        phone: sanitizePhone(
+          updatedEmployee.phone,
+          updatedEmployee.user?.phone,
+        ),
         dayRate: Number(updatedEmployee.defaultDayRate),
         active: updatedEmployee.isActive,
         fullName: `${updatedEmployee.firstName} ${updatedEmployee.lastName}`,

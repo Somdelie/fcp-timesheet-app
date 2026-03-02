@@ -117,6 +117,58 @@ const wagesChartConfig = {
   wages: { label: "Wages (R)", color: "#e11d48" },
 } satisfies ChartConfig;
 
+const WAGE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899"];
+
+function formatWageCurrency(val: number): string {
+  if (val >= 1000) return `R${(val / 1000).toFixed(1)}k`;
+  return `R${val.toFixed(0)}`;
+}
+
+function TopSiteWagesChart({
+  data,
+}: {
+  data: { site: string; wages: number }[];
+}) {
+  const max = Math.max(1, ...data.map((s) => s.wages));
+  return (
+    <div className="flex flex-col gap-3 py-1">
+      {data.map((item, idx) => {
+        const pct = (item.wages / max) * 100;
+        const color = WAGE_COLORS[idx % WAGE_COLORS.length];
+        return (
+          <div key={idx} className="flex items-center gap-3">
+            {/* Label */}
+            <div className="flex items-center gap-2 w-[110px] min-w-[110px]">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm font-semibold truncate text-foreground">
+                {item.site}
+              </span>
+            </div>
+            {/* Bar */}
+            <div className="flex-1 h-6 rounded-md bg-muted/40 overflow-hidden">
+              <div
+                className="h-full rounded-md transition-all duration-500"
+                style={{
+                  width: `${Math.max(pct, 4)}%`,
+                  backgroundColor: color,
+                  opacity: 0.85,
+                }}
+              />
+            </div>
+            {/* Amount */}
+            <span className="text-sm font-bold text-muted-foreground w-[60px] text-right tabular-nums">
+              {formatWageCurrency(item.wages)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const siteChartConfig = {
   workers: { label: "Workers", color: "#1e5a8a" },
   photos: { label: "Photos", color: "#10b981" },
@@ -158,7 +210,7 @@ export default function HomePage() {
                 ts: number;
                 payload: any;
               } | null;
-              if (cached && now - cached.ts < 30 * 60_000) {
+              if (cached && now - cached.ts < 1 * 60_000) {
                 const json = cached.payload ?? {};
                 setMetrics(json.metrics ?? null);
                 setWeeklyData(json.weeklyAttendance ?? null);
@@ -226,7 +278,7 @@ export default function HomePage() {
                 ts: number;
                 payload: any;
               } | null;
-              if (cached && now - cached.ts < 30 * 60_000) {
+              if (cached && now - cached.ts < 1 * 60_000) {
                 const json = cached.payload ?? {};
                 setWeeklyData(json.weeklyAttendance ?? null);
                 setTopWagesData(json.topSiteWages ?? null);
@@ -375,43 +427,7 @@ export default function HomePage() {
                     No wage data yet for your sites.
                   </p>
                 ) : (
-                  <ChartContainer
-                    config={wagesChartConfig}
-                    className="h-full w-full"
-                  >
-                    <BarChart data={topSiteWagesData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis
-                        type="number"
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v: number) =>
-                          `R${(v / 1000).toFixed(0)}k`
-                        }
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="site"
-                        tickLine={false}
-                        axisLine={false}
-                        width={100}
-                      />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent
-                            formatter={(value) =>
-                              `R${Number(value).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
-                            }
-                          />
-                        }
-                      />
-                      <Bar
-                        dataKey="wages"
-                        fill="var(--color-wages)"
-                        radius={[0, 8, 8, 0]}
-                      />
-                    </BarChart>
-                  </ChartContainer>
+                  <TopSiteWagesChart data={topSiteWagesData} />
                 )}
               </CardContent>
             </Card>
@@ -911,43 +927,7 @@ export default function HomePage() {
                   No wage data available.
                 </p>
               ) : (
-                <ChartContainer
-                  config={wagesChartConfig}
-                  className="h-full w-full"
-                >
-                  <BarChart data={topSiteWagesData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) =>
-                        `R${(v / 1000).toFixed(0)}k`
-                      }
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="site"
-                      tickLine={false}
-                      axisLine={false}
-                      width={100}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value) =>
-                            `R${Number(value).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`
-                          }
-                        />
-                      }
-                    />
-                    <Bar
-                      dataKey="wages"
-                      fill="var(--color-wages)"
-                      radius={[0, 8, 8, 0]}
-                    />
-                  </BarChart>
-                </ChartContainer>
+                <TopSiteWagesChart data={topSiteWagesData} />
               )}
             </CardContent>
           </Card>

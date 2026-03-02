@@ -6,6 +6,17 @@ import { employeeWhereFor } from "@/lib/employee-scope";
 import { writeAuditEvent } from "@/lib/audit";
 import { randomBytes } from "crypto";
 
+/** Return a phone string only if it looks like a real phone number (not an email). */
+function sanitizePhone(
+  ...candidates: (string | null | undefined)[]
+): string | null {
+  for (const v of candidates) {
+    const s = (v ?? "").trim();
+    if (s && !s.includes("@")) return s;
+  }
+  return null;
+}
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -102,7 +113,7 @@ export async function GET(request: NextRequest) {
           fullName: `${e.firstName} ${e.lastName}`,
           createdAt: e.createdAt.toISOString(),
           photoUrl: e.faceImageUrl ?? null,
-          phone: e.phone ?? e.user?.phone ?? null,
+          phone: sanitizePhone(e.phone, e.user?.phone),
           isForeman: !!(e.user?.role === "FOREMAN" && e.user?.foreman),
         })),
       },
@@ -307,7 +318,7 @@ export async function PUT(request: NextRequest) {
         firstName: employee.firstName,
         lastName: employee.lastName,
         code: employee.qrCodeValue,
-        phone: employee.phone ?? employee.user?.phone ?? null,
+        phone: sanitizePhone(employee.phone, employee.user?.phone),
         dayRate: Number(employee.defaultDayRate),
         active: employee.isActive,
         fullName: `${employee.firstName} ${employee.lastName}`,

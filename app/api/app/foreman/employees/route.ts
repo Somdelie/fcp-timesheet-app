@@ -15,6 +15,17 @@ function clean(s: unknown) {
   return String(s ?? "").trim();
 }
 
+/** Return a phone string only if it looks like a real phone number (not an email). */
+function sanitizePhone(
+  ...candidates: (string | null | undefined)[]
+): string | null {
+  for (const v of candidates) {
+    const s = (v ?? "").trim();
+    if (s && !s.includes("@")) return s;
+  }
+  return null;
+}
+
 function parseMoneyToDecimalString(v: unknown) {
   const s = String(v ?? "")
     .trim()
@@ -123,7 +134,7 @@ export async function GET(req: Request) {
       dayRate: Number(e.defaultDayRate),
       active: e.isActive,
       faceImageUrl: e.faceImageUrl ?? null,
-      phone: e.phone ?? e.user?.phone ?? null,
+      phone: sanitizePhone(e.phone, e.user?.phone),
     }));
 
     return NextResponse.json({ employees: items });

@@ -25,6 +25,17 @@ export type EmployeeDTO = {
   linkedToForemanId?: string | null; // If linked to a foreman via ForemanEmployee
 };
 
+/** Return a phone string only if it looks like a real phone number (not an email). */
+function sanitizePhone(
+  ...candidates: (string | null | undefined)[]
+): string | null {
+  for (const v of candidates) {
+    const s = (v ?? "").trim();
+    if (s && !s.includes("@")) return s;
+  }
+  return null;
+}
+
 function serializeEmployee(e: any): EmployeeDTO & { isForeman: boolean } {
   // Check if employee is an assistant to a foreman (has active ForemanAssistant link)
   const linkedToForemanId = e.assistantLinks?.[0]?.foremanId ?? null;
@@ -39,7 +50,7 @@ function serializeEmployee(e: any): EmployeeDTO & { isForeman: boolean } {
     defaultDayRate: e.defaultDayRate ? String(e.defaultDayRate) : null, // ✅ Decimal -> string or null
     faceImageUrl: e.faceImageUrl ?? null,
     isActive: Boolean(e.isActive),
-    phone: e.phone ?? e.user?.phone ?? null,
+    phone: sanitizePhone(e.phone, e.user?.phone),
     createdAt:
       e.createdAt instanceof Date
         ? e.createdAt.toISOString()
