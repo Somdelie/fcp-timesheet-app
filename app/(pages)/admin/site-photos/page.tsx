@@ -22,6 +22,9 @@ import {
   XCircle,
   MapPin,
   Trash2,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from "lucide-react";
 
 interface SitePhoto {
@@ -121,6 +124,7 @@ export default function AdminSitePhotosPage() {
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
   const [verifying, setVerifying] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   const loadPhotos = async (foremanId?: string, supervisorId?: string) => {
     setLoading(true);
@@ -150,6 +154,11 @@ export default function AdminSitePhotosPage() {
   useEffect(() => {
     loadPhotos();
   }, []);
+
+  useEffect(() => {
+    // Reset zoom whenever a new photo is selected or modal is closed
+    setZoom(1);
+  }, [selectedPhoto?.id]);
 
   const handleVerify = async (
     photoId: string,
@@ -416,11 +425,14 @@ export default function AdminSitePhotosPage() {
           <DialogTitle className="sr-only">Photo Preview</DialogTitle>
           {selectedPhoto && (
             <div className="relative">
-              <img
-                src={selectedPhoto.imageUrl}
-                alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
-                className="w-full h-auto max-h-[80vh] object-contain"
-              />
+              <div className="max-h-[80vh] overflow-auto bg-black flex items-center justify-center">
+                <img
+                  src={selectedPhoto.imageUrl}
+                  alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
+                  className="max-w-none h-auto object-contain transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                />
+              </div>
               <div className="absolute left-4 top-4 flex flex-col gap-2">
                 <Badge variant="default" className="w-fit">
                   {selectedPhoto.siteName}
@@ -429,12 +441,47 @@ export default function AdminSitePhotosPage() {
                   {selectedPhoto.foremanName}
                 </Badge>
               </div>
-              <div className="absolute right-4 top-4">
+              <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
                 <Badge
                   variant={getStatusVariant(selectedPhoto.verificationStatus)}
                 >
                   {selectedPhoto.verificationStatus}
                 </Badge>
+                <div className="flex gap-1 rounded-md bg-black/60 p-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
+                    onClick={() =>
+                      setZoom((z) =>
+                        z <= 0.75 ? 0.75 : Math.max(0.75, z - 0.25),
+                      )
+                    }
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
+                    onClick={() => setZoom(1)}
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
+                    onClick={() =>
+                      setZoom((z) => (z >= 4 ? 4 : Math.min(4, z + 0.25)))
+                    }
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
               <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-4">
                 <div className="flex items-end justify-between">
