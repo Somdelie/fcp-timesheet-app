@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
+import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { verifyApiToken } from "@/lib/jwt";
 import { resolveActingForeman } from "@/lib/resolveActingForeman";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
@@ -173,20 +173,12 @@ export async function POST(req: Request) {
   // optional local dedupe to reduce DB churn
   const uniqueQrValues = Array.from(new Set(qrValues));
 
-  // Get company default day rate
-  const companySetting = await prisma.companySettings.findUnique({
-    where: { id: "singleton" },
-    select: { defaultEmployeeDayRate: true },
-  });
-  const defaultRate = companySetting?.defaultEmployeeDayRate;
-
   const employees = await prisma.employee.findMany({
     where: { qrCodeValue: { in: uniqueQrValues as string[] } },
     select: {
       id: true,
       qrCodeValue: true,
       isActive: true,
-      defaultDayRate: true,
       firstName: true,
       lastName: true,
     },
@@ -220,19 +212,12 @@ export async function POST(req: Request) {
     }
 
     try {
-      const effectiveRate = (await resolveEmployeeDayRate({
+      const rateResult = await computeDayRateAtScan({
         employeeId: emp.id,
-        workDate,
-        siteId,
         foremanId: actingForemanId,
-        employeeDefaultRate: emp.defaultDayRate,
-        companyDefaultRate: defaultRate,
-      })) as any;
-
-      if (!effectiveRate) {
-        results.push({ qrCodeValue: qr as string, status: "UNKNOWN" });
-        continue;
-      }
+        siteId,
+        workDate,
+      });
 
       // Determine scan attribution based on whether this is an assistant or real foreman
       const scanData: Prisma.AttendanceScanCreateInput = {
@@ -240,7 +225,8 @@ export async function POST(req: Request) {
         employee: { connect: { id: emp.id } },
         workDate,
         site: { connect: { id: siteId } },
-        dayRateAtScan: effectiveRate,
+        dayRateAtScan: rateResult.dayRate,
+        team: rateResult.team,
         qrPayload: qr as string,
         latitude,
         longitude,

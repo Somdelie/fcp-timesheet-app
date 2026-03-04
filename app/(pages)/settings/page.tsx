@@ -44,6 +44,7 @@ import {
 import {
   getCompanySettings,
   updateCompanySettings,
+  updateTeamDefaultRates,
 } from "@/actions/company-settings";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
@@ -112,6 +113,11 @@ export default function SettingsPage() {
   const [year, setYear] = useState<number>(nowYearUTC);
 
   const [defaultEmployeeDayRate, setDefaultEmployeeDayRate] = useState("");
+  const [defaultPainterDayRate, setDefaultPainterDayRate] = useState("");
+  const [defaultBuildingDayRate, setDefaultBuildingDayRate] = useState("");
+  const [defaultSpecialCoatingsDayRate, setDefaultSpecialCoatingsDayRate] =
+    useState("");
+  const [isSavingTeamRates, setIsSavingTeamRates] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
   // Timesheet anchor (source of truth from DB) + admin input
@@ -140,6 +146,15 @@ export default function SettingsPage() {
         if (res.ok) {
           setDefaultEmployeeDayRate(
             String(res.settings.defaultEmployeeDayRate),
+          );
+          setDefaultPainterDayRate(
+            String(res.settings.defaultPainterDayRate ?? "0"),
+          );
+          setDefaultBuildingDayRate(
+            String(res.settings.defaultBuildingDayRate ?? "0"),
+          );
+          setDefaultSpecialCoatingsDayRate(
+            String(res.settings.defaultSpecialCoatingsDayRate ?? "0"),
           );
         }
       } catch (err) {
@@ -223,6 +238,40 @@ export default function SettingsPage() {
       toast.error("Failed to save settings.");
     } finally {
       setIsSavingRate(false);
+    }
+  };
+
+  const handleSaveTeamRates = async () => {
+    const painters = Number(defaultPainterDayRate.trim());
+    const building = Number(defaultBuildingDayRate.trim());
+    const specialCoatings = Number(defaultSpecialCoatingsDayRate.trim());
+
+    if (
+      !Number.isFinite(painters) ||
+      painters < 0 ||
+      !Number.isFinite(building) ||
+      building < 0 ||
+      !Number.isFinite(specialCoatings) ||
+      specialCoatings < 0
+    ) {
+      toast.error("Please enter valid team rates (0 or above).");
+      return;
+    }
+
+    setIsSavingTeamRates(true);
+    try {
+      const res = await updateTeamDefaultRates({
+        defaultPainterDayRate: defaultPainterDayRate.trim(),
+        defaultBuildingDayRate: defaultBuildingDayRate.trim(),
+        defaultSpecialCoatingsDayRate: defaultSpecialCoatingsDayRate.trim(),
+      });
+      if (res.ok) toast.success("Team default rates updated!");
+      else toast.error(res.error || "Failed to save team rates.");
+    } catch (err) {
+      console.error("Error saving team rates:", err);
+      toast.error("Failed to save team rates.");
+    } finally {
+      setIsSavingTeamRates(false);
     }
   };
 
@@ -530,6 +579,74 @@ export default function SettingsPage() {
                       disabled={isSavingRate || isLoadingSettings}
                     >
                       {isSavingRate ? "Saving..." : "Save Day Rate"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Default Day Rates</CardTitle>
+                <CardDescription>
+                  Set default day rates per team type. These rates apply when an
+                  employee has no individual override and the foreman has no
+                  custom rate.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="painterRate">Painters Rate (R)</Label>
+                    <Input
+                      id="painterRate"
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 350.00"
+                      value={defaultPainterDayRate}
+                      onChange={(e) => setDefaultPainterDayRate(e.target.value)}
+                      disabled={isLoadingSettings}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="buildingRate">Building Rate (R)</Label>
+                    <Input
+                      id="buildingRate"
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 400.00"
+                      value={defaultBuildingDayRate}
+                      onChange={(e) =>
+                        setDefaultBuildingDayRate(e.target.value)
+                      }
+                      disabled={isLoadingSettings}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="specialCoatingsRate">
+                      Special Coatings Rate (R)
+                    </Label>
+                    <Input
+                      id="specialCoatingsRate"
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 450.00"
+                      value={defaultSpecialCoatingsDayRate}
+                      onChange={(e) =>
+                        setDefaultSpecialCoatingsDayRate(e.target.value)
+                      }
+                      disabled={isLoadingSettings}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSaveTeamRates}
+                      disabled={isSavingTeamRates || isLoadingSettings}
+                    >
+                      {isSavingTeamRates ? "Saving..." : "Save Team Rates"}
                     </Button>
                   </div>
                 </div>

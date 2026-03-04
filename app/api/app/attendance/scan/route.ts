@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { resolveEmployeeDayRate } from "@/lib/employeeDayRate";
+import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { requireServerAuth } from "@/lib/auth-server";
 import { z } from "zod";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
@@ -151,19 +151,11 @@ export async function POST(req: Request) {
 
   const workDate = startOfTodayLocal();
 
-  // Get company default day rate
-  const companySetting = await prisma.companySettings.findUnique({
-    where: { id: "singleton" },
-    select: { defaultEmployeeDayRate: true },
-  });
-  const defaultRate = companySetting?.defaultEmployeeDayRate;
-
   const employee = await prisma.employee.findFirst({
     where: { qrCodeValue: employeeCode },
     select: {
       id: true,
       isActive: true,
-      defaultDayRate: true,
       firstName: true,
       lastName: true,
       userId: true,
@@ -197,20 +189,12 @@ export async function POST(req: Request) {
     }
   }
 
-  const effectiveRate = (await resolveEmployeeDayRate({
+  const rateResult = await computeDayRateAtScan({
     employeeId: employee.id,
-    workDate,
-    siteId,
     foremanId: assigned.foremanId,
-    employeeDefaultRate: employee.defaultDayRate,
-    companyDefaultRate: defaultRate,
-  })) as any;
-  if (!effectiveRate) {
-    return NextResponse.json(
-      { error: "No day rate configured for employee" },
-      { status: 400 },
-    );
-  }
+    siteId,
+    workDate,
+  });
 
   let siteDay;
   try {
@@ -234,7 +218,8 @@ export async function POST(req: Request) {
         employeeId: employee.id,
         workDate,
         siteId,
-        dayRateAtScan: effectiveRate,
+        dayRateAtScan: rateResult.dayRate,
+        team: rateResult.team,
         qrPayload: employeeCode,
         latitude: body.data.latitude ?? null,
         longitude: body.data.longitude ?? null,

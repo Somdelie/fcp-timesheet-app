@@ -138,7 +138,7 @@ function TopSiteWagesChart({
         return (
           <div key={idx} className="flex items-center gap-3">
             {/* Label */}
-            <div className="flex items-center gap-2 w-[110px] min-w-[110px]">
+            <div className="flex items-center gap-2 w-27.5 min-w-27.5">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: color }}
@@ -159,7 +159,7 @@ function TopSiteWagesChart({
               />
             </div>
             {/* Amount */}
-            <span className="text-sm font-bold text-muted-foreground w-[60px] text-right tabular-nums">
+            <span className="text-sm font-bold text-muted-foreground w-15 text-right tabular-nums">
               {formatWageCurrency(item.wages)}
             </span>
           </div>
@@ -376,7 +376,7 @@ export default function HomePage() {
               <CardHeader>
                 <CardTitle>Weekly Attendance (My Sites)</CardTitle>
                 <CardDescription>
-                  Attendance scans and active sites over the past week.
+                  Attendance scans and active sites over the week.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -679,16 +679,16 @@ export default function HomePage() {
 
   // Default: ADMIN dashboard with full system overview
   return (
-    <div className="flex flex-col min-h-screen bg-muted/30">
+    <div className="flex flex-col min-h-screen">
       <div className="flex-1 space-y-2">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">
-              Admin Dashboard
+              Dashboard Overview
             </h1>
             <p className="text-muted-foreground mt-1">
-              Overview of workforce management system
+              Overview of timesheet management system
             </p>
           </div>
           <div className="text-sm text-muted-foreground">
@@ -883,7 +883,7 @@ export default function HomePage() {
             <CardHeader className="pb-2">
               <CardTitle>Weekly Attendance Trend</CardTitle>
               <CardDescription>
-                Attendance scans and active sites over the past week
+                Attendance scans and active sites over the week
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-0">
@@ -1084,7 +1084,6 @@ export default function HomePage() {
                     icon: ClipboardCheck,
                     href: "/timesheets",
                   },
-                  { label: "Request Photos", icon: Camera, href: "/sites" },
                 ].map((action, index) => {
                   const Icon = action.icon;
                   return (

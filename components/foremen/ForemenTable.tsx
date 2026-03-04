@@ -26,6 +26,7 @@ import {
   MoreHorizontal,
   Eye,
   UserPlus,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,9 +63,24 @@ export type ForemanRow = {
   foreman: {
     id: string;
     defaultDayRate: string | null;
+    defaultTeam: string;
     createdAt: string;
   } | null;
   isAssistant: boolean;
+};
+
+const TEAM_LABELS: Record<string, string> = {
+  PAINTERS: "Painters",
+  BUILDING: "Building",
+  SPECIAL_COATINGS: "Special Coatings",
+};
+
+const TEAM_COLORS: Record<string, string> = {
+  PAINTERS: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  BUILDING:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  SPECIAL_COATINGS:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
 };
 
 function formatDate(iso: string) {
@@ -88,12 +104,14 @@ interface ForemenTableProps {
   data: ForemanRow[];
   onView: (foreman: ForemanRow) => void;
   onAddAssistant?: (foreman: ForemanRow) => void;
+  onSwitchTeam?: (foreman: ForemanRow) => void;
 }
 
 export default function ForemenTable({
   data,
   onView,
   onAddAssistant,
+  onSwitchTeam,
 }: ForemenTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
@@ -192,6 +210,33 @@ export default function ForemenTable({
         },
       },
       {
+        id: "team",
+        accessorFn: (row) => row.foreman?.defaultTeam ?? null,
+        size: 150,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-violet-600" />
+            Team
+          </div>
+        ),
+        cell: ({ row }) => {
+          if (row.original.isAssistant) {
+            return (
+              <span className="text-xs text-muted-foreground italic">—</span>
+            );
+          }
+          const team = row.original.foreman?.defaultTeam ?? "PAINTERS";
+          return (
+            <Badge
+              variant="secondary"
+              className={`text-[11px] font-medium ${TEAM_COLORS[team] ?? ""}`}
+            >
+              {TEAM_LABELS[team] ?? team}
+            </Badge>
+          );
+        },
+      },
+      {
         id: "createdAt",
         accessorKey: "createdAt",
         size: 110,
@@ -256,13 +301,28 @@ export default function ForemenTable({
                     </DropdownMenuItem>
                   </>
                 )}
+                {!row.original.isAssistant && onSwitchTeam && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex items-center gap-2"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        onSwitchTeam(row.original);
+                      }}
+                    >
+                      <Users className="h-4 w-4" />
+                      Switch Team
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ),
       },
     ],
-    [onView, onAddAssistant],
+    [onView, onAddAssistant, onSwitchTeam],
   );
 
   const table = useReactTable({

@@ -313,7 +313,7 @@ export default function SitesTable({
           );
         },
         cell: ({ row }) => (
-          <span className="font-semibold">{row.original.name}</span>
+          <span className="font-semibold uppercase">{row.original.name}</span>
         ),
       },
       {
@@ -327,7 +327,9 @@ export default function SitesTable({
           </div>
         ),
         cell: ({ row }) => (
-          <span className="text-sm">{row.original.supervisorName ?? "—"}</span>
+          <span className="text-sm capitalize">
+            {row.original.supervisorName ?? "—"}
+          </span>
         ),
       },
       {

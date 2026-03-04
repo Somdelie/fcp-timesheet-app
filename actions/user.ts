@@ -235,6 +235,7 @@ export async function getAllForemen() {
         select: {
           id: true,
           defaultDayRate: true,
+          defaultTeam: true,
           createdAt: true,
         },
       },

@@ -23,6 +23,7 @@ export default async function ForemanPage() {
       ? {
           id: foreman.foreman.id,
           defaultDayRate: foreman.foreman.defaultDayRate?.toString() ?? null,
+          defaultTeam: foreman.foreman.defaultTeam ?? "PAINTERS",
           createdAt: new Date(foreman.foreman.createdAt).toLocaleDateString(),
         }
       : null,

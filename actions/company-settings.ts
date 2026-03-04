@@ -7,6 +7,9 @@ import { revalidatePath } from "next/cache";
 export type CompanySettingsDTO = {
   id: string;
   defaultEmployeeDayRate: string; // keep as string to avoid float rounding issues
+  defaultPainterDayRate: string;
+  defaultBuildingDayRate: string;
+  defaultSpecialCoatingsDayRate: string;
   updatedAt: string;
 };
 
@@ -14,6 +17,11 @@ function serializeSettings(s: any): CompanySettingsDTO {
   return {
     id: s.id,
     defaultEmployeeDayRate: String(s.defaultEmployeeDayRate),
+    defaultPainterDayRate: String(s.defaultPainterDayRate ?? "0"),
+    defaultBuildingDayRate: String(s.defaultBuildingDayRate ?? "0"),
+    defaultSpecialCoatingsDayRate: String(
+      s.defaultSpecialCoatingsDayRate ?? "0",
+    ),
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()
@@ -121,5 +129,77 @@ export async function updateCompanySettings(input: {
 
   revalidatePath("/settings");
   revalidatePath("/employees");
+  return { ok: true as const, settings: serializeSettings(result) };
+}
+
+/**
+ * Allows non-negative values (including 0) for team rates.
+ * Returns null only if the input is not a valid finite number.
+ */
+function parseMoneyAllowZero(v: unknown): string | null {
+  const s = String(v ?? "")
+    .trim()
+    .replace(",", ".");
+  if (!s) return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n.toFixed(2);
+}
+
+/**
+ * Update team default day rates in CompanySettings.
+ *
+ * Accepts partial input — only provided fields are updated.
+ */
+export async function updateTeamDefaultRates(input: {
+  defaultPainterDayRate?: string | number;
+  defaultBuildingDayRate?: string | number;
+  defaultSpecialCoatingsDayRate?: string | number;
+}) {
+  const auth = await requireServerAuth();
+
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Unauthorized. Admin only." };
+  }
+
+  const data: Record<string, unknown> = {};
+
+  if (input.defaultPainterDayRate !== undefined) {
+    const v = parseMoneyAllowZero(input.defaultPainterDayRate);
+    if (v === null)
+      return { ok: false as const, error: "Painter day rate is invalid." };
+    data.defaultPainterDayRate = v;
+  }
+  if (input.defaultBuildingDayRate !== undefined) {
+    const v = parseMoneyAllowZero(input.defaultBuildingDayRate);
+    if (v === null)
+      return { ok: false as const, error: "Building day rate is invalid." };
+    data.defaultBuildingDayRate = v;
+  }
+  if (input.defaultSpecialCoatingsDayRate !== undefined) {
+    const v = parseMoneyAllowZero(input.defaultSpecialCoatingsDayRate);
+    if (v === null)
+      return {
+        ok: false as const,
+        error: "Special Coatings day rate is invalid.",
+      };
+    data.defaultSpecialCoatingsDayRate = v;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return { ok: false as const, error: "No team rates provided." };
+  }
+
+  const result = await prisma.companySettings.upsert({
+    where: { id: "singleton" },
+    update: data,
+    create: {
+      id: "singleton",
+      defaultEmployeeDayRate: 0,
+      ...data,
+    },
+  });
+
+  revalidatePath("/settings");
   return { ok: true as const, settings: serializeSettings(result) };
 }

@@ -25,6 +25,8 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface SitePhoto {
@@ -239,6 +241,19 @@ export default function AdminSitePhotosPage() {
 
   const groupedPhotos = groupPhotosByDate(photos);
 
+  // Carousel scroll refs – one per date group
+  const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const scrollCarousel = (date: string, direction: "left" | "right") => {
+    const el = carouselRefs.current[date];
+    if (!el) return;
+    const scrollAmount = el.clientWidth * 0.75;
+    el.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
   const handleForemanChange = (value: string) => {
     const newValue = value === "all" ? "" : value;
     setSelectedForemanId(newValue);
@@ -340,14 +355,45 @@ export default function AdminSitePhotosPage() {
         <div className="space-y-8">
           {groupedPhotos.map((group) => (
             <div key={group.date}>
-              <h2 className="mb-4 text-lg font-semibold text-foreground">
-                {group.label}
-              </h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-foreground">
+                  {group.label}
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {group.photos.length} photo
+                    {group.photos.length !== 1 ? "s" : ""}
+                  </Badge>
+                </h2>
+                {group.photos.length > 4 && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => scrollCarousel(group.date, "left")}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => scrollCarousel(group.date, "right")}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div
+                ref={(el) => {
+                  carouselRefs.current[group.date] = el;
+                }}
+                className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
+              >
                 {group.photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="group relative cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:shadow-md"
+                    className="group relative flex-shrink-0 w-56 cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:shadow-md snap-start"
                     onClick={() => setSelectedPhoto(photo)}
                   >
                     <div className="aspect-square">
@@ -363,7 +409,7 @@ export default function AdminSitePhotosPage() {
                     <div className="absolute left-2 top-2">
                       <Badge
                         variant="default"
-                        className="bg-primary/90 backdrop-blur-sm"
+                        className="bg-primary/90 backdrop-blur-sm text-[10px] px-1.5 py-0.5"
                       >
                         {photo.siteName}
                       </Badge>
@@ -373,7 +419,7 @@ export default function AdminSitePhotosPage() {
                     <div className="absolute right-2 top-2">
                       <Badge
                         variant={getStatusVariant(photo.verificationStatus)}
-                        className="backdrop-blur-sm"
+                        className="backdrop-blur-sm text-[10px] px-1.5 py-0.5"
                       >
                         {photo.verificationStatus}
                       </Badge>
@@ -383,7 +429,7 @@ export default function AdminSitePhotosPage() {
                     <div className="absolute bottom-2 left-2">
                       <Badge
                         variant="secondary"
-                        className="bg-secondary/90 backdrop-blur-sm"
+                        className="bg-secondary/90 backdrop-blur-sm text-[10px] px-1.5 py-0.5"
                       >
                         {photo.foremanName}
                       </Badge>
@@ -391,7 +437,7 @@ export default function AdminSitePhotosPage() {
 
                     {/* Time - bottom right */}
                     <div className="absolute bottom-2 right-2">
-                      <span className="rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm">
+                      <span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
                         {new Date(photo.uploadedAtISO).toLocaleTimeString(
                           "en-GB",
                           {

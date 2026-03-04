@@ -25,7 +25,8 @@ type RecentActivityKind =
   | "EMPLOYEE_CREATED"
   | "SITE_CREATED"
   | "PHOTO_VERIFIED"
-  | "PHOTO_FLAGGED";
+  | "PHOTO_FLAGGED"
+  | "MANUAL_SCAN";
 
 export type RecentActivityItem = {
   id: string;
@@ -54,6 +55,8 @@ function defaultTitle(kind: RecentActivityKind) {
       return "Photo verification completed";
     case "PHOTO_FLAGGED":
       return "Photo flagged for review";
+    case "MANUAL_SCAN":
+      return "Manual scan created";
     default:
       return "Recent activity";
   }
@@ -168,6 +171,7 @@ export async function GET(req: Request) {
           "SITE_CREATED",
           "PHOTO_VERIFIED",
           "PHOTO_FLAGGED",
+          "MANUAL_SCAN",
         ];
 
   const auditEvents = await prisma.auditEvent.findMany({
@@ -216,6 +220,7 @@ export async function GET(req: Request) {
           md.siteId
         )
           href = `/sites/${encodeURIComponent(String(md.siteId))}`;
+        else if (kind === "MANUAL_SCAN") href = "/admin/attendance-scans";
         else if (kind.startsWith("TIMESHEET_"))
           href =
             auth.role === "SUPERVISOR"

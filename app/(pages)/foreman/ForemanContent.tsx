@@ -17,6 +17,7 @@ import {
   Briefcase,
   DollarSign,
   Calendar,
+  Users,
 } from "lucide-react";
 import {
   Dialog,
@@ -39,7 +40,28 @@ import {
   actionAdminListEmployees,
   actionAdminCreateAssistant,
 } from "@/actions/admin";
+import { switchForemanTeam } from "@/actions/foreman-team";
 import type { AdminEmployee } from "@/lib/apiClient";
+
+const TEAM_OPTIONS = [
+  { value: "PAINTERS", label: "Painters" },
+  { value: "BUILDING", label: "Building" },
+  { value: "SPECIAL_COATINGS", label: "Special Coatings" },
+] as const;
+
+const TEAM_LABELS: Record<string, string> = {
+  PAINTERS: "Painters",
+  BUILDING: "Building",
+  SPECIAL_COATINGS: "Special Coatings",
+};
+
+const TEAM_COLORS: Record<string, string> = {
+  PAINTERS: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  BUILDING:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  SPECIAL_COATINGS:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+};
 
 interface Foreman {
   id: string;
@@ -50,6 +72,7 @@ interface Foreman {
   foreman: {
     id: string;
     defaultDayRate: string | null;
+    defaultTeam: string;
     createdAt: string;
   } | null;
   isAssistant: boolean;
@@ -83,6 +106,14 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
     assistantPassword: string;
   } | null>(null);
 
+  // Team switch dialog state
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [teamDialogForeman, setTeamDialogForeman] = useState<Foreman | null>(
+    null,
+  );
+  const [teamDialogValue, setTeamDialogValue] = useState<string>("");
+  const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
+
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/" }, { label: "Foremen" }]);
   }, [setBreadcrumbs]);
@@ -95,6 +126,34 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
   const closeDialog = () => {
     setIsDialogOpen(false);
     setSelectedForeman(null);
+  };
+
+  const handleOpenSwitchTeam = (foreman: Foreman) => {
+    setTeamDialogForeman(foreman);
+    setTeamDialogValue(foreman.foreman?.defaultTeam ?? "PAINTERS");
+    setTeamDialogOpen(true);
+  };
+
+  const handleSwitchTeam = async () => {
+    if (!teamDialogForeman?.foreman?.id) return;
+    setIsSwitchingTeam(true);
+    try {
+      const res = await switchForemanTeam({
+        foremanId: teamDialogForeman.foreman.id,
+        newTeam: teamDialogValue as any,
+      });
+      if (res.ok) {
+        toast.success(res.message || "Team switched successfully!");
+        setTeamDialogOpen(false);
+        router.refresh();
+      } else {
+        toast.error(res.error || "Failed to switch team.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to switch team.");
+    } finally {
+      setIsSwitchingTeam(false);
+    }
   };
 
   const loadEmployeesForAssistant = async () => {
@@ -253,6 +312,7 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
             data={filtered}
             onView={openDialog}
             onAddAssistant={handleOpenAddAssistant}
+            onSwitchTeam={handleOpenSwitchTeam}
           />
         )}
       </div>
@@ -333,6 +393,28 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
                     <p className="mt-1.5 font-semibold text-foreground">
                       R {selectedForeman.foreman.defaultDayRate}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Team */}
+              {selectedForeman.foreman && (
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 p-2 bg-violet-50 rounded">
+                    <Users size={18} className="text-violet-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider">
+                      TEAM
+                    </p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${TEAM_COLORS[selectedForeman.foreman.defaultTeam] ?? ""}`}
+                      >
+                        {TEAM_LABELS[selectedForeman.foreman.defaultTeam] ??
+                          selectedForeman.foreman.defaultTeam}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -625,6 +707,64 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Switch Team Dialog */}
+      <Dialog open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Switch Team</DialogTitle>
+            <DialogDescription>
+              Change the default team for{" "}
+              <strong>{teamDialogForeman?.name}</strong>. This affects the day
+              rate used for all future scans under this foreman.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Team</label>
+              <Select
+                value={teamDialogValue}
+                onValueChange={setTeamDialogValue}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEAM_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                Existing attendance scans will not be affected. Only future
+                scans will use the new team rate.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setTeamDialogOpen(false)}
+                disabled={isSwitchingTeam}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSwitchTeam}
+                disabled={
+                  isSwitchingTeam ||
+                  teamDialogValue === teamDialogForeman?.foreman?.defaultTeam
+                }
+              >
+                {isSwitchingTeam ? "Switching..." : "Switch Team"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

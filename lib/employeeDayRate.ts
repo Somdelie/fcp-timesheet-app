@@ -1,20 +1,199 @@
 import { prisma } from "./prisma";
+import type { TeamType } from "@/generated/prisma/client";
 
-// Resolve effective day rate for an employee on a given date/site.
-// Rules:
-// - Base rate = employee.defaultDayRate ?? companyDefaultRate
-// - Active overrides: startsOn <= workDate && (endsOn is null || endsOn >= workDate)
-// - If multiple overrides:
-//     * Prefer site-specific (siteId matches) over global (siteId null)
-//     * Within each group, pick the one with the latest startsOn
+// ─── helpers ───────────────────────────────────────────────────────
 
-type EmployeeOverrideRow = {
+type OverrideRow = {
   siteId: string | null;
   startsOn: Date;
   endsOn: Date | null;
   dayRate: unknown;
 };
 
+/** Pick the override with the latest startsOn from a list. */
+function pickLatest<T extends { startsOn: Date }>(list: T[]): T | null {
+  return list.reduce<T | null>((acc, cur) => {
+    if (!acc) return cur;
+    return cur.startsOn > acc.startsOn ? cur : acc;
+  }, null);
+}
+
+/** Safely convert a Prisma Decimal / string / number to a JS number (0 if falsy). */
+function toNum(v: unknown): number {
+  if (v == null) return 0;
+  if (typeof v === "number") return v;
+  const d = v as { toNumber?: () => number };
+  if (typeof d.toNumber === "function") return d.toNumber();
+  const n = Number(v as string);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// ─── public: team-default look-up ──────────────────────────────────
+
+type CompanySettingsRow = {
+  defaultPainterDayRate: unknown;
+  defaultBuildingDayRate: unknown;
+  defaultSpecialCoatingsDayRate: unknown;
+  defaultEmployeeDayRate: unknown;
+};
+
+/**
+ * Return the team-specific default rate from CompanySettings.
+ * Returns 0 if settings are missing or the team has no configured rate.
+ */
+export function getTeamDefaultRate(
+  team: TeamType,
+  settings: CompanySettingsRow | null | undefined,
+): number {
+  if (!settings) return 0;
+  switch (team) {
+    case "PAINTERS":
+      return toNum(settings.defaultPainterDayRate);
+    case "BUILDING":
+      return toNum(settings.defaultBuildingDayRate);
+    case "SPECIAL_COATINGS":
+      return toNum(settings.defaultSpecialCoatingsDayRate);
+    default:
+      return 0;
+  }
+}
+
+// ─── public: compute rate at scan time ─────────────────────────────
+
+export type ComputeDayRateResult = {
+  dayRate: number;
+  team: TeamType | null;
+};
+
+/**
+ * Compute the effective day rate for an employee at scan time.
+ *
+ * Priority (highest → lowest):
+ *   1. EmployeeDayRateOverride  (site-specific > global; latest startsOn)
+ *   2. Team default from CompanySettings (based on Foreman.defaultTeam)
+ *   3. Foreman.defaultDayRate
+ *   4. Employee.defaultDayRate
+ *   5. CompanySettings.defaultEmployeeDayRate
+ *   6. 0  (final fallback — should not happen if settings exist)
+ *
+ * IMPORTANT: SiteForemanDayRateOverride is NOT part of this chain.
+ * That model is reserved for rare manual exceptions only.
+ */
+export async function computeDayRateAtScan(opts: {
+  employeeId: string;
+  foremanId: string;
+  siteId: string;
+  workDate: Date;
+}): Promise<ComputeDayRateResult> {
+  const { employeeId, foremanId, siteId, workDate } = opts;
+
+  // Build the end-of-day and start-of-day boundaries for the work date.
+  // workDate is assumed to be midnight UTC; we compare inclusively.
+  const workDateStart = new Date(workDate);
+  workDateStart.setUTCHours(0, 0, 0, 0);
+  const workDateEnd = new Date(workDate);
+  workDateEnd.setUTCHours(23, 59, 59, 999);
+
+  // Parallel: fetch overrides, foreman, employee, company settings
+  const [employeeOverrides, foreman, employee, settings] = await Promise.all([
+    // 1) All candidate EmployeeDayRateOverride rows
+    (prisma as any).employeeDayRateOverride.findMany({
+      where: {
+        employeeId,
+        startsOn: { lte: workDateEnd },
+        OR: [{ endsOn: null }, { endsOn: { gte: workDateStart } }],
+      },
+      select: {
+        siteId: true,
+        startsOn: true,
+        endsOn: true,
+        dayRate: true,
+      },
+    }) as Promise<OverrideRow[]>,
+
+    // 2) Foreman data (defaultDayRate + defaultTeam)
+    (prisma as any).foreman.findUnique({
+      where: { id: foremanId },
+      select: { defaultDayRate: true, defaultTeam: true },
+    }) as Promise<{
+      defaultDayRate: unknown;
+      defaultTeam: TeamType;
+    } | null>,
+
+    // 3) Employee defaultDayRate
+    (prisma as any).employee.findUnique({
+      where: { id: employeeId },
+      select: { defaultDayRate: true },
+    }) as Promise<{ defaultDayRate: unknown } | null>,
+
+    // 4) CompanySettings singleton
+    (prisma as any).companySettings.findUnique({
+      where: { id: "singleton" },
+      select: {
+        defaultEmployeeDayRate: true,
+        defaultPainterDayRate: true,
+        defaultBuildingDayRate: true,
+        defaultSpecialCoatingsDayRate: true,
+      },
+    }) as Promise<CompanySettingsRow | null>,
+  ]);
+
+  const team: TeamType | null = foreman?.defaultTeam ?? null;
+
+  // --- Priority 1: EmployeeDayRateOverride ---
+  if (employeeOverrides.length > 0) {
+    const siteSpecific = employeeOverrides.filter(
+      (o) => o.siteId !== null && o.siteId === siteId,
+    );
+    const global = employeeOverrides.filter((o) => o.siteId === null);
+
+    const chosen = pickLatest(siteSpecific) ?? pickLatest(global);
+    if (chosen) {
+      const rate = toNum(chosen.dayRate);
+      if (rate > 0) return { dayRate: rate, team };
+      // If override dayRate is 0/null/invalid, ignore and continue fallback chain
+    }
+  }
+
+  // --- Priority 2: Team default from CompanySettings ---
+  if (team && settings) {
+    const teamRate = getTeamDefaultRate(team, settings);
+    if (teamRate > 0) return { dayRate: teamRate, team };
+  }
+
+  // --- Priority 3: Foreman.defaultDayRate ---
+  if (foreman) {
+    const foremanRate = toNum(foreman.defaultDayRate);
+    if (foremanRate > 0) return { dayRate: foremanRate, team };
+  }
+
+  // --- Priority 4: Employee.defaultDayRate ---
+  if (employee) {
+    const empRate = toNum(employee.defaultDayRate);
+    if (empRate > 0) return { dayRate: empRate, team };
+  }
+
+  // --- Priority 5: CompanySettings.defaultEmployeeDayRate ---
+  if (settings) {
+    const companyRate = toNum(settings.defaultEmployeeDayRate);
+    if (companyRate > 0) return { dayRate: companyRate, team };
+  }
+
+  // --- Priority 6: final fallback ---
+  if (!settings) {
+    console.error(
+      "[computeDayRateAtScan] CompanySettings row missing — returning 0",
+    );
+  }
+  return { dayRate: 0, team };
+}
+
+// ─── legacy wrapper (for callers that haven't migrated yet) ────────
+
+/**
+ * @deprecated Use `computeDayRateAtScan` instead. This wrapper exists only
+ * so that call-sites that haven't been updated yet keep compiling.
+ */
 export async function resolveEmployeeDayRate(opts: {
   employeeId: string;
   workDate: Date;
@@ -23,78 +202,47 @@ export async function resolveEmployeeDayRate(opts: {
   employeeDefaultRate?: unknown | null;
   companyDefaultRate?: unknown | null;
 }): Promise<unknown | null> {
-  const {
-    employeeId,
-    workDate,
-    siteId,
-    foremanId,
-    employeeDefaultRate,
-    companyDefaultRate,
-  } = opts;
+  const { employeeId, workDate, siteId, foremanId } = opts;
 
-  const baseRate =
-    (employeeDefaultRate as any) ?? (companyDefaultRate as any) ?? null;
+  // If foremanId + siteId are available, delegate to the new function
+  if (foremanId && siteId) {
+    const result = await computeDayRateAtScan({
+      employeeId,
+      foremanId,
+      siteId,
+      workDate,
+    });
+    return result.dayRate > 0 ? result.dayRate : null;
+  }
 
-  // Fetch active employee-specific overrides for this employee on this date
-  const employeeOverrides = (await (
-    prisma as any
-  ).employeeDayRateOverride.findMany({
+  // Minimal fallback when foreman context is missing (shouldn't happen in
+  // production scan flows, but keeps existing admin APIs working).
+  const overrides = (await (prisma as any).employeeDayRateOverride.findMany({
     where: {
       employeeId,
       startsOn: { lte: workDate },
       OR: [{ endsOn: null }, { endsOn: { gte: workDate } }],
     },
-    select: {
-      siteId: true,
-      startsOn: true,
-      endsOn: true,
-      dayRate: true,
-    },
-  })) as EmployeeOverrideRow[];
+    select: { siteId: true, startsOn: true, endsOn: true, dayRate: true },
+  })) as OverrideRow[];
 
   const targetSiteId = siteId ?? null;
-
-  const siteSpecific = employeeOverrides.filter(
+  const siteSpecific = overrides.filter(
     (o) => o.siteId !== null && o.siteId === targetSiteId,
   );
-  const global = employeeOverrides.filter((o) => o.siteId === null);
-
-  const pickLatest = <T extends { startsOn: Date }>(list: T[]): T | null =>
-    list.reduce<T | null>((acc, cur) => {
-      if (!acc) return cur;
-      return cur.startsOn > acc.startsOn ? cur : acc;
-    }, null);
-
-  // 1) Check for site + foreman overrides (applies to all employees under that foreman on this site)
-  if (targetSiteId && foremanId) {
-    const sfOverrides = (await (
-      prisma as any
-    ).siteForemanDayRateOverride.findMany({
-      where: {
-        siteId: targetSiteId,
-        foremanId,
-        startsOn: { lte: workDate },
-        OR: [{ endsOn: null }, { endsOn: { gte: workDate } }],
-      },
-      select: {
-        startsOn: true,
-        endsOn: true,
-        dayRate: true,
-      },
-    })) as { startsOn: Date; endsOn: Date | null; dayRate: unknown }[];
-
-    if (sfOverrides.length) {
-      const chosenSiteForeman = pickLatest(sfOverrides);
-      if (chosenSiteForeman) {
-        return (chosenSiteForeman.dayRate as any) ?? baseRate;
-      }
-    }
+  const global = overrides.filter((o) => o.siteId === null);
+  const chosen = pickLatest(siteSpecific) ?? pickLatest(global);
+  if (chosen) {
+    const rate = toNum(chosen.dayRate);
+    if (rate > 0) return rate;
   }
 
-  // 2) Otherwise, fall back to employee-specific overrides (site-specific, then global)
-  if (!employeeOverrides.length) return baseRate;
+  // Fall back to supplied defaults
+  const empRate = toNum(opts.employeeDefaultRate);
+  if (empRate > 0) return empRate;
 
-  const chosenEmployee = pickLatest(siteSpecific) ?? pickLatest(global);
+  const compRate = toNum(opts.companyDefaultRate);
+  if (compRate > 0) return compRate;
 
-  return (chosenEmployee?.dayRate as any) ?? baseRate;
+  return null;
 }

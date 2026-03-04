@@ -14,6 +14,8 @@ import {
   ScanLine,
   Package,
   ShoppingCart,
+  LayoutDashboard,
+  UserPlus,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SUPERVISOR" | "FOREMAN";
@@ -31,8 +33,8 @@ const menuItems: {
 }[] = [
   {
     href: "/",
-    label: "Home",
-    icon: Home,
+    label: "Dashboard",
+    icon: LayoutDashboard,
     roles: ["ADMIN", "SUPERVISOR", "FOREMAN"],
   },
   {
@@ -87,6 +89,12 @@ const menuItems: {
     href: "/admin/attendance-scans",
     label: "Attendance Scans",
     icon: ScanLine,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/manual-scan",
+    label: "Manual Scan",
+    icon: UserPlus,
     roles: ["ADMIN"],
   },
   {

@@ -159,6 +159,10 @@ model Foreman {
 
   defaultDayRate Decimal? @db.Decimal(12, 2)
 
+  // ✅ NEW: default team for this foreman (used to choose team default day rate)
+  // Default ensures existing rows migrate safely without DB reset.
+  defaultTeam TeamType @default(PAINTERS)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -411,6 +415,10 @@ model AttendanceScan {
   // Pay snapshot at scan time
   dayRateAtScan Decimal @db.Decimal(12, 2)
 
+  // ✅ NEW (optional): snapshot which team rate was used for this scan
+  // Old rows will be NULL; new rows can store the team chosen (usually foreman.defaultTeam).
+  team TeamType?
+
   // Optional extra info
   qrPayload        String?
   addedByForemanId String?
@@ -439,6 +447,7 @@ model AttendanceScan {
   @@index([scannedAt])
   @@index([scanType])
   @@index([direction])
+  @@index([team])
 }
 
 //
@@ -777,10 +786,16 @@ model VerificationToken {
 // ============================
 
 model CompanySettings {
-  id                     String   @id @default("singleton")
-  defaultEmployeeDayRate Decimal  @default(0) @db.Decimal(12, 2)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                     String  @id @default("singleton")
+  defaultEmployeeDayRate Decimal @default(0) @db.Decimal(12, 2)
+
+  // ✅ NEW: team default day rates (all default to 0 so migration is safe)
+  defaultPainterDayRate         Decimal @default(0) @db.Decimal(12, 2)
+  defaultBuildingDayRate        Decimal @default(0) @db.Decimal(12, 2)
+  defaultSpecialCoatingsDayRate Decimal @default(0) @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AuditEvent {
@@ -879,4 +894,11 @@ enum ProductOrderStatus {
   PARTIALLY_APPLIED
   APPLIED
   CANCELLED
+}
+
+// ✅ NEW: teams for team-based default day rates
+enum TeamType {
+  PAINTERS
+  BUILDING
+  SPECIAL_COATINGS
 }

@@ -252,13 +252,13 @@ async function getSiteActivityData() {
 }
 
 async function getPhotoVerificationData() {
+  const currentYear = new Date().getFullYear();
   const data: { month: string; verified: number; flagged: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(currentYear, i, 1);
     const month = date.toLocaleDateString("en-US", { month: "short" });
-    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    const monthStart = new Date(currentYear, i, 1);
+    const monthEnd = new Date(currentYear, i + 1, 0);
 
     const [verified, flagged] = await Promise.all([
       prisma.photoVerification.count({
