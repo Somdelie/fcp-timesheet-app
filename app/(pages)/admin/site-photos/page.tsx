@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,6 +125,15 @@ export default function AdminSitePhotosPage() {
   const [verifying, setVerifying] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const imageWrapperRef = useRef<HTMLDivElement | null>(null);
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef<{
+    mouseX: number;
+    mouseY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
 
   const loadPhotos = async (foremanId?: string, supervisorId?: string) => {
     setLoading(true);
@@ -156,8 +165,9 @@ export default function AdminSitePhotosPage() {
   }, []);
 
   useEffect(() => {
-    // Reset zoom whenever a new photo is selected or modal is closed
+    // Reset zoom and pan whenever a new photo is selected or modal is closed
     setZoom(1);
+    setPan({ x: 0, y: 0 });
   }, [selectedPhoto?.id]);
 
   const handleVerify = async (
@@ -425,12 +435,54 @@ export default function AdminSitePhotosPage() {
           <DialogTitle className="sr-only">Photo Preview</DialogTitle>
           {selectedPhoto && (
             <div className="relative">
-              <div className="max-h-[80vh] overflow-auto bg-black flex items-center justify-center">
+              <div
+                ref={imageWrapperRef}
+                className="max-h-[80vh] bg-black flex items-center justify-center overflow-hidden"
+                onMouseDown={(event) => {
+                  if (zoom <= 1) return;
+                  if (!imageWrapperRef.current) return;
+                  isPanningRef.current = true;
+                  panStartRef.current = {
+                    mouseX: event.clientX,
+                    mouseY: event.clientY,
+                    startX: pan.x,
+                    startY: pan.y,
+                  };
+                  imageWrapperRef.current.style.cursor = "grabbing";
+                  event.preventDefault();
+                }}
+                onMouseMove={(event) => {
+                  if (!isPanningRef.current || !panStartRef.current) return;
+                  const dx = event.clientX - panStartRef.current.mouseX;
+                  const dy = event.clientY - panStartRef.current.mouseY;
+                  setPan({
+                    x: panStartRef.current.startX + dx,
+                    y: panStartRef.current.startY + dy,
+                  });
+                }}
+                onMouseUp={() => {
+                  if (!imageWrapperRef.current) return;
+                  isPanningRef.current = false;
+                  panStartRef.current = null;
+                  imageWrapperRef.current.style.cursor =
+                    zoom > 1 ? "grab" : "default";
+                }}
+                onMouseLeave={() => {
+                  if (!imageWrapperRef.current) return;
+                  isPanningRef.current = false;
+                  panStartRef.current = null;
+                  imageWrapperRef.current.style.cursor =
+                    zoom > 1 ? "grab" : "default";
+                }}
+              >
                 <img
                   src={selectedPhoto.imageUrl}
                   alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
-                  className="max-w-none h-auto object-contain transition-transform"
-                  style={{ transform: `scale(${zoom})` }}
+                  className="h-auto max-h-[80vh] w-auto object-contain select-none transition-transform"
+                  style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    transformOrigin: "center center",
+                  }}
                 />
               </div>
               <div className="absolute left-4 top-4 flex flex-col gap-2">
@@ -454,9 +506,13 @@ export default function AdminSitePhotosPage() {
                     size="icon"
                     className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
                     onClick={() =>
-                      setZoom((z) =>
-                        z <= 0.75 ? 0.75 : Math.max(0.75, z - 0.25),
-                      )
+                      setZoom((z) => {
+                        const next = z <= 1 ? 1 : Math.max(1, z - 0.5);
+                        if (next === 1) {
+                          setPan({ x: 0, y: 0 });
+                        }
+                        return next;
+                      })
                     }
                   >
                     <ZoomOut className="h-3.5 w-3.5" />
@@ -476,7 +532,7 @@ export default function AdminSitePhotosPage() {
                     size="icon"
                     className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
                     onClick={() =>
-                      setZoom((z) => (z >= 4 ? 4 : Math.min(4, z + 0.25)))
+                      setZoom((z) => (z >= 4 ? 4 : Math.min(4, z + 0.5)))
                     }
                   >
                     <ZoomIn className="h-3.5 w-3.5" />
