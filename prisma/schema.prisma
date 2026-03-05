@@ -66,6 +66,13 @@ model User {
 
   // Product orders created by this admin/user
   productOrders ProductOrder[]
+
+  siteProductOrders SiteProductOrder[]
+
+  fortnightMeetings FortnightMeeting[]
+
+  // Reverse: employee transfers performed by this user
+  employeeTransfers AttendanceScan[] @relation("TransferredByUser")
 }
 
 model PushToken {
@@ -266,6 +273,8 @@ model Site {
 
   // ✅ NEW: site + foreman day rate overrides
   foremanRateOverrides SiteForemanDayRateOverride[]
+  siteProductOrders    SiteProductOrder[]
+  fortnightMeetingRows FortnightMeetingRow[]
 
   @@index([isActive])
   @@index([name])
@@ -431,14 +440,26 @@ model AttendanceScan {
   // ✅ NEW: scan in vs scan out
   direction ScanDirection @default(IN)
 
+  // ✅ Scan-out: timestamp when employee was clocked out (via site day photo)
+  scannedOutAt   DateTime?
+  scanOutPhotoId String?
+
+  // ✅ Transfer: if employee was transferred from another site
+  transferredFromSiteId String?
+  transferredFromScanId String?
+  transferredAt         DateTime?
+  transferredByUserId   String?
+
   // Location
   latitude  Float?
   longitude Float?
   address   String?
 
-  employee Employee @relation(fields: [employeeId], references: [id])
-  siteDay  SiteDay  @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
-  site     Site     @relation(fields: [siteId], references: [id])
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+  siteDay       SiteDay       @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
+  site          Site          @relation(fields: [siteId], references: [id])
+  scanOutPhoto  SiteDayPhoto? @relation("ScanOutPhoto", fields: [scanOutPhotoId], references: [id])
+  transferredBy User?         @relation("TransferredByUser", fields: [transferredByUserId], references: [id])
 
   @@unique([employeeId, workDate])
   @@unique([siteDayId, employeeId])
@@ -488,6 +509,9 @@ model SiteDayPhoto {
 
   detections   PhotoDetection[]
   verification PhotoVerification?
+
+  // Reverse: scans that used this photo for scan-out
+  scanOutScans AttendanceScan[] @relation("ScanOutPhoto")
 
   request        SiteDayPhotoRequest? @relation(fields: [requestId], references: [id])
   siteDay        SiteDay              @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
@@ -545,7 +569,8 @@ model TimesheetPeriod {
   label     String?
   createdAt DateTime @default(now())
 
-  timesheets Timesheet[]
+  timesheets        Timesheet[]
+  fortnightMeetings FortnightMeeting[]
 
   @@unique([startDate, endDate])
   @@index([startDate])
@@ -901,4 +926,278 @@ enum TeamType {
   PAINTERS
   BUILDING
   SPECIAL_COATINGS
+}
+
+//
+// ============================
+// PROCUREMENT / SITE PRODUCT ORDERS (NEW)
+// ============================
+
+// Units / variants you mentioned
+enum ProductUom {
+  // Length
+  MM
+  CM
+  M
+  M2
+  M3
+
+  // Weight
+  G
+  KG
+  TON
+
+  // Volume
+  ML
+  L
+
+  // Packaging
+  UNIT
+  PIECE
+  PACK
+  BOX
+  BAG
+  BUCKET
+  DRUM
+  CAN
+  BOTTLE
+  TUBE
+  BAR
+
+  // Sheet / Roll / Bulk
+  ROLL
+  SHEET
+  BUNDLE
+  PALLET
+
+  // Time-based
+  HOUR
+  DAY
+}
+
+model ProductCategory {
+  id   String @id @default(cuid())
+  name String
+
+  procurementProducts ProcurementProduct[]
+}
+
+model Supplier {
+  id      String  @id @default(cuid())
+  name    String
+  phone   String?
+  email   String?
+  address String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations
+  products              ProcurementProduct[]
+  orders                SiteProductOrder[]
+  supplierProductPrices SupplierProductPrice[]
+
+  @@unique([name])
+  @@index([isActive])
+}
+
+// A product in the procurement catalog (paints, cement, etc.)
+model ProcurementProduct {
+  id         String           @id @default(cuid())
+  name       String
+  sku        String?
+  categoryId String?
+  category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Base unit info (e.g. 20 L, 5 L, 40 KG, etc.)
+  uom         ProductUom
+  unitSize    Decimal?   @db.Decimal(12, 3) // e.g. 20.000
+  description String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional default supplier
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  // Prices can vary by supplier (and over time)
+  supplierPrices SupplierProductPrice[]
+
+  // order items using this product
+  orderItems SiteProductOrderItem[]
+
+  @@unique([sku])
+  @@index([isActive])
+  @@index([categoryId])
+  @@index([name])
+}
+
+// Price list per supplier per product (optionally time-bounded)
+model SupplierProductPrice {
+  id String @id @default(cuid())
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // current/active price for that supplier/product
+  price Decimal @db.Decimal(12, 2)
+
+  // optional effective window
+  startsOn DateTime  @default(now())
+  endsOn   DateTime?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId, productId])
+  @@index([productId, isActive])
+  @@index([supplierId, isActive])
+}
+
+// Procurement order against a SITE (not a foreman order)
+model SiteProductOrder {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  // optional: who created the order (admin user)
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  reference String? // e.g. PO number, ticket number
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items SiteProductOrderItem[]
+
+  // Optional cached totals (safe because optional)
+  totalCost Decimal? @db.Decimal(14, 2)
+
+  @@index([siteId, createdAt])
+  @@index([supplierId, createdAt])
+  @@index([createdByUserId, createdAt])
+}
+
+// Items inside the site order
+model SiteProductOrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   SiteProductOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  // quantity of the product (e.g. 5x 20L)
+  quantity Int
+
+  // ✅ IMPORTANT: snapshot the unit price used at order time (keeps history stable)
+  unitPriceAtOrder Decimal @default(0) @db.Decimal(12, 2)
+
+  // Optional: store what UOM/size was ordered (if product changes later)
+  uomAtOrder      ProductUom?
+  unitSizeAtOrder Decimal?    @db.Decimal(12, 3)
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+//
+// ============================
+// FORTNIGHT MEETING REPORT (SNAPSHOT) - NEW
+// ============================
+
+model FortnightMeeting {
+  id        String   @id @default(cuid())
+  periodId  String   @unique
+  meetingOn DateTime // your Thursday meeting date
+
+  createdByUserId String?
+  createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rows   FortnightMeetingRow[]
+  totals FortnightMeetingTotals?
+
+  period TimesheetPeriod @relation(fields: [periodId], references: [id], onDelete: Restrict)
+
+  @@index([meetingOn])
+}
+
+model FortnightMeetingRow {
+  id        String @id @default(cuid())
+  meetingId String
+  siteId    String
+
+  // ===== COSTS (what you implement now) =====
+  materialCost Decimal @default(0) @db.Decimal(14, 2)
+  wagesCost    Decimal @default(0) @db.Decimal(14, 2)
+  projectCost  Decimal @default(0) @db.Decimal(14, 2) // material + wages
+
+  // ===== REVENUE (keep for later; set 0 now) =====
+  revenueClaimed  Decimal @default(0) @db.Decimal(14, 2)
+  revenueReceived Decimal @default(0) @db.Decimal(14, 2)
+
+  // ===== PROFIT/LOSS (keep for later; set 0 now) =====
+  profitOrLoss Decimal @default(0) @db.Decimal(14, 2)
+
+  // Optional % columns (like your sheet). You can compute later.
+  materialPct Decimal? @db.Decimal(8, 2)
+  wagesPct    Decimal? @db.Decimal(8, 2)
+  profitPct   Decimal? @db.Decimal(8, 2)
+
+  // ===== COMPARISON VS PREVIOUS MEETING (optional snapshot) =====
+  prevProjectCost  Decimal? @db.Decimal(14, 2)
+  prevWagesCost    Decimal? @db.Decimal(14, 2)
+  prevMaterialCost Decimal? @db.Decimal(14, 2)
+
+  // deltas (current vs previous)
+  projectCostDeltaPct  Decimal? @db.Decimal(8, 2)
+  wagesCostDeltaPct    Decimal? @db.Decimal(8, 2)
+  materialCostDeltaPct Decimal? @db.Decimal(8, 2)
+
+  meeting FortnightMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  site    Site             @relation(fields: [siteId], references: [id], onDelete: Restrict)
+
+  @@unique([meetingId, siteId])
+  @@index([siteId])
+}
+
+model FortnightMeetingTotals {
+  id        String @id @default(cuid())
+  meetingId String @unique
+
+  totalMaterialCost Decimal @default(0) @db.Decimal(14, 2)
+  totalWagesCost    Decimal @default(0) @db.Decimal(14, 2)
+  totalProjectCost  Decimal @default(0) @db.Decimal(14, 2)
+
+  // Revenue totals (0 for now)
+  totalRevenueClaimed  Decimal @default(0) @db.Decimal(14, 2)
+  totalRevenueReceived Decimal @default(0) @db.Decimal(14, 2)
+
+  // Profit/Loss total (0 for now)
+  totalProfitOrLoss Decimal @default(0) @db.Decimal(14, 2)
+
+  meeting FortnightMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 }

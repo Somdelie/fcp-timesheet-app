@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   LayoutDashboard,
   UserPlus,
+  ArrowRightLeft,
 } from "lucide-react";
 
 type Role = "ADMIN" | "SUPERVISOR" | "FOREMAN";
@@ -81,7 +82,7 @@ const menuItems: {
   },
   {
     href: "/admin/site-photos",
-    label: "Photo Verifications",
+    label: "Scan Outs",
     icon: Camera,
     roles: ["ADMIN"],
   },
@@ -95,6 +96,12 @@ const menuItems: {
     href: "/admin/manual-scan",
     label: "Manual Scan",
     icon: UserPlus,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/transfer-employee",
+    label: "Transfer Employee",
+    icon: ArrowRightLeft,
     roles: ["ADMIN"],
   },
   {
