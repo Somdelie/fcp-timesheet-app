@@ -85,7 +85,11 @@ export async function POST(req: Request) {
 
   if (!siteDay) {
     siteDay = await prisma.siteDay.create({
-      data: { siteId, foremanId: foreman.id, workDate },
+      data: {
+        site: { connect: { id: siteId } },
+        foreman: { connect: { id: foreman.id } },
+        workDate,
+      },
       select: { id: true, foremanId: true, isLocked: true },
     });
   }
@@ -139,10 +143,10 @@ export async function POST(req: Request) {
 
       await prisma.attendanceScan.create({
         data: {
-          siteDayId: siteDay.id,
-          employeeId: emp.id,
+          siteDay: { connect: { id: siteDay.id } },
+          employee: { connect: { id: emp.id } },
           workDate,
-          siteId,
+          site: { connect: { id: siteId } },
           dayRateAtScan: rateResult.dayRate,
           team: rateResult.team,
           qrPayload: qr as string,

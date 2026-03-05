@@ -213,7 +213,7 @@ export async function POST(req: Request) {
               defaultDayRate: dayRateStr as any,
               faceImageUrl: null,
               isActive,
-              createdByUserId: payload.sub,
+              createdByUser: { connect: { id: payload.sub } },
             },
             select: {
               id: true,
@@ -235,8 +235,8 @@ export async function POST(req: Request) {
             },
             update: { reason: "created" },
             create: {
-              foremanId: foreman.id,
-              employeeId: employee.id,
+              foreman: { connect: { id: foreman.id } },
+              employee: { connect: { id: employee.id } },
               reason: "created",
             },
           });

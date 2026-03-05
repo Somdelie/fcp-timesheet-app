@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     prisma.auditEvent
       .create({
         data: {
-          actorUserId: auth.userId,
+          actor: { connect: { id: auth.userId } },
           action: "APP_OPEN",
           entity: "Dashboard",
           entityId: null,

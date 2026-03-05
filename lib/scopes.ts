@@ -1,8 +1,8 @@
 export function employeeWhereForUser(auth: {
   userId: string;
-  role: "ADMIN" | "SUPERVISOR" | "FOREMAN";
+  role: "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
 }) {
-  if (auth.role === "ADMIN") return {};
+  if (auth.role === "ADMIN" || auth.role === "OFFICE") return {};
 
   if (auth.role === "FOREMAN") {
     return {

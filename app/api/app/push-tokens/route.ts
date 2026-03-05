@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
     await prisma.pushToken.upsert({
       where: { token: rawToken },
       update: {
-        userId: ctx.user.sub,
+        user: { connect: { id: ctx.user.sub } },
         platform: platform ?? undefined,
       },
       create: {
-        userId: ctx.user.sub,
+        user: { connect: { id: ctx.user.sub } },
         token: rawToken,
         platform: platform ?? undefined,
       },

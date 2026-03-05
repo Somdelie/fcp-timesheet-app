@@ -199,7 +199,11 @@ export async function POST(req: Request) {
     if (!siteDay) {
       try {
         siteDay = await prisma.siteDay.create({
-          data: { siteId, foremanId, workDate },
+          data: {
+            site: { connect: { id: siteId } },
+            foreman: { connect: { id: foremanId } },
+            workDate,
+          },
           select: { id: true },
         });
       } catch (e: any) {
@@ -224,10 +228,10 @@ export async function POST(req: Request) {
     // Create the attendance scan
     const scan = await prisma.attendanceScan.create({
       data: {
-        siteDayId: siteDay.id,
-        employeeId: employee.id,
+        siteDay: { connect: { id: siteDay.id } },
+        employee: { connect: { id: employee.id } },
         workDate,
-        siteId,
+        site: { connect: { id: siteId } },
         dayRateAtScan: effectiveRate as any,
         team: rateResult.team,
         qrPayload: employee.qrCodeValue ?? null,

@@ -125,14 +125,14 @@ export async function PATCH(
           await tx.supervisor.upsert({
             where: { userId: id },
             update: {},
-            create: { userId: id },
+            create: { user: { connect: { id } } },
           });
           await tx.foreman.deleteMany({ where: { userId: id } });
         } else if (data.role === "FOREMAN") {
           await tx.foreman.upsert({
             where: { userId: id },
             update: {},
-            create: { userId: id },
+            create: { user: { connect: { id } } },
           });
           await tx.supervisor.deleteMany({ where: { userId: id } });
         } else if (data.role === "ADMIN") {

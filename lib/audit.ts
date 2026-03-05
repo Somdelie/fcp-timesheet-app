@@ -12,7 +12,7 @@ type AuditDb = {
   auditEvent: {
     create: (args: {
       data: {
-        actorUserId?: string | null;
+        actor?: { connect: { id: string } };
         action: string;
         entity: string;
         entityId?: string | null;
@@ -32,7 +32,9 @@ export async function writeAuditEvent(input: AuditEventInput, db?: AuditDb) {
   try {
     await client.auditEvent.create({
       data: {
-        actorUserId: input.actorUserId ?? null,
+        actor: input.actorUserId
+          ? { connect: { id: input.actorUserId } }
+          : undefined,
         action: String(input.action),
         entity: String(input.entity),
         entityId: input.entityId ?? null,

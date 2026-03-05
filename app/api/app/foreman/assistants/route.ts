@@ -117,8 +117,8 @@ export async function POST(req: Request) {
     // Create new assistant link
     const assistant = await prisma.foremanAssistant.create({
       data: {
-        foremanId: foreman.id,
-        employeeId,
+        foreman: { connect: { id: foreman.id } },
+        employee: { connect: { id: employeeId } },
         startsOn: new Date(),
       },
       select: {

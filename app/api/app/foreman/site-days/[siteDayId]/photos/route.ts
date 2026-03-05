@@ -88,11 +88,11 @@ export async function POST(
 
     const photo = await prisma.siteDayPhoto.create({
       data: {
-        siteDayId: siteDay.id,
+        siteDay: { connect: { id: siteDay.id } },
         imageUrl: url,
         cloudinaryPublicId: upload.public_id,
-        uploadedByUserId: payload.sub,
-        requestId: requestId ?? undefined,
+        uploadedByUser: { connect: { id: payload.sub } },
+        request: requestId ? { connect: { id: requestId } } : undefined,
         latitude: Number.isFinite(latitude) ? latitude : null,
         longitude: Number.isFinite(longitude) ? longitude : null,
         address: address ?? undefined,

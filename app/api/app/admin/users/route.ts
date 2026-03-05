@@ -183,7 +183,7 @@ export async function POST(req: Request) {
     try {
       const foreman = await prisma.foreman.create({
         data: {
-          userId: created.id,
+          user: { connect: { id: created.id } },
           defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
         },
       });
@@ -192,8 +192,8 @@ export async function POST(req: Request) {
       try {
         await prisma.supervisorForeman.create({
           data: {
-            supervisorId,
-            foremanId: foreman.id,
+            supervisor: { connect: { id: supervisorId } },
+            foreman: { connect: { id: foreman.id } },
             startsOn: new Date(),
           },
         });
@@ -211,8 +211,8 @@ export async function POST(req: Request) {
             lastName: nameNorm.split(" ").slice(1).join(" ") || "",
             defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
             qrCodeValue,
-            createdByUserId: created.id,
-            userId: created.id,
+            createdByUser: { connect: { id: created.id } },
+            user: { connect: { id: created.id } },
             isActive: true,
           },
         });

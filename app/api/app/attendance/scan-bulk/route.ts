@@ -86,8 +86,8 @@ async function getOrCreateSiteDay(opts: {
   try {
     return await prisma.siteDay.create({
       data: {
-        siteId: opts.siteId,
-        foremanId: opts.foremanId,
+        site: { connect: { id: opts.siteId } },
+        foreman: { connect: { id: opts.foremanId } },
         workDate: opts.workDate,
       },
       select: { id: true },
@@ -115,7 +115,10 @@ async function getOrCreateSiteDay(opts: {
 }
 
 export async function POST(req: Request) {
-  let auth: { userId: string; role: "ADMIN" | "SUPERVISOR" | "FOREMAN" };
+  let auth: {
+    userId: string;
+    role: "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
+  };
   try {
     auth = await requireServerAuth();
   } catch {
@@ -280,10 +283,10 @@ export async function POST(req: Request) {
         try {
           await tx.attendanceScan.create({
             data: {
-              siteDayId: siteDay.id,
-              employeeId: item.empId,
+              siteDay: { connect: { id: siteDay.id } },
+              employee: { connect: { id: item.empId } },
               workDate,
-              siteId,
+              site: { connect: { id: siteId } },
               dayRateAtScan: item.dayRate,
               qrPayload: item.code,
               latitude: body.data.latitude ?? null,

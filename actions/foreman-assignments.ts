@@ -52,8 +52,8 @@ export async function linkSupervisorToForeman(input: {
 
   await prisma.supervisorForeman.create({
     data: {
-      supervisorId,
-      foremanId: foreman.id,
+      supervisor: { connect: { id: supervisorId } },
+      foreman: { connect: { id: foreman.id } },
       startsOn: new Date(),
     },
   });
@@ -134,8 +134,8 @@ export async function assignForemanToSite(input: {
     // 1. Create the site assignment
     await tx.foremanSiteAssignment.create({
       data: {
-        foremanId: foreman.id,
-        siteId,
+        foreman: { connect: { id: foreman.id } },
+        site: { connect: { id: siteId } },
         startsOn: new Date(),
       },
     });
@@ -153,8 +153,8 @@ export async function assignForemanToSite(input: {
       if (!existingLink) {
         await tx.supervisorForeman.create({
           data: {
-            supervisorId,
-            foremanId: foreman.id,
+            supervisor: { connect: { id: supervisorId } },
+            foreman: { connect: { id: foreman.id } },
             startsOn: new Date(),
           },
         });

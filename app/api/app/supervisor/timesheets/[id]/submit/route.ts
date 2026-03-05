@@ -93,9 +93,9 @@ export async function POST(
     if (!ts) {
       ts = await prisma.timesheet.create({
         data: {
-          periodId: period.id,
-          foremanId: foreman.id,
-          siteId: parsed.siteId ?? null,
+          period: { connect: { id: period.id } },
+          foreman: { connect: { id: foreman.id } },
+          site: parsed.siteId ? { connect: { id: parsed.siteId } } : undefined,
         },
         select: { id: true, status: true },
       });

@@ -6,5 +6,9 @@ export default async function PagesLayout({ children }) {
   // All routes under (pages) require an authenticated user.
   const session = await requireAuth();
 
-  return <AppShell role={session.user.role}>{children}</AppShell>;
+  return (
+    <AppShell role={session.user.role} userName={session.user.name ?? ""}>
+      {children}
+    </AppShell>
+  );
 }

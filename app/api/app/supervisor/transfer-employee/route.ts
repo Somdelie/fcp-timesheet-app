@@ -230,8 +230,8 @@ export async function POST(req: Request) {
     try {
       destinationSiteDay = await prisma.siteDay.create({
         data: {
-          siteId: toSiteId,
-          foremanId: toForemanId,
+          site: { connect: { id: toSiteId } },
+          foreman: { connect: { id: toForemanId } },
           workDate,
         },
         select: { id: true },
@@ -291,10 +291,10 @@ export async function POST(req: Request) {
       // Step 3: Create scan at destination site
       const newScan = await tx.attendanceScan.create({
         data: {
-          siteDayId: destinationSiteDay!.id,
-          employeeId,
+          siteDay: { connect: { id: destinationSiteDay!.id } },
+          employee: { connect: { id: employeeId } },
           workDate,
-          siteId: toSiteId,
+          site: { connect: { id: toSiteId } },
           dayRateAtScan: rateResult.dayRate,
           team: rateResult.team,
           scannedAt: now,
@@ -306,7 +306,7 @@ export async function POST(req: Request) {
           transferredFromSiteId: fromSiteId,
           transferredFromScanId: existingScan.id,
           transferredAt: now,
-          transferredByUserId: userId,
+          transferredBy: { connect: { id: userId } },
         },
         select: {
           id: true,

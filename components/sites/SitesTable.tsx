@@ -31,9 +31,19 @@ import {
   User,
   Wallet,
   CalendarDays,
+  Package,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -124,6 +134,61 @@ function SiteRowActions({
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
+  // New Material Order state
+  const [showOrderDialog, setShowOrderDialog] = React.useState(false);
+  const [creatingOrder, setCreatingOrder] = React.useState(false);
+  const [suppliers, setSuppliers] = React.useState<
+    { id: string; name: string }[]
+  >([]);
+  const [orderForm, setOrderForm] = React.useState({
+    supplierId: "",
+    reference: "",
+    note: "",
+  });
+
+  // Fetch suppliers when order dialog opens
+  React.useEffect(() => {
+    if (!showOrderDialog) return;
+    fetch("/api/app/admin/suppliers?includeInactive=false", {
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data)
+          setSuppliers(json.data.map((s: any) => ({ id: s.id, name: s.name })));
+      })
+      .catch(() => {});
+  }, [showOrderDialog]);
+
+  const handleCreateOrder = async () => {
+    setCreatingOrder(true);
+    try {
+      const res = await fetch(
+        `/api/app/admin/sites/${site.id}/product-orders`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            supplierId: orderForm.supplierId || null,
+            reference: orderForm.reference.trim() || null,
+            note: orderForm.note.trim() || null,
+          }),
+        },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to create order");
+      toast.success("Order created — go to site to add items");
+      setShowOrderDialog(false);
+      setOrderForm({ supplierId: "", reference: "", note: "" });
+      router.push(`/sites/${site.id}`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create order");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   const handleMarkFinished = async () => {
     setIsFinishing(true);
     try {
@@ -179,6 +244,19 @@ function SiteRowActions({
             <ArrowRight className="h-4 w-4" />
             Manage
           </DropdownMenuItem>
+          {(role === "ADMIN" || role === "OFFICE") && (
+            <DropdownMenuItem
+              className="flex items-center gap-2"
+              onSelect={(e) => {
+                e.preventDefault();
+                setOrderForm({ supplierId: "", reference: "", note: "" });
+                setShowOrderDialog(true);
+              }}
+            >
+              <Package className="h-4 w-4" />
+              New Material Order
+            </DropdownMenuItem>
+          )}
           {role === "ADMIN" && (
             <>
               <DropdownMenuItem
@@ -240,6 +318,73 @@ function SiteRowActions({
         confirmText="Delete"
         variant="destructive"
       />
+
+      {/* New Material Order Dialog */}
+      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Material Order</DialogTitle>
+            <DialogDescription>
+              Create a new material order for <strong>{site.name}</strong>. You
+              can add items after on the site page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Supplier</label>
+              <Select
+                value={orderForm.supplierId || "NONE"}
+                onValueChange={(v) =>
+                  setOrderForm({
+                    ...orderForm,
+                    supplierId: v === "NONE" ? "" : v,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supplier (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">No specific supplier</SelectItem>
+                  {suppliers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Reference / PO #</label>
+              <Input
+                value={orderForm.reference}
+                onChange={(e) =>
+                  setOrderForm({ ...orderForm, reference: e.target.value })
+                }
+                placeholder="e.g. PO-2026-001"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Note</label>
+              <Input
+                value={orderForm.note}
+                onChange={(e) =>
+                  setOrderForm({ ...orderForm, note: e.target.value })
+                }
+                placeholder="Optional note"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOrderDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateOrder} disabled={creatingOrder}>
+              {creatingOrder ? "Creating..." : "Create Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

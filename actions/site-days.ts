@@ -89,8 +89,8 @@ export async function createSiteDay(input: {
   try {
     const siteDay = await prisma.siteDay.create({
       data: {
-        siteId,
-        foremanId: foreman.id,
+        site: { connect: { id: siteId } },
+        foreman: { connect: { id: foreman.id } },
         workDate,
       },
       select: {

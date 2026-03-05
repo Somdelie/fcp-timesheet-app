@@ -121,8 +121,8 @@ export async function POST(
       // Create a new photo request for this site day
       await prisma.siteDayPhotoRequest.create({
         data: {
-          siteDayId: siteDay.id,
-          requestedByUserId: actor.id,
+          siteDay: { connect: { id: siteDay.id } },
+          requestedByUser: { connect: { id: actor.id } },
           note: notes || "Previous photo was rejected. Please retake.",
           status: "REQUESTED",
         },

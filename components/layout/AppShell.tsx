@@ -11,9 +11,10 @@ import { UserRoleProvider } from "@/lib/user-role-context";
 type AppShellProps = {
   children: React.ReactNode;
   role: UserRole;
+  userName: string;
 };
 
-export function AppShell({ children, role }: AppShellProps) {
+export function AppShell({ children, role, userName }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
   const hasLoggedOpen = useRef(false);
@@ -35,7 +36,7 @@ export function AppShell({ children, role }: AppShellProps) {
     <BreadcrumbProvider>
       <UserRoleProvider role={role}>
         <div className="flex h-screen bg-background text-foreground">
-          <Sidebar isOpen={isSidebarOpen} role={role} />
+          <Sidebar isOpen={isSidebarOpen} role={role} userName={userName} />
           <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
             <Navbar
               isSidebarOpen={isSidebarOpen}

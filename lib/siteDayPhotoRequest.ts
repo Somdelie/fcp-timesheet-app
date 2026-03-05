@@ -20,7 +20,7 @@ export async function ensureSiteDayPhotoRequestForSiteDay(siteDayId: string) {
   try {
     return await prisma.siteDayPhotoRequest.create({
       data: {
-        siteDayId,
+        siteDay: { connect: { id: siteDayId } },
         note: "Automatic request (first scan of day)",
       },
       select: { id: true },

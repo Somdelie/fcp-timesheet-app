@@ -192,8 +192,8 @@ export async function POST(
             ? existing
             : prisma.siteDay.create({
                 data: {
-                  siteId,
-                  foremanId: f.foremanId,
+                  site: { connect: { id: siteId } },
+                  foreman: { connect: { id: f.foremanId } },
                   workDate: today,
                 },
                 select: { id: true },
@@ -209,8 +209,8 @@ export async function POST(
     siteDays.map((sd) =>
       prisma.siteDayPhotoRequest.create({
         data: {
-          siteDayId: sd.id,
-          requestedByUserId: userId,
+          siteDay: { connect: { id: sd.id } },
+          requestedByUser: { connect: { id: userId } },
           note: note || null,
           dueAt,
         },

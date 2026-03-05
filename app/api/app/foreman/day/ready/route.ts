@@ -99,7 +99,11 @@ export async function POST(req: Request) {
 
   if (!siteDay) {
     siteDay = await prisma.siteDay.create({
-      data: { siteId, workDate, foremanId: actingForemanId },
+      data: {
+        site: { connect: { id: siteId } },
+        workDate,
+        foreman: { connect: { id: actingForemanId } },
+      },
       select: { id: true, foremanId: true, isLocked: true, siteId: true },
     });
   }

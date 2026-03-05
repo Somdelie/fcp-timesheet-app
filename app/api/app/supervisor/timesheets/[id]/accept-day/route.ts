@@ -144,9 +144,9 @@ export async function POST(
       },
     },
     create: {
-      periodId: period.id,
-      foremanId: parsed.foremanId,
-      siteId: siteId,
+      period: { connect: { id: period.id } },
+      foreman: { connect: { id: parsed.foremanId } },
+      site: siteId ? { connect: { id: siteId } } : undefined,
     },
     update: {},
     select: { id: true, status: true },
@@ -177,20 +177,24 @@ export async function POST(
       },
     },
     create: {
-      timesheetId: ts.id,
+      timesheet: { connect: { id: ts.id } },
       workDate,
       status: body.action === "accept" ? "ACCEPTED" : "REJECTED",
       acceptedAt: body.action === "accept" ? new Date() : null,
       rejectedAt: body.action === "reject" ? new Date() : null,
       rejectionReason: body.action === "reject" ? body.reason : null,
-      acceptedBySupervisorId: supervisorId,
+      acceptedBySupervisor: supervisorId
+        ? { connect: { id: supervisorId } }
+        : undefined,
     },
     update: {
       status: body.action === "accept" ? "ACCEPTED" : "REJECTED",
       acceptedAt: body.action === "accept" ? new Date() : null,
       rejectedAt: body.action === "reject" ? new Date() : null,
       rejectionReason: body.action === "reject" ? body.reason : null,
-      acceptedBySupervisorId: supervisorId,
+      acceptedBySupervisor: supervisorId
+        ? { connect: { id: supervisorId } }
+        : { disconnect: true },
     },
     select: { id: true, status: true, workDate: true },
   });

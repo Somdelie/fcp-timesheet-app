@@ -6,7 +6,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { deleteImage } from "@/lib/cloudinary";
 
-export type UserRole = "ADMIN" | "SUPERVISOR" | "FOREMAN";
+export type UserRole = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
 
 export async function createNewUser(input: {
   email: string;
@@ -77,7 +77,7 @@ export async function createNewUser(input: {
       if (role === "SUPERVISOR") {
         await prisma.supervisor.create({
           data: {
-            userId: created.id,
+            user: { connect: { id: created.id } },
           },
         });
       } else if (role === "FOREMAN") {
@@ -88,7 +88,7 @@ export async function createNewUser(input: {
         // Create foreman record
         const foreman = await prisma.foreman.create({
           data: {
-            userId: created.id,
+            user: { connect: { id: created.id } },
             defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
           },
         });
@@ -98,8 +98,8 @@ export async function createNewUser(input: {
           try {
             await prisma.supervisorForeman.create({
               data: {
-                supervisorId: input.supervisorId,
-                foremanId: foreman.id,
+                supervisor: { connect: { id: input.supervisorId } },
+                foreman: { connect: { id: foreman.id } },
                 startsOn: new Date(),
               },
             });
@@ -120,9 +120,9 @@ export async function createNewUser(input: {
               lastName: name.split(" ").slice(1).join(" ") || "",
               defaultDayRate: dayRateDecimal > 0 ? dayRateDecimal : null,
               qrCodeValue,
-              createdByUserId: created.id,
+              createdByUser: { connect: { id: created.id } },
               // Link the employee profile back to this foreman user
-              userId: created.id,
+              user: { connect: { id: created.id } },
               isActive: true,
             },
           });

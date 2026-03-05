@@ -20,7 +20,7 @@ export async function OPTIONS() {
 }
 
 async function getAdminFromRequest(req: NextRequest) {
-  const apiCtx = await requireApiAuth(req, ["ADMIN"]);
+  const apiCtx = await requireApiAuth(req, ["ADMIN", "OFFICE"]);
   if (apiCtx) {
     return { id: apiCtx.user.sub, role: apiCtx.user.role as string } as const;
   }
@@ -29,7 +29,7 @@ async function getAdminFromRequest(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (session?.user && (session.user as any).id) {
       const role = (session.user as any).role as string | undefined;
-      if (role === "ADMIN") {
+      if (role === "ADMIN" || role === "OFFICE") {
         return {
           id: (session.user as any).id as string,
           role: role,
@@ -138,14 +138,13 @@ export async function POST(
           data: {
             type: "PRODUCT",
             applyTo: split.applyTo,
-            employeeId: data.employeeId,
-            foremanId: item.order!.foremanId,
-            createdByUserId: admin.id,
-            productId: item.productId,
+            employee: { connect: { id: data.employeeId } },
+            foreman: { connect: { id: item.order!.foremanId } },
+            createdByUser: { connect: { id: admin.id } },
+            product: { connect: { id: item.productId } },
             quantity: split.quantity,
-            // amount is derived later from product.price in payroll logic
             amount: null,
-            orderItemId: item.id,
+            orderItem: { connect: { id: item.id } },
           },
           select: {
             id: true,

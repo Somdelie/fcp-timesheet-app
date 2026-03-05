@@ -337,8 +337,8 @@ export async function assignSupervisorToSite(input: {
 
   await prisma.supervisorSiteAssignment.create({
     data: {
-      supervisorId: supervisor.id,
-      siteId,
+      supervisor: { connect: { id: supervisor.id } },
+      site: { connect: { id: siteId } },
       startsOn: new Date(),
     },
   });
@@ -418,8 +418,8 @@ export async function bookForemanForDay(input: {
   try {
     const sd = await prisma.siteDay.create({
       data: {
-        siteId,
-        foremanId,
+        site: { connect: { id: siteId } },
+        foreman: { connect: { id: foremanId } },
         workDate,
         isLocked: false,
       },
@@ -539,8 +539,8 @@ export async function requestSiteGroupPhoto(input: {
               ? existing
               : prisma.siteDay.create({
                   data: {
-                    siteId,
-                    foremanId: a.foremanId,
+                    site: { connect: { id: siteId } },
+                    foreman: { connect: { id: a.foremanId } },
                     workDate,
                   },
                   select: { id: true },
@@ -554,8 +554,8 @@ export async function requestSiteGroupPhoto(input: {
       siteDays.map((sd) =>
         prisma.siteDayPhotoRequest.create({
           data: {
-            siteDayId: sd.id,
-            requestedByUserId: auth.userId,
+            siteDay: { connect: { id: sd.id } },
+            requestedByUser: { connect: { id: auth.userId } },
             note,
             dueAt,
           },

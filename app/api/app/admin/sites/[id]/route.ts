@@ -28,19 +28,27 @@ async function getAuthFromRequest(req: Request) {
     const payload = await verifyApiToken(token);
     if (
       payload &&
-      (payload.role === "ADMIN" || payload.role === "SUPERVISOR")
+      (payload.role === "ADMIN" ||
+        payload.role === "OFFICE" ||
+        payload.role === "SUPERVISOR")
     ) {
-      return { id: payload.sub, role: payload.role as "ADMIN" | "SUPERVISOR" };
+      return {
+        id: payload.sub,
+        role: payload.role as "ADMIN" | "OFFICE" | "SUPERVISOR",
+      };
     }
   }
 
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
 
-  if (session?.user && (role === "ADMIN" || role === "SUPERVISOR")) {
+  if (
+    session?.user &&
+    (role === "ADMIN" || role === "OFFICE" || role === "SUPERVISOR")
+  ) {
     return {
       id: (session.user as any).id as string,
-      role: role as "ADMIN" | "SUPERVISOR",
+      role: role as "ADMIN" | "OFFICE" | "SUPERVISOR",
     };
   }
 

@@ -118,9 +118,9 @@ export async function GET(
     if (!timesheet) {
       timesheet = await prisma.timesheet.create({
         data: {
-          periodId: period.id,
-          foremanId: parsed.foremanId,
-          siteId: parsed.siteId ?? null,
+          period: { connect: { id: period.id } },
+          foreman: { connect: { id: parsed.foremanId } },
+          site: parsed.siteId ? { connect: { id: parsed.siteId } } : undefined,
         },
         select: {
           id: true,

@@ -281,8 +281,8 @@ export async function POST(
 
     const created = await prisma.siteForemanDayRateOverride.create({
       data: {
-        siteId,
-        foremanId,
+        site: { connect: { id: siteId } },
+        foreman: { connect: { id: foremanId } },
         startsOn: startsOnDate,
         endsOn: endsOnDate,
         dayRate: data.dayRate as any,

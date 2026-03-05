@@ -207,7 +207,9 @@ export async function createEmployee(input: {
             faceImageUrl,
             isActive,
             defaultDayRate: dayRate as any,
-            createdByUserId,
+            createdByUser: createdByUserId
+              ? { connect: { id: createdByUserId } }
+              : undefined,
           },
           select: {
             id: true,
@@ -250,8 +252,8 @@ export async function createEmployee(input: {
               },
               update: { reason: "created" },
               create: {
-                foremanId: foreman.id,
-                employeeId: employee.id,
+                foreman: { connect: { id: foreman.id } },
+                employee: { connect: { id: employee.id } },
                 reason: "created",
               },
             });
@@ -477,7 +479,7 @@ export async function promoteEmployeeToForeman(input: { employeeId: string }) {
       // Create Foreman record with the employee's current day rate
       const foreman = await tx.foreman.create({
         data: {
-          userId: user.id,
+          user: { connect: { id: user.id } },
           defaultDayRate: employee.defaultDayRate,
         },
       });
@@ -485,14 +487,14 @@ export async function promoteEmployeeToForeman(input: { employeeId: string }) {
       // Update Employee to link to User
       await tx.employee.update({
         where: { id: employeeId },
-        data: { userId: user.id },
+        data: { user: { connect: { id: user.id } } },
       });
 
       // Create ForemanEmployee link to track the promotion
       await tx.foremanEmployee.create({
         data: {
-          foremanId: foreman.id,
-          employeeId: employee.id,
+          foreman: { connect: { id: foreman.id } },
+          employee: { connect: { id: employee.id } },
           reason: "promoted",
         },
       });

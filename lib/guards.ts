@@ -7,8 +7,8 @@ export async function requireCanManageSite(
   auth: ServerAuthUser,
   siteId: string,
 ) {
-  // Admin can manage all sites
-  if (auth.role === "ADMIN") return;
+  // Admin / Office can manage all sites
+  if (auth.role === "ADMIN" || auth.role === "OFFICE") return;
 
   // Supervisor can manage only sites assigned to them (active assignment)
   if (auth.role === "SUPERVISOR") {

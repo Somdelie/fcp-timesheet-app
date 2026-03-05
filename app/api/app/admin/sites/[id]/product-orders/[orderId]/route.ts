@@ -24,15 +24,21 @@ async function getAuth(req: Request) {
   const token = h.startsWith("Bearer ") ? h.slice(7).trim() : null;
   if (token) {
     const p = await verifyApiToken(token);
-    if (p && (p.role === "ADMIN" || p.role === "SUPERVISOR"))
-      return { id: p.sub, role: p.role as "ADMIN" | "SUPERVISOR" };
+    if (
+      p &&
+      (p.role === "ADMIN" || p.role === "OFFICE" || p.role === "SUPERVISOR")
+    )
+      return { id: p.sub, role: p.role as "ADMIN" | "OFFICE" | "SUPERVISOR" };
   }
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
-  if (session?.user && (role === "ADMIN" || role === "SUPERVISOR"))
+  if (
+    session?.user &&
+    (role === "ADMIN" || role === "OFFICE" || role === "SUPERVISOR")
+  )
     return {
       id: (session.user as any).id as string,
-      role: role as "ADMIN" | "SUPERVISOR",
+      role: role as "ADMIN" | "OFFICE" | "SUPERVISOR",
     };
   return null;
 }
@@ -139,7 +145,13 @@ export async function PATCH(
     const updated = await prisma.siteProductOrder.update({
       where: { id: orderId },
       data: {
-        ...(supplierId !== undefined ? { supplierId: supplierId || null } : {}),
+        ...(supplierId !== undefined
+          ? {
+              supplier: supplierId
+                ? { connect: { id: supplierId } }
+                : { disconnect: true },
+            }
+          : {}),
         ...(reference !== undefined ? { reference: reference || null } : {}),
         ...(note !== undefined ? { note: note || null } : {}),
       },

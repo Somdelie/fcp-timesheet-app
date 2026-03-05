@@ -157,9 +157,9 @@ export async function POST(
       },
     },
     create: {
-      periodId: period.id,
-      foremanId: parsed.foremanId,
-      siteId: parsed.siteId,
+      period: { connect: { id: period.id } },
+      foreman: { connect: { id: parsed.foremanId } },
+      site: parsed.siteId ? { connect: { id: parsed.siteId } } : undefined,
     },
     update: {},
     select: { id: true, status: true },
@@ -179,7 +179,9 @@ export async function POST(
     data: {
       status: "APPROVED",
       approvedAt: new Date(),
-      approvedBySupervisorId: supervisorId,
+      approvedBySupervisor: supervisorId
+        ? { connect: { id: supervisorId } }
+        : undefined,
       rejectedAt: null,
       rejectionReason: null,
     },

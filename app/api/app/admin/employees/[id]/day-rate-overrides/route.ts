@@ -205,12 +205,12 @@ export async function POST(
 
     const created = await prisma.employeeDayRateOverride.create({
       data: {
-        employeeId,
-        siteId: data.siteId ?? null,
+        employee: { connect: { id: employeeId } },
+        site: data.siteId ? { connect: { id: data.siteId } } : undefined,
         startsOn: startsOnDate,
         endsOn: endsOnDate,
         dayRate: data.dayRate as any,
-        createdByUserId: admin.id,
+        createdByUser: { connect: { id: admin.id } },
       },
       select: {
         id: true,

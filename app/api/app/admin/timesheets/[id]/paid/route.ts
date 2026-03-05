@@ -93,9 +93,9 @@ export async function POST(
       },
     },
     create: {
-      periodId: period.id,
-      foremanId: parsed.foremanId,
-      siteId: parsed.siteId,
+      period: { connect: { id: period.id } },
+      foreman: { connect: { id: parsed.foremanId } },
+      site: parsed.siteId ? { connect: { id: parsed.siteId } } : undefined,
     },
     update: {},
     select: { id: true, status: true },

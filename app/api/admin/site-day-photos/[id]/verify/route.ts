@@ -67,15 +67,15 @@ export async function POST(
     const verification = await prisma.photoVerification.upsert({
       where: { photoId },
       create: {
-        photoId,
+        photo: { connect: { id: photoId } },
         status: status as "VERIFIED" | "REJECTED",
-        verifiedByUserId: user.id,
+        verifiedByUser: { connect: { id: user.id } },
         verifiedAt: new Date(),
         notes,
       },
       update: {
         status: status as "VERIFIED" | "REJECTED",
-        verifiedByUserId: user.id,
+        verifiedByUser: { connect: { id: user.id } },
         verifiedAt: new Date(),
         notes,
       },
@@ -88,8 +88,8 @@ export async function POST(
       // Create a new photo request for this site day
       await prisma.siteDayPhotoRequest.create({
         data: {
-          siteDayId: siteDay.id,
-          requestedByUserId: user.id,
+          siteDay: { connect: { id: siteDay.id } },
+          requestedByUser: { connect: { id: user.id } },
           note: notes || "Previous photo was rejected. Please retake.",
           status: "REQUESTED",
         },

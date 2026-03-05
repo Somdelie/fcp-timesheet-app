@@ -19,7 +19,7 @@ export async function OPTIONS() {
 }
 
 async function getAdminFromRequest(req: NextRequest) {
-  const apiCtx = await requireApiAuth(req, ["ADMIN"]);
+  const apiCtx = await requireApiAuth(req, ["ADMIN", "OFFICE"]);
   if (apiCtx) {
     return { id: apiCtx.user.sub, role: apiCtx.user.role as string } as const;
   }
@@ -28,7 +28,7 @@ async function getAdminFromRequest(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (session?.user && (session.user as any).id) {
       const role = (session.user as any).role as string | undefined;
-      if (role === "ADMIN") {
+      if (role === "ADMIN" || role === "OFFICE") {
         return {
           id: (session.user as any).id as string,
           role,

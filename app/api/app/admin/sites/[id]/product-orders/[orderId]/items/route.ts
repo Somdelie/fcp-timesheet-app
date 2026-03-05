@@ -24,15 +24,21 @@ async function getAuth(req: Request) {
   const token = h.startsWith("Bearer ") ? h.slice(7).trim() : null;
   if (token) {
     const p = await verifyApiToken(token);
-    if (p && (p.role === "ADMIN" || p.role === "SUPERVISOR"))
-      return { id: p.sub, role: p.role as "ADMIN" | "SUPERVISOR" };
+    if (
+      p &&
+      (p.role === "ADMIN" || p.role === "OFFICE" || p.role === "SUPERVISOR")
+    )
+      return { id: p.sub, role: p.role as "ADMIN" | "OFFICE" | "SUPERVISOR" };
   }
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
-  if (session?.user && (role === "ADMIN" || role === "SUPERVISOR"))
+  if (
+    session?.user &&
+    (role === "ADMIN" || role === "OFFICE" || role === "SUPERVISOR")
+  )
     return {
       id: (session.user as any).id as string,
-      role: role as "ADMIN" | "SUPERVISOR",
+      role: role as "ADMIN" | "OFFICE" | "SUPERVISOR",
     };
   return null;
 }
@@ -115,11 +121,13 @@ export async function POST(
 
     const { id: siteId, orderId } = await ctx.params;
     const body = await req.json();
-    const { productId, quantity, unitPrice, note } = body as {
+    const { productId, quantity, unitPrice, note, uom, unitSize } = body as {
       productId: string;
       quantity: number;
       unitPrice?: number | string | null;
       note?: string;
+      uom?: string;
+      unitSize?: number | string | null;
     };
 
     if (!productId || !quantity || quantity < 1) {
@@ -140,7 +148,7 @@ export async function POST(
         { status: 404, headers: CORS },
       );
 
-    // Fetch the product to snapshot UOM / unitSize
+    // Fetch the product (to verify it exists)
     const product = await prisma.procurementProduct.findUnique({
       where: { id: productId },
       select: { id: true, uom: true, unitSize: true },
@@ -151,22 +159,33 @@ export async function POST(
         { status: 404, headers: CORS },
       );
 
-    // Resolve price
+    // Determine UOM / unitSize: prefer explicit body values, fallback to product defaults
+    const itemUom = (uom as any) || product.uom || null;
+    const itemUnitSize =
+      unitSize != null && unitSize !== ""
+        ? Number(unitSize)
+        : product.unitSize
+          ? Number(product.unitSize)
+          : null;
+
+    // Resolve price (match on uom/unitSize if provided)
     const resolvedPrice = await resolveUnitPrice({
       manualPrice: unitPrice,
       supplierId: order.supplierId,
       productId,
+      uom: itemUom ?? undefined,
+      unitSize: itemUnitSize ?? undefined,
     });
 
     // Create item
     const item = await prisma.siteProductOrderItem.create({
       data: {
-        orderId,
-        productId,
+        order: { connect: { id: orderId } },
+        product: { connect: { id: productId } },
         quantity,
         unitPriceAtOrder: resolvedPrice,
-        uomAtOrder: product.uom,
-        unitSizeAtOrder: product.unitSize,
+        uomAtOrder: itemUom,
+        unitSizeAtOrder: itemUnitSize,
         note: note || null,
       },
     });

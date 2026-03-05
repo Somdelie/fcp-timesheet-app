@@ -138,7 +138,7 @@ export async function POST(
 
         const newForeman = await tx.foreman.create({
           data: {
-            userId: newUser.id,
+            user: { connect: { id: newUser.id } },
           },
         });
 
@@ -159,8 +159,8 @@ export async function POST(
     // Now create the ForemanAssistant link
     await prisma.foremanAssistant.create({
       data: {
-        foremanId,
-        employeeId,
+        foreman: { connect: { id: foremanId } },
+        employee: { connect: { id: employeeId } },
         startsOn: new Date(),
       },
     });

@@ -115,8 +115,8 @@ export async function POST(
     // 1. Create the site assignment
     await tx.foremanSiteAssignment.create({
       data: {
-        siteId,
-        foremanId,
+        site: { connect: { id: siteId } },
+        foreman: { connect: { id: foremanId } },
         startsOn: now,
         endsOn: null,
       },
@@ -135,8 +135,8 @@ export async function POST(
       if (!existingLink) {
         await tx.supervisorForeman.create({
           data: {
-            supervisorId,
-            foremanId,
+            supervisor: { connect: { id: supervisorId } },
+            foreman: { connect: { id: foremanId } },
             startsOn: now,
           },
         });

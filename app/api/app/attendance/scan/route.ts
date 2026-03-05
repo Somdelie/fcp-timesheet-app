@@ -91,8 +91,8 @@ async function getOrCreateSiteDay(opts: {
   try {
     return await prisma.siteDay.create({
       data: {
-        siteId: opts.siteId,
-        foremanId: opts.foremanId,
+        site: { connect: { id: opts.siteId } },
+        foreman: { connect: { id: opts.foremanId } },
         workDate: opts.workDate,
       },
       select: { id: true, siteId: true, foremanId: true, workDate: true },
@@ -214,10 +214,10 @@ export async function POST(req: Request) {
   try {
     const scan = await prisma.attendanceScan.create({
       data: {
-        siteDayId: siteDay.id,
-        employeeId: employee.id,
+        siteDay: { connect: { id: siteDay.id } },
+        employee: { connect: { id: employee.id } },
         workDate,
-        siteId,
+        site: { connect: { id: siteId } },
         dayRateAtScan: rateResult.dayRate,
         team: rateResult.team,
         qrPayload: employeeCode,

@@ -172,7 +172,7 @@ export async function POST(req: Request) {
 
       // Create foreman record
       const foreman = await tx.foreman.create({
-        data: { userId: user.id },
+        data: { user: { connect: { id: user.id } } },
         select: { id: true },
       });
 
@@ -187,8 +187,8 @@ export async function POST(req: Request) {
           firstName,
           lastName,
           qrCodeValue,
-          userId: user.id,
-          createdByUserId: user.id,
+          user: { connect: { id: user.id } },
+          createdByUser: { connect: { id: user.id } },
           isActive: true,
         },
       });

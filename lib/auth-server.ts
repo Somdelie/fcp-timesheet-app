@@ -3,7 +3,7 @@ import { authOptions } from "./auth";
 
 export type ServerAuthUser = {
   userId: string;
-  role: "ADMIN" | "SUPERVISOR" | "FOREMAN";
+  role: "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
 };
 
 export async function requireServerAuth(): Promise<ServerAuthUser> {

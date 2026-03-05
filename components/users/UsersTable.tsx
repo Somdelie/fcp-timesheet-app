@@ -87,6 +87,8 @@ function getRoleBadgeVariant(role: string) {
   switch (role) {
     case "ADMIN":
       return "bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400";
+    case "OFFICE":
+      return "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400";
     case "SUPERVISOR":
       return "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400";
     case "FOREMAN":

@@ -172,7 +172,9 @@ export async function POST(request: NextRequest) {
         faceImageUrl: faceImageUrl ?? null,
         isActive: isActive !== false,
         qrCodeValue,
-        createdByUserId,
+        createdByUser: createdByUserId
+          ? { connect: { id: createdByUserId } }
+          : undefined,
       },
       select: {
         id: true,

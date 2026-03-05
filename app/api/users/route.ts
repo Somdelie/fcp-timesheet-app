@@ -123,9 +123,13 @@ export async function POST(req: Request) {
       });
 
       if (roleRaw === "SUPERVISOR")
-        await tx.supervisor.create({ data: { userId: created.id } });
+        await tx.supervisor.create({
+          data: { user: { connect: { id: created.id } } },
+        });
       if (roleRaw === "FOREMAN") {
-        await tx.foreman.create({ data: { userId: created.id } });
+        await tx.foreman.create({
+          data: { user: { connect: { id: created.id } } },
+        });
 
         // Create linked Employee record
         const nameParts = (name || "").trim().split(/\s+/);
@@ -138,8 +142,8 @@ export async function POST(req: Request) {
             firstName,
             lastName,
             qrCodeValue,
-            userId: created.id,
-            createdByUserId: created.id,
+            user: { connect: { id: created.id } },
+            createdByUser: { connect: { id: created.id } },
             isActive: true,
           },
         });

@@ -38,7 +38,7 @@ const createUserSchema = z
       .min(3, "Email must be at least 3 characters.")
       .max(120, "Email must be at most 120 characters.")
       .email("Please enter a valid email."),
-    role: z.enum(["ADMIN", "SUPERVISOR", "FOREMAN"]),
+    role: z.enum(["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"]),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters.")
@@ -189,6 +189,7 @@ export default function CreateUserForm() {
                     <SelectGroup>
                       <SelectLabel>Roles</SelectLabel>
                       <SelectItem value="ADMIN">Admin</SelectItem>
+                      <SelectItem value="OFFICE">Office</SelectItem>
                       <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
                       <SelectItem value="FOREMAN">Foreman</SelectItem>
                     </SelectGroup>

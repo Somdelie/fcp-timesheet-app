@@ -168,8 +168,8 @@ export async function POST(
     // Create assignment
     const assignment = await prisma.supervisorSiteAssignment.create({
       data: {
-        siteId,
-        supervisorId: supervisor.id,
+        site: { connect: { id: siteId } },
+        supervisor: { connect: { id: supervisor.id } },
         startsOn: startDate ? new Date(startDate) : new Date(),
       },
       include: {

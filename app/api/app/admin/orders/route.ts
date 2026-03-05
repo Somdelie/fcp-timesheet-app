@@ -20,7 +20,7 @@ export async function OPTIONS() {
 }
 
 async function getAdminFromRequest(req: NextRequest) {
-  const apiCtx = await requireApiAuth(req, ["ADMIN"]);
+  const apiCtx = await requireApiAuth(req, ["ADMIN", "OFFICE"]);
   if (apiCtx) {
     return { id: apiCtx.user.sub, role: apiCtx.user.role as string } as const;
   }
@@ -29,7 +29,7 @@ async function getAdminFromRequest(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (session?.user && (session.user as any).id) {
       const role = (session.user as any).role as string | undefined;
-      if (role === "ADMIN") {
+      if (role === "ADMIN" || role === "OFFICE") {
         return {
           id: (session.user as any).id as string,
           role: role,
@@ -107,8 +107,8 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.productOrder.create({
       data: {
-        foremanId: data.foremanId,
-        createdByUserId: admin.id,
+        foreman: { connect: { id: data.foremanId } },
+        createdByUser: { connect: { id: admin.id } },
         status: "PENDING",
       },
     });
@@ -126,8 +126,8 @@ export async function POST(req: NextRequest) {
       const priceNum = Number((p.price as any).toString?.() ?? p.price);
       const createdItem = await prisma.productOrderItem.create({
         data: {
-          orderId: order.id,
-          productId: item.productId,
+          order: { connect: { id: order.id } },
+          product: { connect: { id: item.productId } },
           quantity: item.quantity,
           unitPrice: priceNum as any,
           note: item.note?.trim() || undefined,
