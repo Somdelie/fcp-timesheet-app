@@ -477,13 +477,13 @@ export default function AdminSitePhotosPage() {
         open={!!selectedPhoto}
         onOpenChange={() => setSelectedPhoto(null)}
       >
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogContent className="max-w-[90vw] p-0 overflow-hidden">
           <DialogTitle className="sr-only">Photo Preview</DialogTitle>
           {selectedPhoto && (
             <div className="relative">
               <div
                 ref={imageWrapperRef}
-                className="max-h-[80vh] bg-black flex items-center justify-center overflow-hidden"
+                className="h-[80vh] w-full bg-black flex items-center justify-center overflow-hidden"
                 onMouseDown={(event) => {
                   if (zoom <= 1) return;
                   if (!imageWrapperRef.current) return;
@@ -520,11 +520,21 @@ export default function AdminSitePhotosPage() {
                   imageWrapperRef.current.style.cursor =
                     zoom > 1 ? "grab" : "default";
                 }}
+                onWheel={(event) => {
+                  setZoom((z) => {
+                    const delta = event.deltaY < 0 ? 0.2 : -0.2;
+                    const next = Math.min(4, Math.max(1, z + delta));
+                    if (next === 1) {
+                      setPan({ x: 0, y: 0 });
+                    }
+                    return next;
+                  });
+                }}
               >
                 <img
                   src={selectedPhoto.imageUrl}
                   alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
-                  className="h-auto max-h-[80vh] w-auto object-contain select-none transition-transform"
+                  className="h-full w-full object-contain md:object-cover select-none transition-transform"
                   style={{
                     transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                     transformOrigin: "center center",
