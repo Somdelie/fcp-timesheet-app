@@ -766,6 +766,270 @@ export const materials = [
     supplierId: "cmmdxdol60009w8plpxqwnxct",
     categoryId: "cmmdxbuw40008w8plm4urs9ae",
   },
+  {
+    name: "Metal Water-based Primer",
+    sku: "MWP1",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Micatex",
+    sku: "BBO",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Micatex Tint Bases",
+    sku: "TMX",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Mild Steel Primer",
+    sku: "UC501",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Mortalift",
+    sku: "51 10 01",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Multiseal",
+    sku: "VSS",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Multi-Surface Primer",
+    sku: "WUP1",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Nitrolac H/B Dual",
+    sku: "ANL",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Nitrocellulose Lacquers",
+    sku: "IL",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Nuroof Cool Acrylic Roof Paint",
+    sku: "TRP",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "One Coat Ceiling Paint",
+    sku: "OCC",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Paramount Gloss Enamel",
+    sku: "PAR800",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Paramount Householders PVA",
+    sku: "NLC",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Paramount Plaster Primer: Water-based",
+    sku: "PPW1",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Paramount Universal Paint Stainers",
+    sku: "33700-07",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Plascoguard 4000 HB",
+    sku: "FHB",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plasclac Catalyst",
+    sku: "KAT1104",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascoprime 207",
+    sku: "UC207",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascoprime Self Etch Primer",
+    sku: "SNS1",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascoguard 4000",
+    sku: "FHB",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Plascosafe 500",
+    sku: "PWI / TWI",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascosafe Water-based Floor Coating",
+    sku: "WFC",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascosafe Water-based Furniture Coatings",
+    sku: "FFW",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascosafe Water-based Multicoat",
+    sku: "FFW",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Plascothane 9000",
+    sku: "PRT/PRH/PT",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascothane Catalyst",
+    sku: "KAT518",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascothane Industrial Polyurethane Enamels",
+    sku: "UP",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Plascosafe 18 Primer",
+    sku: "EMS18",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascothane PureCoat",
+    sku: "PUC",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Plascotuff 3000",
+    sku: "PEX/PET/PEH",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascotuff Coal Tar Pitch Coating",
+    sku: "EPD/EPT",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plascotuff Gehopon 3000 WB",
+    sku: "GW",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Plaster Primer (Crown)",
+    sku: "CPP2",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Plaster Primer (Plascon)",
+    sku: "UC56",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Polyfilla Exterior",
+    sku: "10 19 03",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Polyfilla Fine Crack Filler",
+    sku: "10 18 01",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Polyfilla Interior",
+    sku: "10 10 02",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Polyfilla Masonry Patching Plaster",
+    sku: "10 20 03",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Polyfilla Mendall 90",
+    sku: "80 16 01",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Polygalv Zinc Rich Primer",
+    sku: "SN 176",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+
+  {
+    name: "Quick Drying Enamels",
+    sku: "QDE",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
+  {
+    name: "Quicksand Primer Surfacer",
+    sku: "PS202",
+    supplierId: "cmmdxdol60009w8plpxqwnxct",
+    categoryId: "cmmdxbuw40008w8plm4urs9ae",
+  },
 ];
 
 export async function seedMaterials(prisma: PrismaClient) {
