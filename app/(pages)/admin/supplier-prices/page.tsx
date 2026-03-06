@@ -124,6 +124,8 @@ export default function SupplierPricesPage() {
   const [filterSupplier, setFilterSupplier] = useState("");
   const [showInactive, setShowInactive] = useState(false);
 
+  const [filterProductSearch, setFilterProductSearch] = useState("");
+
   // Lookups
   const [products, setProducts] = useState<LookupItem[]>([]);
   const [suppliers, setSuppliers] = useState<LookupItem[]>([]);
@@ -142,6 +144,8 @@ export default function SupplierPricesPage() {
     endsOn: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const [dialogProductSearch, setDialogProductSearch] = useState("");
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<SupplierPrice | null>(null);
@@ -317,12 +321,26 @@ export default function SupplierPricesPage() {
             <SelectValue placeholder="All products" />
           </SelectTrigger>
           <SelectContent>
+            <div className="px-2 py-1.5">
+              <Input
+                placeholder="Search products..."
+                value={filterProductSearch}
+                onChange={(e) => setFilterProductSearch(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
             <SelectItem value="ALL">All products</SelectItem>
-            {products.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
+            {products
+              .filter((p) => {
+                const term = filterProductSearch.trim().toLowerCase();
+                if (!term) return true;
+                return p.name.toLowerCase().includes(term);
+              })
+              .map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
         <Select
@@ -485,12 +503,26 @@ export default function SupplierPricesPage() {
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
+                  <div className="px-2 py-1.5">
+                    <Input
+                      placeholder="Search products..."
+                      value={dialogProductSearch}
+                      onChange={(e) => setDialogProductSearch(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
                   <SelectItem value="NONE">Select product...</SelectItem>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
+                  {products
+                    .filter((p) => {
+                      const term = dialogProductSearch.trim().toLowerCase();
+                      if (!term) return true;
+                      return p.name.toLowerCase().includes(term);
+                    })
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
