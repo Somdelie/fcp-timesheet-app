@@ -103,7 +103,7 @@ export default function PromoteEmployeeDialog({
 
         {promotionResult ? (
           <div className="space-y-4 py-4">
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+            <div className="rounded border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
               <p className="mb-3 text-sm font-semibold text-green-900 dark:text-green-100">
                 New Foreman Account Created
               </p>
@@ -126,7 +126,7 @@ export default function PromoteEmployeeDialog({
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+            <div className="rounded border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
               <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">
                 Important
               </p>
@@ -139,7 +139,7 @@ export default function PromoteEmployeeDialog({
         ) : (
           <div className="space-y-4 py-4">
             {/* Employee Profile Preview */}
-            <div className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
+            <div className="flex items-center gap-4 rounded border bg-muted/30 p-4">
               <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border bg-muted">
                 {employeePhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -166,7 +166,7 @@ export default function PromoteEmployeeDialog({
               </div>
             </div>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+            <div className="rounded border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
               <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
                 A new foreman account will be created with:
               </p>

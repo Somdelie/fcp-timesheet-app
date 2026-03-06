@@ -55,7 +55,7 @@ type SupplierPrice = {
   };
 };
 
-type LookupItem = { id: string; name: string };
+type LookupItem = { id: string; name: string; sku?: string | null };
 type UomOption = { value: string; label: string; group: string };
 
 /* ------------------------------------------------------------------ */
@@ -170,7 +170,11 @@ export default function SupplierPricesPage() {
         ]);
         if (pRes.ok)
           setProducts(
-            (pJson.data ?? []).map((p: any) => ({ id: p.id, name: p.name })),
+            (pJson.data ?? []).map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              sku: p.sku ?? null,
+            })),
           );
         if (sRes.ok)
           setSuppliers(
@@ -326,6 +330,7 @@ export default function SupplierPricesPage() {
                 placeholder="Search products..."
                 value={filterProductSearch}
                 onChange={(e) => setFilterProductSearch(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 className="h-8 text-xs"
               />
             </div>
@@ -334,11 +339,14 @@ export default function SupplierPricesPage() {
               .filter((p) => {
                 const term = filterProductSearch.trim().toLowerCase();
                 if (!term) return true;
-                return p.name.toLowerCase().includes(term);
+                return (
+                  p.name.toLowerCase().includes(term) ||
+                  (p.sku?.toLowerCase().includes(term) ?? false)
+                );
               })
               .map((p) => (
                 <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+                  {p.sku ? `${p.name} (${p.sku})` : p.name}
                 </SelectItem>
               ))}
           </SelectContent>
@@ -380,9 +388,6 @@ export default function SupplierPricesPage() {
               <TableHead>Size</TableHead>
               <TableHead>Supplier</TableHead>
               <TableHead className="text-right">Price</TableHead>
-              <TableHead>Starts</TableHead>
-              <TableHead>Ends</TableHead>
-              <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -390,7 +395,7 @@ export default function SupplierPricesPage() {
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={5}
                   className="text-center py-8 text-muted-foreground"
                 >
                   Loading...
@@ -399,7 +404,7 @@ export default function SupplierPricesPage() {
             ) : prices.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={5}
                   className="text-center py-8 text-muted-foreground"
                 >
                   <DollarSign className="mx-auto h-8 w-8 mb-2 opacity-40" />
@@ -420,15 +425,6 @@ export default function SupplierPricesPage() {
                   <TableCell className="text-sm">{p.supplier.name}</TableCell>
                   <TableCell className="text-right font-medium">
                     {formatCurrency(p.price)}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {fmtDate(p.startsOn)}
-                  </TableCell>
-                  <TableCell className="text-sm">{fmtDate(p.endsOn)}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={p.isActive ? "default" : "outline"}>
-                      {p.isActive ? "Active" : "Inactive"}
-                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -508,6 +504,7 @@ export default function SupplierPricesPage() {
                       placeholder="Search products..."
                       value={dialogProductSearch}
                       onChange={(e) => setDialogProductSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
                       className="h-8 text-xs"
                     />
                   </div>
@@ -516,11 +513,14 @@ export default function SupplierPricesPage() {
                     .filter((p) => {
                       const term = dialogProductSearch.trim().toLowerCase();
                       if (!term) return true;
-                      return p.name.toLowerCase().includes(term);
+                      return (
+                        p.name.toLowerCase().includes(term) ||
+                        (p.sku?.toLowerCase().includes(term) ?? false)
+                      );
                     })
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name}
+                        {p.sku ? `${p.name} (${p.sku})` : p.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -585,26 +585,6 @@ export default function SupplierPricesPage() {
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                 placeholder="0.00"
               />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Starts On</label>
-                <Input
-                  type="date"
-                  value={form.startsOn}
-                  onChange={(e) =>
-                    setForm({ ...form, startsOn: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Ends On</label>
-                <Input
-                  type="date"
-                  value={form.endsOn}
-                  onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
-                />
-              </div>
             </div>
           </div>
           <DialogFooter>

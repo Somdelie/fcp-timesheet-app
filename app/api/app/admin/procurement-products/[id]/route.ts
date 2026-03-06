@@ -95,7 +95,7 @@ export async function GET(
 
 /**
  * PATCH /api/app/admin/procurement-products/[id]
- * Body: { name?, sku?, categoryId?, uom?, unitSize?, description?, supplierId?, isActive? }
+ * Body: { name?, sku?, categoryId?, uom?, unitSize?, description?, supplierId?, isActive?, thumbnailUrl? }
  */
 export async function PATCH(
   req: Request,
@@ -120,6 +120,7 @@ export async function PATCH(
       description,
       supplierId,
       isActive,
+      thumbnailUrl,
     } = body as {
       name?: string;
       sku?: string | null;
@@ -129,6 +130,7 @@ export async function PATCH(
       description?: string | null;
       supplierId?: string | null;
       isActive?: boolean;
+      thumbnailUrl?: string | null;
     };
 
     const data: Record<string, unknown> = {};
@@ -148,6 +150,8 @@ export async function PATCH(
         ? { connect: { id: supplierId } }
         : { disconnect: true };
     if (isActive !== undefined) data.isActive = isActive;
+    if (thumbnailUrl !== undefined)
+      data.thumbnailUrl = thumbnailUrl?.trim() || null;
 
     const updated = await prisma.procurementProduct.update({
       where: { id },

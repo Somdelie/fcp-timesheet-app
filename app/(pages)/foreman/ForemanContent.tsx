@@ -525,7 +525,7 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
               </Select>
             </div>
             {selectedEmployee && (
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 text-sm">
+              <div className="rounded bg-blue-50 dark:bg-blue-950 p-3 text-sm">
                 {isNewUserAssistant ? (
                   <p className="text-muted-foreground">
                     Creating new user account for this employee
@@ -623,7 +623,7 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
               <p className="text-sm text-muted-foreground">
                 Please save these credentials securely:
               </p>
-              <div className="bg-muted/50 dark:bg-muted/20 p-4 rounded-lg space-y-4 border border-border">
+              <div className="bg-muted/50 dark:bg-muted/20 p-4 rounded space-y-4 border border-border">
                 <div>
                   <label className="text-sm font-semibold block mb-2">
                     Name
@@ -691,7 +691,7 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
                   </div>
                 </div>
               </div>
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-3 border border-blue-200 dark:border-blue-900">
+              <div className="rounded bg-blue-50 dark:bg-blue-950/30 p-3 border border-blue-200 dark:border-blue-900">
                 <p className="text-xs text-blue-800 dark:text-blue-200">
                   ℹ️ Share these credentials with the assistant securely. They
                   will not be shown again.
@@ -738,7 +738,7 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3 border border-amber-200 dark:border-amber-800">
+            <div className="rounded bg-amber-50 dark:bg-amber-950/30 p-3 border border-amber-200 dark:border-amber-800">
               <p className="text-xs text-amber-800 dark:text-amber-200">
                 Existing attendance scans will not be affected. Only future
                 scans will use the new team rate.

@@ -26,7 +26,7 @@ function Card({
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm p-6 shadow-sm transition-all hover:shadow-md">
+    <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm p-6 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center gap-3 mb-6">
         {Icon && <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
         <div>
@@ -158,13 +158,13 @@ export default function SiteBookingPanel({ siteId }: { siteId: string }) {
           </h3>
 
           {loading ? (
-            <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-300 dark:border-slate-700 py-8">
+            <div className="flex items-center justify-center rounded border border-dashed border-slate-300 dark:border-slate-700 py-8">
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Loading...
               </p>
             </div>
           ) : rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/20 p-8 text-center">
+            <div className="rounded border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/20 p-8 text-center">
               <Calendar className="mx-auto h-8 w-8 text-slate-400 dark:text-slate-600 mb-2" />
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 No bookings yet. Book a foreman to get started.
@@ -175,7 +175,7 @@ export default function SiteBookingPanel({ siteId }: { siteId: string }) {
               {rows.map((r) => (
                 <div
                   key={r.id}
-                  className="group rounded-xl border border-slate-200/30 dark:border-slate-700/30 bg-linear-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-800/20 dark:to-slate-900/20 p-4 transition-all hover:shadow-md hover:border-slate-300/50 dark:hover:border-slate-600/50"
+                  className="group rounded border border-slate-200/30 dark:border-slate-700/30 bg-linear-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-800/20 dark:to-slate-900/20 p-4 transition-all hover:shadow-md hover:border-slate-300/50 dark:hover:border-slate-600/50"
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
@@ -204,7 +204,7 @@ export default function SiteBookingPanel({ siteId }: { siteId: string }) {
                     )}
                   </div>
 
-                  <div className="rounded-lg bg-slate-100/40 dark:bg-slate-800/40 p-2">
+                  <div className="rounded bg-slate-100/40 dark:bg-slate-800/40 p-2">
                     <p className="text-xs text-slate-600 dark:text-slate-400">
                       SiteDay ID
                     </p>
@@ -219,7 +219,7 @@ export default function SiteBookingPanel({ siteId }: { siteId: string }) {
         </div>
 
         {/* Info Section */}
-        <div className="rounded-lg border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/20 p-4">
+        <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/20 p-4">
           <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
             <span className="font-semibold text-slate-900 dark:text-slate-200">
               Booking Rules:

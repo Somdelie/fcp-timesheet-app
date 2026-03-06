@@ -183,6 +183,12 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE"],
       },
       {
+        href: "/admin/material-orders",
+        label: "Material Orders",
+        icon: ShoppingCart,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
         href: "/admin/fortnight-meetings",
         label: "Fortnight Meetings",
         icon: CalendarCheck,

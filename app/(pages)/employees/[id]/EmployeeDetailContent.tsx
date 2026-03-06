@@ -289,7 +289,7 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
             <img
               src={employee.faceImageUrl}
               alt={`${employee.firstName} ${employee.lastName}`}
-              className="max-h-[85vh] max-w-full rounded-lg object-contain"
+              className="max-h-[85vh] max-w-full rounded object-contain"
               onClick={(e) => e.stopPropagation()}
             />
             <p className="mt-2 text-center text-white text-sm">

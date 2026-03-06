@@ -278,12 +278,12 @@ export default function CreateEmployeeForm() {
                       {field.value ? (
                         // Show image preview
                         <div className="relative">
-                          <div className="rounded-lg border-2 border-dashed border-green-500 bg-green-50/30 p-4 dark:bg-green-950/20">
+                          <div className="rounded border-2 border-dashed border-green-500 bg-green-50/30 p-4 dark:bg-green-950/20">
                             <div className="flex items-end gap-3">
                               <img
                                 src={field.value}
                                 alt="Preview"
-                                className="h-24 w-24 rounded-lg object-cover shadow-sm"
+                                className="h-24 w-24 rounded object-cover shadow-sm"
                               />
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-green-700 dark:text-green-300">
@@ -296,7 +296,7 @@ export default function CreateEmployeeForm() {
                               <button
                                 type="button"
                                 onClick={() => field.onChange("")}
-                                className="rounded-lg bg-white p-1.5 hover:bg-red-50 text-red-600 dark:bg-zinc-800 dark:hover:bg-red-950/30 transition"
+                                className="rounded bg-white p-1.5 hover:bg-red-50 text-red-600 dark:bg-zinc-800 dark:hover:bg-red-950/30 transition"
                                 title="Remove image"
                               >
                                 <X className="h-4 w-4" />
@@ -311,7 +311,7 @@ export default function CreateEmployeeForm() {
                           onDragLeave={handleDrag}
                           onDragOver={handleDrag}
                           onDrop={handleDrop}
-                          className={`relative rounded-lg border-2 border-dashed transition-colors p-6 text-center cursor-pointer ${
+                          className={`relative rounded border-2 border-dashed transition-colors p-6 text-center cursor-pointer ${
                             dragActive
                               ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
                               : "border-zinc-300 bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/30 hover:border-blue-400 dark:hover:border-blue-400"

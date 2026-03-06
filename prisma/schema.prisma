@@ -1005,11 +1005,12 @@ model Supplier {
 
 // A product in the procurement catalog (paints, cement, etc.)
 model ProcurementProduct {
-  id         String           @id @default(cuid())
-  name       String
-  sku        String?
-  categoryId String?
-  category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  id           String           @id @default(cuid())
+  name         String
+  sku          String?
+  thumbnailUrl String?
+  categoryId   String?
+  category     ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   // Legacy base unit info (sizes now live on SupplierProductPrice)
   uom         ProductUom?

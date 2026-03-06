@@ -22,7 +22,7 @@ export default async function ProfilePage(props) {
   }
 
   return (
-    <main className="min-h-screen dark:bg-card rounded-lg px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-200 bg-card/60 backdrop-blur">
+    <main className="min-h-screen dark:bg-card rounded px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-200 bg-card/60 backdrop-blur">
       <div className="mx-auto max-w-3xl">
         {/* Header with decorative element */}
         <div className="mb-12">
@@ -144,8 +144,8 @@ export default async function ProfilePage(props) {
 
         {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-sky-600 dark:hover:border-sky-500 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-200">
-            <div className="shrink-0 h-10 w-10 rounded-lg bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 dark:group-hover:bg-sky-600 group-hover:text-white transition-colors duration-200">
+          <button className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-sky-600 dark:hover:border-sky-500 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-200">
+            <div className="shrink-0 h-10 w-10 rounded bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 dark:group-hover:bg-sky-600 group-hover:text-white transition-colors duration-200">
               <svg
                 className="h-5 w-5"
                 fill="none"
@@ -170,8 +170,8 @@ export default async function ProfilePage(props) {
             </div>
           </button>
 
-          <button className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-sky-600 dark:hover:border-sky-500 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-200">
-            <div className="shrink-0 h-10 w-10 rounded-lg bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 dark:group-hover:bg-sky-600 group-hover:text-white transition-colors duration-200">
+          <button className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-sky-600 dark:hover:border-sky-500 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-200">
+            <div className="shrink-0 h-10 w-10 rounded bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 dark:group-hover:bg-sky-600 group-hover:text-white transition-colors duration-200">
               <svg
                 className="h-5 w-5"
                 fill="none"
@@ -196,8 +196,8 @@ export default async function ProfilePage(props) {
             </div>
           </button>
 
-          <button className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-sky-600 dark:hover:border-sky-500 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-200">
-            <div className="shrink-0 h-10 w-10 rounded-lg bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 dark:group-hover:bg-sky-600 group-hover:text-white transition-colors duration-200">
+          <button className="group flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-sky-600 dark:hover:border-sky-500 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-200">
+            <div className="shrink-0 h-10 w-10 rounded bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:bg-sky-600 dark:group-hover:bg-sky-600 group-hover:text-white transition-colors duration-200">
               <svg
                 className="h-5 w-5"
                 fill="none"

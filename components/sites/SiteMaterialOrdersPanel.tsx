@@ -225,7 +225,7 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="flex flex-col gap-0.5 px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50">
+    <div className="flex flex-col gap-0.5 px-4 py-3 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50">
       <span className="text-[11px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
         {label}
       </span>
@@ -566,12 +566,12 @@ export default function SiteMaterialOrdersPanel({
   const totalItems = aggregated.reduce((s, a) => s + a.totalQuantity, 0);
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+    <div className="rounded border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
       {/* ── Header ── */}
       <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
+            <div className="h-9 w-9 rounded bg-blue-600 flex items-center justify-center shadow-sm">
               <Package
                 className="h-4.5 w-4.5 text-white"
                 style={{ height: 18, width: 18 }}
@@ -589,13 +589,13 @@ export default function SiteMaterialOrdersPanel({
           <div className="flex items-center gap-2">
             <button
               onClick={loadOrders}
-              className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="h-8 w-8 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <RotateCw className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={openPos}
-              className="h-8 flex items-center gap-1.5 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-medium transition-colors shadow-sm"
+              className="h-8 flex items-center gap-1.5 px-3.5 rounded bg-primary hover:bg-primary/90 text-white text-[13px] font-medium transition-colors shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
               New Order
@@ -646,7 +646,7 @@ export default function SiteMaterialOrdersPanel({
               </div>
             ) : aggregated.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14 text-slate-400 dark:text-slate-500">
-                <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                <div className="h-14 w-14 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
                   <Package className="h-6 w-6 opacity-50" />
                 </div>
                 <p className="text-[13px] font-medium">
@@ -657,7 +657,7 @@ export default function SiteMaterialOrdersPanel({
                 </p>
               </div>
             ) : (
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+              <div className="rounded border border-slate-200 dark:border-slate-700/60 overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60 divide-x divide-slate-200 dark:divide-slate-700/60">
@@ -741,7 +741,7 @@ export default function SiteMaterialOrdersPanel({
               </div>
             ) : orders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14 text-slate-400 dark:text-slate-500">
-                <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                <div className="h-14 w-14 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
                   <ShoppingCart className="h-6 w-6 opacity-50" />
                 </div>
                 <p className="text-[13px] font-medium">No orders yet</p>
@@ -756,7 +756,7 @@ export default function SiteMaterialOrdersPanel({
                   return (
                     <div
                       key={order.id}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700/60 overflow-hidden transition-shadow hover:shadow-sm"
+                      className="rounded border border-slate-200 dark:border-slate-700/60 overflow-hidden transition-shadow hover:shadow-sm"
                     >
                       {/* Order row */}
                       <div
@@ -993,11 +993,11 @@ export default function SiteMaterialOrdersPanel({
       {/* POS — New Order Dialog                                     */}
       {/* ═══════════════════════════════════════════════════════════ */}
       <Dialog open={posOpen} onOpenChange={setPosOpen}>
-        <DialogContent className="max-w-7xl h-[85vh] flex flex-col p-0 gap-0 [&>button]:z-50 rounded-xl overflow-hidden">
+        <DialogContent className="max-w-7xl h-[85vh] flex flex-col p-0 gap-0 [&>button]:z-50 rounded overflow-hidden">
           {/* POS Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center">
                 <ShoppingCart className="h-4 w-4 text-white" />
               </div>
               <div>
@@ -1027,7 +1027,7 @@ export default function SiteMaterialOrdersPanel({
                     placeholder="Search products..."
                     value={posSearch}
                     onChange={(e) => setPosSearch(e.target.value)}
-                    className="w-full pl-9 pr-9 h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                    className="w-full pl-9 pr-9 h-10 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                   />
                   {posSearch && (
                     <button
@@ -1073,7 +1073,7 @@ export default function SiteMaterialOrdersPanel({
                         <button
                           key={ci.key}
                           onClick={() => addToCart(ci)}
-                          className={`relative p-3.5 rounded-xl border-2 text-left transition-all active:scale-[0.97] ${
+                          className={`relative p-3.5 rounded border-2 text-left transition-all active:scale-[0.97] ${
                             inCart
                               ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/20 shadow-md shadow-blue-100 dark:shadow-blue-950/30"
                               : "border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-slate-800/60 hover:shadow-sm"
@@ -1084,7 +1084,7 @@ export default function SiteMaterialOrdersPanel({
                               {inCart.quantity}
                             </span>
                           )}
-                          <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2.5">
+                          <div className="h-8 w-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2.5">
                             <Package className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                           </div>
                           <div className="font-semibold text-[12px] leading-snug text-slate-900 dark:text-white">
@@ -1135,7 +1135,7 @@ export default function SiteMaterialOrdersPanel({
                   cart.map((ci) => (
                     <div
                       key={ci.key}
-                      className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3"
+                      className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2.5">
                         <div className="min-w-0">
@@ -1157,7 +1157,7 @@ export default function SiteMaterialOrdersPanel({
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 transition-colors"
+                          className="h-7 w-7 rounded border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 transition-colors"
                           onClick={() => updateCartQty(ci.key, -1)}
                         >
                           <Minus className="h-3 w-3" />
@@ -1171,10 +1171,10 @@ export default function SiteMaterialOrdersPanel({
                             if (Number.isFinite(v) && v >= 1)
                               setCartQty(ci.key, v);
                           }}
-                          className="h-7 w-14 text-center text-[13px] font-bold border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          className="h-7 w-14 text-center text-[13px] font-bold border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         />
                         <button
-                          className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 transition-colors"
+                          className="h-7 w-7 rounded border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 transition-colors"
                           onClick={() => updateCartQty(ci.key, 1)}
                         >
                           <Plus className="h-3 w-3" />
@@ -1207,13 +1207,13 @@ export default function SiteMaterialOrdersPanel({
                   placeholder="Reference / PO #"
                   value={posReference}
                   onChange={(e) => setPosReference(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[12px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  className="w-full h-9 px-3 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[12px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                 />
                 <input
                   placeholder="Note (optional)"
                   value={posNote}
                   onChange={(e) => setPosNote(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[12px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  className="w-full h-9 px-3 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[12px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                 />
 
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1 pb-1">
@@ -1234,7 +1234,7 @@ export default function SiteMaterialOrdersPanel({
                 <button
                   onClick={handlePlaceOrder}
                   disabled={placing || cart.length === 0}
-                  className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold shadow-sm transition-colors flex items-center justify-center gap-2"
+                  className="w-full h-10 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {placing ? (
                     <>
@@ -1258,7 +1258,7 @@ export default function SiteMaterialOrdersPanel({
       {/* Add Item Dialog                                            */}
       {/* ═══════════════════════════════════════════════════════════ */}
       <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
-        <DialogContent className="max-w-md rounded-xl">
+        <DialogContent className="max-w-md rounded">
           <DialogHeader>
             <DialogTitle className="text-[15px] font-semibold">
               Add Item to Order

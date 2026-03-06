@@ -446,7 +446,7 @@ export default function SettingsPage() {
         </div>
 
         {saveMessage && (
-          <div className="bg-emerald-500/15 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-lg">
+          <div className="bg-emerald-500/15 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded">
             {saveMessage}
           </div>
         )}
@@ -797,7 +797,7 @@ export default function SettingsPage() {
 
                 {/* Preview */}
                 {fortnight ? (
-                  <div className="space-y-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div className="space-y-4 bg-slate-50 dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700">
                     <div className="space-y-3">
                       <div className="space-y-2">
                         <Label className="text-sm font-semibold">
@@ -897,7 +897,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-blue-500/10 border border-blue-500/25 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg text-sm">
+                  <div className="bg-blue-500/10 border border-blue-500/25 text-blue-700 dark:text-blue-300 px-4 py-3 rounded text-sm">
                     {anchorISO
                       ? "Select a date or click “Generate for Today” to compute the fortnight using the saved anchor."
                       : `Set the anchor Saturday for ${year} first.`}
@@ -917,7 +917,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="bg-yellow-500/10 border border-yellow-500/25 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded-lg">
+                <div className="bg-yellow-500/10 border border-yellow-500/25 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded">
                   <p className="text-sm font-medium">
                     These settings should only be modified by experienced
                     administrators
@@ -968,7 +968,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="border rounded-lg p-4 space-y-2">
+                  <div className="border rounded p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-orange-500" />
                       <span className="font-medium text-sm">
@@ -980,7 +980,7 @@ export default function SettingsPage() {
                       permanently removed. They can re-register if needed.
                     </p>
                   </div>
-                  <div className="border rounded-lg p-4 space-y-2">
+                  <div className="border rounded p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-blue-500" />
                       <span className="font-medium text-sm">
@@ -992,7 +992,7 @@ export default function SettingsPage() {
                       all related assignments and records.
                     </p>
                   </div>
-                  <div className="border rounded-lg p-4 space-y-2">
+                  <div className="border rounded p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <FileCheck className="h-4 w-4 text-green-500" />
                       <span className="font-medium text-sm">
@@ -1043,7 +1043,7 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="border rounded-lg divide-y">
+                  <div className="border rounded divide-y">
                     {recentLogins.map((l) => (
                       <div
                         key={l.id}
@@ -1161,7 +1161,7 @@ export default function SettingsPage() {
                     No audit logs found.
                   </p>
                 ) : (
-                  <div className="border rounded-lg divide-y">
+                  <div className="border rounded divide-y">
                     {auditLogs.map((log) => (
                       <div
                         key={log.id}

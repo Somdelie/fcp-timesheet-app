@@ -99,7 +99,7 @@ export async function GET(req: Request) {
 
 /**
  * POST /api/app/admin/procurement-products
- * Body: { name, sku?, categoryId?, uom, unitSize?, description?, supplierId? }
+ * Body: { name, sku?, categoryId?, uom, unitSize?, description?, supplierId?, thumbnailUrl? }
  */
 export async function POST(req: Request) {
   try {
@@ -111,16 +111,25 @@ export async function POST(req: Request) {
       );
 
     const body = await req.json();
-    const { name, sku, categoryId, uom, unitSize, description, supplierId } =
-      body as {
-        name: string;
-        sku?: string;
-        categoryId?: string;
-        uom?: ProductUom;
-        unitSize?: number | string;
-        description?: string;
-        supplierId?: string;
-      };
+    const {
+      name,
+      sku,
+      categoryId,
+      uom,
+      unitSize,
+      description,
+      supplierId,
+      thumbnailUrl,
+    } = body as {
+      name: string;
+      sku?: string;
+      categoryId?: string;
+      uom?: ProductUom;
+      unitSize?: number | string;
+      description?: string;
+      supplierId?: string;
+      thumbnailUrl?: string;
+    };
 
     if (!name?.trim())
       return NextResponse.json(
@@ -137,6 +146,7 @@ export async function POST(req: Request) {
         unitSize: unitSize != null ? Number(unitSize) : null,
         description: description?.trim() || null,
         supplier: supplierId ? { connect: { id: supplierId } } : undefined,
+        thumbnailUrl: thumbnailUrl?.trim() || null,
       },
       include: {
         category: { select: { id: true, name: true } },
@@ -149,11 +159,18 @@ export async function POST(req: Request) {
       { status: 201, headers: CORS },
     );
   } catch (e: any) {
-    if (e?.code === "P2002" && e?.meta?.target?.includes("sku"))
+    if (e?.code === "P2002") {
+      const target = e?.meta?.target ?? e?.meta?.modelName ?? "";
+      const field = Array.isArray(target)
+        ? target.join(", ")
+        : String(target).includes("sku")
+          ? "sku"
+          : String(target);
       return NextResponse.json(
-        { error: "A product with that SKU already exists" },
+        { error: `A product with that ${field || "value"} already exists` },
         { status: 409, headers: CORS },
       );
+    }
     console.error("POST procurement-products error:", e);
     return NextResponse.json(
       { error: "Internal error" },

@@ -247,7 +247,7 @@ export default function SiteForemanRatesPanel({
 
         {selectedForemanUserId && (
           <>
-            <div className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/30 p-4 space-y-3">
+            <div className="mt-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/30 p-4 space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 New override
               </p>

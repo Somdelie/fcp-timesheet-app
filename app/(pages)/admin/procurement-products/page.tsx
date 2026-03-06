@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   Plus,
@@ -13,6 +13,7 @@ import {
   ChevronUp,
   ChevronDown,
   ArrowUpDown,
+  Upload,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ type ProcurementProduct = {
   name: string;
   sku: string | null;
   description: string | null;
+  thumbnailUrl: string | null;
   isActive: boolean;
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
@@ -95,8 +97,12 @@ export default function ProcurementProductsPage() {
     description: "",
     categoryId: "",
     supplierId: "",
+    thumbnailUrl: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<ProcurementProduct | null>(
@@ -167,6 +173,7 @@ export default function ProcurementProductsPage() {
       description: "",
       categoryId: "",
       supplierId: "",
+      thumbnailUrl: "",
     });
     setDialogOpen(true);
   }
@@ -179,8 +186,60 @@ export default function ProcurementProductsPage() {
       description: p.description ?? "",
       categoryId: p.category?.id ?? "",
       supplierId: p.supplier?.id ?? "",
+      thumbnailUrl: p.thumbnailUrl ?? "",
     });
     setDialogOpen(true);
+  }
+
+  async function handleThumbnailUpload(file: File) {
+    if (!file) return;
+    try {
+      setUploading(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "procurement-products");
+
+      const res = await fetch("/api/uploads/image", {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || "Upload failed");
+
+      const url = String(payload.url ?? "");
+      if (!url) throw new Error("Upload did not return a URL.");
+
+      setForm((f) => ({ ...f, thumbnailUrl: url }));
+      toast.success("Thumbnail uploaded");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to upload thumbnail");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleThumbnailFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleThumbnailUpload(file);
+    e.target.value = "";
+  }
+
+  function handleThumbnailDrag(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
+  }
+
+  function handleThumbnailDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) handleThumbnailUpload(file);
+    else toast.error("Please drop an image file");
   }
 
   async function handleSubmit() {
@@ -205,6 +264,7 @@ export default function ProcurementProductsPage() {
           description: form.description.trim() || null,
           categoryId: form.categoryId || null,
           supplierId: form.supplierId || null,
+          thumbnailUrl: form.thumbnailUrl || null,
         }),
       });
       const json = await res.json();
@@ -248,6 +308,32 @@ export default function ProcurementProductsPage() {
   }, [products, search]);
   const columns: ColumnDef<ProcurementProduct>[] = [
     {
+      id: "thumbnail",
+      header: () => <span className="sr-only">Image</span>,
+      cell: ({ row }) =>
+        row.original.thumbnailUrl ? (
+          <img
+            src={row.original.thumbnailUrl}
+            alt={row.original.name}
+            className="h-9 w-9 rounded object-cover"
+          />
+        ) : (
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-muted">
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </div>
+        ),
+      enableSorting: false,
+      size: 50,
+    },
+    {
+      accessorKey: "sku",
+      header: () => <span>SKU</span>,
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.sku || "—"}</span>
+      ),
+      enableSorting: false,
+    },
+    {
       accessorKey: "name",
       header: ({ column }) => {
         const isSorted = column.getIsSorted();
@@ -271,11 +357,6 @@ export default function ProcurementProductsPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
-          {row.original.sku && (
-            <div className="text-xs text-muted-foreground">
-              SKU: {row.original.sku}
-            </div>
-          )}
           {row.original.description && (
             <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
               {row.original.description}
@@ -304,30 +385,6 @@ export default function ProcurementProductsPage() {
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
-      enableSorting: false,
-    },
-    {
-      id: "prices",
-      header: () => <div className="text-center">Prices</div>,
-      cell: ({ row }) => (
-        <div className="text-center">
-          <Badge variant="secondary">
-            {row.original._count.supplierPrices}
-          </Badge>
-        </div>
-      ),
-      enableSorting: false,
-    },
-    {
-      accessorKey: "isActive",
-      header: () => <div className="text-center">Status</div>,
-      cell: ({ row }) => (
-        <div className="text-center">
-          <Badge variant={row.original.isActive ? "default" : "outline"}>
-            {row.original.isActive ? "Active" : "Inactive"}
-          </Badge>
-        </div>
-      ),
       enableSorting: false,
     },
     {
@@ -636,6 +693,71 @@ export default function ProcurementProductsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {/* Thumbnail upload */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Thumbnail</label>
+              {form.thumbnailUrl ? (
+                <div className="relative">
+                  <div className="rounded border-2 border-dashed border-green-500 bg-green-50/30 p-3 dark:bg-green-950/20">
+                    <div className="flex items-end gap-3">
+                      <img
+                        src={form.thumbnailUrl}
+                        alt="Thumbnail"
+                        className="h-20 w-20 rounded object-cover shadow-sm"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                          ✓ Image uploaded
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, thumbnailUrl: "" })}
+                        className="rounded bg-white p-1.5 hover:bg-red-50 text-red-600 dark:bg-zinc-800 dark:hover:bg-red-950/30 transition"
+                        title="Remove image"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragEnter={handleThumbnailDrag}
+                  onDragLeave={handleThumbnailDrag}
+                  onDragOver={handleThumbnailDrag}
+                  onDrop={handleThumbnailDrop}
+                  className={`relative rounded border-2 border-dashed transition-colors p-4 text-center cursor-pointer ${
+                    dragActive
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                      : "border-zinc-300 bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/30 hover:border-blue-400 dark:hover:border-blue-400"
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleThumbnailFileChange}
+                    disabled={uploading}
+                  />
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-950/50">
+                      <Upload className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <p className="text-sm font-medium">
+                      {uploading
+                        ? "Uploading..."
+                        : "Click to upload or drag image"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG up to 5MB
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Name *</label>

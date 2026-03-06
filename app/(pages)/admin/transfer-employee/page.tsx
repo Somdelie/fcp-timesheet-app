@@ -345,7 +345,7 @@ export default function AdminTransferEmployeePage() {
 
           {selectedSiteId && (
             <div className="mt-4 grid grid-cols-3 gap-4">
-              <div className="rounded-lg border p-3 text-center">
+              <div className="rounded border p-3 text-center">
                 <div className="text-2xl font-black text-emerald-600">
                   {scannedInCount}
                 </div>
@@ -353,7 +353,7 @@ export default function AdminTransferEmployeePage() {
                   Scanned In
                 </div>
               </div>
-              <div className="rounded-lg border p-3 text-center">
+              <div className="rounded border p-3 text-center">
                 <div className="text-2xl font-black text-slate-500">
                   {scannedOutCount}
                 </div>
@@ -361,7 +361,7 @@ export default function AdminTransferEmployeePage() {
                   Scanned Out
                 </div>
               </div>
-              <div className="rounded-lg border p-3 text-center">
+              <div className="rounded border p-3 text-center">
                 <div className="text-2xl font-black text-blue-600">
                   {scans.length}
                 </div>
@@ -550,7 +550,7 @@ export default function AdminTransferEmployeePage() {
           {selectedScan && (
             <div className="space-y-4">
               {/* Employee info */}
-              <div className="rounded-lg border bg-muted/50 p-3">
+              <div className="rounded border bg-muted/50 p-3">
                 <div className="font-semibold">{selectedScan.employeeName}</div>
                 <div className="text-sm text-muted-foreground">
                   {selectedScan.employeeCode} • Scanned in:{" "}
@@ -634,7 +634,7 @@ export default function AdminTransferEmployeePage() {
                       No foreman assigned to this site
                     </div>
                   ) : destForemen.length === 1 ? (
-                    <div className="rounded-lg border bg-muted/50 p-2 text-sm">
+                    <div className="rounded border bg-muted/50 p-2 text-sm">
                       {destForemen[0].name}
                     </div>
                   ) : (
@@ -707,7 +707,7 @@ export default function AdminTransferEmployeePage() {
 
               {/* Summary */}
               {destinationSiteId && selectedForemanId && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 text-sm">
+                <div className="rounded border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 text-sm">
                   <strong>{selectedScan.employeeName}</strong> will be
                   transferred from <strong>{selectedSiteName}</strong> to{" "}
                   <strong>{destinationSiteName}</strong> under foreman{" "}

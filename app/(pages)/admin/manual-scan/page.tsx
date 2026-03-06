@@ -522,7 +522,7 @@ export default function AdminManualScanPage() {
               {recentScans.map((scan, idx) => (
                 <div
                   key={scan?.id ?? idx}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex items-center justify-between rounded border p-3"
                 >
                   <div>
                     <p className="font-medium">

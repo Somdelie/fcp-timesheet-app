@@ -176,7 +176,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="p-0 sm:max-w-130 max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border-0 shadow-2xl dark:shadow-black/60">
+      <DialogContent className="p-0 sm:max-w-130 max-h-[90vh] overflow-hidden flex flex-col rounded border-0 shadow-2xl dark:shadow-black/60">
         <form
           onSubmit={handleSubmit}
           className="flex flex-col h-full overflow-hidden"
@@ -184,7 +184,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800">
                 <User className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
               </div>
               <div>
@@ -215,7 +215,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     disabled={isForeman}
-                    className={`h-9 rounded-lg border-zinc-200 dark:border-zinc-700 text-sm ${isForeman ? "opacity-50 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
+                    className={`h-9 rounded border-zinc-200 dark:border-zinc-700 text-sm ${isForeman ? "opacity-50 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
                   />
                 </FormField>
                 <FormField label="Last name">
@@ -223,13 +223,13 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     disabled={isForeman}
-                    className={`h-9 rounded-lg border-zinc-200 dark:border-zinc-700 text-sm ${isForeman ? "opacity-50 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
+                    className={`h-9 rounded border-zinc-200 dark:border-zinc-700 text-sm ${isForeman ? "opacity-50 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
                   />
                 </FormField>
               </div>
 
               {/* Status toggle */}
-              <div className="mt-3 flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50/60 px-3.5 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/40">
+              <div className="mt-3 flex items-center justify-between rounded border border-zinc-200 bg-zinc-50/60 px-3.5 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/40">
                 <div>
                   <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
                     Active status
@@ -281,7 +281,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     onChange={(e) => setDefaultDayRate(e.target.value)}
                     disabled={!isForeman}
                     placeholder={isForeman ? "e.g. 100.00" : "—"}
-                    className={`h-9 rounded-lg border-zinc-200 dark:border-zinc-700 text-sm pl-7 ${!isForeman ? "opacity-50 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
+                    className={`h-9 rounded border-zinc-200 dark:border-zinc-700 text-sm pl-7 ${!isForeman ? "opacity-50 cursor-not-allowed bg-zinc-50 dark:bg-zinc-900" : ""}`}
                   />
                 </div>
               </FormField>
@@ -294,11 +294,11 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             <div>
               <SectionLabel>Profile photo</SectionLabel>
               {faceImageUrl ? (
-                <div className="flex items-center gap-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/30 p-4">
+                <div className="flex items-center gap-4 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/30 p-4">
                   <img
                     src={faceImageUrl}
                     alt="Preview"
-                    className="h-16 w-16 rounded-xl object-cover shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+                    className="h-16 w-16 rounded object-cover shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
@@ -311,7 +311,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   <button
                     type="button"
                     onClick={() => setFaceImageUrl("")}
-                    className="shrink-0 flex items-center justify-center h-7 w-7 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 transition"
+                    className="shrink-0 flex items-center justify-center h-7 w-7 rounded border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 transition"
                     title="Remove photo"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -324,7 +324,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`relative cursor-pointer rounded-xl border-2 border-dashed transition-all p-6 text-center ${
+                  className={`relative cursor-pointer rounded border-2 border-dashed transition-all p-6 text-center ${
                     dragActive
                       ? "border-zinc-400 bg-zinc-100 dark:bg-zinc-800"
                       : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40"
@@ -339,7 +339,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     disabled={uploading}
                   />
                   <div className="flex flex-col items-center gap-2.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    <div className="flex h-10 w-10 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                       <Upload
                         className={`h-4 w-4 ${uploading ? "text-zinc-300 animate-bounce" : "text-zinc-400"}`}
                       />
@@ -364,14 +364,14 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               type="button"
               onClick={() => setOpen(false)}
               disabled={pending}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition disabled:opacity-50"
+              className="px-4 py-2 rounded text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending || uploading}
-              className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-white text-sm font-medium text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-100 transition disabled:opacity-50 shadow-sm"
+              className="px-4 py-2 rounded bg-zinc-900 dark:bg-white text-sm font-medium text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-100 transition disabled:opacity-50 shadow-sm"
             >
               {pending || uploading ? "Saving…" : "Save changes"}
             </button>

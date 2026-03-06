@@ -393,7 +393,7 @@ export default function AdminSitePhotosPage() {
                 {group.photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="group relative flex-shrink-0 w-56 cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:shadow-md snap-start"
+                    className="group relative flex-shrink-0 w-56 cursor-pointer overflow-hidden rounded border bg-card shadow-sm transition-all hover:shadow-md snap-start"
                     onClick={() => setSelectedPhoto(photo)}
                   >
                     <div className="aspect-square">

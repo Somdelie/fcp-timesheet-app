@@ -372,7 +372,7 @@ export default function FortnightMeetingsPage() {
         )}
 
         {/* Site rows table */}
-        <div className="rounded-lg border border-slate-200 dark:border-slate-700/60 overflow-x-auto">
+        <div className="rounded border border-slate-200 dark:border-slate-700/60 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60 divide-x divide-slate-200 dark:divide-slate-700/60">
@@ -518,7 +518,7 @@ export default function FortnightMeetingsPage() {
       </div>
 
       {/* Meetings list */}
-      <div className="rounded-lg border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+      <div className="rounded border border-slate-200 dark:border-slate-700/60 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/60 divide-x divide-slate-200 dark:divide-slate-700/60">

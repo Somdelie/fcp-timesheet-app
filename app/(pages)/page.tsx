@@ -484,19 +484,19 @@ export default function HomePage() {
                 <div className="space-y-3">
                   <Link
                     href="/supervisor/timesheets"
-                    className="block w-full rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                    className="block w-full rounded border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
                   >
                     Review supervisor timesheets
                   </Link>
                   <Link
                     href="/sites"
-                    className="block w-full rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                    className="block w-full rounded border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
                   >
                     View my sites
                   </Link>
                   <Link
                     href="/employees"
-                    className="block w-full rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                    className="block w-full rounded border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
                   >
                     View site employees
                   </Link>
@@ -549,7 +549,7 @@ export default function HomePage() {
                         className="flex items-start gap-4 pb-4 border-b last:border-b-0"
                       >
                         <div
-                          className={`w-10 h-10 ${activity.bg} rounded-lg flex items-center justify-center shrink-0`}
+                          className={`w-10 h-10 ${activity.bg} rounded flex items-center justify-center shrink-0`}
                         >
                           <Icon className={`w-5 h-5 ${activity.color}`} />
                         </div>
@@ -602,9 +602,9 @@ export default function HomePage() {
                       <Link
                         key={index}
                         href={action.href}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
+                        className="w-full flex items-center gap-3 p-3 rounded border border-border hover:bg-muted transition-colors text-left"
                       >
-                        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
                           <Icon className="w-4 h-4 text-primary" />
                         </div>
                         <span className="font-medium text-foreground text-sm">
@@ -1029,7 +1029,7 @@ export default function HomePage() {
                     const row = (
                       <div className="flex items-start gap-4 pb-4 border-b last:border-b-0">
                         <div
-                          className={`w-10 h-10 ${bg} rounded-lg flex items-center justify-center shrink-0`}
+                          className={`w-10 h-10 ${bg} rounded flex items-center justify-center shrink-0`}
                         >
                           <Icon className={`w-5 h-5 ${color}`} />
                         </div>
@@ -1052,7 +1052,7 @@ export default function HomePage() {
                       <Link
                         key={activity.id}
                         href={href}
-                        className="block rounded-lg -m-2 p-2 hover:bg-muted/50 transition-colors"
+                        className="block rounded -m-2 p-2 hover:bg-muted/50 transition-colors"
                       >
                         {row}
                       </Link>
@@ -1091,9 +1091,9 @@ export default function HomePage() {
                       key={index}
                       href={action.href}
                       prefetch={false}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors text-left"
+                      className="w-full flex items-center gap-3 p-3 rounded border border-border hover:bg-muted transition-colors text-left"
                     >
-                      <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
                         <Icon className="w-4 h-4 text-primary" />
                       </div>
                       <span className="font-medium text-foreground text-sm">
