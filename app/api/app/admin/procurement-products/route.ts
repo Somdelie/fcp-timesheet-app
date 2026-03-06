@@ -65,7 +65,12 @@ export async function GET(req: Request) {
 
     const where: Record<string, unknown> = {};
     if (!includeInactive) where.isActive = true;
-    if (q) where.name = { contains: q, mode: "insensitive" };
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { sku: { contains: q, mode: "insensitive" } },
+      ];
+    }
     if (categoryId) where.categoryId = categoryId;
     if (supplierId) where.supplierId = supplierId;
 

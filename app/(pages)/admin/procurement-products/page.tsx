@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { toast } from "react-toastify";
 import {
   Plus,
@@ -138,7 +138,6 @@ export default function ProcurementProductsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set("q", search);
       if (showInactive) params.set("includeInactive", "true");
       if (filterCategory) params.set("categoryId", filterCategory);
       if (filterSupplier) params.set("supplierId", filterSupplier);
@@ -154,7 +153,7 @@ export default function ProcurementProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, showInactive, filterCategory, filterSupplier]);
+  }, [showInactive, filterCategory, filterSupplier]);
 
   useEffect(() => {
     load();
@@ -237,6 +236,16 @@ export default function ProcurementProductsPage() {
       toast.error(e?.message || "Failed to delete product");
     }
   }
+
+  const filteredProducts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return products;
+    return products.filter((p) => {
+      const name = p.name.toLowerCase();
+      const sku = p.sku ? p.sku.toLowerCase() : "";
+      return name.includes(term) || sku.includes(term);
+    });
+  }, [products, search]);
   const columns: ColumnDef<ProcurementProduct>[] = [
     {
       accessorKey: "name",
@@ -354,7 +363,7 @@ export default function ProcurementProductsPage() {
   ];
 
   const table = useReactTable({
-    data: products,
+    data: filteredProducts,
     columns,
     state: { sorting, pagination },
     onSortingChange: setSorting,
@@ -380,7 +389,7 @@ export default function ProcurementProductsPage() {
         <div className="relative flex-1 min-w-50 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder="Search by name or SKU..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -439,7 +448,7 @@ export default function ProcurementProductsPage() {
       </div>
 
       {/* Table */}
-      {!loading && products.length === 0 ? (
+      {!loading && filteredProducts.length === 0 ? (
         <div className="border border-dashed border-zinc-300 bg-white/50 p-12 text-center dark:border-zinc-700/50 dark:bg-card/30">
           <Package className="mx-auto h-8 w-8 mb-2 opacity-40" />
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
@@ -524,7 +533,7 @@ export default function ProcurementProductsPage() {
             <div className="text-muted-foreground hidden text-sm lg:flex gap-2">
               <span>
                 Showing{" "}
-                {products.length === 0
+                {filteredProducts.length === 0
                   ? 0
                   : table.getState().pagination.pageIndex *
                       table.getState().pagination.pageSize +
@@ -533,9 +542,9 @@ export default function ProcurementProductsPage() {
                 {Math.min(
                   (table.getState().pagination.pageIndex + 1) *
                     table.getState().pagination.pageSize,
-                  products.length,
+                  filteredProducts.length,
                 )}{" "}
-                of {products.length} products
+                of {filteredProducts.length} products
               </span>
             </div>
             <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
