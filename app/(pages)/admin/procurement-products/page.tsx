@@ -10,6 +10,9 @@ import {
   Package,
   Pencil,
   Trash2,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,6 +42,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -90,6 +102,12 @@ export default function ProcurementProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ProcurementProduct | null>(
     null,
   );
+
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   // Load lookup data on mount
   useEffect(() => {
@@ -219,6 +237,132 @@ export default function ProcurementProductsPage() {
       toast.error(e?.message || "Failed to delete product");
     }
   }
+  const columns: ColumnDef<ProcurementProduct>[] = [
+    {
+      accessorKey: "name",
+      header: ({ column }) => {
+        const isSorted = column.getIsSorted();
+        return (
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(isSorted === "asc")}
+          >
+            <Package className="h-4 w-4 text-indigo-600" />
+            Product
+            {isSorted === "asc" ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : isSorted === "desc" ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        );
+      },
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.name}</div>
+          {row.original.sku && (
+            <div className="text-xs text-muted-foreground">
+              SKU: {row.original.sku}
+            </div>
+          )}
+          {row.original.description && (
+            <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+              {row.original.description}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "category",
+      header: () => <span>Category</span>,
+      cell: ({ row }) =>
+        row.original.category ? (
+          <Badge variant="outline">{row.original.category.name}</Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "supplier",
+      header: () => <span>Supplier</span>,
+      cell: ({ row }) =>
+        row.original.supplier ? (
+          <span className="text-sm">{row.original.supplier.name}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+      enableSorting: false,
+    },
+    {
+      id: "prices",
+      header: () => <div className="text-center">Prices</div>,
+      cell: ({ row }) => (
+        <div className="text-center">
+          <Badge variant="secondary">
+            {row.original._count.supplierPrices}
+          </Badge>
+        </div>
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: "isActive",
+      header: () => <div className="text-center">Status</div>,
+      cell: ({ row }) => (
+        <div className="text-center">
+          <Badge variant={row.original.isActive ? "default" : "outline"}>
+            {row.original.isActive ? "Active" : "Inactive"}
+          </Badge>
+        </div>
+      ),
+      enableSorting: false,
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEdit(row.original)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive"
+            onClick={() => setDeleteTarget(row.original)}
+            disabled={row.original._count.orderItems > 0}
+            title={
+              row.original._count.orderItems > 0
+                ? "Cannot delete: product used in orders"
+                : "Delete product"
+            }
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+      enableSorting: false,
+    },
+  ];
+
+  const table = useReactTable({
+    data: products,
+    columns,
+    state: { sorting, pagination },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
 
   // Group UOM options removed — UOM now lives on supplier prices
 
@@ -295,107 +439,179 @@ export default function ProcurementProductsPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead className="text-center">Prices</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : products.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  <Package className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                  No products found
-                </TableCell>
-              </TableRow>
-            ) : (
-              products.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="font-medium">{p.name}</div>
-                    {p.sku && (
-                      <div className="text-xs text-muted-foreground">
-                        SKU: {p.sku}
-                      </div>
-                    )}
-                    {p.description && (
-                      <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {p.description}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {p.category ? (
-                      <Badge variant="outline">{p.category.name}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {p.supplier ? (
-                      <span className="text-sm">{p.supplier.name}</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary">{p._count.supplierPrices}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={p.isActive ? "default" : "outline"}>
-                      {p.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(p)}
+      {!loading && products.length === 0 ? (
+        <div className="border border-dashed border-zinc-300 bg-white/50 p-12 text-center dark:border-zinc-700/50 dark:bg-card/30">
+          <Package className="mx-auto h-8 w-8 mb-2 opacity-40" />
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+            No products found
+          </h3>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Adjust your search or filters, or add a new product.
+          </p>
+        </div>
+      ) : (
+        <div className="border bg-card">
+          <div className="overflow-x-auto">
+            <Table className="border-collapse">
+              <TableHeader className="bg-muted/60">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700"
                       >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => setDeleteTarget(p)}
-                        disabled={p._count.orderItems > 0}
-                        title={
-                          p._count.orderItems > 0
-                            ? "Cannot delete: product used in orders"
-                            : "Delete product"
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className="border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/60">
+            <div className="text-muted-foreground hidden text-sm lg:flex gap-2">
+              <span>
+                Showing{" "}
+                {products.length === 0
+                  ? 0
+                  : table.getState().pagination.pageIndex *
+                      table.getState().pagination.pageSize +
+                    1}{" "}
+                to{" "}
+                {Math.min(
+                  (table.getState().pagination.pageIndex + 1) *
+                    table.getState().pagination.pageSize,
+                  products.length,
+                )}{" "}
+                of {products.length} products
+              </span>
+            </div>
+            <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+              <div className="hidden items-center gap-2 lg:flex">
+                <span className="text-sm font-medium">Rows per page</span>
+                <Select
+                  value={String(table.getState().pagination.pageSize)}
+                  onValueChange={(value) => {
+                    table.setPageSize(Number(value));
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-20">
+                    <SelectValue
+                      placeholder={table.getState().pagination.pageSize}
+                    />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[5, 10, 25, 50, 100].map((pageSize) => (
+                      <SelectItem key={pageSize} value={String(pageSize)}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-fit items-center justify-center text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount() || 1}
+              </div>
+              <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronDown className="hidden" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  {/* Using text arrows to avoid extra icons */}
+                  &lt;
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  &gt;
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:flex"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronUp className="hidden" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

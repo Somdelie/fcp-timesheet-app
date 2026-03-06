@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import bcrypt from "bcryptjs";
+import { seedMaterials } from "./materials";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -14,17 +15,20 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   const hashedPassword = await bcrypt.hash("Zola@1990", 12);
 
-  const user = await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: { email: "admin@cautiousndlovu.co.za" },
+    update: {},
+    create: {
       name: "Cautious Ndlovu",
       email: "admin@cautiousndlovu.co.za",
       role: "ADMIN",
       password: hashedPassword,
     },
   });
-  console.log("Created user:", user);
+  console.log("Admin user:", user);
 
-  // Fetch all users with their posts
+  await seedMaterials(prisma);
+
   const allUsers = await prisma.user.findMany();
   console.log("All users:", JSON.stringify(allUsers, null, 2));
 }
