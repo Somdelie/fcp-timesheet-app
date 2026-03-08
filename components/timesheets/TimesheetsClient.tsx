@@ -84,6 +84,7 @@ type AdminRow = {
   teamDays?: number | null;
   teamWages?: number | null;
   totalDeductions?: number | null;
+  totalOvertimeCost?: number | null;
   sites?: Array<{ id: string; code?: string | null; name: string }>;
   rowKey?: string;
 };
@@ -313,6 +314,14 @@ export default function TimesheetsListClient({ mode }: Props) {
     );
   }, [mode, rowsAdmin, rowsSup]);
 
+  const totalOvertime = useMemo(() => {
+    if (mode !== "ADMIN") return 0;
+    return rowsAdmin.reduce(
+      (sum, row) => sum + Number(row.totalOvertimeCost ?? 0),
+      0,
+    );
+  }, [mode, rowsAdmin]);
+
   // Foreman totals: group all sites by foreman and sum wages for quick overview (ADMIN only)
   const foremanTotals = useMemo(() => {
     if (mode !== "ADMIN") return [];
@@ -328,6 +337,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         teamDays: number;
         teamWages: number;
         totalDeductions: number;
+        totalOvertimeCost: number;
         grandTotal: number;
       }
     >();
@@ -344,6 +354,7 @@ export default function TimesheetsListClient({ mode }: Props) {
         teamDays: 0,
         teamWages: 0,
         totalDeductions: 0,
+        totalOvertimeCost: 0,
         grandTotal: 0,
       };
       // Collect site IDs
@@ -359,13 +370,17 @@ export default function TimesheetsListClient({ mode }: Props) {
       existing.foremanWages += Number(row.foremanWages ?? 0);
       existing.teamDays += Number(row.teamDays ?? 0);
       existing.teamWages += Number(row.teamWages ?? 0);
+      existing.totalOvertimeCost += Number(row.totalOvertimeCost ?? 0);
       // Deductions are per-foreman (same value on every site row), so take the max
       existing.totalDeductions = Math.max(
         existing.totalDeductions,
         Number(row.totalDeductions ?? 0),
       );
       existing.grandTotal =
-        existing.foremanWages + existing.teamWages - existing.totalDeductions;
+        existing.foremanWages +
+        existing.teamWages +
+        existing.totalOvertimeCost -
+        existing.totalDeductions;
       map.set(id, existing);
     }
     return Array.from(map.values()).sort((a, b) =>
@@ -1283,6 +1298,15 @@ export default function TimesheetsListClient({ mode }: Props) {
           <div className="text-sm text-muted-foreground whitespace-nowrap">
             Total wages:{" "}
             <span className="font-semibold">{money(totalWages)}</span>
+            {mode === "ADMIN" && totalOvertime > 0 && (
+              <>
+                {" "}
+                • Overtime:{" "}
+                <span className="font-semibold text-orange-600 dark:text-orange-400">
+                  {money(totalOvertime)}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex gap-2">
@@ -1410,6 +1434,21 @@ export default function TimesheetsListClient({ mode }: Props) {
                 Net Pay Total:{" "}
                 {money(foremanTotals.reduce((s, f) => s + f.grandTotal, 0))}
               </span>
+              {foremanTotals.reduce((s, f) => s + f.totalOvertimeCost, 0) >
+                0 && (
+                <>
+                  <span className="text-sm text-muted-foreground">•</span>
+                  <span className="text-sm text-orange-600 dark:text-orange-400">
+                    Overtime:{" "}
+                    {money(
+                      foremanTotals.reduce(
+                        (s, f) => s + f.totalOvertimeCost,
+                        0,
+                      ),
+                    )}
+                  </span>
+                </>
+              )}
               {foremanTotals.reduce((s, f) => s + f.totalDeductions, 0) > 0 && (
                 <>
                   <span className="text-sm text-muted-foreground">•</span>
@@ -1458,6 +1497,9 @@ export default function TimesheetsListClient({ mode }: Props) {
                         Team Amount
                       </TableHead>
                       <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
+                        Overtime
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
                         Deductions
                       </TableHead>
                       <TableHead className="px-3 py-2 text-xs font-semibold text-right border border-zinc-200 dark:border-zinc-700">
@@ -1491,6 +1533,15 @@ export default function TimesheetsListClient({ mode }: Props) {
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
                           {money(ft.teamWages)}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                          {ft.totalOvertimeCost > 0 ? (
+                            <span className="text-orange-600 dark:text-orange-400">
+                              {money(ft.totalOvertimeCost)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
                           {ft.totalDeductions > 0 ? (

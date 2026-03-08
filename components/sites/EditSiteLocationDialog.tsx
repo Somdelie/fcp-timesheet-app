@@ -28,6 +28,7 @@ import SiteLocationPicker from "@/components/sites/SiteLocationPicker";
 import { updateSiteLocation } from "@/actions/sites";
 
 const schema = z.object({
+  client: z.string().max(120, "Max 120 characters.").optional(),
   location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
   latitude: z
@@ -44,6 +45,7 @@ const schema = z.object({
 
 export default function EditSiteLocationDialog(props: {
   siteId: string;
+  initialClient?: string | null;
   initialLocation?: string | null;
   initialAddress?: string | null;
   initialLatitude?: number | null;
@@ -51,6 +53,7 @@ export default function EditSiteLocationDialog(props: {
 }) {
   const {
     siteId,
+    initialClient,
     initialLocation,
     initialAddress,
     initialLatitude,
@@ -65,6 +68,7 @@ export default function EditSiteLocationDialog(props: {
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
+      client: initialClient ?? "",
       location: initialLocation ?? "",
       address: initialAddress ?? "",
       latitude:
@@ -78,6 +82,7 @@ export default function EditSiteLocationDialog(props: {
     startTransition(async () => {
       const res = await updateSiteLocation({
         siteId,
+        client: values.client || null,
         location: values.location || null,
         address: values.address || null,
         latitude: values.latitude ?? null,
@@ -123,6 +128,32 @@ export default function EditSiteLocationDialog(props: {
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <FieldGroup>
+            <Controller
+              name="client"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Client{" "}
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                      (Optional)
+                    </span>
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    placeholder="e.g. Acme Corp"
+                    disabled={pending}
+                    className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
             <Controller
               name="location"
               control={form.control}

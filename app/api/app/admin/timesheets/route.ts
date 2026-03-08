@@ -422,6 +422,32 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // ✅ OVERTIME: batch-query overtime entries for foremen+sites in this period
+    const overtimeEntries =
+      foremanIds.length > 0
+        ? await prisma.overtimeEntry.findMany({
+            where: {
+              foremanId: { in: foremanIds },
+              workDate: { gte: startDate, lt: endExclusive },
+            },
+            select: {
+              foremanId: true,
+              siteId: true,
+              totalCost: true,
+            },
+          })
+        : [];
+
+    // Sum overtime per (foreman, site)
+    const overtimeByForemanSite = new Map<string, number>();
+    for (const ot of overtimeEntries) {
+      const key = `${ot.foremanId}__${ot.siteId}`;
+      overtimeByForemanSite.set(
+        key,
+        (overtimeByForemanSite.get(key) ?? 0) + decimalToNumber(ot.totalCost),
+      );
+    }
+
     // Build response - one row per (foreman, site)
     const siteDaysByForeman = new Map<string, typeof siteDays>();
     for (const sd of siteDays) {
@@ -445,6 +471,7 @@ export async function GET(req: NextRequest) {
       teamDays: number;
       teamWages: number;
       totalDeductions: number;
+      totalOvertimeCost: number;
       sites: SiteLite[];
     }> = [];
 
@@ -489,6 +516,7 @@ export async function GET(req: NextRequest) {
           teamDays: totals.teamDays,
           teamWages: totals.teamWages,
           totalDeductions: deductionsByForeman.get(foremanId) ?? 0,
+          totalOvertimeCost: overtimeByForemanSite.get(key) ?? 0,
           sites: [site],
         });
       }

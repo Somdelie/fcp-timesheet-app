@@ -10,6 +10,7 @@ export interface FortnightMeetingResult {
   totals: {
     totalMaterialCost: number;
     totalWagesCost: number;
+    totalOvertimeCost: number;
     totalProjectCost: number;
   };
 }
@@ -19,6 +20,7 @@ export interface FortnightMeetingRowResult {
   siteName: string;
   materialCost: number;
   wagesCost: number;
+  overtimeCost: number;
   projectCost: number;
   materialPct: number | null;
   wagesPct: number | null;
@@ -86,6 +88,7 @@ export async function generateFortnightMeeting(opts: {
       siteName: r.siteName,
       materialCost: r.materialCost,
       wagesCost: r.wagesCost,
+      overtimeCost: r.overtimeCost,
       projectCost: r.projectCost,
       materialPct: r.materialPct,
       wagesPct: r.wagesPct,
@@ -123,6 +126,7 @@ export async function generateFortnightMeeting(opts: {
             site: { connect: { id: row.siteId } },
             materialCost: row.materialCost,
             wagesCost: row.wagesCost,
+            overtimeCost: row.overtimeCost,
             projectCost: row.projectCost,
             materialPct: row.materialPct,
             wagesPct: row.wagesPct,
@@ -138,6 +142,7 @@ export async function generateFortnightMeeting(opts: {
           create: {
             totalMaterialCost: costs.totals.totalMaterialCost,
             totalWagesCost: costs.totals.totalWagesCost,
+            totalOvertimeCost: costs.totals.totalOvertimeCost,
             totalProjectCost: costs.totals.totalProjectCost,
           },
         },
@@ -156,6 +161,7 @@ export async function generateFortnightMeeting(opts: {
     totals: {
       totalMaterialCost: costs.totals.totalMaterialCost,
       totalWagesCost: costs.totals.totalWagesCost,
+      totalOvertimeCost: costs.totals.totalOvertimeCost,
       totalProjectCost: costs.totals.totalProjectCost,
     },
   };

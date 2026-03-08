@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -91,7 +91,6 @@ function groupPhotosByDate(photos: SitePhoto[]): GroupedPhotos[] {
     groups[dateKey].push(photo);
   }
 
-  // Sort dates descending (newest first)
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
   return sortedDates.map((date) => ({
@@ -116,6 +115,16 @@ function getStatusVariant(
   }
 }
 
+type NaturalImageSize = {
+  width: number;
+  height: number;
+};
+
+type FittedImageSize = {
+  width: number;
+  height: number;
+};
+
 export default function AdminSitePhotosPage() {
   const [photos, setPhotos] = useState<SitePhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,8 +135,15 @@ export default function AdminSitePhotosPage() {
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
   const [verifying, setVerifying] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  const [naturalImageSize, setNaturalImageSize] =
+    useState<NaturalImageSize | null>(null);
+  const [fittedImageSize, setFittedImageSize] =
+    useState<FittedImageSize | null>(null);
+
   const imageWrapperRef = useRef<HTMLDivElement | null>(null);
   const isPanningRef = useRef(false);
   const panStartRef = useRef<{
@@ -137,20 +153,116 @@ export default function AdminSitePhotosPage() {
     startY: number;
   } | null>(null);
 
+  const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(max, Math.max(min, value));
+
+  const getContainerSize = () => {
+    const el = imageWrapperRef.current;
+    if (!el) return null;
+    return {
+      width: el.clientWidth,
+      height: el.clientHeight,
+    };
+  };
+
+  const calculateFittedSize = (
+    image: NaturalImageSize,
+    container: { width: number; height: number },
+  ): FittedImageSize => {
+    const imageRatio = image.width / image.height;
+    const containerRatio = container.width / container.height;
+
+    if (imageRatio > containerRatio) {
+      const width = container.width;
+      const height = width / imageRatio;
+      return { width, height };
+    }
+
+    const height = container.height;
+    const width = height * imageRatio;
+    return { width, height };
+  };
+
+  const clampPan = (
+    nextPan: { x: number; y: number },
+    nextZoom: number,
+    baseSize?: FittedImageSize | null,
+  ) => {
+    const container = getContainerSize();
+    const fitted = baseSize ?? fittedImageSize;
+
+    if (!container || !fitted || nextZoom <= 1) {
+      return { x: 0, y: 0 };
+    }
+
+    const scaledWidth = fitted.width * nextZoom;
+    const scaledHeight = fitted.height * nextZoom;
+
+    const overflowX = Math.max(0, (scaledWidth - container.width) / 2);
+    const overflowY = Math.max(0, (scaledHeight - container.height) / 2);
+
+    return {
+      x: clamp(nextPan.x, -overflowX, overflowX),
+      y: clamp(nextPan.y, -overflowY, overflowY),
+    };
+  };
+
+  const resetViewer = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setNaturalImageSize(null);
+    setFittedImageSize(null);
+    isPanningRef.current = false;
+    panStartRef.current = null;
+  };
+
+  const setZoomSafely = (updater: number | ((prev: number) => number)) => {
+    setZoom((currentZoom) => {
+      const rawNextZoom =
+        typeof updater === "function" ? updater(currentZoom) : updater;
+      const nextZoom = clamp(rawNextZoom, 1, 5);
+
+      setPan((currentPan) => clampPan(currentPan, nextZoom));
+
+      if (nextZoom <= 1) {
+        setPan({ x: 0, y: 0 });
+      }
+
+      return nextZoom;
+    });
+  };
+
+  const updateFittedImageSize = () => {
+    if (!naturalImageSize) return;
+    const container = getContainerSize();
+    if (!container) return;
+
+    const nextFitted = calculateFittedSize(naturalImageSize, container);
+    setFittedImageSize(nextFitted);
+    setPan((currentPan) => clampPan(currentPan, zoom, nextFitted));
+  };
+
   const loadPhotos = async (foremanId?: string, supervisorId?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (foremanId) params.set("foremanId", foremanId);
       if (supervisorId) params.set("supervisorId", supervisorId);
-      const url = `/api/admin/site-day-photos${params.toString() ? `?${params}` : ""}`;
+
+      const url = `/api/admin/site-day-photos${
+        params.toString() ? `?${params}` : ""
+      }`;
+
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error("Failed to load photos");
       }
+
       const data = await res.json();
       setPhotos(data.photos || []);
-      // Only update filter options on initial load (no filters)
+
       if (!foremanId && !supervisorId) {
         setForemen(data.foremen || []);
         setSupervisors(data.supervisors || []);
@@ -167,10 +279,20 @@ export default function AdminSitePhotosPage() {
   }, []);
 
   useEffect(() => {
-    // Reset zoom and pan whenever a new photo is selected or modal is closed
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
+    resetViewer();
   }, [selectedPhoto?.id]);
+
+  useEffect(() => {
+    if (!selectedPhoto || !naturalImageSize) return;
+    updateFittedImageSize();
+
+    const handleResize = () => {
+      updateFittedImageSize();
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [selectedPhoto, naturalImageSize, zoom]);
 
   const handleVerify = async (
     photoId: string,
@@ -183,22 +305,24 @@ export default function AdminSitePhotosPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to update verification status");
       }
+
       toast.success(
         status === "VERIFIED"
           ? "Photo verified"
           : "Photo rejected - foreman notified",
       );
 
-      // Update local state
       setPhotos((prev) =>
         prev.map((p) =>
           p.id === photoId ? { ...p, verificationStatus: status } : p,
         ),
       );
+
       if (selectedPhoto?.id === photoId) {
         setSelectedPhoto((prev) =>
           prev ? { ...prev, verificationStatus: status } : null,
@@ -216,19 +340,24 @@ export default function AdminSitePhotosPage() {
       !confirm(
         "Are you sure you want to delete this photo? This cannot be undone.",
       )
-    )
+    ) {
       return;
+    }
+
     setDeleting(photoId);
     try {
       const res = await fetch(`/api/admin/site-day-photos/${photoId}`, {
         method: "DELETE",
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to delete photo");
       }
+
       toast.success("Photo deleted");
       setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+
       if (selectedPhoto?.id === photoId) {
         setSelectedPhoto(null);
       }
@@ -239,14 +368,10 @@ export default function AdminSitePhotosPage() {
     }
   };
 
-  const groupedPhotos = groupPhotosByDate(photos);
-
-  // Carousel scroll refs – one per date group
-  const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
   const scrollCarousel = (date: string, direction: "left" | "right") => {
     const el = carouselRefs.current[date];
     if (!el) return;
+
     const scrollAmount = el.clientWidth * 0.75;
     el.scrollBy({
       left: direction === "left" ? -scrollAmount : scrollAmount,
@@ -273,6 +398,7 @@ export default function AdminSitePhotosPage() {
   };
 
   const hasFilters = selectedForemanId || selectedSupervisorId;
+  const groupedPhotos = groupPhotosByDate(photos);
 
   return (
     <div className="space-y-6 p-6">
@@ -283,6 +409,7 @@ export default function AdminSitePhotosPage() {
             Review photos submitted by foremen in the last 7 days
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Select
             value={selectedSupervisorId || "all"}
@@ -300,6 +427,7 @@ export default function AdminSitePhotosPage() {
               ))}
             </SelectContent>
           </Select>
+
           <Select
             value={selectedForemanId || "all"}
             onValueChange={handleForemanChange}
@@ -316,12 +444,14 @@ export default function AdminSitePhotosPage() {
               ))}
             </SelectContent>
           </Select>
+
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               <X className="mr-1 h-4 w-4" />
               Clear
             </Button>
           )}
+
           <Button
             variant="outline"
             onClick={() => loadPhotos(selectedForemanId, selectedSupervisorId)}
@@ -363,6 +493,7 @@ export default function AdminSitePhotosPage() {
                     {group.photos.length !== 1 ? "s" : ""}
                   </Badge>
                 </h2>
+
                 {group.photos.length > 4 && (
                   <div className="flex items-center gap-1">
                     <Button
@@ -384,19 +515,20 @@ export default function AdminSitePhotosPage() {
                   </div>
                 )}
               </div>
+
               <div
                 ref={(el) => {
                   carouselRefs.current[group.date] = el;
                 }}
-                className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40"
+                className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40 flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory"
               >
                 {group.photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="group relative flex-shrink-0 w-56 cursor-pointer overflow-hidden rounded border bg-card shadow-sm transition-all hover:shadow-md snap-start"
+                    className="group relative w-56 flex-shrink-0 cursor-pointer overflow-hidden rounded border bg-card shadow-sm transition-all hover:shadow-md snap-start"
                     onClick={() => setSelectedPhoto(photo)}
                   >
-                    <div className="aspect-square">
+                    <div className="aspect-square bg-muted">
                       <img
                         src={photo.imageUrl}
                         alt={`${photo.siteName} - ${photo.foremanName}`}
@@ -405,37 +537,33 @@ export default function AdminSitePhotosPage() {
                       />
                     </div>
 
-                    {/* Site badge - top left */}
                     <div className="absolute left-2 top-2">
                       <Badge
                         variant="default"
-                        className="bg-primary/90 backdrop-blur-sm text-[10px] px-1.5 py-0.5"
+                        className="bg-primary/90 px-1.5 py-0.5 text-[10px] backdrop-blur-sm"
                       >
                         {photo.siteName}
                       </Badge>
                     </div>
 
-                    {/* Status badge - top right */}
                     <div className="absolute right-2 top-2">
                       <Badge
                         variant={getStatusVariant(photo.verificationStatus)}
-                        className="backdrop-blur-sm text-[10px] px-1.5 py-0.5"
+                        className="px-1.5 py-0.5 text-[10px] backdrop-blur-sm"
                       >
                         {photo.verificationStatus}
                       </Badge>
                     </div>
 
-                    {/* Foreman badge - bottom left */}
                     <div className="absolute bottom-2 left-2">
                       <Badge
                         variant="secondary"
-                        className="bg-secondary/90 backdrop-blur-sm text-[10px] px-1.5 py-0.5"
+                        className="bg-secondary/90 px-1.5 py-0.5 text-[10px] backdrop-blur-sm"
                       >
                         {photo.foremanName}
                       </Badge>
                     </div>
 
-                    {/* Time - bottom right */}
                     <div className="absolute bottom-2 right-2">
                       <span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
                         {new Date(photo.uploadedAtISO).toLocaleTimeString(
@@ -448,7 +576,6 @@ export default function AdminSitePhotosPage() {
                       </span>
                     </div>
 
-                    {/* Delete button - top right corner, behind status badge */}
                     <button
                       className="absolute right-2 top-10 z-10 rounded-full bg-red-600/80 p-1.5 text-white opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100"
                       title="Delete photo"
@@ -472,21 +599,23 @@ export default function AdminSitePhotosPage() {
         </div>
       )}
 
-      {/* Full image modal */}
       <Dialog
         open={!!selectedPhoto}
         onOpenChange={() => setSelectedPhoto(null)}
       >
-        <DialogContent className="max-w-[90vw] p-0 overflow-hidden">
+        <DialogContent className="max-w-[94vw] overflow-hidden p-0">
           <DialogTitle className="sr-only">Photo Preview</DialogTitle>
+
           {selectedPhoto && (
             <div className="relative">
               <div
                 ref={imageWrapperRef}
-                className="h-[80vh] w-full bg-black flex items-center justify-center overflow-hidden"
+                className={`flex h-[82vh] w-full items-center justify-center overflow-hidden bg-black ${
+                  zoom > 1 ? "cursor-grab" : "cursor-default"
+                }`}
                 onMouseDown={(event) => {
                   if (zoom <= 1) return;
-                  if (!imageWrapperRef.current) return;
+
                   isPanningRef.current = true;
                   panStartRef.current = {
                     mouseX: event.clientX,
@@ -494,53 +623,113 @@ export default function AdminSitePhotosPage() {
                     startX: pan.x,
                     startY: pan.y,
                   };
-                  imageWrapperRef.current.style.cursor = "grabbing";
+
+                  if (imageWrapperRef.current) {
+                    imageWrapperRef.current.style.cursor = "grabbing";
+                  }
+
                   event.preventDefault();
                 }}
                 onMouseMove={(event) => {
                   if (!isPanningRef.current || !panStartRef.current) return;
+
                   const dx = event.clientX - panStartRef.current.mouseX;
                   const dy = event.clientY - panStartRef.current.mouseY;
-                  setPan({
-                    x: panStartRef.current.startX + dx,
-                    y: panStartRef.current.startY + dy,
-                  });
+
+                  setPan(
+                    clampPan(
+                      {
+                        x: panStartRef.current.startX + dx,
+                        y: panStartRef.current.startY + dy,
+                      },
+                      zoom,
+                    ),
+                  );
                 }}
                 onMouseUp={() => {
-                  if (!imageWrapperRef.current) return;
                   isPanningRef.current = false;
                   panStartRef.current = null;
-                  imageWrapperRef.current.style.cursor =
-                    zoom > 1 ? "grab" : "default";
+
+                  if (imageWrapperRef.current) {
+                    imageWrapperRef.current.style.cursor =
+                      zoom > 1 ? "grab" : "default";
+                  }
                 }}
                 onMouseLeave={() => {
-                  if (!imageWrapperRef.current) return;
                   isPanningRef.current = false;
                   panStartRef.current = null;
-                  imageWrapperRef.current.style.cursor =
-                    zoom > 1 ? "grab" : "default";
+
+                  if (imageWrapperRef.current) {
+                    imageWrapperRef.current.style.cursor =
+                      zoom > 1 ? "grab" : "default";
+                  }
                 }}
                 onWheel={(event) => {
-                  setZoom((z) => {
-                    const delta = event.deltaY < 0 ? 0.2 : -0.2;
-                    const next = Math.min(4, Math.max(1, z + delta));
-                    if (next === 1) {
-                      setPan({ x: 0, y: 0 });
-                    }
-                    return next;
-                  });
+                  event.preventDefault();
+
+                  const delta = event.deltaY < 0 ? 0.2 : -0.2;
+                  const nextZoom = clamp(zoom + delta, 1, 5);
+
+                  setZoom(nextZoom);
+                  setPan((currentPan) => clampPan(currentPan, nextZoom));
+                }}
+                onDoubleClick={() => {
+                  if (zoom === 1) {
+                    setZoom(2);
+                    setPan({ x: 0, y: 0 });
+                  } else {
+                    setZoom(1);
+                    setPan({ x: 0, y: 0 });
+                  }
                 }}
               >
-                <img
-                  src={selectedPhoto.imageUrl}
-                  alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
-                  className="h-full w-full object-contain md:object-cover select-none transition-transform"
-                  style={{
-                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                    transformOrigin: "center center",
-                  }}
-                />
+                {naturalImageSize && fittedImageSize ? (
+                  <div
+                    className="relative select-none"
+                    style={{
+                      width: fittedImageSize.width,
+                      height: fittedImageSize.height,
+                      transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                      transformOrigin: "center center",
+                      transition: isPanningRef.current
+                        ? "none"
+                        : "transform 120ms ease-out",
+                    }}
+                  >
+                    <img
+                      src={selectedPhoto.imageUrl}
+                      alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
+                      draggable={false}
+                      className="block h-full w-full select-none object-contain"
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={selectedPhoto.imageUrl}
+                    alt={`${selectedPhoto.siteName} - ${selectedPhoto.foremanName}`}
+                    draggable={false}
+                    className="max-h-full max-w-full select-none object-contain opacity-0"
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      const nextNatural = {
+                        width: img.naturalWidth,
+                        height: img.naturalHeight,
+                      };
+                      setNaturalImageSize(nextNatural);
+
+                      const container = getContainerSize();
+                      if (!container) return;
+
+                      const nextFitted = calculateFittedSize(
+                        nextNatural,
+                        container,
+                      );
+                      setFittedImageSize(nextFitted);
+                    }}
+                  />
+                )}
               </div>
+
               <div className="absolute left-4 top-4 flex flex-col gap-2">
                 <Badge variant="default" className="w-fit">
                   {selectedPhoto.siteName}
@@ -549,12 +738,14 @@ export default function AdminSitePhotosPage() {
                   {selectedPhoto.foremanName}
                 </Badge>
               </div>
+
               <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
                 <Badge
                   variant={getStatusVariant(selectedPhoto.verificationStatus)}
                 >
                   {selectedPhoto.verificationStatus}
                 </Badge>
+
                 <div className="flex gap-1 rounded-md bg-black/60 p-1">
                   <Button
                     type="button"
@@ -562,8 +753,9 @@ export default function AdminSitePhotosPage() {
                     size="icon"
                     className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
                     onClick={() =>
-                      setZoom((z) => {
-                        const next = z <= 1 ? 1 : Math.max(1, z - 0.5);
+                      setZoom((current) => {
+                        const next = clamp(current - 0.5, 1, 5);
+                        setPan((p) => clampPan(p, next));
                         if (next === 1) {
                           setPan({ x: 0, y: 0 });
                         }
@@ -573,30 +765,41 @@ export default function AdminSitePhotosPage() {
                   >
                     <ZoomOut className="h-3.5 w-3.5" />
                   </Button>
+
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
-                    onClick={() => setZoom(1)}
+                    onClick={() => {
+                      setZoom(1);
+                      setPan({ x: 0, y: 0 });
+                    }}
+                    title="Fit to screen"
                   >
                     <Maximize2 className="h-3.5 w-3.5" />
                   </Button>
+
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     className="h-7 w-7 border-white/30 text-white hover:bg-white/10"
                     onClick={() =>
-                      setZoom((z) => (z >= 4 ? 4 : Math.min(4, z + 0.5)))
+                      setZoom((current) => {
+                        const next = clamp(current + 0.5, 1, 5);
+                        setPan((p) => clampPan(p, next));
+                        return next;
+                      })
                     }
                   >
                     <ZoomIn className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
+
               <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-4">
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between gap-4">
                   <div>
                     <p className="text-sm text-white">
                       Uploaded:{" "}
@@ -616,10 +819,11 @@ export default function AdminSitePhotosPage() {
                         },
                       )}
                     </p>
+
                     {selectedPhoto.latitude && selectedPhoto.longitude ? (
                       <div className="mt-1">
                         {selectedPhoto.address && (
-                          <p className="text-sm text-white/80 mb-1">
+                          <p className="mb-1 text-sm text-white/80">
                             {selectedPhoto.address}
                           </p>
                         )}
@@ -645,7 +849,8 @@ export default function AdminSitePhotosPage() {
                       </p>
                     )}
                   </div>
-                  {selectedPhoto.verificationStatus === "PENDING" && (
+
+                  {selectedPhoto.verificationStatus === "PENDING" ? (
                     <div className="flex gap-2">
                       <Button
                         variant="destructive"
@@ -662,6 +867,7 @@ export default function AdminSitePhotosPage() {
                         )}
                         Reject
                       </Button>
+
                       <Button
                         variant="default"
                         size="sm"
@@ -678,6 +884,7 @@ export default function AdminSitePhotosPage() {
                         )}
                         Accept
                       </Button>
+
                       <Button
                         variant="destructive"
                         size="sm"
@@ -692,8 +899,7 @@ export default function AdminSitePhotosPage() {
                         Delete
                       </Button>
                     </div>
-                  )}
-                  {selectedPhoto.verificationStatus !== "PENDING" && (
+                  ) : (
                     <Button
                       variant="destructive"
                       size="sm"

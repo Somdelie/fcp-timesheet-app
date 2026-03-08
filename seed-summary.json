@@ -1,0 +1,624 @@
+{
+  "totalRawRows": 712,
+  "resolvedRows": 654,
+  "createdSites": 0,
+  "reusedSites": 653,
+  "updatedSites": 3,
+  "createdAssignments": 574,
+  "skippedAssignments": 80,
+  "manualReviewCount": 61,
+  "manualReview": [
+    {
+      "reason": "malformed row (fewer than 4 tab-separated columns)",
+      "row": {
+        "code": "6328",
+        "name": "CITY CENTRE PH8 PTN20"
+      },
+      "details": "Raw line: 6328\tCITY CENTRE PH8 PTN20\tWBHO"
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6013",
+        "name": "CPT Flat",
+        "client": "FCP",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6023",
+        "name": "FCP3828 Princeton Village",
+        "client": "RESPUBLICA",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6033",
+        "name": "Stand 4131 Waterfall",
+        "client": "Direct",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6035",
+        "name": "Cape Town Office",
+        "client": "FirstClass Projects",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6040",
+        "name": "House Ixopo",
+        "client": "Direct",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6062",
+        "name": "Watch Tower",
+        "client": "Direct",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6076",
+        "name": "31 Mackay Street",
+        "client": "FirstClass Projects",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6089",
+        "name": "House JP",
+        "client": "Direct",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6108",
+        "name": "The Ingress B1-3",
+        "client": "Archstone Construction (PTY) LTD",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6136",
+        "name": "Mias Angling and Scuba",
+        "client": "SRP Development",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6141",
+        "name": "Nedbank Talis Roof Repair",
+        "client": "Redefine",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6162",
+        "name": "Uitsig Estate Stand 9&33",
+        "client": "Excelsus",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6175",
+        "name": "Golden Walk Entrance 1",
+        "client": "Redefine",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6184",
+        "name": "Mineralia",
+        "client": "Redefine",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6185",
+        "name": "Stoneridge Waterproofing Gutters and Flat Roofs",
+        "client": "Redefine",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6188",
+        "name": "Ermelo Game Centre Walkway Canopy",
+        "client": "Broll",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6191",
+        "name": "106 16th Road Midrand",
+        "client": "Redefine",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6202",
+        "name": "BP Waterfall",
+        "client": "Barrow",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6212",
+        "name": "FCP3952 Princeton Village RSLPR4974",
+        "client": "RESPUBLICA",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6254",
+        "name": "Ellipse Ph3",
+        "client": "Barrow",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6261",
+        "name": "Waterfall Islamic Institute Boundary",
+        "client": "SRP Development",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6263",
+        "name": "Princeton Village Rooms",
+        "client": "Respublica",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6279",
+        "name": "FCP4019 Princeton Village External",
+        "client": "Respublica",
+        "supervisorRaw": "Caut"
+      },
+      "details": "raw supervisorName=\"Caut\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6284",
+        "name": "Cash Sales 2025",
+        "client": "FirstClass Projects",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6320",
+        "name": "LIBERTY PROMENADE ROOFS",
+        "client": "Origin",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6343",
+        "name": "GOSCOR FIRE DAMAGE",
+        "client": "Abbeydale",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6365",
+        "name": "Fortress Lowlardia",
+        "client": "Direct",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6382",
+        "name": "10 Arabian Avenue 2025",
+        "client": "Baucor",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6392",
+        "name": "PV WATERPROOFING BLOCK D-I&STUDY",
+        "client": "RESPUBLICA",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6398",
+        "name": "ELLIPSE CLUBHOUSE",
+        "client": "BARROW",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6402",
+        "name": "WOODMEAD RETAIL",
+        "client": "GROWTHPOINT",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6422",
+        "name": "KG MALL ROOFS",
+        "client": "CAPITAL",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6423",
+        "name": "MOUTSE MALL ROOFS",
+        "client": "CAPITAL",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6427",
+        "name": "FCP4128 PRINCTON VILLAGE ROOMS",
+        "client": "RESPUBLICA",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6442",
+        "name": "LP9 WH3 SINOTILE",
+        "client": "Archstone Construction (PTY) LTD",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6451",
+        "name": "WOOLWORTHS DC PHASE2",
+        "client": "Abbeydale",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6467",
+        "name": "FCP4167 PRINCETON VILLAGE",
+        "client": "RESPUBLICA",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6485",
+        "name": "102A RUTLAND AVENUE",
+        "client": "Direct",
+        "supervisorRaw": "Craig"
+      },
+      "details": "raw supervisorName=\"Craig\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6528",
+        "name": "FERREIRA RESIDENCE",
+        "client": "JCREFURB",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6533",
+        "name": "RANDBURG SQUARE",
+        "client": "BROLL",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6551",
+        "name": "ISLAMIC INSTITUTE MOSQUE",
+        "client": "SRP",
+        "supervisorRaw": "Cautious"
+      },
+      "details": "raw supervisorName=\"Cautious\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6554",
+        "name": "MALL OF AFRICA REPAINTS",
+        "client": "BAUCOR",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6576",
+        "name": "HAVAL MIDRAND 2ND SHOW ROOM",
+        "client": "Whip Retail",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6580",
+        "name": "MBC YARD",
+        "client": "Mikebuyskes Construction",
+        "supervisorRaw": "caUTIOUS"
+      },
+      "details": "raw supervisorName=\"caUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6585",
+        "name": "LEGENDS SAFARI WOODMEAD",
+        "client": "SRP",
+        "supervisorRaw": "caUTIOUS"
+      },
+      "details": "raw supervisorName=\"caUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6587",
+        "name": "SPRINGVALE PRIMARY SCHOOL",
+        "client": "JOVAN",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6590",
+        "name": "MIDRAND WAREHOUSE 5 OFFICES",
+        "client": "SKYSTONE",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6591",
+        "name": "MERCEDES CENTURION",
+        "client": "Kumkani Khulani Contracting",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6597",
+        "name": "RIETVLEI BUSINESS PARK",
+        "client": "Archstone Construction (PTY) LTD",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6614",
+        "name": "TOYOTA HINO DEALERSHIP",
+        "client": "Kumkani Khulani Contracting",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6615",
+        "name": "86 18TH STREET PARKHURST",
+        "client": "DIRECT",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6633",
+        "name": "PV BLOCK P",
+        "client": "EXCELSUS",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6644",
+        "name": "PV DEC 2025",
+        "client": "RESPUBLICA",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6652",
+        "name": "17 SUTHERLAND AVENUE",
+        "client": "DIRECT",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6657",
+        "name": "MIDSTREAM MEDICLINIC THEATRE",
+        "client": "DIRECT",
+        "supervisorRaw": "CAUTIOUS"
+      },
+      "details": "raw supervisorName=\"CAUTIOUS\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6676",
+        "name": "7 ORCHARDS",
+        "client": "Direct",
+        "supervisorRaw": "Sean"
+      },
+      "details": "raw supervisorName=\"Sean\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6684",
+        "name": "ADAMS &ADAMS",
+        "client": "ATTAQ",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "unknown supervisor name",
+      "row": {
+        "code": "6701",
+        "name": "14 LADIES MILE CONSTATIA CPT",
+        "client": "DIRECT",
+        "supervisorRaw": "SEAN"
+      },
+      "details": "raw supervisorName=\"SEAN\""
+    },
+    {
+      "reason": "code and normalized name match different existing sites",
+      "row": {
+        "code": "6424",
+        "name": "ST JOHNS PRE PREP SCHOOL",
+        "client": "JTDOOLEY",
+        "supervisorRaw": "Lawrence",
+        "supervisorKey": "LAWRENCE",
+        "supervisorId": "cmm4lctyy000309kwjjkufjnn"
+      },
+      "details": "byCode.id=cmmf7uqrz0047tkplbnr5z5ab (ST JOHNS PRE PREP SCHOOL), byName.id=cmmf7u9150030tkplnjhoqfww (St Johns Pre Prep School)"
+    },
+    {
+      "reason": "different supervisor already actively assigned to this site",
+      "row": {
+        "code": "6465",
+        "name": "KNOCKANDO RES",
+        "client": "ABE",
+        "supervisorRaw": "Lawrence",
+        "supervisorKey": "LAWRENCE",
+        "supervisorId": "cmm4lctyy000309kwjjkufjnn"
+      },
+      "details": "existingAssignment.id=cmmi6mnd3009tv0plim4kj8a4, existingSupervisorId=cmm32kesx000109jprlix5qra, newSupervisorId=cmm4lctyy000309kwjjkufjnn"
+    }
+  ]
+}

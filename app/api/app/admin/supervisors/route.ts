@@ -68,11 +68,35 @@ export async function GET(req: Request) {
           select: {
             id: true,
             createdAt: true,
+            siteAssignments: {
+              where: { endsOn: null },
+              select: {
+                site: { select: { id: true, name: true, code: true } },
+              },
+            },
+            foremanLinks: {
+              select: {
+                foreman: {
+                  select: {
+                    id: true,
+                    user: { select: { name: true } },
+                  },
+                },
+              },
+            },
           },
         },
       },
       orderBy: { createdAt: "desc" },
     });
+
+    console.log("=== SUPERVISORS ===");
+    for (const s of supervisors) {
+      console.log(
+        `  id: ${s.id}  |  name: ${s.name}  |  email: ${s.email}  |  supervisorId: ${s.supervisor?.id ?? "N/A"}`,
+      );
+    }
+    console.log("===================");
 
     return NextResponse.json(
       {
@@ -83,7 +107,16 @@ export async function GET(req: Request) {
           name: s.name,
           role: s.role,
           createdAt: s.createdAt.toISOString(),
-          supervisor: s.supervisor,
+          supervisorId: s.supervisor?.id ?? null,
+          sites: (s.supervisor?.siteAssignments ?? []).map((a) => ({
+            id: a.site.id,
+            name: a.site.name,
+            code: a.site.code,
+          })),
+          foremen: (s.supervisor?.foremanLinks ?? []).map((l) => ({
+            id: l.foreman.id,
+            name: l.foreman.user.name ?? "Unknown",
+          })),
         })),
       },
       { headers: CORS_HEADERS },

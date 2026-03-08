@@ -21,6 +21,8 @@ import {
   FolderTree,
   DollarSign,
   CalendarCheck,
+  Shield,
+  Clock,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -66,12 +68,6 @@ const menuGroups: {
         icon: LayoutDashboard,
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
       },
-      {
-        href: "/profile",
-        label: "Profile",
-        icon: User2,
-        roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
-      },
     ],
   },
   {
@@ -96,9 +92,32 @@ const menuGroups: {
         roles: ["ADMIN"],
       },
       {
+        href: "/admin/supervisors",
+        label: "Supervisors",
+        icon: Shield,
+        roles: ["ADMIN"],
+      },
+      {
         href: "/admin/transfer-employee",
         label: "Transfer Employee",
         icon: ArrowRightLeft,
+        roles: ["ADMIN"],
+      },
+    ],
+  },
+  {
+    group: "Overtime",
+    items: [
+      {
+        href: "/admin/overtime",
+        label: "Overtime Entries",
+        icon: Clock,
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/overtime-prices",
+        label: "Overtime Prices",
+        icon: DollarSign,
         roles: ["ADMIN"],
       },
     ],
@@ -228,11 +247,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
         .sidebar-root {
           font-family: 'DM Sans', sans-serif;
           background-color: color-mix(in oklab, var(--card) 80%, transparent);
-          color: hsl(var(--card-foreground));
+          color: var(--card-foreground);
           display: flex;
           flex-direction: column;
           height: 100%;
-          border-right: 1px solid rgba(255,255,255,0.06);
+          border-right: 1px solid var(--border);
           transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
           overflow: hidden;
           position: relative;
@@ -244,9 +263,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           justify-content: center;
           padding: 0 16px;
           height: 64px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
           flex-shrink: 0;
-          background: white;
+          background: #ffffff;
         }
 
         .sidebar-logo-mark {
@@ -259,8 +278,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           margin: 12px 12px 4px;
           border-radius: 8px;
           padding: 10px 12px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: color-mix(in oklab, var(--muted) 50%, transparent);
+          border: 1px solid var(--border);
           display: flex;
           align-items: center;
           gap: 8px;
@@ -296,7 +315,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           font-weight: 500;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: #5a5e6b;
+          color: var(--muted-foreground);
           line-height: 1;
           margin-bottom: 2px;
         }
@@ -304,7 +323,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
         .sidebar-role-name {
           font-size: 13px;
           font-weight: 600;
-          color: #e2e4ec;
+          color: var(--foreground);
           line-height: 1;
           white-space: nowrap;
         }
@@ -315,7 +334,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           overflow-x: hidden;
           padding: 8px 0 16px;
           scrollbar-width: thin;
-          scrollbar-color: rgba(255,255,255,0.08) transparent;
+          scrollbar-color: var(--border) transparent;
         }
 
         .sidebar-nav::-webkit-scrollbar {
@@ -327,14 +346,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.08);
+          background: var(--border);
           border-radius: 2px;
         }
 
         .sidebar-group {
           margin-bottom: 4px;
           padding-bottom: 4px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          border-bottom: 1px solid var(--border);
         }
 
         .sidebar-group-label {
@@ -342,7 +361,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           font-weight: 600;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: #3d4150;
+          color: var(--muted-foreground);
           padding: 12px 16px 4px;
           white-space: nowrap;
           overflow: hidden;
@@ -357,7 +376,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           padding: 9px 10px;
           border-radius: 8px;
           text-decoration: none;
-          color: #7c8096;
+          color: var(--muted-foreground);
           font-size: 13.5px;
           font-weight: 500;
           transition: all 180ms ease;
@@ -367,13 +386,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
         }
 
         .sidebar-item:hover {
-          background: rgba(255,255,255,0.06);
-          color: #dde0ea;
+          background: color-mix(in oklab, var(--muted) 50%, transparent);
+          color: var(--foreground);
         }
 
         .sidebar-item.active {
-          background: rgba(232,87,42,0.14);
-          color: #f0833a;
+          background: color-mix(in srgb, var(--theme-primary, var(--primary)) 14%, transparent);
+          color: var(--theme-primary, var(--primary));
         }
 
         .sidebar-item.active::before {
@@ -384,7 +403,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           transform: translateY(-50%);
           width: 3px;
           height: 60%;
-          background: #e8572a;
+          background: var(--theme-primary, var(--primary));
           border-radius: 0 2px 2px 0;
         }
 
@@ -423,7 +442,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
 
         .sidebar-divider {
           height: 1px;
-          background: rgba(255,255,255,0.05);
+          background: var(--border);
           margin: 8px 16px;
         }
 
@@ -477,20 +496,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           </div>
         </div>
 
-        {/* Role Badge */}
-        <div className="sidebar-role-badge">
-          <div
-            className="sidebar-role-dot"
-            style={{ background: badge.color }}
-          />
-          {isOpen && (
-            <div className="sidebar-role-info">
-              <div className="sidebar-role-label">{badge.label}</div>
-              <div className="sidebar-role-name">{userName}</div>
-            </div>
-          )}
-        </div>
-
         {/* Navigation */}
         <nav className="sidebar-nav">
           {menuGroups.map((group, gi) => {
@@ -532,6 +537,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
             );
           })}
         </nav>
+
+        {/* Role Badge */}
+        <div className="sidebar-role-badge" style={{ marginTop: "auto" }}>
+          <div
+            className="sidebar-role-dot"
+            style={{ background: badge.color }}
+          />
+          {isOpen && (
+            <div className="sidebar-role-info">
+              <div className="sidebar-role-label">{badge.label}</div>
+              <div className="sidebar-role-name">{userName}</div>
+            </div>
+          )}
+        </div>
       </aside>
     </>
   );

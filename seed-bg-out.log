@@ -1,0 +1,79 @@
+=== Seed: Missing Sites & Supervisor Assignments ===
+
+Parsed 712 raw rows.
+
+Resolved 654 rows. 59 already flagged for manual review.
+
+All 10 supervisor IDs verified in DB.
+
+  Processing row 100/654...
+  Processing row 200/654...
+  Processing row 300/654...
+  Processing row 400/654...
+  Processing row 500/654...
+  Processing row 600/654...
+
+=== Summary ===
+Total raw rows parsed:       712
+Resolved rows:               654
+Created sites:               0
+Reused sites:                653
+Updated sites:               3
+Created assignments:         574
+Skipped assignments:         80
+Manual review items:         61
+
+=== Manual Review (first 50) ===
+  [1] reason: malformed row (fewer than 4 tab-separated columns)  | code=6328  | name=CITY CENTRE PH8 PTN20  | supervisor=  | details: Raw line: 6328	CITY CENTRE PH8 PTN20	WBHO
+  [2] reason: unknown supervisor name  | code=6013  | name=CPT Flat  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [3] reason: unknown supervisor name  | code=6023  | name=FCP3828 Princeton Village  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [4] reason: unknown supervisor name  | code=6033  | name=Stand 4131 Waterfall  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [5] reason: unknown supervisor name  | code=6035  | name=Cape Town Office  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [6] reason: unknown supervisor name  | code=6040  | name=House Ixopo  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [7] reason: unknown supervisor name  | code=6062  | name=Watch Tower  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [8] reason: unknown supervisor name  | code=6076  | name=31 Mackay Street  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [9] reason: unknown supervisor name  | code=6089  | name=House JP  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [10] reason: unknown supervisor name  | code=6108  | name=The Ingress B1-3  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [11] reason: unknown supervisor name  | code=6136  | name=Mias Angling and Scuba  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [12] reason: unknown supervisor name  | code=6141  | name=Nedbank Talis Roof Repair  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [13] reason: unknown supervisor name  | code=6162  | name=Uitsig Estate Stand 9&33  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [14] reason: unknown supervisor name  | code=6175  | name=Golden Walk Entrance 1  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [15] reason: unknown supervisor name  | code=6184  | name=Mineralia  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [16] reason: unknown supervisor name  | code=6185  | name=Stoneridge Waterproofing Gutters and Flat Roofs  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [17] reason: unknown supervisor name  | code=6188  | name=Ermelo Game Centre Walkway Canopy  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [18] reason: unknown supervisor name  | code=6191  | name=106 16th Road Midrand  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [19] reason: unknown supervisor name  | code=6202  | name=BP Waterfall  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [20] reason: unknown supervisor name  | code=6212  | name=FCP3952 Princeton Village RSLPR4974  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [21] reason: unknown supervisor name  | code=6254  | name=Ellipse Ph3  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [22] reason: unknown supervisor name  | code=6261  | name=Waterfall Islamic Institute Boundary  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [23] reason: unknown supervisor name  | code=6263  | name=Princeton Village Rooms  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [24] reason: unknown supervisor name  | code=6279  | name=FCP4019 Princeton Village External  | supervisor=Caut  | details: raw supervisorName="Caut"
+  [25] reason: unknown supervisor name  | code=6284  | name=Cash Sales 2025  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [26] reason: unknown supervisor name  | code=6320  | name=LIBERTY PROMENADE ROOFS  | supervisor=Sean  | details: raw supervisorName="Sean"
+  [27] reason: unknown supervisor name  | code=6343  | name=GOSCOR FIRE DAMAGE  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [28] reason: unknown supervisor name  | code=6365  | name=Fortress Lowlardia  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [29] reason: unknown supervisor name  | code=6382  | name=10 Arabian Avenue 2025  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [30] reason: unknown supervisor name  | code=6392  | name=PV WATERPROOFING BLOCK D-I&STUDY  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [31] reason: unknown supervisor name  | code=6398  | name=ELLIPSE CLUBHOUSE  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [32] reason: unknown supervisor name  | code=6402  | name=WOODMEAD RETAIL  | supervisor=SEAN  | details: raw supervisorName="SEAN"
+  [33] reason: unknown supervisor name  | code=6422  | name=KG MALL ROOFS  | supervisor=SEAN  | details: raw supervisorName="SEAN"
+  [34] reason: unknown supervisor name  | code=6423  | name=MOUTSE MALL ROOFS  | supervisor=SEAN  | details: raw supervisorName="SEAN"
+  [35] reason: unknown supervisor name  | code=6427  | name=FCP4128 PRINCTON VILLAGE ROOMS  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [36] reason: unknown supervisor name  | code=6442  | name=LP9 WH3 SINOTILE  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [37] reason: unknown supervisor name  | code=6451  | name=WOOLWORTHS DC PHASE2  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [38] reason: unknown supervisor name  | code=6467  | name=FCP4167 PRINCETON VILLAGE  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [39] reason: unknown supervisor name  | code=6485  | name=102A RUTLAND AVENUE  | supervisor=Craig  | details: raw supervisorName="Craig"
+  [40] reason: unknown supervisor name  | code=6528  | name=FERREIRA RESIDENCE  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [41] reason: unknown supervisor name  | code=6533  | name=RANDBURG SQUARE  | supervisor=SEAN  | details: raw supervisorName="SEAN"
+  [42] reason: unknown supervisor name  | code=6551  | name=ISLAMIC INSTITUTE MOSQUE  | supervisor=Cautious  | details: raw supervisorName="Cautious"
+  [43] reason: unknown supervisor name  | code=6554  | name=MALL OF AFRICA REPAINTS  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [44] reason: unknown supervisor name  | code=6576  | name=HAVAL MIDRAND 2ND SHOW ROOM  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [45] reason: unknown supervisor name  | code=6580  | name=MBC YARD  | supervisor=caUTIOUS  | details: raw supervisorName="caUTIOUS"
+  [46] reason: unknown supervisor name  | code=6585  | name=LEGENDS SAFARI WOODMEAD  | supervisor=caUTIOUS  | details: raw supervisorName="caUTIOUS"
+  [47] reason: unknown supervisor name  | code=6587  | name=SPRINGVALE PRIMARY SCHOOL  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [48] reason: unknown supervisor name  | code=6590  | name=MIDRAND WAREHOUSE 5 OFFICES  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [49] reason: unknown supervisor name  | code=6591  | name=MERCEDES CENTURION  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  [50] reason: unknown supervisor name  | code=6597  | name=RIETVLEI BUSINESS PARK  | supervisor=CAUTIOUS  | details: raw supervisorName="CAUTIOUS"
+  ... and 11 more.
+
+Summary written to seed-summary.json

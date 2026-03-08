@@ -10,11 +10,13 @@ export type SiteForPdf = {
   id: string;
   name: string;
   code: string | null;
+  client?: string | null;
   location: string | null;
   isActive: boolean;
   createdAt: string;
   supervisorName?: string | null;
   totalWages?: number;
+  totalMaterialCost?: number;
 };
 
 function formatCurrencyPdf(amount: number): string {
@@ -93,11 +95,14 @@ export async function generateSitesPdf(
 
   // Column widths for landscape
   const colWidths = {
-    code: 100,
-    name: 220,
-    location: 280,
-    status: 90,
-    created: 88,
+    code: 80,
+    name: 140,
+    client: 100,
+    supervisor: 110,
+    wages: 90,
+    material: 90,
+    total: 90,
+    created: 78,
   };
 
   const headerHeight = 36;
@@ -154,7 +159,7 @@ export async function generateSitesPdf(
       height: 8,
       color: colors.indigo600,
     });
-    pg.drawText("Job Number", {
+    pg.drawText("Job #", {
       x: xPos + 12,
       y: textY,
       size: headerFontSize,
@@ -180,34 +185,27 @@ export async function generateSitesPdf(
     });
     xPos += colWidths.name;
 
-    // Location (orange)
-    pg.drawRectangle({
-      x: xPos,
-      y: textY + 1,
-      width: 8,
-      height: 8,
-      color: colors.orange600,
-    });
-    pg.drawText("Location", {
-      x: xPos + 12,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.location;
-
-    // Status
-    pg.drawText("Status", {
+    // Client
+    pg.drawText("Client", {
       x: xPos,
       y: textY,
       size: headerFontSize,
       font: fontBold,
       color: colors.textPrimary,
     });
-    xPos += colWidths.status;
+    xPos += colWidths.client;
 
-    // Created (emerald)
+    // Supervisor
+    pg.drawText("Supervisor", {
+      x: xPos,
+      y: textY,
+      size: headerFontSize,
+      font: fontBold,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.supervisor;
+
+    // Wages
     pg.drawRectangle({
       x: xPos,
       y: textY + 1,
@@ -215,8 +213,45 @@ export async function generateSitesPdf(
       height: 8,
       color: colors.emerald600,
     });
-    pg.drawText("Created", {
+    pg.drawText("Wages", {
       x: xPos + 12,
+      y: textY,
+      size: headerFontSize,
+      font: fontBold,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.wages;
+
+    // Material Cost
+    pg.drawRectangle({
+      x: xPos,
+      y: textY + 1,
+      width: 8,
+      height: 8,
+      color: colors.orange600,
+    });
+    pg.drawText("Material", {
+      x: xPos + 12,
+      y: textY,
+      size: headerFontSize,
+      font: fontBold,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.material;
+
+    // Total Cost
+    pg.drawText("Total Cost", {
+      x: xPos,
+      y: textY,
+      size: headerFontSize,
+      font: fontBold,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.total;
+
+    // Created (emerald)
+    pg.drawText("Created", {
+      x: xPos,
       y: textY,
       size: headerFontSize,
       font: fontBold,
@@ -286,51 +321,70 @@ export async function generateSitesPdf(
     });
     xPos += colWidths.name;
 
-    // Location
-    const locText = truncateText(
-      site.location || "—",
-      colWidths.location - 16,
+    // Client
+    const clientText = truncateText(
+      site.client || "—",
+      colWidths.client - 8,
       font,
-      fontSize,
+      fontSize - 1,
     );
-    pg.drawText(locText, {
+    pg.drawText(clientText, {
       x: xPos,
-      y: textY,
-      size: fontSize,
-      font: font,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.location;
-
-    // Status pill
-    const statusText = site.isActive ? "Active" : "Inactive";
-    const statusWidth = font.widthOfTextAtSize(statusText, fontSize - 1) + 20;
-    const pillHeight = 18;
-    const pillY = textY - 3;
-
-    pg.drawRectangle({
-      x: xPos,
-      y: pillY,
-      width: statusWidth,
-      height: pillHeight,
-      color: site.isActive ? rgb(0.94, 0.99, 0.96) : colors.inactiveBg,
-    });
-
-    pg.drawCircle({
-      x: xPos + 8,
-      y: pillY + pillHeight / 2,
-      size: 3,
-      color: site.isActive ? colors.emerald500 : colors.zinc400,
-    });
-
-    pg.drawText(statusText, {
-      x: xPos + 16,
       y: textY,
       size: fontSize - 1,
       font: font,
-      color: site.isActive ? colors.activeText : colors.inactiveText,
+      color: colors.textPrimary,
     });
-    xPos += colWidths.status;
+    xPos += colWidths.client;
+
+    // Supervisor
+    const supText = truncateText(
+      site.supervisorName || "—",
+      colWidths.supervisor - 8,
+      font,
+      fontSize - 1,
+    );
+    pg.drawText(supText, {
+      x: xPos,
+      y: textY,
+      size: fontSize - 1,
+      font: font,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.supervisor;
+
+    // Wages
+    pg.drawText(formatCurrencyPdf(site.totalWages ?? 0), {
+      x: xPos,
+      y: textY,
+      size: fontSize - 1,
+      font: font,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.wages;
+
+    // Material Cost
+    pg.drawText(formatCurrencyPdf(site.totalMaterialCost ?? 0), {
+      x: xPos,
+      y: textY,
+      size: fontSize - 1,
+      font: font,
+      color: colors.textPrimary,
+    });
+    xPos += colWidths.material;
+
+    // Total Cost
+    pg.drawText(
+      formatCurrencyPdf((site.totalWages ?? 0) + (site.totalMaterialCost ?? 0)),
+      {
+        x: xPos,
+        y: textY,
+        size: fontSize - 1,
+        font: fontBold,
+        color: colors.textPrimary,
+      },
+    );
+    xPos += colWidths.total;
 
     // Created
     const createdText = truncateText(
@@ -375,7 +429,6 @@ export async function generateSitesPdf(
 
     // Vertical column dividers
     let colX = margin + colWidths.code;
-    // After Code column
     pg.drawLine({
       start: { x: colX, y: topY },
       end: { x: colX, y: bottomY },
@@ -383,23 +436,41 @@ export async function generateSitesPdf(
       color: colors.borderLight,
     });
     colX += colWidths.name;
-    // After Name column
     pg.drawLine({
       start: { x: colX, y: topY },
       end: { x: colX, y: bottomY },
       thickness: 0.5,
       color: colors.borderLight,
     });
-    colX += colWidths.location;
-    // After Location column
+    colX += colWidths.client;
     pg.drawLine({
       start: { x: colX, y: topY },
       end: { x: colX, y: bottomY },
       thickness: 0.5,
       color: colors.borderLight,
     });
-    colX += colWidths.status;
-    // After Status column
+    colX += colWidths.supervisor;
+    pg.drawLine({
+      start: { x: colX, y: topY },
+      end: { x: colX, y: bottomY },
+      thickness: 0.5,
+      color: colors.borderLight,
+    });
+    colX += colWidths.wages;
+    pg.drawLine({
+      start: { x: colX, y: topY },
+      end: { x: colX, y: bottomY },
+      thickness: 0.5,
+      color: colors.borderLight,
+    });
+    colX += colWidths.material;
+    pg.drawLine({
+      start: { x: colX, y: topY },
+      end: { x: colX, y: bottomY },
+      thickness: 0.5,
+      color: colors.borderLight,
+    });
+    colX += colWidths.total;
     pg.drawLine({
       start: { x: colX, y: topY },
       end: { x: colX, y: bottomY },
@@ -475,14 +546,18 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
 
   const tableRows = sites
     .map((site) => {
-      const statusClass = site.isActive ? "active" : "inactive";
+      const wages = site.totalWages ?? 0;
+      const material = site.totalMaterialCost ?? 0;
+      const totalCost = wages + material;
       return `
         <tr>
           <td class="code-col">${escapeHTML(site.code ?? "—")}</td>
           <td class="name-col">${escapeHTML(site.name)}</td>
+          <td class="client-col">${escapeHTML(site.client ?? "—")}</td>
           <td class="supervisor-col">${escapeHTML(site.supervisorName ?? "—")}</td>
-          <td class="wages-col">${formatCurrencyHtml(site.totalWages ?? 0)}</td>
-          <td class="status-col"><span class="status-pill ${statusClass}">${site.isActive ? "Active" : "Inactive"}</span></td>
+          <td class="wages-col">${formatCurrencyHtml(wages)}</td>
+          <td class="material-col">${formatCurrencyHtml(material)}</td>
+          <td class="total-col">${formatCurrencyHtml(totalCost)}</td>
           <td class="created-col">${formatDate(site.createdAt)}</td>
         </tr>
       `;
@@ -491,6 +566,11 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
 
   // Calculate totals
   const totalWagesSum = sites.reduce((sum, s) => sum + (s.totalWages ?? 0), 0);
+  const totalMaterialSum = sites.reduce(
+    (sum, s) => sum + (s.totalMaterialCost ?? 0),
+    0,
+  );
+  const totalCostSum = totalWagesSum + totalMaterialSum;
   const activeSites = sites.filter((s) => s.isActive).length;
 
   return `
@@ -561,7 +641,7 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
         /* Summary cards */
         .summary-cards {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(5, 1fr);
           gap: 12px;
           margin-bottom: 20px;
         }
@@ -611,55 +691,35 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
         }
         .main-table .code-col { 
           font-family: monospace;
-          width: 100px;
+          width: 80px;
         }
         .main-table .name-col { 
           font-weight: 500;
-          min-width: 180px;
+          min-width: 140px;
+        }
+        .main-table .client-col { 
+          min-width: 100px;
         }
         .main-table .supervisor-col { 
-          min-width: 150px;
+          min-width: 110px;
         }
         .main-table .wages-col { 
           text-align: right;
           font-weight: 600;
-          min-width: 120px;
+          min-width: 90px;
         }
-        .main-table .status-col { 
-          text-align: center;
-          width: 90px;
+        .main-table .material-col { 
+          text-align: right;
+          font-weight: 600;
+          min-width: 90px;
+        }
+        .main-table .total-col { 
+          text-align: right;
+          font-weight: 700;
+          min-width: 90px;
         }
         .main-table .created-col { 
-          width: 100px;
-        }
-        .status-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 10px;
-          border-radius: 9999px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-        .status-pill.active {
-          background: #dcfce7;
-          color: #166534;
-        }
-        .status-pill.inactive {
-          background: #e4e4e7;
-          color: #52525b;
-        }
-        .status-pill::before {
-          content: '';
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-        }
-        .status-pill.active::before {
-          background: #22c55e;
-        }
-        .status-pill.inactive::before {
-          background: #a1a1aa;
+          width: 80px;
         }
         .main-table tbody tr:nth-child(even) {
           background: #fafafa;
@@ -683,8 +743,7 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
             print-color-adjust: exact !important;
             color-adjust: exact !important;
           }
-          .main-table th,
-          .status-pill {
+          .main-table th {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             color-adjust: exact !important;
@@ -722,17 +781,27 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
             <div class="summary-label">Total Wages</div>
             <div class="summary-value">${formatCurrencyHtml(totalWagesSum)}</div>
           </div>
+          <div class="summary-card">
+            <div class="summary-label">Total Material</div>
+            <div class="summary-value">${formatCurrencyHtml(totalMaterialSum)}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Total Cost</div>
+            <div class="summary-value">${formatCurrencyHtml(totalCostSum)}</div>
+          </div>
         </div>
         
         <div class="table-container">
           <table class="main-table">
             <thead>
               <tr>
-                <th class="code-col">Job Number</th>
+                <th class="code-col">Job #</th>
                 <th class="name-col">Name</th>
+                <th class="client-col">Client</th>
                 <th class="supervisor-col">Supervisor</th>
-                <th class="wages-col">Total Wages</th>
-                <th class="status-col">Status</th>
+                <th class="wages-col">Wages</th>
+                <th class="material-col">Material</th>
+                <th class="total-col">Total Cost</th>
                 <th class="created-col">Created</th>
               </tr>
             </thead>

@@ -6,6 +6,7 @@ export interface SiteCostRow {
   siteName: string;
   materialCost: number;
   wagesCost: number;
+  overtimeCost: number;
   projectCost: number;
   // Revenue / profit – placeholders for now
   revenueClaimed: number;
@@ -21,6 +22,7 @@ export interface SiteCostSummary {
   totals: {
     totalMaterialCost: number;
     totalWagesCost: number;
+    totalOvertimeCost: number;
     totalProjectCost: number;
     totalRevenueClaimed: number;
     totalRevenueReceived: number;
@@ -94,8 +96,35 @@ export async function calcSiteCosts(
     );
   }
 
+  // ── Overtime costs (via OvertimeEntry.totalCost) ──
+  const overtimeWhere: Record<string, unknown> = {
+    workDate: { gte: startDate, lt: endDateExclusive },
+    ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
+  };
+
+  const overtimeRows = await prisma.overtimeEntry.findMany({
+    where: overtimeWhere,
+    select: {
+      siteId: true,
+      totalCost: true,
+    },
+  });
+
+  const overtimeMap = new Map<string, Decimal>();
+  for (const ot of overtimeRows) {
+    const siteId = ot.siteId;
+    overtimeMap.set(
+      siteId,
+      (overtimeMap.get(siteId) ?? new Decimal(0)).add(ot.totalCost),
+    );
+  }
+
   // ── Merge into unique siteId set ──
-  const allSiteIds = new Set([...materialMap.keys(), ...wagesMap.keys()]);
+  const allSiteIds = new Set([
+    ...materialMap.keys(),
+    ...wagesMap.keys(),
+    ...overtimeMap.keys(),
+  ]);
 
   // If caller specified siteIds make sure they're all present even if 0
   if (siteIds?.length) {
@@ -113,15 +142,18 @@ export async function calcSiteCosts(
   const rows: SiteCostRow[] = [];
   let totalMaterialCost = new Decimal(0);
   let totalWagesCost = new Decimal(0);
+  let totalOvertimeCost = new Decimal(0);
   let totalProjectCost = new Decimal(0);
 
   for (const siteId of allSiteIds) {
     const material = materialMap.get(siteId) ?? new Decimal(0);
     const wages = wagesMap.get(siteId) ?? new Decimal(0);
-    const project = material.add(wages);
+    const overtime = overtimeMap.get(siteId) ?? new Decimal(0);
+    const project = material.add(wages).add(overtime);
 
     totalMaterialCost = totalMaterialCost.add(material);
     totalWagesCost = totalWagesCost.add(wages);
+    totalOvertimeCost = totalOvertimeCost.add(overtime);
     totalProjectCost = totalProjectCost.add(project);
 
     const projectNum = project.toNumber();
@@ -131,6 +163,7 @@ export async function calcSiteCosts(
       siteName: nameMap.get(siteId) ?? "Unknown",
       materialCost: material.toNumber(),
       wagesCost: wages.toNumber(),
+      overtimeCost: overtime.toNumber(),
       projectCost: projectNum,
       // Revenue & profit — not implemented yet
       revenueClaimed: 0,
@@ -153,6 +186,7 @@ export async function calcSiteCosts(
     totals: {
       totalMaterialCost: totalMaterialCost.toNumber(),
       totalWagesCost: totalWagesCost.toNumber(),
+      totalOvertimeCost: totalOvertimeCost.toNumber(),
       totalProjectCost: totalProjectCost.toNumber(),
       totalRevenueClaimed: 0,
       totalRevenueReceived: 0,

@@ -66,7 +66,13 @@ export async function GET(req: Request) {
       include: {
         supplier: { select: { id: true, name: true } },
         product: {
-          select: { id: true, name: true, uom: true, unitSize: true },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            uom: true,
+            unitSize: true,
+          },
         },
       },
     });

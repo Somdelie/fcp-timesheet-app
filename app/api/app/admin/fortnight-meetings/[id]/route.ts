@@ -84,6 +84,7 @@ export async function GET(
         ? {
             totalMaterialCost: Number(meeting.totals.totalMaterialCost),
             totalWagesCost: Number(meeting.totals.totalWagesCost),
+            totalOvertimeCost: Number(meeting.totals.totalOvertimeCost),
             totalProjectCost: Number(meeting.totals.totalProjectCost),
             totalRevenueClaimed: Number(meeting.totals.totalRevenueClaimed),
             totalRevenueReceived: Number(meeting.totals.totalRevenueReceived),
@@ -95,6 +96,7 @@ export async function GET(
         site: r.site,
         materialCost: Number(r.materialCost),
         wagesCost: Number(r.wagesCost),
+        overtimeCost: Number(r.overtimeCost),
         projectCost: Number(r.projectCost),
         revenueClaimed: Number(r.revenueClaimed),
         revenueReceived: Number(r.revenueReceived),

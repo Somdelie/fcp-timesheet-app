@@ -2,7 +2,7 @@
 import SitesList from "@/components/sites/SitesList";
 import { listSites } from "@/actions/sites";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function SitesPage({
   searchParams,
@@ -13,7 +13,7 @@ export default async function SitesPage({
   const q = sp?.q ?? "";
   const show = sp?.show ?? "active";
 
-  const res = await listSites({ q, show, take: 300 });
+  const res = await listSites({ q, show });
   const sites = res.ok ? res.sites : [];
 
   return (

@@ -12,6 +12,7 @@ import {
   useReactTable,
   type ColumnDef,
   type SortingState,
+  type RowSelectionState,
 } from "@tanstack/react-table";
 import {
   ArrowRight,
@@ -32,6 +33,9 @@ import {
   Wallet,
   CalendarDays,
   Package,
+  Briefcase,
+  Hammer,
+  Calculator,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -67,17 +71,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { markSiteFinished, deleteSite } from "@/actions/sites";
 
 export type SiteRow = {
   id: string;
   name: string;
   code: string | null;
+  client: string | null;
   location: string | null;
   isActive: boolean;
   createdAt: string;
   supervisorName: string | null;
   totalWages: number;
+  totalMaterialCost: number;
 };
 
 function classNames(...xs: Array<string | false | undefined | null>) {
@@ -112,7 +119,7 @@ function StatusPill({ active }: { active: boolean }) {
 function formatDate(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString("en-ZA", {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -393,21 +400,61 @@ interface SitesTableProps {
   data: SiteRow[];
   role: string;
   onRequestPhoto: (site: SiteRow) => void;
+  onSelectionChange?: (selectedSites: SiteRow[]) => void;
 }
 
 export default function SitesTable({
   data,
   role,
   onRequestPhoto,
+  onSelectionChange,
 }: SitesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
 
+  // Notify parent of selection changes
+  React.useEffect(() => {
+    if (!onSelectionChange) return;
+    const selectedRows = Object.keys(rowSelection)
+      .filter((k) => rowSelection[k])
+      .map((k) => data[Number(k)])
+      .filter(Boolean);
+    onSelectionChange(selectedRows);
+  }, [rowSelection, data, onSelectionChange]);
+
   const columns: ColumnDef<SiteRow>[] = React.useMemo(
     () => [
+      {
+        id: "select",
+        size: 40,
+        header: ({ table }) => (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && "indeterminate")
+              }
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
+              aria-label="Select all"
+            />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+            />
+          </div>
+        ),
+      },
       {
         id: "code",
         accessorKey: "code",
@@ -462,6 +509,33 @@ export default function SitesTable({
         ),
       },
       {
+        id: "client",
+        accessorKey: "client",
+        size: 150,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <Briefcase className="h-4 w-4 text-amber-600" />
+              Client
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.client ?? "—"}</span>
+        ),
+      },
+      {
         id: "supervisorName",
         accessorKey: "supervisorName",
         size: 180,
@@ -494,11 +568,38 @@ export default function SitesTable({
         ),
       },
       {
-        id: "status",
-        accessorKey: "isActive",
-        size: 100,
-        header: "Status",
-        cell: ({ row }) => <StatusPill active={row.original.isActive} />,
+        id: "totalMaterialCost",
+        accessorKey: "totalMaterialCost",
+        size: 150,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Hammer className="h-4 w-4 text-orange-600" />
+            Total Material Cost
+          </div>
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm font-medium">
+            {formatCurrency(row.original.totalMaterialCost ?? 0)}
+          </span>
+        ),
+      },
+      {
+        id: "totalCost",
+        size: 140,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Calculator className="h-4 w-4 text-rose-600" />
+            Total Cost
+          </div>
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm font-semibold">
+            {formatCurrency(
+              (row.original.totalWages ?? 0) +
+                (row.original.totalMaterialCost ?? 0),
+            )}
+          </span>
+        ),
       },
       {
         id: "createdAt",
@@ -551,9 +652,12 @@ export default function SitesTable({
     state: {
       sorting,
       pagination,
+      rowSelection,
     },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

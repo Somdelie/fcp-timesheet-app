@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { Search, Plus, Download, Printer } from "lucide-react";
+import { Search, Plus, Download, Printer, CalendarDays } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import CreateSiteForm from "./CreateSiteForm";
 import SitesTable, { type SiteRow } from "./SitesTable";
-import { requestSiteGroupPhoto } from "@/actions/sites";
+import { requestSiteGroupPhoto, listSites } from "@/actions/sites";
 import { useUserRole } from "@/lib/user-role-context";
 import {
   generateSitesPdf,
@@ -47,15 +47,53 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const [photoNote, setPhotoNote] = React.useState<string>("");
   const [photoSubmitting, setPhotoSubmitting] = React.useState(false);
   const [pdfGenerating, setPdfGenerating] = React.useState(false);
+  const [selectedSites, setSelectedSites] = React.useState<SiteRow[]>([]);
+  const [dateFrom, setDateFrom] = React.useState("");
+  const [dateTo, setDateTo] = React.useState("");
+  const [dateFilteredSites, setDateFilteredSites] = React.useState<
+    SiteRow[] | null
+  >(null);
+  const [dateLoading, setDateLoading] = React.useState(false);
+
+  // The effective data set: if date range is applied use date-filtered data, otherwise initialSites
+  const effectiveData = dateFilteredSites ?? initialSites;
+
+  async function handleApplyDateRange() {
+    if (!dateFrom && !dateTo) {
+      setDateFilteredSites(null);
+      return;
+    }
+    setDateLoading(true);
+    try {
+      const res = await listSites({ q: "", show, take: 300, dateFrom, dateTo });
+      if (res.ok) setDateFilteredSites(res.sites);
+    } catch {
+      toast.error("Failed to filter by date");
+    } finally {
+      setDateLoading(false);
+    }
+  }
+
+  function handleClearDateRange() {
+    setDateFrom("");
+    setDateTo("");
+    setDateFilteredSites(null);
+  }
+
+  // Determine the sites to print/download: selected sites if any, otherwise all filtered
+  function getSitesForExport() {
+    return selectedSites.length > 0 ? selectedSites : filtered;
+  }
 
   async function handleDownloadPdf() {
-    if (filtered.length === 0) {
+    const exportSites = getSitesForExport();
+    if (exportSites.length === 0) {
       toast.error("No sites to export");
       return;
     }
     setPdfGenerating(true);
     try {
-      const pdfBytes = await generateSitesPdf(filtered);
+      const pdfBytes = await generateSitesPdf(exportSites);
       const filename = `sites-report-${new Date().toISOString().slice(0, 10)}.pdf`;
       downloadPdfBlob(pdfBytes, filename);
       toast.success("PDF downloaded");
@@ -76,14 +114,14 @@ export default function SitesList({ initialSites }: SitesListProps) {
   /** Pure client-side filtering — instant, no server round-trips */
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return initialSites;
-    return initialSites.filter(
+    if (!q) return effectiveData;
+    return effectiveData.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
         (s.code && s.code.toLowerCase().includes(q)) ||
         (s.location && s.location.toLowerCase().includes(q)),
     );
-  }, [initialSites, query]);
+  }, [effectiveData, query]);
 
   async function handleSubmitPhotoRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -156,6 +194,11 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
                 onClick={handleDownloadPdf}
                 disabled={pdfGenerating || filtered.length === 0}
+                title={
+                  selectedSites.length > 0
+                    ? `Download ${selectedSites.length} selected`
+                    : "Download all"
+                }
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -163,13 +206,19 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 variant="outline"
                 className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
                 onClick={() => {
-                  if (filtered.length === 0) {
+                  const exportSites = getSitesForExport();
+                  if (exportSites.length === 0) {
                     toast.error("No sites to print");
                     return;
                   }
-                  printSites(filtered);
+                  printSites(exportSites);
                 }}
                 disabled={filtered.length === 0}
+                title={
+                  selectedSites.length > 0
+                    ? `Print ${selectedSites.length} selected`
+                    : "Print all"
+                }
               >
                 <Printer className="h-4 w-4" />
               </Button>
@@ -220,6 +269,60 @@ export default function SitesList({ initialSites }: SitesListProps) {
         </div>
       </div>
 
+      {/* Date Range Filter */}
+      <div className="mb-2 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm p-3 shadow-sm dark:border-zinc-700/50 dark:bg-card/40">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+              <CalendarDays className="inline h-3.5 w-3.5 mr-1" />
+              From
+            </label>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-9 w-40 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+              <CalendarDays className="inline h-3.5 w-3.5 mr-1" />
+              To
+            </label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-9 w-40 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={handleApplyDateRange}
+            disabled={dateLoading || (!dateFrom && !dateTo)}
+            className="h-9"
+          >
+            {dateLoading ? "Loading..." : "Apply"}
+          </Button>
+          {dateFilteredSites !== null && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleClearDateRange}
+              className="h-9"
+            >
+              Clear
+            </Button>
+          )}
+          {selectedSites.length > 0 && (
+            <span className="text-xs font-medium text-primary ml-auto">
+              {selectedSites.length} site{selectedSites.length === 1 ? "" : "s"}{" "}
+              selected
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Sites Table */}
       {filtered.length === 0 ? (
         <div className="rounded border border-dashed border-zinc-300 bg-white/50 p-12 text-center dark:border-zinc-700/50 dark:bg-card/30">
@@ -242,6 +345,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
             setPhotoSite(site);
             setPhotoDialogOpen(true);
           }}
+          onSelectionChange={setSelectedSites}
         />
       )}
 

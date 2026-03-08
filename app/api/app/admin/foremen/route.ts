@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 
@@ -28,28 +30,41 @@ function normalizeEmail(v: unknown) {
  * List all foremen (admin-only)
  */
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization") ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  // 1) Try Bearer token (mobile / desktop)
+  const authHeader = req.headers.get("authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : null;
+  let authed = false;
 
-  if (!token) {
-    return NextResponse.json(
-      { error: "Missing token" },
-      { status: 401, headers: CORS_HEADERS },
-    );
+  if (token) {
+    const payload = await verifyApiToken(token);
+    if (
+      payload &&
+      (payload.role === "ADMIN" ||
+        payload.role === "SUPERVISOR" ||
+        payload.role === "OFFICE")
+    ) {
+      authed = true;
+    }
   }
 
-  const payload = await verifyApiToken(token);
-  if (!payload) {
-    return NextResponse.json(
-      { error: "Invalid token" },
-      { status: 401, headers: CORS_HEADERS },
-    );
+  // 2) Fallback to NextAuth web session
+  if (!authed) {
+    const session = await getServerSession(authOptions);
+    const role = (session?.user as any)?.role as string | undefined;
+    if (
+      session?.user &&
+      (role === "ADMIN" || role === "SUPERVISOR" || role === "OFFICE")
+    ) {
+      authed = true;
+    }
   }
 
-  if (payload.role !== "ADMIN" && payload.role !== "SUPERVISOR") {
+  if (!authed) {
     return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403, headers: CORS_HEADERS },
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS_HEADERS },
     );
   }
 

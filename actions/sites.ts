@@ -40,10 +40,22 @@ function serializeSite(s: any) {
       sum + (Number(scan.dayRateAtScan) || 0),
     0,
   );
+  // Calculate total material cost from order items
+  const totalMaterialCost = (s.siteProductOrders ?? []).reduce(
+    (sum: number, order: any) =>
+      sum +
+      (order.items ?? []).reduce(
+        (s2: number, item: any) =>
+          s2 + (Number(item.unitPriceAtOrder) || 0) * (item.quantity || 0),
+        0,
+      ),
+    0,
+  );
   return {
     id: s.id,
     name: s.name,
     code: s.code,
+    client: s.client ?? null,
     location: s.location,
     address: s.address ?? null,
     latitude: typeof s.latitude === "number" ? s.latitude : null,
@@ -55,6 +67,7 @@ function serializeSite(s: any) {
         : String(s.createdAt),
     supervisorName,
     totalWages,
+    totalMaterialCost,
   };
 }
 
@@ -80,13 +93,22 @@ export async function listSites(input?: {
   q?: string;
   show?: "active" | "all";
   take?: number;
+  dateFrom?: string;
+  dateTo?: string;
 }) {
   const auth = await requireServerAuth();
   const scope = siteWhereFor(auth);
 
   const q = clean(input?.q);
   const onlyActive = (input?.show ?? "active") !== "all";
-  const take = Math.min(Math.max(input?.take ?? 200, 1), 500);
+  const take = input?.take ? Math.max(input.take, 1) : undefined;
+
+  // Build date filter for attendance scans + product orders
+  const dateFilter: { gte?: Date; lte?: Date } = {};
+  if (input?.dateFrom)
+    dateFilter.gte = new Date(input.dateFrom + "T00:00:00.000Z");
+  if (input?.dateTo) dateFilter.lte = new Date(input.dateTo + "T23:59:59.999Z");
+  const hasDateFilter = Object.keys(dateFilter).length > 0;
 
   const sites = await prisma.site.findMany({
     where: {
@@ -108,6 +130,7 @@ export async function listSites(input?: {
       id: true,
       name: true,
       code: true,
+      client: true,
       location: true,
       address: true,
       latitude: true,
@@ -128,8 +151,20 @@ export async function listSites(input?: {
         take: 1,
       },
       attendanceScans: {
+        where: hasDateFilter ? { workDate: dateFilter } : undefined,
         select: {
           dayRateAtScan: true,
+        },
+      },
+      siteProductOrders: {
+        where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+        select: {
+          items: {
+            select: {
+              quantity: true,
+              unitPriceAtOrder: true,
+            },
+          },
         },
       },
     },
@@ -146,6 +181,7 @@ export type SiteRow =
 export async function createSite(input: {
   name: string;
   code?: string | null;
+  client?: string | null;
   location?: string | null;
   address?: string | null;
   latitude?: number | string | null;
@@ -159,6 +195,7 @@ export async function createSite(input: {
 
   const name = clean(input.name);
   const code = clean(input.code) || null;
+  const client = clean(input.client) || null;
   const location = clean(input.location) || null;
   const address = clean(input.address) || null;
   const latitude = cleanNumber(input.latitude);
@@ -183,6 +220,7 @@ export async function createSite(input: {
       data: {
         name,
         code,
+        client,
         location,
         address,
         latitude,
@@ -193,6 +231,7 @@ export async function createSite(input: {
         id: true,
         name: true,
         code: true,
+        client: true,
         location: true,
         address: true,
         latitude: true,
@@ -229,6 +268,7 @@ export async function createSite(input: {
 
 export async function updateSiteLocation(input: {
   siteId: string;
+  client?: string | null;
   location?: string | null;
   address?: string | null;
   latitude?: number | string | null;
@@ -240,6 +280,8 @@ export async function updateSiteLocation(input: {
 
   await requireCanManageSite(auth, siteId);
 
+  const client =
+    input.client === undefined ? undefined : clean(input.client) || null;
   const location =
     input.location === undefined ? undefined : clean(input.location) || null;
   const address =
@@ -274,6 +316,7 @@ export async function updateSiteLocation(input: {
     const site = await prisma.site.update({
       where: { id: siteId },
       data: {
+        ...(client !== undefined ? { client } : {}),
         ...(location !== undefined ? { location } : {}),
         ...(address !== undefined ? { address } : {}),
         ...(latitude !== undefined ? { latitude } : {}),
@@ -283,6 +326,7 @@ export async function updateSiteLocation(input: {
         id: true,
         name: true,
         code: true,
+        client: true,
         location: true,
         address: true,
         latitude: true,

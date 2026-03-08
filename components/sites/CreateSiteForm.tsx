@@ -24,6 +24,7 @@ const siteSchema = z.object({
     .min(2, "Site name must be at least 2 characters.")
     .max(80, "Max 80 characters."),
   code: z.string().max(30, "Max 30 characters.").optional(),
+  client: z.string().max(120, "Max 120 characters.").optional(),
   location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
   latitude: z
@@ -51,6 +52,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
     defaultValues: {
       name: "",
       code: "",
+      client: "",
       location: "",
       address: "",
       latitude: undefined,
@@ -63,6 +65,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
       const res = await createSite({
         name: values.name,
         code: values.code || null,
+        client: values.client || null,
         location: values.location || null,
         address: values.address || null,
         latitude: values.latitude ?? null,
@@ -79,6 +82,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
       form.reset({
         name: "",
         code: "",
+        client: "",
         location: "",
         address: "",
         latitude: undefined,
@@ -135,6 +139,34 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
                 id="code"
                 aria-invalid={fieldState.invalid}
                 placeholder="e.g. MOA-001"
+                autoComplete="off"
+                disabled={pending}
+                className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          name="client"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel
+                htmlFor="client"
+                className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+              >
+                Client{" "}
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                  (Optional)
+                </span>
+              </FieldLabel>
+              <Input
+                {...field}
+                id="client"
+                aria-invalid={fieldState.invalid}
+                placeholder="e.g. Acme Corp"
                 autoComplete="off"
                 disabled={pending}
                 className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"

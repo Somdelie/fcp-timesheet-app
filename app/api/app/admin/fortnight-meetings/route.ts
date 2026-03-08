@@ -61,6 +61,7 @@ export async function GET(req: Request) {
           select: {
             totalMaterialCost: true,
             totalWagesCost: true,
+            totalOvertimeCost: true,
             totalProjectCost: true,
           },
         },
@@ -79,6 +80,7 @@ export async function GET(req: Request) {
         ? {
             totalMaterialCost: Number(m.totals.totalMaterialCost),
             totalWagesCost: Number(m.totals.totalWagesCost),
+            totalOvertimeCost: Number(m.totals.totalOvertimeCost),
             totalProjectCost: Number(m.totals.totalProjectCost),
           }
         : null,

@@ -50,6 +50,7 @@ type SupplierPrice = {
   product: {
     id: string;
     name: string;
+    sku: string | null;
     uom: string | null;
     unitSize: number | null;
   };
@@ -381,10 +382,11 @@ export default function SupplierPricesPage() {
 
       {/* Table */}
       <div className="rounded-md border">
-        <Table>
+        <Table className="[&_th]:border-x [&_td]:border-x">
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
+              <TableHead>SKU</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Supplier</TableHead>
               <TableHead className="text-right">Price</TableHead>
@@ -395,7 +397,7 @@ export default function SupplierPricesPage() {
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
                   Loading...
@@ -404,7 +406,7 @@ export default function SupplierPricesPage() {
             ) : prices.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
                   <DollarSign className="mx-auto h-8 w-8 mb-2 opacity-40" />
@@ -416,6 +418,9 @@ export default function SupplierPricesPage() {
                 <TableRow key={p.id}>
                   <TableCell>
                     <div className="font-medium">{p.product.name}</div>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {p.product.sku ?? "—"}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">

@@ -83,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
   }, [pathname]);
 
   return (
-    <header className="flex h-14 shrink-0 w-full items-center justify-between border-b bg-card/80 px-4 backdrop-blur z-10">
+    <header className="navbar flex h-16 shrink-0 w-full items-center justify-between border-b bg-card/80 px-4 backdrop-blur z-10">
       {/* left */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={onToggleSidebar}>

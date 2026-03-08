@@ -10,7 +10,7 @@ import SiteTotalsPanel from "@/components/sites/SiteTotalsPanel";
 import SiteMaterialOrdersPanel from "@/components/sites/SiteMaterialOrdersPanel";
 import EditSiteLocationDialog from "@/components/sites/EditSiteLocationDialog";
 import SiteForemanRatesPanel from "@/components/sites/SiteForemanRatesPanel";
-import { ArrowLeft, CheckCircle, MapPin, Hash } from "lucide-react";
+import { ArrowLeft, CheckCircle, MapPin, Hash, User } from "lucide-react";
 import Link from "next/link";
 
 export default async function SiteManagePage({
@@ -28,6 +28,7 @@ export default async function SiteManagePage({
       id: true,
       name: true,
       code: true,
+      client: true,
       location: true,
       address: true,
       latitude: true,
@@ -139,6 +140,17 @@ export default async function SiteManagePage({
                     </span>
                   </div>
                 )}
+                {site.client && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                      Client:{" "}
+                      <span className="text-slate-900 dark:text-slate-200">
+                        {site.client}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 {site.location && (
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -181,6 +193,7 @@ export default async function SiteManagePage({
             <div className="flex flex-col items-end gap-2">
               <EditSiteLocationDialog
                 siteId={site.id}
+                initialClient={site.client}
                 initialLocation={site.location}
                 initialAddress={site.address}
                 initialLatitude={site.latitude}

@@ -6,7 +6,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +72,38 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const search = url.searchParams.get("q")?.trim().toLowerCase() || "";
     const isActive = url.searchParams.get("isActive");
+    const fields = url.searchParams.get("fields");
+    const dateFrom = url.searchParams.get("dateFrom") || "";
+    const dateTo = url.searchParams.get("dateTo") || "";
+
+    // Lightweight mode — only id, name, code (for dropdowns / lookups)
+    if (fields === "lite") {
+      const liteSites = await prisma.site.findMany({
+        where: {
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { code: { contains: search, mode: "insensitive" } },
+            ],
+          }),
+          ...(isActive && { isActive: isActive === "true" }),
+        },
+        select: { id: true, name: true, code: true, isActive: true },
+        orderBy: { name: "asc" },
+      });
+      const res = NextResponse.json(
+        { ok: true, sites: liteSites },
+        { headers: CORS_HEADERS },
+      );
+      logApiRequest("/api/app/admin/sites", req.method, res.status);
+      return res;
+    }
+
+    // Build date filters for scans / orders
+    const dateFilter: { gte?: Date; lte?: Date } = {};
+    if (dateFrom) dateFilter.gte = new Date(dateFrom + "T00:00:00.000Z");
+    if (dateTo) dateFilter.lte = new Date(dateTo + "T23:59:59.999Z");
+    const hasDateFilter = Object.keys(dateFilter).length > 0;
 
     const sites = await prisma.site.findMany({
       where: {
@@ -90,6 +122,7 @@ export async function GET(req: Request) {
         id: true,
         name: true,
         code: true,
+        client: true,
         location: true,
         latitude: true,
         longitude: true,
@@ -111,13 +144,24 @@ export async function GET(req: Request) {
           take: 1,
         },
         attendanceScans: {
+          where: hasDateFilter ? { workDate: dateFilter } : undefined,
           select: {
             dayRateAtScan: true,
           },
         },
+        siteProductOrders: {
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          select: {
+            items: {
+              select: {
+                quantity: true,
+                unitPriceAtOrder: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
-      take: 100,
     });
 
     const res = NextResponse.json(
@@ -133,10 +177,24 @@ export async function GET(req: Request) {
               sum + (Number(scan.dayRateAtScan) || 0),
             0,
           );
+          // Calculate total material cost from order items
+          const totalMaterialCost =
+            (s as any).siteProductOrders?.reduce(
+              (sum: number, order: any) =>
+                sum +
+                (order.items ?? []).reduce(
+                  (s2: number, item: any) =>
+                    s2 +
+                    (Number(item.unitPriceAtOrder) || 0) * (item.quantity || 0),
+                  0,
+                ),
+              0,
+            ) ?? 0;
           return {
             id: s.id,
             name: s.name,
             code: s.code,
+            client: s.client ?? null,
             location: s.location,
             latitude: s.latitude,
             longitude: s.longitude,
@@ -144,6 +202,7 @@ export async function GET(req: Request) {
             createdAt: s.createdAt.toISOString(),
             supervisorName,
             totalWages,
+            totalMaterialCost,
           };
         }),
       },
