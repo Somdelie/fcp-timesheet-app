@@ -789,7 +789,7 @@ export default function MaterialOrdersPage() {
           </SheetHeader>
 
           {/* POS UI */}
-          <div className="min-h-screen bg-[#F5F4F0] dark:bg-[#111110] font-mono">
+          <div className="h-full bg-[#F5F4F0] dark:bg-[#111110] font-mono">
             {/* Top header bar */}
             <div className="border-b-2 border-black dark:border-zinc-700 bg-black text-white px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-4">

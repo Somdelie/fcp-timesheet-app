@@ -341,7 +341,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-2">
           <Loader className="w-8 h-8 animate-spin text-muted-foreground" />
           <p className="text-muted-foreground">Loading dashboard...</p>
@@ -357,8 +357,8 @@ export default function HomePage() {
 
   if (role === "SUPERVISOR") {
     return (
-      <div className="flex flex-col min-h-screen bg-muted/30">
-        <div className="flex-1 p-6 space-y-6">
+      <div className="flex flex-col h-full bg-muted/30">
+        <div className="flex-1 p-6 space-y-6 overflow-auto">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
@@ -624,8 +624,8 @@ export default function HomePage() {
 
   if (role === "FOREMAN") {
     return (
-      <div className="flex flex-col min-h-screen bg-muted/30">
-        <div className="flex-1 p-6 space-y-6">
+      <div className="flex flex-col h-full bg-muted/30">
+        <div className="flex-1 p-6 space-y-6 overflow-auto">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
@@ -679,8 +679,8 @@ export default function HomePage() {
 
   // Default: ADMIN dashboard with full system overview
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="flex-1 space-y-2">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 space-y-2 overflow-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

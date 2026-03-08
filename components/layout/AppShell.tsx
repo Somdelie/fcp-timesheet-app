@@ -35,7 +35,7 @@ export function AppShell({ children, role, userName }: AppShellProps) {
   return (
     <BreadcrumbProvider>
       <UserRoleProvider role={role}>
-        <div className="flex h-screen bg-background text-foreground">
+        <div className="flex h-full bg-background text-foreground">
           <Sidebar isOpen={isSidebarOpen} role={role} userName={userName} />
           <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
             <Navbar

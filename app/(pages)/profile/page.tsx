@@ -22,7 +22,7 @@ export default async function ProfilePage(props) {
   }
 
   return (
-    <main className="min-h-screen dark:bg-card rounded px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-200 bg-card/60 backdrop-blur">
+    <main className="dark:bg-card rounded px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-200 bg-card/60 backdrop-blur">
       <div className="mx-auto max-w-3xl">
         {/* Header with decorative element */}
         <div className="mb-12">

@@ -48,7 +48,7 @@ export default async function SiteManagePage({
 
   if (!site) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100/50 dark:from-slate-950 dark:to-slate-900/50 flex items-center justify-center px-4">
+      <div className="bg-linear-to-br from-slate-50 to-slate-100/50 dark:from-slate-950 dark:to-slate-900/50 flex items-center justify-center px-4">
         <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm p-8 text-center max-w-md">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             Site Not Found
@@ -99,7 +99,7 @@ export default async function SiteManagePage({
     typeof site.latitude === "number" && typeof site.longitude === "number";
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="mx-auto w-full max-w-7xl py-3">
         {/* Header Navigation */}
         <div className="mb-2">
