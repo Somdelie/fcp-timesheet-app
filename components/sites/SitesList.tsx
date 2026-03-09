@@ -167,86 +167,114 @@ export default function SitesList({ initialSites }: SitesListProps) {
     <div className="">
       {/* Header */}
 
-      {/* Controls */}
-      <div className="mb-2 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm p-3 shadow-sm transition-all hover:shadow-md dark:border-zinc-700/50 dark:bg-card/40">
-        <div className="flex flex-col gap-4 sm:flex-row items-end sm:justify-between">
-          <div className="flex-3">
-            <label
-              htmlFor="search"
-              className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2"
-            >
-              Search Sites Manage and organize all your work sites in one place.
-              Use the search to quickly find sites by name, code, or location.
-            </label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
-                <Input
-                  id="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by name, code, location..."
-                  className="h-10 pl-9 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
-                />
-              </div>
-              <Button
-                variant="outline"
-                className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
-                onClick={handleDownloadPdf}
-                disabled={pdfGenerating || filtered.length === 0}
-                title={
-                  selectedSites.length > 0
-                    ? `Download ${selectedSites.length} selected`
-                    : "Download all"
-                }
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
-                onClick={() => {
-                  const exportSites = getSitesForExport();
-                  if (exportSites.length === 0) {
-                    toast.error("No sites to print");
-                    return;
-                  }
-                  printSites(exportSites);
-                }}
-                disabled={filtered.length === 0}
-                title={
-                  selectedSites.length > 0
-                    ? `Print ${selectedSites.length} selected`
-                    : "Print all"
-                }
-              >
-                <Printer className="h-4 w-4" />
-              </Button>
-            </div>
-            {/* <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                {filtered.length} site{filtered.length === 1 ? "" : "s"} found
-              </p> */}
+      <div className="mb-2 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm px-3 py-2 shadow-sm transition-all hover:shadow-md dark:border-zinc-700/50 dark:bg-card/40">
+        <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative w-48">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+            <Input
+              id="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search..."
+              className="h-8 pl-8 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
+            />
           </div>
 
-          <div className="flex flex-1 gap-2">
+          {/* Divider */}
+          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+          {/* From */}
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-8 w-34 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+            />
+          </div>
+
+          <span className="text-xs text-zinc-400">→</span>
+
+          {/* To */}
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-8 w-34 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+          />
+
+          <Button
+            size="sm"
+            onClick={handleApplyDateRange}
+            disabled={dateLoading || (!dateFrom && !dateTo)}
+            className="h-8 px-3 text-sm"
+          >
+            {dateLoading ? "Loading..." : "Apply"}
+          </Button>
+
+          {dateFilteredSites !== null && (
             <Button
-              variant={show === "active" ? "default" : "outline"}
-              className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
-              onClick={() => updateUrl({ show: "active" })}
+              size="sm"
+              variant="outline"
+              onClick={handleClearDateRange}
+              className="h-8 px-3 text-sm dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white"
             >
-              Active
+              Clear
+            </Button>
+          )}
+
+          {/* Divider */}
+          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+
+          {/* Actions */}
+          <div className="flex items-center gap-1.5 ml-auto">
+            {selectedSites.length > 0 && (
+              <span className="text-xs font-medium text-primary mr-1">
+                {selectedSites.length} site
+                {selectedSites.length === 1 ? "" : "s"} selected
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+              onClick={handleDownloadPdf}
+              disabled={pdfGenerating || filtered.length === 0}
+              title={
+                selectedSites.length > 0
+                  ? `Download ${selectedSites.length} selected`
+                  : "Download all"
+              }
+            >
+              <Download className="h-3.5 w-3.5" />
             </Button>
             <Button
-              variant={show === "all" ? "default" : "outline"}
-              className="h-10 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
-              onClick={() => updateUrl({ show: "all" })}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+              onClick={() => {
+                const exportSites = getSitesForExport();
+                if (exportSites.length === 0) {
+                  toast.error("No sites to print");
+                  return;
+                }
+                printSites(exportSites);
+              }}
+              disabled={filtered.length === 0}
+              title={
+                selectedSites.length > 0
+                  ? `Print ${selectedSites.length} selected`
+                  : "Print all"
+              }
             >
-              All
+              <Printer className="h-3.5 w-3.5" />
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2" size="lg">
-                  <Plus className="h-4 w-4" />
+                <Button size="sm" className="h-8 gap-1.5 px-3">
+                  <Plus className="h-3.5 w-3.5" />
                   New Site
                 </Button>
               </DialogTrigger>
@@ -266,60 +294,6 @@ export default function SitesList({ initialSites }: SitesListProps) {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
-      </div>
-
-      {/* Date Range Filter */}
-      <div className="mb-2 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm p-3 shadow-sm dark:border-zinc-700/50 dark:bg-card/40">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-              <CalendarDays className="inline h-3.5 w-3.5 mr-1" />
-              From
-            </label>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="h-9 w-40 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-              <CalendarDays className="inline h-3.5 w-3.5 mr-1" />
-              To
-            </label>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="h-9 w-40 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
-            />
-          </div>
-          <Button
-            size="sm"
-            onClick={handleApplyDateRange}
-            disabled={dateLoading || (!dateFrom && !dateTo)}
-            className="h-9"
-          >
-            {dateLoading ? "Loading..." : "Apply"}
-          </Button>
-          {dateFilteredSites !== null && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleClearDateRange}
-              className="h-9"
-            >
-              Clear
-            </Button>
-          )}
-          {selectedSites.length > 0 && (
-            <span className="text-xs font-medium text-primary ml-auto">
-              {selectedSites.length} site{selectedSites.length === 1 ? "" : "s"}{" "}
-              selected
-            </span>
-          )}
         </div>
       </div>
 

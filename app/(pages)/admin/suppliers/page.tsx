@@ -209,7 +209,7 @@ export default function SuppliersPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded border">
         <Table>
           <TableHeader>
             <TableRow>

@@ -435,72 +435,70 @@ export default function ProcurementProductsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Procurement Materials</h1>
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-50 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or SKU..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Select
+            value={filterCategory}
+            onValueChange={(v) => setFilterCategory(v === "ALL" ? "" : v)}
+          >
+            <SelectTrigger className="w-45">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All categories</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filterSupplier}
+            onValueChange={(v) => setFilterSupplier(v === "ALL" ? "" : v)}
+          >
+            <SelectTrigger className="w-45">
+              <SelectValue placeholder="All suppliers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All suppliers</SelectItem>
+              {suppliers.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowInactive(!showInactive)}
+          >
+            {showInactive ? "Hide Inactive" : "Show Inactive"}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={load}>
+            <RotateCw className="h-4 w-4" />
+          </Button>
+        </div>
         <Button onClick={openCreate} size="sm">
           <Plus className="mr-1 h-4 w-4" /> Add Product
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-50 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or SKU..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <Select
-          value={filterCategory}
-          onValueChange={(v) => setFilterCategory(v === "ALL" ? "" : v)}
-        >
-          <SelectTrigger className="w-45">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All categories</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={filterSupplier}
-          onValueChange={(v) => setFilterSupplier(v === "ALL" ? "" : v)}
-        >
-          <SelectTrigger className="w-45">
-            <SelectValue placeholder="All suppliers" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All suppliers</SelectItem>
-            {suppliers.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowInactive(!showInactive)}
-        >
-          {showInactive ? "Hide Inactive" : "Show Inactive"}
-        </Button>
-        <Button variant="ghost" size="icon" onClick={load}>
-          <RotateCw className="h-4 w-4" />
         </Button>
       </div>
 

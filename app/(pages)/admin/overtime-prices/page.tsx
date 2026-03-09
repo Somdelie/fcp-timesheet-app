@@ -188,7 +188,7 @@ export default function OvertimePricesPage() {
       </div>
 
       {/* Create form */}
-      <div className="border rounded-lg bg-card p-4">
+      <div className="border rounded bg-card p-4">
         <h3 className="text-sm font-semibold mb-3">Add New Price</h3>
         <div className="flex items-end gap-3 flex-wrap">
           <div className="flex-1 min-w-45">

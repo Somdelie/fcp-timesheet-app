@@ -282,6 +282,10 @@ export default function SiteMaterialOrdersPanel({
   );
   const [tab, setTab] = useState<"orders" | "summary">("summary");
 
+  // Date range filter
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   useEffect(() => {
     async function loadLookups() {
       try {
@@ -347,21 +351,29 @@ export default function SiteMaterialOrdersPanel({
     loadLookups();
   }, []);
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/app/admin/sites/${siteId}/product-orders`, {
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to load");
-      setOrders(json.data);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  }, [siteId]);
+  const loadOrders = useCallback(
+    async (from?: string, to?: string) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+        const qs = params.toString();
+        const res = await fetch(
+          `/api/app/admin/sites/${siteId}/product-orders${qs ? `?${qs}` : ""}`,
+          { credentials: "include" },
+        );
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? "Failed to load");
+        setOrders(json.data);
+      } catch (e: any) {
+        toast.error(e?.message || "Failed to load orders");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [siteId],
+  );
 
   useEffect(() => {
     loadOrders();
@@ -587,18 +599,46 @@ export default function SiteMaterialOrdersPanel({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-8 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-900 dark:text-white"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-8 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-900 dark:text-white"
+            />
             <button
-              onClick={loadOrders}
+              onClick={() =>
+                loadOrders(dateFrom || undefined, dateTo || undefined)
+              }
+              disabled={loading}
+              className="h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-[13px] font-medium transition-colors shadow-sm disabled:opacity-50"
+            >
+              {loading ? "..." : "Filter"}
+            </button>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => {
+                  setDateFrom("");
+                  setDateTo("");
+                  loadOrders();
+                }}
+                className="h-8 px-3 rounded border border-slate-200 dark:border-slate-700 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              onClick={() =>
+                loadOrders(dateFrom || undefined, dateTo || undefined)
+              }
               className="h-8 w-8 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <RotateCw className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={openPos}
-              className="h-8 flex items-center gap-1.5 px-3.5 rounded bg-primary hover:bg-primary/90 text-white text-[13px] font-medium transition-colors shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Order
             </button>
           </div>
         </div>
@@ -692,7 +732,7 @@ export default function SiteMaterialOrdersPanel({
                           )}
                         </td>
                         <td className="text-center px-3 py-3">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-[12px] font-semibold">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-[12px] font-semibold">
                             {a.totalQuantity}
                             {a.uom && (
                               <span className="font-normal opacity-70">
@@ -786,7 +826,7 @@ export default function SiteMaterialOrdersPanel({
                               {order.reference ?? "Unnamed Order"}
                             </span>
                             {order.supplier && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300">
                                 {order.supplier.name}
                               </span>
                             )}
@@ -826,7 +866,7 @@ export default function SiteMaterialOrdersPanel({
                           )}
                           <div className="flex items-center gap-0.5">
                             <button
-                              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                              className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setAddItemOrderId(order.id);
@@ -843,7 +883,7 @@ export default function SiteMaterialOrdersPanel({
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              className="h-7 w-7 flex items-center justify-center rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                              className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setDeleteOrderTarget(order);

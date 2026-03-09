@@ -381,7 +381,7 @@ export default function SupplierPricesPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded border">
         <Table className="[&_th]:border-x [&_td]:border-x">
           <TableHeader>
             <TableRow>
@@ -461,76 +461,112 @@ export default function SupplierPricesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Price" : "Add Price"}</DialogTitle>
+            <DialogTitle>
+              {editing ? "Edit Supplier Price" : "Add Supplier Price"}
+            </DialogTitle>
             <DialogDescription>
               {editing
-                ? "Update the supplier price."
-                : "Set a price for a product from a specific supplier."}
+                ? "Update the price this supplier charges for the selected product."
+                : "Set the price a supplier charges for a specific product."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Supplier *</label>
-              <Select
-                value={form.supplierId || "NONE"}
-                onValueChange={(v) =>
-                  setForm({ ...form, supplierId: v === "NONE" ? "" : v })
-                }
-                disabled={!!editing}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">Select supplier...</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Product *</label>
-              <Select
-                value={form.productId || "NONE"}
-                onValueChange={(v) =>
-                  setForm({ ...form, productId: v === "NONE" ? "" : v })
-                }
-                disabled={!!editing}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <div className="px-2 py-1.5">
-                    <Input
-                      placeholder="Search products..."
-                      value={dialogProductSearch}
-                      onChange={(e) => setDialogProductSearch(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      className="h-8 text-xs"
-                    />
+            {editing ? (
+              <div className="rounded border bg-muted/40 px-3 py-2 text-sm space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Supplier
+                  </span>
+                  <span className="font-medium">{editing.supplier.name}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Product
+                  </span>
+                  <div className="text-right">
+                    <div className="font-medium leading-tight">
+                      {editing.product.name}
+                    </div>
+                    {editing.product.sku && (
+                      <div className="text-[11px] text-muted-foreground">
+                        SKU: {editing.product.sku}
+                      </div>
+                    )}
                   </div>
-                  <SelectItem value="NONE">Select product...</SelectItem>
-                  {products
-                    .filter((p) => {
-                      const term = dialogProductSearch.trim().toLowerCase();
-                      if (!term) return true;
-                      return (
-                        p.name.toLowerCase().includes(term) ||
-                        (p.sku?.toLowerCase().includes(term) ?? false)
-                      );
-                    })
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.sku ? `${p.name} (${p.sku})` : p.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Supplier *</label>
+                  <Select
+                    value={form.supplierId || "NONE"}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        supplierId: v === "NONE" ? "" : v,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">Select supplier...</SelectItem>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Product *</label>
+                  <Select
+                    value={form.productId || "NONE"}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        productId: v === "NONE" ? "" : v,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="px-2 py-1.5">
+                        <Input
+                          placeholder="Search products..."
+                          value={dialogProductSearch}
+                          onChange={(e) =>
+                            setDialogProductSearch(e.target.value)
+                          }
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <SelectItem value="NONE">Select product...</SelectItem>
+                      {products
+                        .filter((p) => {
+                          const term = dialogProductSearch.trim().toLowerCase();
+                          if (!term) return true;
+                          return (
+                            p.name.toLowerCase().includes(term) ||
+                            (p.sku?.toLowerCase().includes(term) ?? false)
+                          );
+                        })
+                        .map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.sku ? `${p.name} (${p.sku})` : p.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Unit of Measure</label>

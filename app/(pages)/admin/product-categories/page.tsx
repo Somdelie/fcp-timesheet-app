@@ -147,7 +147,7 @@ export default function ProductCategoriesPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded border">
         <Table>
           <TableHeader>
             <TableRow>

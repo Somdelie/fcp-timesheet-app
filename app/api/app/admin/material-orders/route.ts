@@ -147,6 +147,16 @@ export async function POST(req: Request) {
         { status: 401, headers: CORS },
       );
 
+    const user = await prisma.user.findUnique({
+      where: { id: auth.id },
+      select: { id: true },
+    });
+    if (!user)
+      return NextResponse.json(
+        { error: "User not found for current auth" },
+        { status: 401, headers: CORS },
+      );
+
     const body = await req.json();
     const { siteId, supplierId, reference, note, items } = body as {
       siteId: string;
@@ -192,7 +202,7 @@ export async function POST(req: Request) {
       data: {
         site: { connect: { id: siteId } },
         supplier: supplierId ? { connect: { id: supplierId } } : undefined,
-        createdByUser: { connect: { id: auth.id } },
+        createdByUser: { connect: { id: user.id } },
         reference: reference || null,
         note: note || null,
       },

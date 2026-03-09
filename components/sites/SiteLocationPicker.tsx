@@ -131,7 +131,7 @@ export default function SiteLocationPicker(props: {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   if (!token) {
     return (
-      <div className="rounded-md border border-zinc-200/50 bg-zinc-50 p-3 text-sm text-zinc-600 dark:border-zinc-700/50 dark:bg-zinc-900/30 dark:text-zinc-300">
+      <div className="rounded border border-zinc-200/50 bg-zinc-50 p-3 text-sm text-zinc-600 dark:border-zinc-700/50 dark:bg-zinc-900/30 dark:text-zinc-300">
         Map picker unavailable: missing `NEXT_PUBLIC_MAPBOX_TOKEN`.
       </div>
     );
@@ -140,7 +140,7 @@ export default function SiteLocationPicker(props: {
   return (
     <div
       ref={containerRef}
-      className="w-full overflow-hidden rounded-md border border-zinc-200/50 dark:border-zinc-700/50"
+      className="w-full overflow-hidden rounded border border-zinc-200/50 dark:border-zinc-700/50"
       style={{ height }}
     />
   );

@@ -8,6 +8,7 @@ import SiteAssignmentsPanel from "@/components/sites/SiteAssignmentsPanel";
 import SiteBookingPanel from "@/components/sites/SiteBookingPanel";
 import SiteTotalsPanel from "@/components/sites/SiteTotalsPanel";
 import SiteMaterialOrdersPanel from "@/components/sites/SiteMaterialOrdersPanel";
+import SiteMaterialsPanel from "@/components/sites/SiteMaterialsPanel";
 import EditSiteLocationDialog from "@/components/sites/EditSiteLocationDialog";
 import SiteForemanRatesPanel from "@/components/sites/SiteForemanRatesPanel";
 import { ArrowLeft, CheckCircle, MapPin, Hash, User } from "lucide-react";
@@ -230,6 +231,8 @@ export default async function SiteManagePage({
           )}
 
           {/* <SiteBookingPanel siteId={site.id} /> */}
+
+          <SiteMaterialsPanel siteId={site.id} />
 
           <SiteMaterialOrdersPanel siteId={site.id} />
 

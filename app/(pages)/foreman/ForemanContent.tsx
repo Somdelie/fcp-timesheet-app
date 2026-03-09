@@ -409,7 +409,7 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
                     </p>
                     <div className="mt-1.5 flex items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${TEAM_COLORS[selectedForeman.foreman.defaultTeam] ?? ""}`}
+                        className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${TEAM_COLORS[selectedForeman.foreman.defaultTeam] ?? ""}`}
                       >
                         {TEAM_LABELS[selectedForeman.foreman.defaultTeam] ??
                           selectedForeman.foreman.defaultTeam}

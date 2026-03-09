@@ -36,6 +36,7 @@ import {
   Briefcase,
   Hammer,
   Calculator,
+  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,11 @@ import {
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { markSiteFinished, deleteSite } from "@/actions/sites";
+import {
+  listSiteMaterials,
+  type SiteMaterialRow,
+} from "@/actions/site-materials";
+import { Badge } from "@/components/ui/badge";
 
 export type SiteRow = {
   id: string;
@@ -141,60 +147,19 @@ function SiteRowActions({
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
-  // New Material Order state
-  const [showOrderDialog, setShowOrderDialog] = React.useState(false);
-  const [creatingOrder, setCreatingOrder] = React.useState(false);
-  const [suppliers, setSuppliers] = React.useState<
-    { id: string; name: string }[]
-  >([]);
-  const [orderForm, setOrderForm] = React.useState({
-    supplierId: "",
-    reference: "",
-    note: "",
-  });
+  // Site Products dialog state
+  const [showProductsDialog, setShowProductsDialog] = React.useState(false);
+  const [siteProducts, setSiteProducts] = React.useState<SiteMaterialRow[]>([]);
+  const [loadingProducts, setLoadingProducts] = React.useState(false);
 
-  // Fetch suppliers when order dialog opens
   React.useEffect(() => {
-    if (!showOrderDialog) return;
-    fetch("/api/app/admin/suppliers?includeInactive=false", {
-      credentials: "include",
-    })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.data)
-          setSuppliers(json.data.map((s: any) => ({ id: s.id, name: s.name })));
-      })
-      .catch(() => {});
-  }, [showOrderDialog]);
-
-  const handleCreateOrder = async () => {
-    setCreatingOrder(true);
-    try {
-      const res = await fetch(
-        `/api/app/admin/sites/${site.id}/product-orders`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            supplierId: orderForm.supplierId || null,
-            reference: orderForm.reference.trim() || null,
-            note: orderForm.note.trim() || null,
-          }),
-        },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to create order");
-      toast.success("Order created — go to site to add items");
-      setShowOrderDialog(false);
-      setOrderForm({ supplierId: "", reference: "", note: "" });
-      router.push(`/sites/${site.id}`);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to create order");
-    } finally {
-      setCreatingOrder(false);
-    }
-  };
+    if (!showProductsDialog) return;
+    setLoadingProducts(true);
+    listSiteMaterials(site.id).then((res) => {
+      if (res.ok) setSiteProducts(res.materials);
+      setLoadingProducts(false);
+    });
+  }, [showProductsDialog, site.id]);
 
   const handleMarkFinished = async () => {
     setIsFinishing(true);
@@ -251,19 +216,16 @@ function SiteRowActions({
             <ArrowRight className="h-4 w-4" />
             Manage
           </DropdownMenuItem>
-          {(role === "ADMIN" || role === "OFFICE") && (
-            <DropdownMenuItem
-              className="flex items-center gap-2"
-              onSelect={(e) => {
-                e.preventDefault();
-                setOrderForm({ supplierId: "", reference: "", note: "" });
-                setShowOrderDialog(true);
-              }}
-            >
-              <Package className="h-4 w-4" />
-              New Material Order
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            className="flex items-center gap-2"
+            onSelect={(e) => {
+              e.preventDefault();
+              setShowProductsDialog(true);
+            }}
+          >
+            <Package className="h-4 w-4" />
+            Site Products
+          </DropdownMenuItem>
           {role === "ADMIN" && (
             <>
               <DropdownMenuItem
@@ -326,68 +288,69 @@ function SiteRowActions({
         variant="destructive"
       />
 
-      {/* New Material Order Dialog */}
-      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
-        <DialogContent>
+      {/* Site Products Dialog */}
+      <Dialog open={showProductsDialog} onOpenChange={setShowProductsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>New Material Order</DialogTitle>
+            <DialogTitle>Site Products — {site.name}</DialogTitle>
             <DialogDescription>
-              Create a new material order for <strong>{site.name}</strong>. You
-              can add items after on the site page.
+              Materials expected to be used on this job site.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Supplier</label>
-              <Select
-                value={orderForm.supplierId || "NONE"}
-                onValueChange={(v) =>
-                  setOrderForm({
-                    ...orderForm,
-                    supplierId: v === "NONE" ? "" : v,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NONE">No specific supplier</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {loadingProducts ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+              </div>
+            ) : siteProducts.length === 0 ? (
+              <p className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+                No materials assigned to this site yet.
+              </p>
+            ) : (
+              <Table className="border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Qty</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {siteProducts.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-slate-400" />
+                          {m.product.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {m.product.category ? (
+                          <Badge variant="secondary">
+                            {m.product.category.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-400">{"\u2014"}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {m.product.sku || "\u2014"}
+                      </TableCell>
+                      <TableCell>{m.quantity ?? "\u2014"}</TableCell>
+                    </TableRow>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Reference / PO #</label>
-              <Input
-                value={orderForm.reference}
-                onChange={(e) =>
-                  setOrderForm({ ...orderForm, reference: e.target.value })
-                }
-                placeholder="e.g. PO-2026-001"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Note</label>
-              <Input
-                value={orderForm.note}
-                onChange={(e) =>
-                  setOrderForm({ ...orderForm, note: e.target.value })
-                }
-                placeholder="Optional note"
-              />
-            </div>
+                </TableBody>
+              </Table>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOrderDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateOrder} disabled={creatingOrder}>
-              {creatingOrder ? "Creating..." : "Create Order"}
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/sites/${site.id}`)}
+            >
+              <ArrowRight className="mr-1 h-4 w-4" />
+              Manage Site
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -409,7 +372,9 @@ export default function SitesTable({
   onRequestPhoto,
   onSelectionChange,
 }: SitesTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "code", desc: true },
+  ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
@@ -430,7 +395,7 @@ export default function SitesTable({
     () => [
       {
         id: "select",
-        size: 40,
+        size: 48,
         header: ({ table }) => (
           <div className="flex items-center justify-center">
             <Checkbox
@@ -562,7 +527,7 @@ export default function SitesTable({
           </div>
         ),
         cell: ({ row }) => (
-          <span className="text-sm font-medium">
+          <span className="block text-right text-sm font-medium">
             {formatCurrency(row.original.totalWages ?? 0)}
           </span>
         ),
@@ -578,7 +543,7 @@ export default function SitesTable({
           </div>
         ),
         cell: ({ row }) => (
-          <span className="text-sm font-medium">
+          <span className="block text-right text-sm font-medium">
             {formatCurrency(row.original.totalMaterialCost ?? 0)}
           </span>
         ),
@@ -593,7 +558,7 @@ export default function SitesTable({
           </div>
         ),
         cell: ({ row }) => (
-          <span className="text-sm font-semibold">
+          <span className="block text-right text-sm font-semibold">
             {formatCurrency(
               (row.original.totalWages ?? 0) +
                 (row.original.totalMaterialCost ?? 0),
@@ -674,12 +639,16 @@ export default function SitesTable({
                   <TableHead
                     key={header.id}
                     style={{
-                      width:
-                        header.column.getSize() !== 150
-                          ? header.column.getSize()
-                          : undefined,
+                      width: header.column.getSize(),
+                      minWidth: header.column.id === "select" ? 48 : undefined,
+                      maxWidth: header.column.id === "select" ? 48 : undefined,
                     }}
-                    className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700"
+                    className={classNames(
+                      "border border-zinc-200 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700",
+                      header.column.id === "select"
+                        ? "px-3 py-2 text-center"
+                        : "px-3 py-1",
+                    )}
                   >
                     {header.isPlaceholder
                       ? null
@@ -704,12 +673,16 @@ export default function SitesTable({
                     <TableCell
                       key={cell.id}
                       style={{
-                        width:
-                          cell.column.getSize() !== 150
-                            ? cell.column.getSize()
-                            : undefined,
+                        width: cell.column.getSize(),
+                        minWidth: cell.column.id === "select" ? 48 : undefined,
+                        maxWidth: cell.column.id === "select" ? 48 : undefined,
                       }}
-                      className="border border-zinc-200 px-3 py-1 dark:border-zinc-700"
+                      className={classNames(
+                        "border border-zinc-200 dark:border-zinc-700",
+                        cell.column.id === "select"
+                          ? "px-3 py-2 text-center"
+                          : "px-3 py-1",
+                      )}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

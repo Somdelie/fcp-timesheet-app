@@ -455,7 +455,7 @@ export default function AdminAttendanceScansPage() {
                     <h2 className="mb-3 text-lg font-semibold">
                       {group.label}
                     </h2>
-                    <div className="rounded-md border">
+                    <div className="rounded border">
                       <Table>
                         <TableHeader>
                           <TableRow>

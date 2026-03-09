@@ -276,8 +276,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
 
         .sidebar-role-badge {
           margin: 12px 12px 4px;
-          border-radius: 8px;
-          padding: 10px 12px;
+          border-radius: 3px;
+          padding: 5px 12px;
           background: color-mix(in oklab, var(--muted) 50%, transparent);
           border: 1px solid var(--border);
           display: flex;
@@ -374,7 +374,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           gap: 10px;
           margin: 1px 8px;
           padding: 9px 10px;
-          border-radius: 8px;
+          border-radius: 2px;
           text-decoration: none;
           color: var(--muted-foreground);
           font-size: 13.5px;

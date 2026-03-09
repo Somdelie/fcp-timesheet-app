@@ -833,7 +833,7 @@ export default function OvertimeEntriesPage() {
           {/* Header */}
           <div className="px-6 pt-6 pb-5 border-b border-border">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center">
+              <div className="h-8 w-8 rounded bg-foreground flex items-center justify-center">
                 <Clock className="h-4 w-4 text-background" />
               </div>
               <SheetTitle className="text-base font-semibold text-foreground tracking-tight">
@@ -1140,7 +1140,7 @@ export default function OvertimeEntriesPage() {
 
             {/* Cost Preview */}
             {formPreviewTotal > 0 && (
-              <div className="rounded-xl border border-border bg-muted/50 p-4">
+              <div className="rounded border border-border bg-muted/50 p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -1162,7 +1162,7 @@ export default function OvertimeEntriesPage() {
 
             {/* Submit */}
             <Button
-              className="w-full h-11 bg-foreground hover:bg-foreground/80 text-background text-sm font-semibold tracking-wide rounded-lg transition-colors mt-2"
+              className="w-full h-11 bg-foreground hover:bg-foreground/80 text-background text-sm font-semibold tracking-wide rounded transition-colors mt-2"
               onClick={handleSubmit}
               disabled={submitting}
             >

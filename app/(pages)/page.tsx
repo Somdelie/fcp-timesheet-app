@@ -148,9 +148,9 @@ function TopSiteWagesChart({
               </span>
             </div>
             {/* Bar */}
-            <div className="flex-1 h-6 rounded-md bg-muted/40 overflow-hidden">
+            <div className="flex-1 h-6 rounded bg-muted/40 overflow-hidden">
               <div
-                className="h-full rounded-md transition-all duration-500"
+                className="h-full rounded transition-all duration-500"
                 style={{
                   width: `${Math.max(pct, 4)}%`,
                   backgroundColor: color,
@@ -680,7 +680,7 @@ export default function HomePage() {
   // Default: ADMIN dashboard with full system overview
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 space-y-2 overflow-auto">
+      <div className="flex-1 space-y-2 overflow-auto pr-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

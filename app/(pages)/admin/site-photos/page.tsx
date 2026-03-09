@@ -746,7 +746,7 @@ export default function AdminSitePhotosPage() {
                   {selectedPhoto.verificationStatus}
                 </Badge>
 
-                <div className="flex gap-1 rounded-md bg-black/60 p-1">
+                <div className="flex gap-1 rounded bg-black/60 p-1">
                   <Button
                     type="button"
                     variant="outline"

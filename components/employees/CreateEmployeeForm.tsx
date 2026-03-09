@@ -194,7 +194,7 @@ export default function CreateEmployeeForm() {
 
         {/* If you want the QR visible while dialog is open, keep lastQr and set it on success */}
         {lastQr && (
-          <div className="rounded-md border p-3 text-sm">
+          <div className="rounded border p-3 text-sm">
             <div className="font-medium">Generated QR value</div>
             <div className="mt-1 font-mono">{lastQr}</div>
           </div>

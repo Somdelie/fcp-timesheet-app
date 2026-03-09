@@ -286,6 +286,9 @@ model Site {
   // Overtime entries linked to this site
   overtimeEntries OvertimeEntry[]
 
+  // Materials expected to be used on this site
+  siteMaterials SiteMaterial[]
+
   @@index([isActive])
   @@index([name])
 }
@@ -1041,6 +1044,9 @@ model ProcurementProduct {
   // order items using this product
   orderItems SiteProductOrderItem[]
 
+  // Sites where this product is expected to be used
+  siteMaterials SiteMaterial[]
+
   @@unique([sku])
   @@index([isActive])
   @@index([categoryId])
@@ -1281,4 +1287,32 @@ model FortnightMeetingTotals {
   totalProfitOrLoss Decimal @default(0) @db.Decimal(14, 2)
 
   meeting FortnightMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+// ============================
+// SITE MATERIALS (Bill of Materials)
+// ============================
+// Products expected to be used on a site (not actual orders)
+
+model SiteMaterial {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Optional estimated quantity
+  quantity Int?
+
+  // Optional note (e.g. "for main entrance walls")
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteId, productId])
+  @@index([siteId])
+  @@index([productId])
 }
