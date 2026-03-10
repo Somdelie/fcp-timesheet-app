@@ -823,7 +823,9 @@ export default function SiteMaterialOrdersPanel({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[13px] font-semibold text-slate-900 dark:text-white">
-                              {order.reference ?? "Unnamed Order"}
+                              {order.reference
+                                ? `#${order.reference}`
+                                : "Unnamed Order"}
                             </span>
                             {order.supplier && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300">
