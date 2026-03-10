@@ -93,6 +93,60 @@ export async function POST(req: NextRequest) {
     if (p.sku) skuLookup.set(p.sku, p);
   }
 
+  // ── Name-based fallback matching ──
+  type Product = (typeof allProducts)[number];
+
+  function tokenize(text: string): Set<string> {
+    return new Set(
+      text
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length > 0),
+    );
+  }
+
+  function findProductByName(
+    rawDesc: string,
+    unit: string,
+  ): Product | undefined {
+    // Strip product code prefix (e.g. "PP 00070020L", "5147607", "TLS001000")
+    const descOnly = rawDesc
+      .replace(/^[A-Z]{2,4}\s*[\d\s]+(?:[A-Z]{1,3})?\s*/i, "")
+      .trim();
+
+    if (!descOnly) return undefined;
+
+    // Build search tokens from description + unit
+    const searchText = unit ? `${descOnly} ${unit}` : descOnly;
+    const searchTokens = tokenize(searchText);
+
+    if (searchTokens.size < 2) return undefined;
+
+    let bestProduct: Product | undefined;
+    let bestScore = 0;
+
+    for (const p of allProducts) {
+      const nameTokens = tokenize(p.name);
+
+      let matchCount = 0;
+      for (const t of searchTokens) {
+        if (nameTokens.has(t)) matchCount++;
+      }
+
+      // Score: proportion of search tokens found in product name
+      const score = matchCount / searchTokens.size;
+
+      // Require at least 60% overlap and min 2 matching tokens
+      if (score > bestScore && score >= 0.6 && matchCount >= 2) {
+        bestScore = score;
+        bestProduct = p;
+      }
+    }
+
+    return bestProduct;
+  }
+
   // ── Match parsed items to DB products and build seed orders ──
   const siteProductOrders: SeedOrder[] = [];
   const skippedOrderNumbers: string[] = [];
@@ -105,9 +159,15 @@ export async function POST(req: NextRequest) {
     let resolvedSupplierId: string | null = null;
 
     for (const item of order.items) {
-      const product = item.candidateSku
+      // 1) Try exact SKU match (Plascon-style codes)
+      let product = item.candidateSku
         ? skuLookup.get(item.candidateSku)
         : undefined;
+
+      // 2) Fallback: name-based fuzzy match (Dulux & others)
+      if (!product) {
+        product = findProductByName(item.rawDescription, item.unit);
+      }
 
       if (product) {
         if (!resolvedSupplierId && product.supplierId) {
@@ -196,6 +256,12 @@ export async function POST(req: NextRequest) {
         unit: i.unit,
         quantity: i.quantity,
         candidateSku: i.candidateSku,
+        matchedProduct: (() => {
+          const p =
+            (i.candidateSku ? skuLookup.get(i.candidateSku) : undefined) ??
+            findProductByName(i.rawDescription, i.unit);
+          return p ? { name: p.name, sku: p.sku } : null;
+        })(),
       })),
     })),
     prismaSeedCode,
