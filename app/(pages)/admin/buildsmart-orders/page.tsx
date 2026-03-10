@@ -53,9 +53,13 @@ type SeedResponse = {
     totalFiles: number;
     queuedOrders: number;
     seededOrders: number;
+    savedToDb: number;
+    duplicates: number;
     skippedOrders: number;
   };
   orders: SeedOrder[];
+  savedOrderIds?: string[];
+  duplicateRefs?: string[];
   skippedOrderNumbers: string[];
   skipReasons?: Record<string, string[]>;
   prismaSeedCode?: string;
@@ -467,18 +471,22 @@ export default function BuildsmartPdfSeedPage() {
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <MetricCard
                       label="Files"
                       value={result.summary.totalFiles}
                     />
                     <MetricCard
-                      label="Queued"
-                      value={result.summary.queuedOrders}
+                      label="Matched"
+                      value={result.summary.seededOrders}
                     />
                     <MetricCard
-                      label="Seeded"
-                      value={result.summary.seededOrders}
+                      label="Saved to DB"
+                      value={result.summary.savedToDb}
+                    />
+                    <MetricCard
+                      label="Duplicates"
+                      value={result.summary.duplicates}
                     />
                     <MetricCard
                       label="Skipped"

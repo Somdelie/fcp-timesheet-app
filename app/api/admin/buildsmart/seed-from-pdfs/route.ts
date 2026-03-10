@@ -147,14 +147,31 @@ export async function POST(req: NextRequest) {
     return bestProduct;
   }
 
+  // ── Load sites for siteCode → siteId resolution ──
+  const allSites = await prisma.site.findMany({
+    where: { isActive: true },
+    select: { id: true, code: true, name: true },
+  });
+  const siteCodeLookup = new Map<string, string>();
+  for (const s of allSites) {
+    if (s.code) siteCodeLookup.set(s.code, s.id);
+  }
+
   // ── Match parsed items to DB products and build seed orders ──
+  type MatchedItem = SeedOrderItem & { productId: string };
+  type MatchedOrder = SeedOrder & {
+    siteId: string | null;
+    matchedItems: MatchedItem[];
+  };
+
+  const matchedOrders: MatchedOrder[] = [];
   const siteProductOrders: SeedOrder[] = [];
   const skippedOrderNumbers: string[] = [];
   const skipReasons: Record<string, string[]> = {};
 
   for (const order of parsedOrders) {
     const reasons: string[] = [];
-    const matchedItems: SeedOrderItem[] = [];
+    const matchedItems: MatchedItem[] = [];
     const unmatchedDescs: string[] = [];
     let resolvedSupplierId: string | null = null;
 
@@ -175,7 +192,8 @@ export async function POST(req: NextRequest) {
         }
 
         matchedItems.push({
-          sku: product.sku!,
+          productId: product.id,
+          sku: product.sku ?? "",
           quantity: item.quantity,
           unitPriceAtOrder: null,
           uomAtOrder: product.uom ?? "UNIT",
@@ -189,6 +207,17 @@ export async function POST(req: NextRequest) {
             : `"${item.rawDescription}"`,
         );
       }
+    }
+
+    // Resolve siteId from siteCode
+    const siteId = order.siteCode
+      ? (siteCodeLookup.get(order.siteCode) ?? null)
+      : null;
+
+    if (!siteId) {
+      reasons.push(
+        `No matching site for code "${order.siteCode ?? ""}". Available codes: ${[...siteCodeLookup.keys()].join(", ") || "none"}`,
+      );
     }
 
     if (!resolvedSupplierId) {
@@ -205,13 +234,13 @@ export async function POST(req: NextRequest) {
       reasons.push(`Unmatched items: ${unmatchedDescs.join(", ")}`);
     }
 
-    if (!resolvedSupplierId || matchedItems.length === 0) {
+    if (!resolvedSupplierId || matchedItems.length === 0 || !siteId) {
       skippedOrderNumbers.push(order.orderNumber);
       skipReasons[order.orderNumber] = reasons;
       continue;
     }
 
-    siteProductOrders.push({
+    const seedOrder: SeedOrder = {
       reference: order.orderNumber,
       supplierId: resolvedSupplierId,
       siteCode: order.siteCode ?? "",
@@ -220,7 +249,9 @@ export async function POST(req: NextRequest) {
         : new Date().toISOString(),
       note: `Imported from BuildSmart PO ${order.orderNumber}`,
       items: matchedItems,
-    });
+    };
+    siteProductOrders.push(seedOrder);
+    matchedOrders.push({ ...seedOrder, siteId, matchedItems });
 
     // Still report unmatched items as warnings
     if (unmatchedDescs.length > 0) {
@@ -230,6 +261,47 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Persist matched orders to the database ──
+  const savedOrderIds: string[] = [];
+  const duplicateRefs: string[] = [];
+
+  for (const mo of matchedOrders) {
+    // Skip if order with same reference already exists
+    const existing = await prisma.siteProductOrder.findFirst({
+      where: { reference: mo.reference },
+      select: { id: true },
+    });
+
+    if (existing) {
+      duplicateRefs.push(mo.reference);
+      continue;
+    }
+
+    const created = await prisma.siteProductOrder.create({
+      data: {
+        siteId: mo.siteId!,
+        supplierId: mo.supplierId,
+        reference: mo.reference,
+        note: mo.note,
+        createdAt: new Date(mo.createdAt),
+        items: {
+          create: mo.matchedItems.map((mi) => ({
+            productId: mi.productId,
+            quantity: mi.quantity,
+            unitPriceAtOrder: mi.unitPriceAtOrder ?? 0,
+            uomAtOrder: mi.uomAtOrder as any,
+            unitSizeAtOrder: mi.unitSizeAtOrder
+              ? parseFloat(mi.unitSizeAtOrder)
+              : undefined,
+            note: mi.note,
+          })),
+        },
+      },
+    });
+
+    savedOrderIds.push(created.id);
+  }
+
   const prismaSeedCode = generatePrismaSeedCode(siteProductOrders);
 
   return NextResponse.json({
@@ -237,9 +309,13 @@ export async function POST(req: NextRequest) {
       totalFiles: pdfFiles.length,
       queuedOrders: parsedOrders.length,
       seededOrders: siteProductOrders.length,
+      savedToDb: savedOrderIds.length,
+      duplicates: duplicateRefs.length,
       skippedOrders: skippedOrderNumbers.length,
     },
     orders: siteProductOrders,
+    savedOrderIds,
+    duplicateRefs,
     skippedOrderNumbers,
     skipReasons,
     debug: parsedOrders.map((o) => ({
