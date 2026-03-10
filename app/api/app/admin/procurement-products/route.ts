@@ -63,6 +63,21 @@ export async function GET(req: Request) {
     const supplierId = url.searchParams.get("supplierId");
     const includeInactive = url.searchParams.get("includeInactive") === "true";
 
+    const rawLimit = url.searchParams.get("limit");
+    const rawPage = url.searchParams.get("page");
+
+    const MAX_LIMIT = 500;
+    const DEFAULT_LIMIT = 100;
+
+    let limit = Number(rawLimit ?? DEFAULT_LIMIT);
+    if (!Number.isFinite(limit) || limit <= 0) limit = DEFAULT_LIMIT;
+    if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+
+    let page = Number(rawPage ?? 1);
+    if (!Number.isFinite(page) || page < 1) page = 1;
+
+    const skip = (page - 1) * limit;
+
     const where: Record<string, unknown> = {};
     if (!includeInactive) where.isActive = true;
     if (q) {
@@ -74,18 +89,32 @@ export async function GET(req: Request) {
     if (categoryId) where.categoryId = categoryId;
     if (supplierId) where.supplierId = supplierId;
 
-    const products = await prisma.procurementProduct.findMany({
-      where,
-      orderBy: { name: "asc" },
-      include: {
-        category: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } },
-        _count: { select: { orderItems: true, supplierPrices: true } },
-      },
-    });
+    const [total, products] = await Promise.all([
+      prisma.procurementProduct.count({ where }),
+      prisma.procurementProduct.findMany({
+        where,
+        orderBy: { name: "asc" },
+        skip,
+        take: limit,
+        include: {
+          category: { select: { id: true, name: true } },
+          supplier: { select: { id: true, name: true } },
+          _count: { select: { orderItems: true, supplierPrices: true } },
+        },
+      }),
+    ]);
+
+    const hasMore = skip + products.length < total;
 
     return NextResponse.json(
-      { ok: true, data: products.map(serialise) },
+      {
+        ok: true,
+        data: products.map(serialise),
+        page,
+        limit,
+        total,
+        hasMore,
+      },
       { headers: CORS },
     );
   } catch (e: any) {

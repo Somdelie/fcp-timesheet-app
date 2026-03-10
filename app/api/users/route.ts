@@ -38,19 +38,51 @@ export async function GET(req: Request) {
     );
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const url = new URL(req.url);
+  const rawLimit = url.searchParams.get("limit");
+  const rawPage = url.searchParams.get("page");
 
-  return NextResponse.json({ users }, { headers: CORS_HEADERS });
+  const MAX_LIMIT = 500;
+  const DEFAULT_LIMIT = 100;
+
+  let limit = Number(rawLimit ?? DEFAULT_LIMIT);
+  if (!Number.isFinite(limit) || limit <= 0) limit = DEFAULT_LIMIT;
+  if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+
+  let page = Number(rawPage ?? 1);
+  if (!Number.isFinite(page) || page < 1) page = 1;
+
+  const skip = (page - 1) * limit;
+
+  const [total, users] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+  ]);
+
+  const hasMore = skip + users.length < total;
+
+  return NextResponse.json(
+    {
+      users,
+      page,
+      limit,
+      total,
+      hasMore,
+    },
+    { headers: CORS_HEADERS },
+  );
 }
 
 export async function POST(req: Request) {
