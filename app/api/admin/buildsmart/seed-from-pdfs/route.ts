@@ -11,6 +11,8 @@ import type {
   SeedOrder,
   SeedOrderItem,
 } from "@/lib/buildsmart-parser";
+import { resolveUnitPrice } from "@/lib/procurement/resolveUnitPrice";
+import { recalcOrderTotal } from "@/lib/procurement/recalcOrderTotal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -277,6 +279,22 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // Resolve unit prices from SupplierProductPrice table
+    const itemsWithPrices = await Promise.all(
+      mo.matchedItems.map(async (mi) => {
+        const price = await resolveUnitPrice({
+          manualPrice: mi.unitPriceAtOrder,
+          supplierId: mo.supplierId,
+          productId: mi.productId,
+          uom: mi.uomAtOrder,
+          unitSize: mi.unitSizeAtOrder
+            ? parseFloat(mi.unitSizeAtOrder)
+            : undefined,
+        });
+        return { ...mi, resolvedPrice: price };
+      }),
+    );
+
     const created = await prisma.siteProductOrder.create({
       data: {
         siteId: mo.siteId!,
@@ -285,10 +303,10 @@ export async function POST(req: NextRequest) {
         note: mo.note,
         createdAt: new Date(mo.createdAt),
         items: {
-          create: mo.matchedItems.map((mi) => ({
+          create: itemsWithPrices.map((mi) => ({
             productId: mi.productId,
             quantity: mi.quantity,
-            unitPriceAtOrder: mi.unitPriceAtOrder ?? 0,
+            unitPriceAtOrder: mi.resolvedPrice,
             uomAtOrder: mi.uomAtOrder as any,
             unitSizeAtOrder: mi.unitSizeAtOrder
               ? parseFloat(mi.unitSizeAtOrder)
@@ -298,6 +316,9 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Recalculate and persist the order total
+    await recalcOrderTotal(created.id);
 
     savedOrderIds.push(created.id);
   }
