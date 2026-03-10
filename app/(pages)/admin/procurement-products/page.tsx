@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ import {
   flexRender,
   type ColumnDef,
   type SortingState,
+  type RowSelectionState,
 } from "@tanstack/react-table";
 
 /* ------------------------------------------------------------------ */
@@ -109,11 +111,20 @@ export default function ProcurementProductsPage() {
     null,
   );
 
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkSummary, setBulkSummary] = useState<{
+    total: number;
+    deletable: number;
+    blocked: number;
+  } | null>(null);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   });
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   // Load lookup data on mount
   useEffect(() => {
@@ -308,6 +319,34 @@ export default function ProcurementProductsPage() {
   }, [products, search]);
   const columns: ColumnDef<ProcurementProduct>[] = [
     {
+      id: "select",
+      size: 48,
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+    },
+    {
       id: "thumbnail",
       header: () => <span className="sr-only">Image</span>,
       cell: ({ row }) =>
@@ -422,9 +461,12 @@ export default function ProcurementProductsPage() {
   const table = useReactTable({
     data: filteredProducts,
     columns,
-    state: { sorting, pagination },
+    state: { sorting, pagination, rowSelection },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -497,9 +539,38 @@ export default function ProcurementProductsPage() {
             <RotateCw className="h-4 w-4" />
           </Button>
         </div>
-        <Button onClick={openCreate} size="sm">
-          <Plus className="mr-1 h-4 w-4" /> Add Product
-        </Button>
+        <div className="flex items-center gap-3">
+          {table.getSelectedRowModel().rows.length > 0 && (
+            <Badge variant="outline" className="hidden text-xs sm:inline-flex">
+              {table.getSelectedRowModel().rows.length} selected
+            </Badge>
+          )}
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={!table.getSelectedRowModel().rows.length}
+            onClick={() => {
+              const selected = table
+                .getSelectedRowModel()
+                .rows.map((r) => r.original);
+              const deletable = selected.filter(
+                (p) => p._count.orderItems === 0,
+              );
+              setBulkSummary({
+                total: selected.length,
+                deletable: deletable.length,
+                blocked: selected.length - deletable.length,
+              });
+              setBulkDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="mr-1 h-4 w-4" />
+            Delete selected
+          </Button>
+          <Button onClick={openCreate} size="sm">
+            <Plus className="mr-1 h-4 w-4" /> Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -848,6 +919,58 @@ export default function ProcurementProductsPage() {
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone.`}
         onConfirm={handleDelete}
         confirmText="Delete"
+        variant="destructive"
+      />
+      <ConfirmationDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBulkDeleteOpen(false);
+            setBulkSummary(null);
+          }
+        }}
+        title="Delete Selected Products"
+        description={
+          bulkSummary
+            ? `You selected ${bulkSummary.total} product(s). ${bulkSummary.deletable} will be deleted and ${bulkSummary.blocked} in use will be skipped. This cannot be undone.`
+            : "Are you sure you want to delete the selected products? This cannot be undone. Products used in orders will be skipped."
+        }
+        onConfirm={async () => {
+          const selected = table
+            .getSelectedRowModel()
+            .rows.map((r) => r.original);
+          const deletable = selected.filter((p) => p._count.orderItems === 0);
+          if (deletable.length === 0) {
+            toast.error(
+              "Selected products are used in orders and cannot be deleted.",
+            );
+            setBulkDeleteOpen(false);
+            return;
+          }
+
+          setBulkDeleting(true);
+          try {
+            for (const product of deletable) {
+              const res = await fetch(
+                `/api/app/admin/procurement-products/${product.id}`,
+                { method: "DELETE", credentials: "include" },
+              );
+              const json = await res.json().catch(() => null);
+              if (!res.ok) {
+                throw new Error(json?.error ?? "Failed to delete product");
+              }
+            }
+            toast.success(`Deleted ${deletable.length} product(s)`);
+            setRowSelection({});
+            setBulkDeleteOpen(false);
+            load();
+          } catch (e: any) {
+            toast.error(e?.message || "Failed to delete selected products");
+          } finally {
+            setBulkDeleting(false);
+          }
+        }}
+        confirmText={bulkDeleting ? "Deleting..." : "Delete selected products"}
         variant="destructive"
       />
     </div>

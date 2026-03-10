@@ -381,81 +381,110 @@ export default function SupplierPricesPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded border">
-        <Table className="[&_th]:border-x [&_td]:border-x">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : prices.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  <DollarSign className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                  No prices found
-                </TableCell>
-              </TableRow>
-            ) : (
-              prices.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="font-medium">{p.product.name}</div>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {p.product.sku ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">
-                      {p.uom ? `${p.unitSize ?? ""}${uomLabel(p.uom)}` : "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm">{p.supplier.name}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatCurrency(p.price)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(p)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => setDeleteTarget(p)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+      {!loading && prices.length === 0 ? (
+        <div className="border border-dashed border-zinc-300 bg-white/50 p-12 text-center dark:border-zinc-700/50 dark:bg-card/30">
+          <DollarSign className="mx-auto mb-2 h-8 w-8 opacity-40" />
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+            No prices found
+          </h3>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Adjust your filters, or add a new supplier price.
+          </p>
+        </div>
+      ) : (
+        <div className="border bg-card">
+          <div className="overflow-x-auto">
+            <Table className="border-collapse">
+              <TableHeader className="bg-muted/60">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Product
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    SKU
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Size
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Supplier
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-right dark:border-zinc-700">
+                    Price
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-right dark:border-zinc-700">
+                    Actions
+                  </TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : prices.length > 0 ? (
+                  prices.map((p) => (
+                    <TableRow
+                      key={p.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                    >
+                      <TableCell className="border border-zinc-200 px-3 py-2 align-top dark:border-zinc-700">
+                        <div className="font-medium">{p.product.name}</div>
+                      </TableCell>
+                      <TableCell className="border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
+                        {p.product.sku ?? "—"}
+                      </TableCell>
+                      <TableCell className="border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+                        <span className="text-sm">
+                          {p.uom
+                            ? `${p.unitSize ?? ""}${uomLabel(p.uom)}`
+                            : "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
+                        {p.supplier.name}
+                      </TableCell>
+                      <TableCell className="border border-zinc-200 px-3 py-2 text-right font-medium dark:border-zinc-700">
+                        {formatCurrency(p.price)}
+                      </TableCell>
+                      <TableCell className="border border-zinc-200 px-3 py-2 text-right dark:border-zinc-700">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(p)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => setDeleteTarget(p)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

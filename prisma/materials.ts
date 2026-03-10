@@ -1,4 +1,12 @@
 import type { PrismaClient } from "../generated/prisma/client";
+import {
+  duluxProductsBatch01,
+  duluxProductsBatch02,
+  duluxProductsBatch03,
+  duluxProductsBatch04,
+  duluxProductsBatch05,
+  duluxProductsBatch06,
+} from "./materials-dulux";
 
 export const materials = [
   {
@@ -1030,6 +1038,12 @@ export const materials = [
     supplierId: "cmmdxdol60009w8plpxqwnxct",
     categoryId: "cmmdxbuw40008w8plm4urs9ae",
   },
+  ...duluxProductsBatch01,
+  ...duluxProductsBatch02,
+  ...duluxProductsBatch03,
+  ...duluxProductsBatch04,
+  ...duluxProductsBatch05,
+  ...duluxProductsBatch06,
 ];
 
 export async function seedMaterials(prisma: PrismaClient) {
