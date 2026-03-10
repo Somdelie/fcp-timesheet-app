@@ -7,6 +7,11 @@ import {
   duluxProductsBatch05,
   duluxProductsBatch06,
 } from "./materials-dulux";
+import {
+  plasconProductsBatch01,
+  plasconProductsBatch02,
+  plasconProductsExtra,
+} from "./materials-plascon";
 
 export const materials = [
   {
@@ -1044,6 +1049,9 @@ export const materials = [
   ...duluxProductsBatch04,
   ...duluxProductsBatch05,
   ...duluxProductsBatch06,
+  ...plasconProductsBatch01,
+  ...plasconProductsBatch02,
+  ...plasconProductsExtra,
 ];
 
 export async function seedMaterials(prisma: PrismaClient) {

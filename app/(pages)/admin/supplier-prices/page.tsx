@@ -368,13 +368,7 @@ export default function SupplierPricesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowInactive(!showInactive)}
-        >
-          {showInactive ? "Hide Inactive" : "Show Inactive"}
-        </Button>
+
         <Button variant="ghost" size="icon" onClick={load}>
           <RotateCw className="h-4 w-4" />
         </Button>
