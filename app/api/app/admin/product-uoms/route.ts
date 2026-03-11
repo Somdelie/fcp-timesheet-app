@@ -33,6 +33,7 @@ const PRODUCT_UOM = [
   { value: "L", label: "L", group: "Volume" },
   // Packaging
   { value: "UNIT", label: "unit", group: "Packaging" },
+  { value: "EACH", label: "each", group: "Packaging" },
   { value: "PIECE", label: "piece", group: "Packaging" },
   { value: "PACK", label: "pack", group: "Packaging" },
   { value: "BOX", label: "box", group: "Packaging" },

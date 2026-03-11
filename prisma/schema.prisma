@@ -977,6 +977,7 @@ enum ProductUom {
   BOTTLE
   TUBE
   BAR
+  EACH
 
   // Sheet / Roll / Bulk
   ROLL
