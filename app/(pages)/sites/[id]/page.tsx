@@ -11,6 +11,7 @@ import SiteMaterialOrdersPanel from "@/components/sites/SiteMaterialOrdersPanel"
 import SiteMaterialsPanel from "@/components/sites/SiteMaterialsPanel";
 import EditSiteLocationDialog from "@/components/sites/EditSiteLocationDialog";
 import SiteForemanRatesPanel from "@/components/sites/SiteForemanRatesPanel";
+import SiteFinishingSchedulePanel from "@/components/finishing-schedules/SiteFinishingSchedulePanel";
 import { ArrowLeft, CheckCircle, MapPin, Hash, User } from "lucide-react";
 import Link from "next/link";
 
@@ -237,6 +238,8 @@ export default async function SiteManagePage({
           <SiteMaterialOrdersPanel siteId={site.id} />
 
           <SiteTotalsPanel siteId={site.id} />
+
+          <SiteFinishingSchedulePanel siteId={site.id} />
         </div>
       </div>
     </div>

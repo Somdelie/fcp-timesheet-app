@@ -247,6 +247,28 @@ export async function POST(req: Request) {
       });
     }
 
+    // Auto-seed SiteMaterial for each ordered product
+    const orderedProductIds = items
+      .filter((i) => i.productId && i.quantity && i.quantity >= 1)
+      .map((i) => i.productId);
+
+    if (orderedProductIds.length > 0) {
+      const existingMaterials = await prisma.siteMaterial.findMany({
+        where: { siteId, productId: { in: orderedProductIds } },
+        select: { productId: true },
+      });
+      const existingSet = new Set(existingMaterials.map((m) => m.productId));
+      const newProductIds = [...new Set(orderedProductIds)].filter(
+        (pid) => !existingSet.has(pid),
+      );
+      if (newProductIds.length > 0) {
+        await prisma.siteMaterial.createMany({
+          data: newProductIds.map((productId) => ({ siteId, productId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     // Recalculate total
     const newTotal = await recalcOrderTotal(order.id);
 

@@ -287,7 +287,7 @@ export async function POST(
         endsOn: endsOnDate,
         dayRate: data.dayRate as any,
         reason: data.reason ?? null,
-        createdByUserId: admin.id,
+        createdByUser: { connect: { id: admin.id } },
       },
       select: {
         id: true,

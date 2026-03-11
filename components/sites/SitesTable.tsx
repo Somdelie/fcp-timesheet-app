@@ -31,7 +31,6 @@ import {
   Building2,
   User,
   Wallet,
-  CalendarDays,
   Package,
   Briefcase,
   Hammer,
@@ -564,33 +563,6 @@ export default function SitesTable({
                 (row.original.totalMaterialCost ?? 0),
             )}
           </span>
-        ),
-      },
-      {
-        id: "createdAt",
-        accessorKey: "createdAt",
-        size: 110,
-        header: ({ column }) => {
-          const isSorted = column.getIsSorted();
-          return (
-            <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => column.toggleSorting(isSorted === "asc")}
-            >
-              <CalendarDays className="h-4 w-4 text-emerald-600" />
-              Created
-              {isSorted === "asc" ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : isSorted === "desc" ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <span className="text-xs">{formatDate(row.original.createdAt)}</span>
         ),
       },
       {

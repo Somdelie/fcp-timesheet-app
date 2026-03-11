@@ -23,6 +23,7 @@ import {
   CalendarCheck,
   Shield,
   Clock,
+  ClipboardList,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -154,6 +155,12 @@ const menuGroups: {
         label: "Manual Scan",
         icon: UserPlus,
         roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/finishing-schedules",
+        label: "Finishing Schedules",
+        icon: ClipboardList,
+        roles: ["ADMIN", "OFFICE"],
       },
     ],
   },

@@ -19,6 +19,15 @@ export type SiteForPdf = {
   totalMaterialCost?: number;
 };
 
+export type SitesPrintColumns = {
+  client?: boolean;
+  supervisor?: boolean;
+  wages?: boolean;
+  material?: boolean;
+  total?: boolean;
+  created?: boolean;
+};
+
 function formatCurrencyPdf(amount: number): string {
   return `R${amount.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -79,8 +88,19 @@ const colors = {
   zinc400: rgb(0.62, 0.62, 0.67),
 };
 
+type ColumnKey =
+  | "code"
+  | "name"
+  | "client"
+  | "supervisor"
+  | "wages"
+  | "material"
+  | "total"
+  | "created";
+
 export async function generateSitesPdf(
   sites: SiteForPdf[],
+  columns?: SitesPrintColumns,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -91,10 +111,9 @@ export async function generateSitesPdf(
   const pageWidth = 841.89;
   const pageHeight = 595.28;
   const margin = 32;
-  const tableWidth = pageWidth - margin * 2;
 
   // Column widths for landscape
-  const colWidths = {
+  const colWidths: Record<ColumnKey, number> = {
     code: 80,
     name: 140,
     client: 100,
@@ -104,6 +123,35 @@ export async function generateSitesPdf(
     total: 90,
     created: 78,
   };
+
+  const enabledCols: Record<ColumnKey, boolean> = {
+    code: true,
+    name: true,
+    client: columns?.client ?? true,
+    supervisor: columns?.supervisor ?? true,
+    wages: columns?.wages ?? true,
+    material: columns?.material ?? true,
+    total: columns?.total ?? true,
+    created: columns?.created ?? true,
+  };
+
+  const columnOrder: ColumnKey[] = [
+    "code",
+    "name",
+    "client",
+    "supervisor",
+    "wages",
+    "material",
+    "total",
+    "created",
+  ];
+
+  const activeColumns = columnOrder.filter((key) => enabledCols[key]);
+
+  const tableWidth = activeColumns.reduce(
+    (sum, key) => sum + colWidths[key],
+    0,
+  );
 
   const headerHeight = 36;
   const rowHeight = 32;
@@ -151,112 +199,126 @@ export async function generateSitesPdf(
     let xPos = margin + 12;
     const textY = startY - headerHeight / 2 - 4;
 
-    // Job Number (indigo)
-    pg.drawRectangle({
-      x: xPos,
-      y: textY + 1,
-      width: 8,
-      height: 8,
-      color: colors.indigo600,
-    });
-    pg.drawText("Job #", {
-      x: xPos + 12,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.code;
-
-    // Name (sky)
-    pg.drawRectangle({
-      x: xPos,
-      y: textY + 1,
-      width: 8,
-      height: 8,
-      color: colors.sky600,
-    });
-    pg.drawText("Name", {
-      x: xPos + 12,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.name;
-
-    // Client
-    pg.drawText("Client", {
-      x: xPos,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.client;
-
-    // Supervisor
-    pg.drawText("Supervisor", {
-      x: xPos,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.supervisor;
-
-    // Wages
-    pg.drawRectangle({
-      x: xPos,
-      y: textY + 1,
-      width: 8,
-      height: 8,
-      color: colors.emerald600,
-    });
-    pg.drawText("Wages", {
-      x: xPos + 12,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.wages;
-
-    // Material Cost
-    pg.drawRectangle({
-      x: xPos,
-      y: textY + 1,
-      width: 8,
-      height: 8,
-      color: colors.orange600,
-    });
-    pg.drawText("Material", {
-      x: xPos + 12,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.material;
-
-    // Total Cost
-    pg.drawText("Total Cost", {
-      x: xPos,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.total;
-
-    // Created (emerald)
-    pg.drawText("Created", {
-      x: xPos,
-      y: textY,
-      size: headerFontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
+    for (const key of activeColumns) {
+      switch (key) {
+        case "code": {
+          pg.drawRectangle({
+            x: xPos,
+            y: textY + 1,
+            width: 8,
+            height: 8,
+            color: colors.indigo600,
+          });
+          pg.drawText("Job #", {
+            x: xPos + 12,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.code;
+          break;
+        }
+        case "name": {
+          pg.drawRectangle({
+            x: xPos,
+            y: textY + 1,
+            width: 8,
+            height: 8,
+            color: colors.sky600,
+          });
+          pg.drawText("Name", {
+            x: xPos + 12,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.name;
+          break;
+        }
+        case "client": {
+          pg.drawText("Client", {
+            x: xPos,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.client;
+          break;
+        }
+        case "supervisor": {
+          pg.drawText("Supervisor", {
+            x: xPos,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.supervisor;
+          break;
+        }
+        case "wages": {
+          pg.drawRectangle({
+            x: xPos,
+            y: textY + 1,
+            width: 8,
+            height: 8,
+            color: colors.emerald600,
+          });
+          pg.drawText("Wages", {
+            x: xPos + 12,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.wages;
+          break;
+        }
+        case "material": {
+          pg.drawRectangle({
+            x: xPos,
+            y: textY + 1,
+            width: 8,
+            height: 8,
+            color: colors.orange600,
+          });
+          pg.drawText("Material", {
+            x: xPos + 12,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.material;
+          break;
+        }
+        case "total": {
+          pg.drawText("Total Cost", {
+            x: xPos,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.total;
+          break;
+        }
+        case "created": {
+          pg.drawText("Created", {
+            x: xPos,
+            y: textY,
+            size: headerFontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.created;
+          break;
+        }
+      }
+    }
 
     return startY - headerHeight;
   }
@@ -289,117 +351,133 @@ export async function generateSitesPdf(
     let xPos = margin + 12;
     const textY = rowY + rowHeight / 2 - 4;
 
-    // Code (monospace)
-    const codeText = truncateText(
-      site.code || "—",
-      colWidths.code - 16,
-      fontMono,
-      fontSize - 1,
-    );
-    pg.drawText(codeText, {
-      x: xPos,
-      y: textY,
-      size: fontSize - 1,
-      font: fontMono,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.code;
-
-    // Name (bold)
-    const nameText = truncateText(
-      site.name,
-      colWidths.name - 16,
-      fontBold,
-      fontSize,
-    );
-    pg.drawText(nameText, {
-      x: xPos,
-      y: textY,
-      size: fontSize,
-      font: fontBold,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.name;
-
-    // Client
-    const clientText = truncateText(
-      site.client || "—",
-      colWidths.client - 8,
-      font,
-      fontSize - 1,
-    );
-    pg.drawText(clientText, {
-      x: xPos,
-      y: textY,
-      size: fontSize - 1,
-      font: font,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.client;
-
-    // Supervisor
-    const supText = truncateText(
-      site.supervisorName || "—",
-      colWidths.supervisor - 8,
-      font,
-      fontSize - 1,
-    );
-    pg.drawText(supText, {
-      x: xPos,
-      y: textY,
-      size: fontSize - 1,
-      font: font,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.supervisor;
-
-    // Wages
-    pg.drawText(formatCurrencyPdf(site.totalWages ?? 0), {
-      x: xPos,
-      y: textY,
-      size: fontSize - 1,
-      font: font,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.wages;
-
-    // Material Cost
-    pg.drawText(formatCurrencyPdf(site.totalMaterialCost ?? 0), {
-      x: xPos,
-      y: textY,
-      size: fontSize - 1,
-      font: font,
-      color: colors.textPrimary,
-    });
-    xPos += colWidths.material;
-
-    // Total Cost
-    pg.drawText(
-      formatCurrencyPdf((site.totalWages ?? 0) + (site.totalMaterialCost ?? 0)),
-      {
-        x: xPos,
-        y: textY,
-        size: fontSize - 1,
-        font: fontBold,
-        color: colors.textPrimary,
-      },
-    );
-    xPos += colWidths.total;
-
-    // Created
-    const createdText = truncateText(
-      formatDate(site.createdAt),
-      colWidths.created - 12,
-      font,
-      fontSize - 1,
-    );
-    pg.drawText(createdText, {
-      x: xPos,
-      y: textY,
-      size: fontSize - 1,
-      font: font,
-      color: colors.textSecondary,
-    });
+    for (const key of activeColumns) {
+      switch (key) {
+        case "code": {
+          const codeText = truncateText(
+            site.code || "—",
+            colWidths.code - 16,
+            fontMono,
+            fontSize - 1,
+          );
+          pg.drawText(codeText, {
+            x: xPos,
+            y: textY,
+            size: fontSize - 1,
+            font: fontMono,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.code;
+          break;
+        }
+        case "name": {
+          const nameText = truncateText(
+            site.name,
+            colWidths.name - 16,
+            fontBold,
+            fontSize,
+          );
+          pg.drawText(nameText, {
+            x: xPos,
+            y: textY,
+            size: fontSize,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.name;
+          break;
+        }
+        case "client": {
+          const clientText = truncateText(
+            site.client || "—",
+            colWidths.client - 8,
+            font,
+            fontSize - 1,
+          );
+          pg.drawText(clientText, {
+            x: xPos,
+            y: textY,
+            size: fontSize - 1,
+            font: font,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.client;
+          break;
+        }
+        case "supervisor": {
+          const supText = truncateText(
+            site.supervisorName || "—",
+            colWidths.supervisor - 8,
+            font,
+            fontSize - 1,
+          );
+          pg.drawText(supText, {
+            x: xPos,
+            y: textY,
+            size: fontSize - 1,
+            font: font,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.supervisor;
+          break;
+        }
+        case "wages": {
+          pg.drawText(formatCurrencyPdf(site.totalWages ?? 0), {
+            x: xPos,
+            y: textY,
+            size: fontSize - 1,
+            font: font,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.wages;
+          break;
+        }
+        case "material": {
+          pg.drawText(formatCurrencyPdf(site.totalMaterialCost ?? 0), {
+            x: xPos,
+            y: textY,
+            size: fontSize - 1,
+            font: font,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.material;
+          break;
+        }
+        case "total": {
+          pg.drawText(
+            formatCurrencyPdf(
+              (site.totalWages ?? 0) + (site.totalMaterialCost ?? 0),
+            ),
+            {
+              x: xPos,
+              y: textY,
+              size: fontSize - 1,
+              font: fontBold,
+              color: colors.textPrimary,
+            },
+          );
+          xPos += colWidths.total;
+          break;
+        }
+        case "created": {
+          const createdText = truncateText(
+            formatDate(site.createdAt),
+            colWidths.created - 12,
+            font,
+            fontSize - 1,
+          );
+          pg.drawText(createdText, {
+            x: xPos,
+            y: textY,
+            size: fontSize - 1,
+            font: font,
+            color: colors.textSecondary,
+          });
+          xPos += colWidths.created;
+          break;
+        }
+      }
+    }
 
     return rowY;
   }
@@ -428,55 +506,17 @@ export async function generateSitesPdf(
     });
 
     // Vertical column dividers
-    let colX = margin + colWidths.code;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
-    colX += colWidths.name;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
-    colX += colWidths.client;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
-    colX += colWidths.supervisor;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
-    colX += colWidths.wages;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
-    colX += colWidths.material;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
-    colX += colWidths.total;
-    pg.drawLine({
-      start: { x: colX, y: topY },
-      end: { x: colX, y: bottomY },
-      thickness: 0.5,
-      color: colors.borderLight,
-    });
+    let colX = margin;
+    for (let i = 0; i < activeColumns.length - 1; i++) {
+      const key = activeColumns[i];
+      colX += colWidths[key];
+      pg.drawLine({
+        start: { x: colX, y: topY },
+        end: { x: colX, y: bottomY },
+        thickness: 0.5,
+        color: colors.borderLight,
+      });
+    }
   }
 
   y = drawTableHeader(page, y);
@@ -540,25 +580,67 @@ function escapeHTML(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
+export function generateSitesPrintHTML(
+  sites: SiteForPdf[],
+  columns?: SitesPrintColumns,
+): string {
   const formatCurrencyHtml = (n: number) =>
     `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const enabledCols: Record<ColumnKey, boolean> = {
+    code: true,
+    name: true,
+    client: columns?.client ?? true,
+    supervisor: columns?.supervisor ?? true,
+    wages: columns?.wages ?? true,
+    material: columns?.material ?? true,
+    total: columns?.total ?? true,
+    created: columns?.created ?? true,
+  };
 
   const tableRows = sites
     .map((site) => {
       const wages = site.totalWages ?? 0;
       const material = site.totalMaterialCost ?? 0;
       const totalCost = wages + material;
+
+      const cells: string[] = [];
+      cells.push(`<td class="code-col">${escapeHTML(site.code ?? "—")}</td>`);
+      cells.push(`<td class="name-col">${escapeHTML(site.name)}</td>`);
+      if (enabledCols.client) {
+        cells.push(
+          `<td class="client-col">${escapeHTML(site.client ?? "—")}</td>`,
+        );
+      }
+      if (enabledCols.supervisor) {
+        cells.push(
+          `<td class="supervisor-col">${escapeHTML(
+            site.supervisorName ?? "—",
+          )}</td>`,
+        );
+      }
+      if (enabledCols.wages) {
+        cells.push(`<td class="wages-col">${formatCurrencyHtml(wages)}</td>`);
+      }
+      if (enabledCols.material) {
+        cells.push(
+          `<td class="material-col">${formatCurrencyHtml(material)}</td>`,
+        );
+      }
+      if (enabledCols.total) {
+        cells.push(
+          `<td class="total-col">${formatCurrencyHtml(totalCost)}</td>`,
+        );
+      }
+      if (enabledCols.created) {
+        cells.push(
+          `<td class="created-col">${formatDate(site.createdAt)}</td>`,
+        );
+      }
+
       return `
         <tr>
-          <td class="code-col">${escapeHTML(site.code ?? "—")}</td>
-          <td class="name-col">${escapeHTML(site.name)}</td>
-          <td class="client-col">${escapeHTML(site.client ?? "—")}</td>
-          <td class="supervisor-col">${escapeHTML(site.supervisorName ?? "—")}</td>
-          <td class="wages-col">${formatCurrencyHtml(wages)}</td>
-          <td class="material-col">${formatCurrencyHtml(material)}</td>
-          <td class="total-col">${formatCurrencyHtml(totalCost)}</td>
-          <td class="created-col">${formatDate(site.createdAt)}</td>
+          ${cells.join("")}
         </tr>
       `;
     })
@@ -797,12 +879,12 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
               <tr>
                 <th class="code-col">Job #</th>
                 <th class="name-col">Name</th>
-                <th class="client-col">Client</th>
-                <th class="supervisor-col">Supervisor</th>
-                <th class="wages-col">Wages</th>
-                <th class="material-col">Material</th>
-                <th class="total-col">Total Cost</th>
-                <th class="created-col">Created</th>
+                ${enabledCols.client ? '<th class="client-col">Client</th>' : ""}
+                ${enabledCols.supervisor ? '<th class="supervisor-col">Supervisor</th>' : ""}
+                ${enabledCols.wages ? '<th class="wages-col">Wages</th>' : ""}
+                ${enabledCols.material ? '<th class="material-col">Material</th>' : ""}
+                ${enabledCols.total ? '<th class="total-col">Total Cost</th>' : ""}
+                ${enabledCols.created ? '<th class="created-col">Created</th>' : ""}
               </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -826,8 +908,11 @@ export function generateSitesPrintHTML(sites: SiteForPdf[]): string {
 /**
  * Open print preview in new window for sites
  */
-export function printSites(sites: SiteForPdf[]): void {
-  const html = generateSitesPrintHTML(sites);
+export function printSites(
+  sites: SiteForPdf[],
+  columns?: SitesPrintColumns,
+): void {
+  const html = generateSitesPrintHTML(sites, columns);
   const printWindow = window.open("", "_blank", "width=1100,height=800");
   if (printWindow) {
     printWindow.document.write(html);

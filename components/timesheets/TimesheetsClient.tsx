@@ -89,6 +89,19 @@ type AdminRow = {
   rowKey?: string;
 };
 
+type OvertimeEntry = {
+  id: string;
+  siteId: string;
+  siteName: string;
+  siteCode: string | null;
+  foremanId: string;
+  foremanName: string;
+  workDate: string;
+  numberOfEmployees: number;
+  hoursWorked: number;
+  totalCost: number;
+};
+
 type SupervisorRow = {
   id: string;
   startISO: string;
@@ -301,10 +314,26 @@ export default function TimesheetsListClient({ mode }: Props) {
   // Foreman totals section collapsed/expanded
   const [foremanTotalsExpanded, setForemanTotalsExpanded] = useState(false);
 
+  // Overtime details (per foreman) in foreman totals (ADMIN only)
+  const [overtimeExpandedForemanId, setOvertimeExpandedForemanId] = useState<
+    string | null
+  >(null);
+  const [overtimeEntriesByForeman, setOvertimeEntriesByForeman] = useState<
+    Record<string, OvertimeEntry[]>
+  >({});
+  const [overtimeLoadingForemanId, setOvertimeLoadingForemanId] = useState<
+    string | null
+  >(null);
+
   // Foreman PDF generation state
   const [foremanPdfGenerating, setForemanPdfGenerating] = useState<
     string | null
   >(null);
+
+  const currentPeriod = useMemo(
+    () => periods.find((p) => p.id === periodId) ?? null,
+    [periods, periodId],
+  );
 
   const totalWages = useMemo(() => {
     const list = mode === "ADMIN" ? rowsAdmin : rowsSup;
@@ -321,6 +350,51 @@ export default function TimesheetsListClient({ mode }: Props) {
       0,
     );
   }, [mode, rowsAdmin]);
+
+  const loadOvertimeEntriesForForeman = useCallback(
+    async (foremanId: string): Promise<OvertimeEntry[]> => {
+      if (mode !== "ADMIN") return [];
+      if (!currentPeriod) {
+        toast.error("No period selected");
+        return [];
+      }
+
+      const cached = overtimeEntriesByForeman[foremanId];
+      if (cached) return cached;
+
+      try {
+        setOvertimeLoadingForemanId(foremanId);
+
+        const params = new URLSearchParams();
+        params.set("from", currentPeriod.startISO.slice(0, 10));
+        params.set("to", currentPeriod.endISO.slice(0, 10));
+
+        const payload = await getJson<{
+          ok: boolean;
+          data: OvertimeEntry[];
+        }>(`/api/app/admin/overtime-entries?${params.toString()}`);
+
+        const all = payload?.data ?? [];
+        const filtered = all.filter((e) => e.foremanId === foremanId);
+
+        setOvertimeEntriesByForeman((prev) => ({
+          ...prev,
+          [foremanId]: filtered,
+        }));
+
+        return filtered;
+      } catch (e: any) {
+        console.error(e);
+        toast.error(e?.message || "Failed to load overtime entries");
+        return [];
+      } finally {
+        setOvertimeLoadingForemanId((prev) =>
+          prev === foremanId ? null : prev,
+        );
+      }
+    },
+    [mode, currentPeriod, overtimeEntriesByForeman],
+  );
 
   // Foreman totals: group all sites by foreman and sum wages for quick overview (ADMIN only)
   const foremanTotals = useMemo(() => {
@@ -1512,88 +1586,200 @@ export default function TimesheetsListClient({ mode }: Props) {
                   </TableHeader>
                   <TableBody>
                     {foremanTotals.map((ft) => (
-                      <TableRow
-                        key={ft.foremanId}
-                        className="hover:bg-muted/30"
-                      >
-                        <TableCell className="px-3 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-700">
-                          {ft.foremanName}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-center border border-zinc-200 dark:border-zinc-700">
-                          {ft.sitesCount}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
-                          {ft.foremanDays}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
-                          {money(ft.foremanWages)}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
-                          {ft.teamDays}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
-                          {money(ft.teamWages)}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
-                          {ft.totalOvertimeCost > 0 ? (
-                            <span className="text-orange-600 dark:text-orange-400">
-                              {money(ft.totalOvertimeCost)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
-                          {ft.totalDeductions > 0 ? (
-                            <span className="text-amber-600 dark:text-amber-400">
-                              -{money(ft.totalDeductions)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-right font-bold text-emerald-600 dark:text-emerald-400 border border-zinc-200 dark:border-zinc-700">
-                          {money(ft.grandTotal)}
-                        </TableCell>
-                        <TableCell className="px-2 py-1 border border-zinc-200 dark:border-zinc-700">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              disabled={foremanPdfGenerating === ft.foremanId}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleForemanPdfAction(ft, "print");
-                              }}
-                              title="Print"
+                      <React.Fragment key={ft.foremanId}>
+                        <TableRow className="hover:bg-muted/30">
+                          <TableCell className="px-3 py-2 text-sm font-medium border border-zinc-200 dark:border-zinc-700">
+                            {ft.foremanName}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-center border border-zinc-200 dark:border-zinc-700">
+                            {ft.sitesCount}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                            {ft.foremanDays}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                            {money(ft.foremanWages)}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                            {ft.teamDays}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                            {money(ft.teamWages)}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                            {ft.totalOvertimeCost > 0 ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto px-0 text-orange-600 dark:text-orange-400 underline-offset-2 hover:underline"
+                                disabled={
+                                  overtimeLoadingForemanId === ft.foremanId
+                                }
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+
+                                  if (
+                                    overtimeExpandedForemanId === ft.foremanId
+                                  ) {
+                                    setOvertimeExpandedForemanId(null);
+                                    return;
+                                  }
+
+                                  const existing =
+                                    overtimeEntriesByForeman[ft.foremanId];
+                                  const entries =
+                                    existing ??
+                                    (await loadOvertimeEntriesForForeman(
+                                      ft.foremanId,
+                                    ));
+
+                                  if (!entries.length) {
+                                    toast.info(
+                                      "No overtime entries for this foreman in this period",
+                                    );
+                                    return;
+                                  }
+
+                                  setOvertimeExpandedForemanId(ft.foremanId);
+                                }}
+                                title="View overtime dates"
+                              >
+                                {overtimeLoadingForemanId === ft.foremanId
+                                  ? "Loading…"
+                                  : money(ft.totalOvertimeCost)}
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right border border-zinc-200 dark:border-zinc-700">
+                            {ft.totalDeductions > 0 ? (
+                              <span className="text-amber-600 dark:text-amber-400">
+                                -{money(ft.totalDeductions)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-right font-bold text-emerald-600 dark:text-emerald-400 border border-zinc-200 dark:border-zinc-700">
+                            {money(ft.grandTotal)}
+                          </TableCell>
+                          <TableCell className="px-2 py-1 border border-zinc-200 dark:border-zinc-700">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={foremanPdfGenerating === ft.foremanId}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleForemanPdfAction(ft, "print");
+                                }}
+                                title="Print"
+                              >
+                                {foremanPdfGenerating === ft.foremanId ? (
+                                  <Spinner className="h-4 w-4" />
+                                ) : (
+                                  <Printer className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={foremanPdfGenerating === ft.foremanId}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleForemanPdfAction(ft, "download");
+                                }}
+                                title="Download PDF"
+                              >
+                                {foremanPdfGenerating === ft.foremanId ? (
+                                  <Spinner className="h-4 w-4" />
+                                ) : (
+                                  <Download className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {overtimeExpandedForemanId === ft.foremanId && (
+                          <TableRow className="bg-muted/40">
+                            <TableCell
+                              colSpan={10}
+                              className="px-3 py-2 text-xs border border-zinc-200 dark:border-zinc-700"
                             >
-                              {foremanPdfGenerating === ft.foremanId ? (
-                                <Spinner className="h-4 w-4" />
+                              {overtimeLoadingForemanId === ft.foremanId ? (
+                                <span>Loading overtime entries…</span>
                               ) : (
-                                <Printer className="h-4 w-4" />
+                                (() => {
+                                  const entries =
+                                    overtimeEntriesByForeman[ft.foremanId] ??
+                                    [];
+                                  if (!entries.length) {
+                                    return (
+                                      <span>
+                                        No overtime entries for this foreman in
+                                        this period.
+                                      </span>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="flex flex-col gap-2">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">
+                                          Overtime dates for {ft.foremanName}
+                                          {currentPeriod
+                                            ? ` (${prettyRange(
+                                                currentPeriod.startISO,
+                                                currentPeriod.endISO,
+                                              )})`
+                                            : ""}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          {entries.length} overtime
+                                          {entries.length === 1
+                                            ? " entry"
+                                            : " entries"}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                                        {entries.map((ot) => (
+                                          <div
+                                            key={ot.id}
+                                            className="rounded border border-dashed px-2 py-1 flex flex-col gap-0.5"
+                                          >
+                                            <span className="font-medium">
+                                              {new Date(
+                                                `${ot.workDate}T00:00:00`,
+                                              ).toLocaleDateString(undefined, {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                              })}
+                                            </span>
+                                            <span className="text-muted-foreground">
+                                              {ot.siteCode
+                                                ? `${ot.siteCode} — ${ot.siteName}`
+                                                : ot.siteName}
+                                            </span>
+                                            <span>
+                                              {ot.numberOfEmployees} employees •{" "}
+                                              {ot.hoursWorked}h • R{" "}
+                                              {money(ot.totalCost)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })()
                               )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              disabled={foremanPdfGenerating === ft.foremanId}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleForemanPdfAction(ft, "download");
-                              }}
-                              title="Download PDF"
-                            >
-                              {foremanPdfGenerating === ft.foremanId ? (
-                                <Spinner className="h-4 w-4" />
-                              ) : (
-                                <Download className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>

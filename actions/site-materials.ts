@@ -38,6 +38,15 @@ export async function listSiteMaterials(siteId: string) {
           category: { select: { id: true, name: true } },
         },
       },
+      usages: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          label: true,
+          quantity: true,
+          note: true,
+        },
+      },
     },
   });
 
@@ -58,9 +67,17 @@ export async function listSiteMaterials(siteId: string) {
         unitSize: m.product.unitSize ? Number(m.product.unitSize) : null,
         category: m.product.category,
       },
+      usages: m.usages,
     })),
   };
 }
+
+export type SiteMaterialUsageRow = {
+  id: string;
+  label: string;
+  quantity: number | null;
+  note: string | null;
+};
 
 export type SiteMaterialRow = {
   id: string;
@@ -77,6 +94,7 @@ export type SiteMaterialRow = {
     unitSize: number | null;
     category: { id: string; name: string } | null;
   };
+  usages: SiteMaterialUsageRow[];
 };
 
 /**
@@ -238,6 +256,118 @@ export async function removeSiteMaterial(id: string) {
   await prisma.siteMaterial.delete({ where: { id: materialId } });
 
   revalidatePath(`/sites/${mat.siteId}`);
+  return { ok: true as const };
+}
+
+// ========================
+// SITE MATERIAL USAGES
+// ========================
+
+/**
+ * Add a usage tag to a site material
+ */
+export async function addSiteMaterialUsage(input: {
+  siteMaterialId: string;
+  label: string;
+  quantity?: number | null;
+  note?: string | null;
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const siteMaterialId = clean(input.siteMaterialId);
+  const label = clean(input.label);
+  if (!siteMaterialId)
+    return { ok: false as const, error: "Material ID is required." };
+  if (!label) return { ok: false as const, error: "Label is required." };
+
+  const mat = await prisma.siteMaterial.findUnique({
+    where: { id: siteMaterialId },
+    select: { siteId: true },
+  });
+  if (!mat) return { ok: false as const, error: "Material not found." };
+
+  await requireCanManageSite(auth, mat.siteId);
+
+  const usage = await prisma.siteMaterialUsage.create({
+    data: {
+      siteMaterial: { connect: { id: siteMaterialId } },
+      label,
+      quantity: input.quantity ?? null,
+      note: input.note ? clean(input.note) : null,
+    },
+    select: { id: true },
+  });
+
+  revalidatePath(`/sites/${mat.siteId}`);
+  return { ok: true as const, id: usage.id };
+}
+
+/**
+ * Update a usage tag
+ */
+export async function updateSiteMaterialUsage(input: {
+  id: string;
+  label?: string;
+  quantity?: number | null;
+  note?: string | null;
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const id = clean(input.id);
+  if (!id) return { ok: false as const, error: "Usage ID is required." };
+
+  const usage = await prisma.siteMaterialUsage.findUnique({
+    where: { id },
+    select: { siteMaterial: { select: { siteId: true } } },
+  });
+  if (!usage) return { ok: false as const, error: "Usage not found." };
+
+  await requireCanManageSite(auth, usage.siteMaterial.siteId);
+
+  await prisma.siteMaterialUsage.update({
+    where: { id },
+    data: {
+      ...(input.label !== undefined ? { label: clean(input.label) } : {}),
+      ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
+      ...(input.note !== undefined
+        ? { note: input.note ? clean(input.note) : null }
+        : {}),
+    },
+  });
+
+  revalidatePath(`/sites/${usage.siteMaterial.siteId}`);
+  return { ok: true as const };
+}
+
+/**
+ * Remove a usage tag
+ */
+export async function removeSiteMaterialUsage(id: string) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const usageId = clean(id);
+  if (!usageId) return { ok: false as const, error: "Usage ID is required." };
+
+  const usage = await prisma.siteMaterialUsage.findUnique({
+    where: { id: usageId },
+    select: { siteMaterial: { select: { siteId: true } } },
+  });
+  if (!usage) return { ok: false as const, error: "Usage not found." };
+
+  await requireCanManageSite(auth, usage.siteMaterial.siteId);
+
+  await prisma.siteMaterialUsage.delete({ where: { id: usageId } });
+
+  revalidatePath(`/sites/${usage.siteMaterial.siteId}`);
   return { ok: true as const };
 }
 

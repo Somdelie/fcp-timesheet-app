@@ -76,6 +76,21 @@ model User {
 
   // Overtime entries created by this user
   overtimeEntries OvertimeEntry[]
+
+  // Site + foreman day-rate overrides created by this user
+  createdSiteForemanDayRateOverrides SiteForemanDayRateOverride[] @relation("SiteForemanDayRateOverrideCreatedBy")
+
+  // Early sign-outs recorded by this user
+  recordedEarlySignOuts AttendanceScan[] @relation("EarlySignOutCapturedByUser")
+
+  // Finishing schedules approved by this user
+  approvedFinishingSchedules SiteFinishingSchedule[] @relation("FinishingScheduleApprovedBy")
+
+  // Fortnight meetings finalized by this user
+  finalizedFortnightMeetings FortnightMeeting[] @relation("FortnightMeetingFinalizedBy")
+
+  // Claims created by this user
+  siteClaims SiteClaim[] @relation("SiteClaimCreatedBy")
 }
 
 model PushToken {
@@ -289,6 +304,12 @@ model Site {
   // Materials expected to be used on this site
   siteMaterials SiteMaterial[]
 
+  // Finishing schedule for this site
+  finishingSchedules SiteFinishingSchedule[]
+
+  costCodes SiteCostCode[]
+  claims    SiteClaim[]
+
   @@index([isActive])
   @@index([name])
 }
@@ -362,8 +383,10 @@ model SiteForemanDayRateOverride {
 
   reason          String?
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdByUser   User?   @relation("SiteForemanDayRateOverrideCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([siteId])
   @@index([foremanId])
@@ -468,6 +491,16 @@ model AttendanceScan {
   longitude Float?
   address   String?
 
+  // Early sign-out support
+  hasEarlySignOut              Boolean             @default(false)
+  earlySignOutAt               DateTime?
+  earlySignOutReasonId         String?
+  earlySignOutReason           EarlySignOutReason? @relation(fields: [earlySignOutReasonId], references: [id], onDelete: SetNull)
+  earlySignOutReasonLabel      String?
+  earlySignOutNote             String?
+  earlySignOutCapturedByUserId String?
+  earlySignOutCapturedByUser   User?               @relation("EarlySignOutCapturedByUser", fields: [earlySignOutCapturedByUserId], references: [id], onDelete: SetNull)
+
   employee      Employee      @relation(fields: [employeeId], references: [id])
   siteDay       SiteDay       @relation(fields: [siteDayId], references: [id], onDelete: Cascade)
   site          Site          @relation(fields: [siteId], references: [id])
@@ -482,6 +515,9 @@ model AttendanceScan {
   @@index([scanType])
   @@index([direction])
   @@index([team])
+  @@index([hasEarlySignOut])
+  @@index([earlySignOutReasonId])
+  @@index([earlySignOutCapturedByUserId])
 }
 
 //
@@ -667,10 +703,11 @@ model TimesheetDayAcceptance {
 //
 
 model Product {
-  id       String  @id @default(cuid())
-  name     String
-  price    Decimal @db.Decimal(12, 2)
-  isActive Boolean @default(true)
+  id             String  @id @default(cuid())
+  name           String
+  normalizedName String?
+  price          Decimal @db.Decimal(12, 2)
+  isActive       Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -683,6 +720,7 @@ model Product {
 
   @@index([isActive])
   @@index([name])
+  @@index([normalizedName])
 }
 
 model Deduction {
@@ -991,30 +1029,39 @@ enum ProductUom {
 }
 
 model ProductCategory {
-  id   String @id @default(cuid())
-  name String
+  id             String  @id @default(cuid())
+  name           String
+  normalizedName String?
 
   procurementProducts ProcurementProduct[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([normalizedName])
 }
 
 model Supplier {
-  id      String  @id @default(cuid())
-  name    String
-  phone   String?
-  email   String?
-  address String?
+  id             String  @id @default(cuid())
+  name           String
+  normalizedName String?
+  phone          String?
+  email          String?
+  address        String?
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // relations
-  products              ProcurementProduct[]
-  orders                SiteProductOrder[]
-  supplierProductPrices SupplierProductPrice[]
+  products               ProcurementProduct[]
+  orders                 SiteProductOrder[]
+  supplierProductPrices  SupplierProductPrice[]
+  finishingScheduleItems SiteFinishingScheduleItem[] @relation("FinishingScheduleItemSupplier")
 
   @@unique([name])
   @@index([isActive])
+  @@index([normalizedName])
 }
 
 // A product in the procurement catalog (paints, cement, etc.)
@@ -1048,10 +1095,15 @@ model ProcurementProduct {
   // Sites where this product is expected to be used
   siteMaterials SiteMaterial[]
 
+  finishingScheduleItems SiteFinishingScheduleItem[]
+
+  normalizedName String?
+
   @@unique([sku])
   @@index([isActive])
   @@index([categoryId])
   @@index([name])
+  @@index([normalizedName])
 }
 
 // Price list per supplier per product (optionally time-bounded)
@@ -1113,6 +1165,7 @@ model SiteProductOrder {
   @@index([siteId, createdAt])
   @@index([supplierId, createdAt])
   @@index([createdByUserId, createdAt])
+  @@index([reference])
 }
 
 // Items inside the site order
@@ -1137,11 +1190,15 @@ model SiteProductOrderItem {
 
   note String?
 
+  costCodeId String?
+  costCode   SiteCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([orderId])
   @@index([productId])
+  @@index([costCodeId])
 }
 
 //
@@ -1155,11 +1212,18 @@ model FortnightMeeting {
   endDate   DateTime // report range end
   meetingOn DateTime // your Thursday meeting date
 
-  // Legacy – kept nullable for old data; no longer required
+  // Legacy – kept nullable for old data
   periodId String?
 
   createdByUserId String?
   createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  generatedAt       DateTime  @default(now())
+  finalizedAt       DateTime?
+  finalizedByUserId String?
+  finalizedByUser   User?     @relation("FortnightMeetingFinalizedBy", fields: [finalizedByUserId], references: [id], onDelete: SetNull)
+
+  notes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1171,6 +1235,7 @@ model FortnightMeeting {
 
   @@unique([startDate, endDate])
   @@index([meetingOn])
+  @@index([finalizedAt])
 }
 
 model FortnightMeetingRow {
@@ -1258,6 +1323,9 @@ model OvertimeEntry {
 
   note String?
 
+  costCodeId String?
+  costCode   SiteCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+
   createdByUserId String
   createdByUser   User   @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
 
@@ -1269,6 +1337,7 @@ model OvertimeEntry {
   @@index([overtimePriceId])
   @@index([createdByUserId])
   @@index([workDate])
+  @@index([costCodeId])
 }
 
 model FortnightMeetingTotals {
@@ -1313,7 +1382,221 @@ model SiteMaterial {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  usages SiteMaterialUsage[]
+
   @@unique([siteId, productId])
   @@index([siteId])
   @@index([productId])
+}
+
+// Usage tags for a site material — e.g. "External Walls", "Internal Walls", "Stills", "Main Color", "Feature Wall"
+model SiteMaterialUsage {
+  id String @id @default(cuid())
+
+  siteMaterialId String
+  siteMaterial   SiteMaterial @relation(fields: [siteMaterialId], references: [id], onDelete: Cascade)
+
+  // e.g. "External Walls", "Internal Walls", "Stills", "Ceilings", "Feature Wall", "Main Color"
+  label String
+
+  // Optional quantity for this specific usage
+  quantity Int?
+
+  // Optional note
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteMaterialId])
+}
+
+// ============================
+// SITE FINISHING SCHEDULE
+// ============================
+// Defines the paint / finish specifications for each area of a site.
+// Based on the Finishing Schedule document format:
+//   Site -> Schedule (header) -> Areas -> Items (per position: product, color, supplier)
+
+enum FinishingZone {
+  INTERNAL
+  EXTERNAL
+}
+
+model SiteFinishingSchedule {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  // Header info from the finishing schedule document
+  contractNo      String?
+  contractManager String?
+  siteForeman     String?
+  client          String?
+  startDate       DateTime?
+  completionDate  DateTime?
+  drawingDetails  String?
+  contactInfo     String?
+
+  // Versioning / publishing
+  version          Int       @default(1)
+  isActive         Boolean   @default(true)
+  approvedAt       DateTime?
+  approvedByUserId String?
+  approvedByUser   User?     @relation("FinishingScheduleApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  supersededById   String?
+  supersededBy     SiteFinishingSchedule?  @relation("FinishingScheduleVersionChain", fields: [supersededById], references: [id], onDelete: SetNull)
+  previousVersions SiteFinishingSchedule[] @relation("FinishingScheduleVersionChain")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  areas SiteFinishingScheduleArea[]
+
+  @@index([siteId])
+  @@index([isActive])
+  @@index([contractNo])
+}
+
+model SiteFinishingScheduleArea {
+  id String @id @default(cuid())
+
+  scheduleId String
+  schedule   SiteFinishingSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  // e.g. "AA", "CA", "CB"
+  name  String
+  // e.g. "Internal/External", "Offices, Substation, warehouse"
+  label String?
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items SiteFinishingScheduleItem[]
+
+  @@index([scheduleId])
+}
+
+model SiteFinishingScheduleItem {
+  id String @id @default(cuid())
+
+  areaId String
+  area   SiteFinishingScheduleArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  zone FinishingZone
+
+  position String
+
+  // Free-text snapshot/display values
+  product   String?
+  colorCode String?
+  supplier  String?
+
+  // Optional structured links for future reporting / procurement
+  procurementProductId String?
+  procurementProduct   ProcurementProduct? @relation(fields: [procurementProductId], references: [id], onDelete: SetNull)
+
+  supplierId  String?
+  supplierRef Supplier? @relation("FinishingScheduleItemSupplier", fields: [supplierId], references: [id], onDelete: SetNull)
+
+  sortOrder Int @default(0)
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([areaId])
+  @@index([zone])
+  @@index([procurementProductId])
+  @@index([supplierId])
+}
+
+// ============================
+// EARLY SIGN-OUT REASONS
+// ============================
+
+model EarlySignOutReason {
+  id              String  @id @default(cuid())
+  label           String
+  normalizedLabel String?
+  isActive        Boolean @default(true)
+  sortOrder       Int     @default(0)
+  requiresNote    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendanceScans AttendanceScan[]
+
+  @@index([isActive, sortOrder])
+  @@index([normalizedLabel])
+}
+
+// ============================
+// SITE COST CODES
+// ============================
+
+model SiteCostCode {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  code        String
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  siteProductOrderItems SiteProductOrderItem[]
+  overtimeEntries       OvertimeEntry[]
+
+  @@unique([siteId, code])
+  @@index([siteId])
+  @@index([isActive])
+}
+
+// ============================
+// SITE CLAIMS
+// ============================
+
+enum SiteClaimStatus {
+  DRAFT
+  SUBMITTED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+model SiteClaim {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  claimNo     String?
+  claimDate   DateTime
+  description String?
+
+  amountClaimed  Decimal @default(0) @db.Decimal(14, 2)
+  amountReceived Decimal @default(0) @db.Decimal(14, 2)
+
+  status SiteClaimStatus @default(DRAFT)
+
+  createdByUserId String?
+  createdByUser   User?   @relation("SiteClaimCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId, claimDate])
+  @@index([status])
+  @@index([claimNo])
 }

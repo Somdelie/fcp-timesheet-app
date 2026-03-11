@@ -3,7 +3,14 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { Search, Plus, Download, Printer, CalendarDays } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Download,
+  Printer,
+  CalendarDays,
+  SlidersHorizontal,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +30,14 @@ import {
   generateSitesPdf,
   downloadPdfBlob,
   printSites,
+  type SitesPrintColumns,
 } from "@/lib/generateSitesPdf";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SitesListProps {
   initialSites: SiteRow[];
@@ -48,6 +62,14 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const [photoSubmitting, setPhotoSubmitting] = React.useState(false);
   const [pdfGenerating, setPdfGenerating] = React.useState(false);
   const [selectedSites, setSelectedSites] = React.useState<SiteRow[]>([]);
+  const [exportColumns, setExportColumns] = React.useState<SitesPrintColumns>({
+    client: true,
+    supervisor: true,
+    wages: true,
+    material: true,
+    total: true,
+    created: true,
+  });
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [dateFilteredSites, setDateFilteredSites] = React.useState<
@@ -93,7 +115,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
     }
     setPdfGenerating(true);
     try {
-      const pdfBytes = await generateSitesPdf(exportSites);
+      const pdfBytes = await generateSitesPdf(exportSites, exportColumns);
       const filename = `sites-report-${new Date().toISOString().slice(0, 10)}.pdf`;
       downloadPdfBlob(pdfBytes, filename);
       toast.success("PDF downloaded");
@@ -260,7 +282,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
                   toast.error("No sites to print");
                   return;
                 }
-                printSites(exportSites);
+                printSites(exportSites, exportColumns);
               }}
               disabled={filtered.length === 0}
               title={
@@ -271,6 +293,64 @@ export default function SitesList({ initialSites }: SitesListProps) {
             >
               <Printer className="h-3.5 w-3.5" />
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span className="hidden md:inline">Columns</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setExportColumns((prev) => ({
+                      ...prev,
+                      wages: !prev.wages,
+                    }));
+                  }}
+                >
+                  {exportColumns.wages ? "✓ " : ""}Wages
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setExportColumns((prev) => ({
+                      ...prev,
+                      material: !prev.material,
+                    }));
+                  }}
+                >
+                  {exportColumns.material ? "✓ " : ""}Material
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setExportColumns((prev) => ({
+                      ...prev,
+                      total: !prev.total,
+                    }));
+                  }}
+                >
+                  {exportColumns.total ? "✓ " : ""}Total Cost
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setExportColumns((prev) => ({
+                      ...prev,
+                      created: !prev.created,
+                    }));
+                  }}
+                >
+                  {exportColumns.created ? "✓ " : ""}Created Date
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="h-8 gap-1.5 px-3">

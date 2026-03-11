@@ -12,6 +12,7 @@ import {
   ClipboardList,
   X,
   Check,
+  Tag,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,10 @@ import {
   updateSiteMaterial,
   removeSiteMaterial,
   listAvailableProducts,
+  addSiteMaterialUsage,
+  removeSiteMaterialUsage,
   type SiteMaterialRow,
+  type SiteMaterialUsageRow,
 } from "@/actions/site-materials";
 
 /* ------------------------------------------------------------------ */
@@ -98,6 +102,11 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
   /* ---- Inline editing ---- */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState("");
+
+  /* ---- Usage dialog ---- */
+  const [usageMaterial, setUsageMaterial] = useState<SiteMaterialRow | null>(
+    null,
+  );
   const [editNote, setEditNote] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -161,6 +170,7 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>SKU</TableHead>
+                <TableHead>Usage</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
@@ -185,6 +195,26 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {m.product.sku || "—"}
+                  </TableCell>
+
+                  {/* Usages */}
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {m.usages.map((u) => (
+                        <Badge key={u.id} variant="outline" className="text-xs">
+                          {u.label}
+                        </Badge>
+                      ))}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => setUsageMaterial(m)}
+                        title="Manage usages"
+                      >
+                        <Tag className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
 
                   {/* Quantity */}
@@ -276,6 +306,13 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
         isLoading={!!removing}
         confirmText="Remove"
         variant="destructive"
+      />
+
+      {/* Usage dialog */}
+      <UsageDialog
+        material={usageMaterial}
+        onOpenChange={(open) => !open && setUsageMaterial(null)}
+        onChanged={load}
       />
     </div>
   );
@@ -463,6 +500,164 @@ function AddMaterialsDialog({
             </div>
           </div>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Usage Dialog                                                       */
+/* ------------------------------------------------------------------ */
+
+const USAGE_SUGGESTIONS = [
+  "External Walls",
+  "Internal Walls",
+  "Stills",
+  "Ceilings",
+  "Sofits",
+  "Doors",
+  "Door Frames",
+  "Skirting",
+  "Main Color",
+  "Feature Wall",
+  "Top Band",
+  "Middle Band",
+  "Bottom Band",
+  "Services",
+  "Silver Frames",
+];
+
+function UsageDialog({
+  material,
+  onOpenChange,
+  onChanged,
+}: {
+  material: SiteMaterialRow | null;
+  onOpenChange: (v: boolean) => void;
+  onChanged: () => void;
+}) {
+  const [newLabel, setNewLabel] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const existingLabels = new Set(
+    (material?.usages ?? []).map((u) => u.label.toLowerCase()),
+  );
+
+  async function handleAdd(label: string) {
+    if (!material || !label.trim()) return;
+    setAdding(true);
+    const res = await addSiteMaterialUsage({
+      siteMaterialId: material.id,
+      label: label.trim(),
+    });
+    if (res.ok) {
+      toast.success(`Usage "${label.trim()}" added`);
+      setNewLabel("");
+      onChanged();
+    } else {
+      toast.error(res.error);
+    }
+    setAdding(false);
+  }
+
+  async function handleRemove(usageId: string) {
+    setRemovingId(usageId);
+    const res = await removeSiteMaterialUsage(usageId);
+    if (res.ok) {
+      toast.success("Usage removed");
+      onChanged();
+    } else {
+      toast.error(res.error);
+    }
+    setRemovingId(null);
+  }
+
+  return (
+    <Dialog open={!!material} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Material Usage</DialogTitle>
+          <DialogDescription>
+            {material
+              ? `Manage where "${material.product.name}" is used on this site.`
+              : ""}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Current usages */}
+        {material && material.usages.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {material.usages.map((u) => (
+              <Badge
+                key={u.id}
+                variant="secondary"
+                className="flex items-center gap-1 pr-1"
+              >
+                {u.label}
+                <button
+                  className="ml-1 rounded-full p-0.5 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                  onClick={() => handleRemove(u.id)}
+                  disabled={removingId === u.id}
+                >
+                  {removingId === u.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <X className="h-3 w-3" />
+                  )}
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Quick-add suggestions */}
+        <div>
+          <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+            Quick add:
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {USAGE_SUGGESTIONS.filter(
+              (s) => !existingLabels.has(s.toLowerCase()),
+            ).map((s) => (
+              <Button
+                key={s}
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={adding}
+                onClick={() => handleAdd(s)}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                {s}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom label input */}
+        <div className="flex gap-2">
+          <Input
+            placeholder="Custom usage label..."
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newLabel.trim()) handleAdd(newLabel);
+            }}
+            className="flex-1"
+          />
+          <Button
+            size="sm"
+            disabled={!newLabel.trim() || adding}
+            onClick={() => handleAdd(newLabel)}
+          >
+            {adding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
