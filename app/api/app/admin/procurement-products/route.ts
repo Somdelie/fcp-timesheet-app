@@ -66,8 +66,8 @@ export async function GET(req: Request) {
     const rawLimit = url.searchParams.get("limit");
     const rawPage = url.searchParams.get("page");
 
-    const MAX_LIMIT = 500;
-    const DEFAULT_LIMIT = 100;
+    const MAX_LIMIT = 1000;
+    const DEFAULT_LIMIT = 1000;
 
     let limit = Number(rawLimit ?? DEFAULT_LIMIT);
     if (!Number.isFinite(limit) || limit <= 0) limit = DEFAULT_LIMIT;

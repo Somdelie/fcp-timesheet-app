@@ -574,7 +574,15 @@ export default function SiteMaterialOrdersPanel({
   }
 
   const aggregated = aggregateProducts(orders);
-  const grandTotal = orders.reduce((s, o) => s + (o.totalCost ?? 0), 0);
+  const grandTotal = orders.reduce(
+    (sum, order) =>
+      sum +
+      order.items.reduce(
+        (itemSum, item) => itemSum + item.quantity * item.unitPriceAtOrder,
+        0,
+      ),
+    0,
+  );
   const totalItems = aggregated.reduce((s, a) => s + a.totalQuantity, 0);
 
   return (
@@ -793,6 +801,10 @@ export default function SiteMaterialOrdersPanel({
               <div className="space-y-1.5">
                 {orders.map((order) => {
                   const isExpanded = expandedOrderId === order.id;
+                  const rowTotal = order.items.reduce(
+                    (sum, item) => sum + item.quantity * item.unitPriceAtOrder,
+                    0,
+                  );
                   return (
                     <div
                       key={order.id}
@@ -861,11 +873,9 @@ export default function SiteMaterialOrdersPanel({
 
                         {/* Right: cost + actions */}
                         <div className="flex items-center gap-3 shrink-0">
-                          {order.totalCost != null && (
-                            <span className="text-[13px] font-semibold text-slate-900 dark:text-white tabular-nums">
-                              {fmtCurrency(order.totalCost)}
-                            </span>
-                          )}
+                          <span className="text-[13px] font-semibold text-slate-900 dark:text-white tabular-nums">
+                            {fmtCurrency(rowTotal)}
+                          </span>
                           <div className="flex items-center gap-0.5">
                             <button
                               className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"

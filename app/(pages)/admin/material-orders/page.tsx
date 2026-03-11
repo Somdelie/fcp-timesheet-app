@@ -200,6 +200,8 @@ export default function MaterialOrdersPage() {
   // Filter
   const [filterSiteId, setFilterSiteId] = useState("all");
   const [filterRef, setFilterRef] = useState("");
+  const [filterFrom, setFilterFrom] = useState<string | null>(null);
+  const [filterTo, setFilterTo] = useState<string | null>(null);
 
   // Pagination
   const [page, setPage] = useState(0);
@@ -327,6 +329,15 @@ export default function MaterialOrdersPage() {
 
   useEffect(() => {
     loadLookups();
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString()
+      .slice(0, 10);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      .toISOString()
+      .slice(0, 10);
+    setFilterFrom(from);
+    setFilterTo(to);
   }, [loadLookups]);
 
   /* ── Load orders ── */
@@ -336,6 +347,8 @@ export default function MaterialOrdersPage() {
       const params = new URLSearchParams();
       if (filterSiteId && filterSiteId !== "all")
         params.set("siteId", filterSiteId);
+      if (filterFrom) params.set("from", filterFrom);
+      if (filterTo) params.set("to", filterTo);
       const res = await fetch(
         `/api/app/admin/material-orders?${params.toString()}`,
         {
@@ -352,7 +365,7 @@ export default function MaterialOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterSiteId]);
+  }, [filterSiteId, filterFrom, filterTo]);
 
   useEffect(() => {
     loadOrders();
@@ -544,6 +557,34 @@ export default function MaterialOrdersPage() {
             placeholder="Search by reference…"
             className="w-48"
           />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              From
+            </label>
+            <Input
+              type="date"
+              value={filterFrom ?? ""}
+              onChange={(e) => {
+                setFilterFrom(e.target.value || null);
+                setPage(0);
+              }}
+              className="w-36"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              To
+            </label>
+            <Input
+              type="date"
+              value={filterTo ?? ""}
+              onChange={(e) => {
+                setFilterTo(e.target.value || null);
+                setPage(0);
+              }}
+              className="w-36"
+            />
+          </div>
           <div className="w-px self-stretch bg-border" />
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
@@ -622,6 +663,10 @@ export default function MaterialOrdersPage() {
               ) : (
                 paginatedOrders.map((order) => {
                   const isExpanded = expandedOrderId === order.id;
+                  const rowTotal = order.items.reduce(
+                    (sum, item) => sum + item.quantity * item.unitPriceAtOrder,
+                    0,
+                  );
                   return (
                     <React.Fragment key={order.id}>
                       <TableRow
@@ -647,7 +692,7 @@ export default function MaterialOrdersPage() {
                           {order.items.length !== 1 ? "s" : ""}
                         </TableCell>
                         <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-semibold text-right">
-                          {formatCurrency(order.totalCost ?? 0)}
+                          {formatCurrency(rowTotal)}
                         </TableCell>
                       </TableRow>
                       <TableRow className="bg-muted/30">

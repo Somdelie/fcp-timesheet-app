@@ -174,6 +174,7 @@ export async function POST(req: NextRequest) {
   for (const order of parsedOrders) {
     const reasons: string[] = [];
     const matchedItems: MatchedItem[] = [];
+    const unmatchedItems: typeof order.items = [];
     const unmatchedDescs: string[] = [];
     let resolvedSupplierId: string | null = null;
 
@@ -203,12 +204,105 @@ export async function POST(req: NextRequest) {
           note: item.rawDescription,
         });
       } else {
+        unmatchedItems.push(item);
+      }
+    }
+
+    // If we still don't have a supplier, fall back to the vendor name on the PDF
+    if (!resolvedSupplierId && order.vendorName) {
+      const existingSupplier = await prisma.supplier.findFirst({
+        where: { name: order.vendorName },
+        select: { id: true },
+      });
+
+      if (existingSupplier) {
+        resolvedSupplierId = existingSupplier.id;
+      } else {
+        const createdSupplier = await prisma.supplier.create({
+          data: {
+            name: order.vendorName,
+          },
+        });
+        resolvedSupplierId = createdSupplier.id;
+      }
+    }
+
+    // Auto-create missing products for unmatched items so the order can still be
+    // imported end-to-end.
+    for (const item of unmatchedItems) {
+      if (!resolvedSupplierId) {
         unmatchedDescs.push(
           item.candidateSku
             ? `"${item.rawDescription}" (tried SKU: ${item.candidateSku})`
             : `"${item.rawDescription}"`,
         );
+        continue;
       }
+
+      // Derive basic UOM + unit size from the unit string, e.g. "20L" → (20, "L").
+      let derivedUom: string | null = null;
+      let derivedUnitSize: number | null = null;
+
+      const unitMatch = item.unit.match(/(\d+)([A-Za-z]+)/);
+      if (unitMatch) {
+        derivedUnitSize = Number(unitMatch[1]);
+        const code = unitMatch[2].toUpperCase();
+        if (code === "L") derivedUom = "L";
+        else if (code === "KG") derivedUom = "KG";
+        else derivedUom = "UNIT";
+      } else if (/each/i.test(item.unit)) {
+        derivedUom = "EACH";
+        derivedUnitSize = 1;
+      }
+
+      const name =
+        item.rawDescription.trim() || `BuildSmart item ${item.costCode}`;
+      const sku = item.candidateSku ?? null;
+
+      // Avoid creating duplicates within the same import if another item used the
+      // same SKU earlier in this run.
+      let product: Product | undefined = sku ? skuLookup.get(sku) : undefined;
+
+      if (!product) {
+        product = await prisma.procurementProduct.create({
+          data: {
+            name,
+            sku,
+            uom: derivedUom as any,
+            unitSize: derivedUnitSize ?? undefined,
+            description: `BuildSmart import (PO ${order.orderNumber})`,
+            supplier: { connect: { id: resolvedSupplierId } },
+          },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            uom: true,
+            unitSize: true,
+            supplierId: true,
+            supplier: { select: { id: true, name: true } },
+          },
+        });
+
+        // Keep in-memory lookups in sync so subsequent items can match this product
+        allProducts.push(product as any);
+        if (sku) skuLookup.set(sku, product as any);
+      }
+
+      matchedItems.push({
+        productId: product.id,
+        sku: product.sku ?? "",
+        quantity: item.quantity,
+        unitPriceAtOrder: null,
+        uomAtOrder: (product.uom as any) ?? derivedUom ?? "UNIT",
+        unitSizeAtOrder:
+          product.unitSize != null
+            ? String(product.unitSize)
+            : derivedUnitSize != null
+              ? String(derivedUnitSize)
+              : "1",
+        note: item.rawDescription,
+      });
     }
 
     // Resolve siteId from siteCode
@@ -279,10 +373,12 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // Resolve unit prices from SupplierProductPrice table
+    // Resolve unit prices from SupplierProductPrice table.
+    // First try an exact (uom + unitSize) match; if that yields 0, fall back
+    // to a more general lookup for the product/supplier only.
     const itemsWithPrices = await Promise.all(
       mo.matchedItems.map(async (mi) => {
-        const price = await resolveUnitPrice({
+        let price = await resolveUnitPrice({
           manualPrice: mi.unitPriceAtOrder,
           supplierId: mo.supplierId,
           productId: mi.productId,
@@ -291,6 +387,16 @@ export async function POST(req: NextRequest) {
             ? parseFloat(mi.unitSizeAtOrder)
             : undefined,
         });
+
+        // If no specific price found, try without size filters
+        if ((price as any).isZero?.()) {
+          price = await resolveUnitPrice({
+            manualPrice: null,
+            supplierId: mo.supplierId,
+            productId: mi.productId,
+          });
+        }
+
         return { ...mi, resolvedPrice: price };
       }),
     );

@@ -38,6 +38,7 @@ import {
   Clock,
   Loader,
   Upload,
+  Package,
 } from "lucide-react";
 import { useUserRole } from "@/lib/user-role-context";
 import type { UserRole } from "@/lib/roles";
@@ -1089,6 +1090,11 @@ export default function HomePage() {
                     label: "BuildSmart PDF Seeder",
                     icon: Upload,
                     href: "/admin/buildsmart-orders",
+                  },
+                  {
+                    label: "BuildSmart Products",
+                    icon: Package,
+                    href: "/admin/buildsmart-products",
                   },
                 ].map((action, index) => {
                   const Icon = action.icon;
