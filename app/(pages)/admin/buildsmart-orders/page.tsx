@@ -196,9 +196,9 @@ export default function BuildsmartPdfSeedPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6">
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <Card className="rounded-3xl border shadow-sm">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <Card className="rounded border shadow-sm">
             <CardHeader className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -244,14 +244,14 @@ export default function BuildsmartPdfSeedPage() {
                     addFiles(e.dataTransfer.files);
                 }}
                 className={cn(
-                  "group rounded-3xl border-2 border-dashed p-8 transition",
+                  "group rounded border-2 border-dashed p-8 transition",
                   dragActive
                     ? "border-primary bg-primary/5"
                     : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
                 )}
               >
                 <div className="flex flex-col items-center justify-center text-center">
-                  <div className="mb-4 rounded-2xl border bg-background p-4 shadow-sm">
+                  <div className="mb-4 rounded border bg-background p-4 shadow-sm">
                     <Upload className="h-8 w-8" />
                   </div>
                   <h3 className="text-lg font-medium">Drop PDFs here</h3>
@@ -266,7 +266,7 @@ export default function BuildsmartPdfSeedPage() {
                   <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                     <Button
                       onClick={() => inputRef.current?.click()}
-                      className="rounded-2xl"
+                      className="rounded"
                     >
                       <FolderOpen className="mr-2 h-4 w-4" />
                       Choose PDFs
@@ -275,7 +275,7 @@ export default function BuildsmartPdfSeedPage() {
                       variant="outline"
                       onClick={clearAll}
                       disabled={!files.length}
-                      className="rounded-2xl"
+                      className="rounded"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Clear list
@@ -296,7 +296,7 @@ export default function BuildsmartPdfSeedPage() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="rounded-2xl border bg-muted/20 shadow-none">
+                <Card className="rounded border bg-muted/20 shadow-none">
                   <CardContent className="p-4">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
                       Queued PDFs
@@ -306,7 +306,7 @@ export default function BuildsmartPdfSeedPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="rounded-2xl border bg-muted/20 shadow-none">
+                <Card className="rounded border bg-muted/20 shadow-none">
                   <CardContent className="p-4">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
                       Detected orders
@@ -316,7 +316,7 @@ export default function BuildsmartPdfSeedPage() {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="rounded-2xl border bg-muted/20 shadow-none">
+                <Card className="rounded border bg-muted/20 shadow-none">
                   <CardContent className="p-4">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
                       API endpoint
@@ -333,7 +333,7 @@ export default function BuildsmartPdfSeedPage() {
                 <Input
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
-                  className="rounded-2xl"
+                  className="rounded"
                 />
               </div>
 
@@ -342,7 +342,7 @@ export default function BuildsmartPdfSeedPage() {
                   onClick={handleSubmit}
                   disabled={!files.length || isSubmitting}
                   size="lg"
-                  className="rounded-2xl px-6"
+                  className="rounded px-6"
                 >
                   {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -362,7 +362,7 @@ export default function BuildsmartPdfSeedPage() {
                       result.prismaSeedCode,
                     )
                   }
-                  className="rounded-2xl"
+                  className="rounded"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download seed file
@@ -371,7 +371,7 @@ export default function BuildsmartPdfSeedPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border shadow-sm">
+          <Card className="rounded border shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Upload queue</CardTitle>
               <CardDescription>
@@ -382,14 +382,14 @@ export default function BuildsmartPdfSeedPage() {
               <ScrollArea className="h-[620px] pr-3">
                 <div className="space-y-3">
                   {!sortedFiles.length ? (
-                    <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
                       No PDFs added yet.
                     </div>
                   ) : (
                     sortedFiles.map((entry) => (
                       <div
                         key={entry.id}
-                        className="rounded-2xl border bg-card p-4 shadow-sm"
+                        className="rounded border bg-card p-4 shadow-sm"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
@@ -457,7 +457,7 @@ export default function BuildsmartPdfSeedPage() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <Card className="rounded-3xl border shadow-sm">
+          <Card className="rounded border shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Run summary</CardTitle>
               <CardDescription>
@@ -466,7 +466,7 @@ export default function BuildsmartPdfSeedPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {!result ? (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
                   No output yet.
                 </div>
               ) : (
@@ -528,7 +528,7 @@ export default function BuildsmartPdfSeedPage() {
                             ([orderNumber, reasons]) => (
                               <div
                                 key={orderNumber}
-                                className="rounded-2xl border bg-muted/20 p-4"
+                                className="rounded border bg-muted/20 p-4"
                               >
                                 <div className="text-sm font-semibold">
                                   Order {orderNumber}
@@ -549,7 +549,7 @@ export default function BuildsmartPdfSeedPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border shadow-sm">
+          <Card className="rounded border shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Generated seed payload</CardTitle>
               <CardDescription>
@@ -559,11 +559,11 @@ export default function BuildsmartPdfSeedPage() {
             </CardHeader>
             <CardContent>
               {!result ? (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
                   Process PDFs to preview generated orders.
                 </div>
               ) : (
-                <ScrollArea className="h-[560px] rounded-2xl border bg-muted/20 p-4">
+                <ScrollArea className="h-[560px] rounded border bg-muted/20 p-4">
                   <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">
                     {JSON.stringify(result.orders, null, 2)}
                   </pre>
@@ -579,7 +579,7 @@ export default function BuildsmartPdfSeedPage() {
 
 function MetricCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border bg-muted/20 p-4">
+    <div className="rounded border bg-muted/20 p-4">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">
         {label}
       </div>

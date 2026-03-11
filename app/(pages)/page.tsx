@@ -37,6 +37,7 @@ import {
   CheckCircle,
   Clock,
   Loader,
+  Upload,
 } from "lucide-react";
 import { useUserRole } from "@/lib/user-role-context";
 import type { UserRole } from "@/lib/roles";
@@ -1083,6 +1084,11 @@ export default function HomePage() {
                     label: "Review Timesheets",
                     icon: ClipboardCheck,
                     href: "/timesheets",
+                  },
+                  {
+                    label: "BuildSmart PDF Seeder",
+                    icon: Upload,
+                    href: "/admin/buildsmart-orders",
                   },
                 ].map((action, index) => {
                   const Icon = action.icon;
