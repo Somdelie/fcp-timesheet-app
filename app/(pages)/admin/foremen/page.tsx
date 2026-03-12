@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AdminForeman, AdminEmployee } from "@/lib/apiClient";
+import type { AdminForeman, AdminEmployee } from "@/lib/apiClient";
 
 export default function AdminForemenPage() {
   const [foremen, setForemen] = useState<AdminForeman[]>([]);

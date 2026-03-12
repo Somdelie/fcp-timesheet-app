@@ -2,6 +2,25 @@
  * Client library for Admin API endpoints
  * These functions make fetch requests with Bearer token authentication
  */
+import { headers as nextHeaders } from "next/headers";
+
+async function getBaseUrl(): Promise<string> {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  // Server-side: derive base URL from incoming request headers
+  try {
+    const hdrs = await nextHeaders();
+    const host = hdrs.get("x-forwarded-host") || hdrs.get("host");
+    const proto = hdrs.get("x-forwarded-proto") || "https";
+    if (host) {
+      return `${proto}://${host}`;
+    }
+  } catch {
+    // headers() may not be available outside of a request context
+  }
+  return process.env.NEXTAUTH_URL || "http://localhost:3000";
+}
 
 export interface AdminForeman {
   foremanId: string;
@@ -43,10 +62,7 @@ export async function apiAdminForemenList({
   { ok: true; foremen: AdminForeman[] } | { ok: false; error: string }
 > {
   try {
-    const base =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const base = await getBaseUrl();
     const url = new URL("/api/app/admin/foremen", base);
     if (q) url.searchParams.set("q", q);
 
@@ -88,10 +104,7 @@ export async function apiAdminCreateForeman({
   | { ok: false; error: string; status?: number }
 > {
   try {
-    const base =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const base = await getBaseUrl();
     const url = new URL("/api/app/admin/foremen", base);
 
     const res = await fetch(url, {
@@ -135,10 +148,7 @@ export async function apiAdminEmployees({
   { ok: true; employees: AdminEmployee[] } | { ok: false; error: string }
 > {
   try {
-    const base =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const base = await getBaseUrl();
     const url = new URL("/api/app/admin/employees", base);
     if (unlinked) url.searchParams.set("unlinked", "true");
     if (q) url.searchParams.set("q", q);
@@ -185,10 +195,7 @@ export async function apiAdminCreateAssistantForForeman({
   | { ok: false; error: string; status?: number }
 > {
   try {
-    const base =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const base = await getBaseUrl();
     const url = new URL(
       `/api/app/admin/foremen/${encodeURIComponent(foremanId)}/assistant`,
       base,
