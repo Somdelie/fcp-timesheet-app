@@ -204,14 +204,11 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
       toast.error("Please select an employee");
       return;
     }
-    if (isNewUserAssistant && !createAssistantData.assistantPassword) {
-      toast.error("Password is required for new users");
+    if (!createAssistantData.assistantPassword) {
+      toast.error("Password is required");
       return;
     }
-    if (
-      isNewUserAssistant &&
-      createAssistantData.assistantPassword.length < 8
-    ) {
+    if (createAssistantData.assistantPassword.length < 8) {
       toast.error("Password must be at least 8 characters");
       return;
     }
@@ -573,26 +570,22 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
                 required
               />
             </div>
-            {isNewUserAssistant && (
-              <div>
-                <label className="text-sm font-medium">
-                  Assistant Password
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Min 8 characters"
-                  value={createAssistantData.assistantPassword}
-                  onChange={(e) =>
-                    setCreateAssistantData({
-                      ...createAssistantData,
-                      assistantPassword: e.target.value,
-                    })
-                  }
-                  required
-                  minLength={8}
-                />
-              </div>
-            )}
+            <div>
+              <label className="text-sm font-medium">Assistant Password</label>
+              <Input
+                type="password"
+                placeholder="Min 8 characters"
+                value={createAssistantData.assistantPassword}
+                onChange={(e) =>
+                  setCreateAssistantData({
+                    ...createAssistantData,
+                    assistantPassword: e.target.value,
+                  })
+                }
+                required
+                minLength={8}
+              />
+            </div>
             <div className="flex gap-2 justify-end">
               <Button
                 type="button"
