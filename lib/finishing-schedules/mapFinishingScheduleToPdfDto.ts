@@ -120,7 +120,7 @@ export function mapFinishingScheduleToPdfDto(
     completionDate: formatDate(schedule.completionDate),
     drawingDetails: show(schedule.drawingDetails),
     contactInfo: show(schedule.contactInfo),
-    fcpQs: "\u2014",
+    fcpQs: "Janice Raath",
     areas,
     hasItems: areas.some((a) => a.items.length > 0),
   };

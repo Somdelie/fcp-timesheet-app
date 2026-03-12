@@ -13,6 +13,11 @@ import type {
 } from "@/lib/buildsmart-parser";
 import { resolveUnitPrice } from "@/lib/procurement/resolveUnitPrice";
 import { recalcOrderTotal } from "@/lib/procurement/recalcOrderTotal";
+import {
+  normalizeSupplierName,
+  mapDescriptionToProduct,
+  stripColorTokens,
+} from "@/lib/buildsmart-import-mappings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,6 +98,21 @@ export async function POST(req: NextRequest) {
   const skuLookup = new Map<string, (typeof allProducts)[number]>();
   for (const p of allProducts) {
     if (p.sku) skuLookup.set(p.sku, p);
+  }
+
+  // Build a name → product lookup (case-insensitive) for explicit mappings
+  const nameLookup = new Map<string, (typeof allProducts)[number]>();
+  for (const p of allProducts) {
+    nameLookup.set(p.name.toLowerCase(), p);
+  }
+
+  // Build a supplier name → id lookup (case-insensitive) for normalized matching
+  const allSuppliers = await prisma.supplier.findMany({
+    select: { id: true, name: true },
+  });
+  const supplierNameLookup = new Map<string, string>();
+  for (const s of allSuppliers) {
+    supplierNameLookup.set(s.name.toLowerCase(), s.id);
   }
 
   // ── Name-based fallback matching ──
@@ -184,9 +204,25 @@ export async function POST(req: NextRequest) {
         ? skuLookup.get(item.candidateSku)
         : undefined;
 
-      // 2) Fallback: name-based fuzzy match (Dulux & others)
+      // 2) Explicit mapping rules (known products from specific suppliers)
+      if (!product) {
+        const mapped = mapDescriptionToProduct(item.rawDescription);
+        if (mapped) {
+          product = nameLookup.get(mapped.toLowerCase());
+        }
+      }
+
+      // 3) Fallback: name-based fuzzy match (Dulux & others)
       if (!product) {
         product = findProductByName(item.rawDescription, item.unit);
+      }
+
+      // 4) Fallback: strip color/tint tokens and retry fuzzy match
+      if (!product) {
+        const stripped = stripColorTokens(item.rawDescription);
+        if (stripped !== item.rawDescription) {
+          product = findProductByName(stripped, item.unit);
+        }
       }
 
       if (product) {
@@ -209,21 +245,44 @@ export async function POST(req: NextRequest) {
     }
 
     // If we still don't have a supplier, fall back to the vendor name on the PDF
+    // with normalization to match known aliases.
     if (!resolvedSupplierId && order.vendorName) {
-      const existingSupplier = await prisma.supplier.findFirst({
-        where: { name: order.vendorName },
-        select: { id: true },
-      });
+      const normalizedName = normalizeSupplierName(order.vendorName);
 
-      if (existingSupplier) {
-        resolvedSupplierId = existingSupplier.id;
+      // Try normalized name first (case-insensitive), then original
+      const supplierId =
+        supplierNameLookup.get(normalizedName.toLowerCase()) ??
+        supplierNameLookup.get(order.vendorName.trim().toLowerCase());
+
+      if (supplierId) {
+        resolvedSupplierId = supplierId;
       } else {
-        const createdSupplier = await prisma.supplier.create({
-          data: {
-            name: order.vendorName,
+        // Exact DB lookup as final attempt before creating
+        const existingSupplier = await prisma.supplier.findFirst({
+          where: {
+            name: {
+              in: [normalizedName, order.vendorName.trim()],
+              mode: "insensitive",
+            },
           },
+          select: { id: true },
         });
-        resolvedSupplierId = createdSupplier.id;
+
+        if (existingSupplier) {
+          resolvedSupplierId = existingSupplier.id;
+        } else {
+          const createdSupplier = await prisma.supplier.create({
+            data: {
+              name: normalizedName,
+            },
+          });
+          resolvedSupplierId = createdSupplier.id;
+          // Keep in-memory lookup in sync
+          supplierNameLookup.set(
+            normalizedName.toLowerCase(),
+            createdSupplier.id,
+          );
+        }
       }
     }
 
@@ -287,6 +346,7 @@ export async function POST(req: NextRequest) {
         // Keep in-memory lookups in sync so subsequent items can match this product
         allProducts.push(product as any);
         if (sku) skuLookup.set(sku, product as any);
+        nameLookup.set(product.name.toLowerCase(), product as any);
       }
 
       matchedItems.push({
@@ -305,14 +365,42 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Resolve siteId from siteCode
-    const siteId = order.siteCode
+    // Resolve siteId from siteCode — auto-create if the contract line gave us
+    // a code and a name but no matching site exists yet.
+    let siteId = order.siteCode
       ? (siteCodeLookup.get(order.siteCode) ?? null)
       : null;
 
+    if (!siteId && order.siteCode && order.siteName) {
+      // Try case-insensitive name match as fallback
+      const existingSite = await prisma.site.findFirst({
+        where: { name: { equals: order.siteName, mode: "insensitive" } },
+        select: { id: true },
+      });
+
+      if (existingSite) {
+        siteId = existingSite.id;
+        siteCodeLookup.set(order.siteCode, existingSite.id);
+      } else {
+        // Auto-create the site from Contract info
+        const created = await prisma.site.create({
+          data: {
+            code: order.siteCode,
+            name: order.siteName.toUpperCase(),
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        siteId = created.id;
+        siteCodeLookup.set(order.siteCode, created.id);
+      }
+    }
+
     if (!siteId) {
       reasons.push(
-        `No matching site for code "${order.siteCode ?? ""}". Available codes: ${[...siteCodeLookup.keys()].join(", ") || "none"}`,
+        order.siteCode
+          ? `No matching site for code "${order.siteCode}".`
+          : `No Contract line found — Balance Sheet / stock order with no site assignment.`,
       );
     }
 

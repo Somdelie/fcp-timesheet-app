@@ -155,48 +155,62 @@ const styles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------
- *  Flat row for table rendering
+ *  Group data by area → zone for nested "rowSpan" rendering
  * ------------------------------------------------------------------ */
 
-type FlatRow = {
-  area: string;
-  zone: string;
+type ZoneGroupRow = {
   position: string;
   product: string;
   colorCode: string;
   supplier: string;
-  showArea: boolean;
-  showZone: boolean;
 };
 
-function flattenRows(data: FinishingSchedulePdfDto): FlatRow[] {
-  const rows: FlatRow[] = [];
+type ZoneGroup = {
+  zone: string;
+  items: ZoneGroupRow[];
+};
 
-  for (const area of data.areas) {
-    let prevZone: string | null = null;
+type AreaGroup = {
+  name: string;
+  zones: ZoneGroup[];
+};
 
-    for (let i = 0; i < area.items.length; i++) {
-      const item = area.items[i];
-      const isFirstInArea = i === 0;
-      const zoneChanged = item.zone !== prevZone;
+function groupByArea(data: FinishingSchedulePdfDto): AreaGroup[] {
+  return data.areas
+    .filter((a) => a.items.length > 0)
+    .map((area) => {
+      const zones: ZoneGroup[] = [];
+      let current: ZoneGroup | null = null;
 
-      rows.push({
-        area: area.displayName,
-        zone: item.zone,
-        position: item.position,
-        product: item.product,
-        colorCode: item.colorCode,
-        supplier: item.supplier,
-        showArea: isFirstInArea,
-        showZone: isFirstInArea || zoneChanged,
-      });
+      for (const item of area.items) {
+        if (!current || current.zone !== item.zone) {
+          current = { zone: item.zone, items: [] };
+          zones.push(current);
+        }
+        current.items.push({
+          position: item.position,
+          product: item.product,
+          colorCode: item.colorCode,
+          supplier: item.supplier,
+        });
+      }
 
-      prevZone = item.zone;
-    }
-  }
-
-  return rows;
+      return { name: area.displayName, zones };
+    });
 }
+
+/*
+ * Column widths recalculated for nested containers.
+ * Flat proportions: Area 18 | Zone 13 | Position 16 | Product 19 | Color 22 | Supplier 12  (=100)
+ */
+const COL_AREA = "18%";
+const COL_ZONES_CTR = "82%";
+const COL_ZONE_IN_CTR = `${((13 / 82) * 100).toFixed(2)}%`;
+const COL_ITEMS_CTR = `${((69 / 82) * 100).toFixed(2)}%`;
+const COL_POS = `${((16 / 69) * 100).toFixed(2)}%`;
+const COL_PROD = `${((19 / 69) * 100).toFixed(2)}%`;
+const COL_CLR = `${((22 / 69) * 100).toFixed(2)}%`;
+const COL_SUP = `${((12 / 69) * 100).toFixed(2)}%`;
 
 /* ------------------------------------------------------------------
  *  Fixed table header (repeats on each page)
@@ -239,7 +253,7 @@ export function FinishingSchedulePdfDocument({
 }: {
   data: FinishingSchedulePdfDto;
 }) {
-  const rows = flattenRows(data);
+  const areaGroups = groupByArea(data);
 
   return (
     <Document title={`${data.siteName} Finishing Schedule`}>
@@ -300,44 +314,129 @@ export function FinishingSchedulePdfDocument({
         <View style={styles.table}>
           <TableHeader />
 
-          {rows.length === 0 ? (
+          {areaGroups.length === 0 ? (
             <View style={styles.emptyStateWrap}>
               <Text style={styles.emptyStateText}>
                 No finishing schedule items added yet.
               </Text>
             </View>
           ) : (
-            rows.map((row, index) => {
-              const isLast = index === rows.length - 1;
-              return (
+            areaGroups.map((area, ai) => (
+              <View
+                key={`area-${ai}`}
+                style={{
+                  flexDirection: "row",
+                  borderBottom:
+                    ai < areaGroups.length - 1 ? "1 solid #666666" : undefined,
+                }}
+                wrap={false}
+              >
+                {/* AREA – simulated rowSpan (vertically centred) */}
                 <View
-                  key={`row-${index}`}
-                  style={isLast ? [styles.row, styles.rowLast] : styles.row}
-                  wrap={false}
+                  style={{
+                    width: COL_AREA,
+                    borderRight: "1 solid #666666",
+                    justifyContent: "center",
+                    paddingHorizontal: 5,
+                    paddingVertical: 4,
+                  }}
                 >
-                  <Text style={[styles.cell, styles.colArea]}>
-                    {row.showArea ? row.area : ""}
-                  </Text>
-                  <Text style={[styles.cell, styles.colZone]}>
-                    {row.showZone ? row.zone : ""}
-                  </Text>
-                  <Text style={[styles.cell, styles.colPosition]}>
-                    {row.position}
-                  </Text>
-                  <Text style={[styles.cell, styles.colProduct]}>
-                    {row.product}
-                  </Text>
-                  <Text style={[styles.cell, styles.colColor]}>
-                    {row.colorCode}
-                  </Text>
-                  <Text
-                    style={[styles.cell, styles.colSupplier, styles.cellLast]}
-                  >
-                    {row.supplier}
+                  <Text style={{ fontSize: 8, fontWeight: 700 }}>
+                    {area.name}
                   </Text>
                 </View>
-              );
-            })
+
+                {/* Zone groups */}
+                <View style={{ width: COL_ZONES_CTR }}>
+                  {area.zones.map((zone, zi) => (
+                    <View
+                      key={`zone-${zi}`}
+                      style={{
+                        flexDirection: "row",
+                        borderBottom:
+                          zi < area.zones.length - 1
+                            ? "1 solid #CCCCCC"
+                            : undefined,
+                      }}
+                    >
+                      {/* INT / EXT – simulated rowSpan */}
+                      <View
+                        style={{
+                          width: COL_ZONE_IN_CTR,
+                          borderRight: "1 solid #666666",
+                          justifyContent: "center",
+                          paddingHorizontal: 5,
+                          paddingVertical: 4,
+                        }}
+                      >
+                        <Text style={{ fontSize: 8 }}>{zone.zone}</Text>
+                      </View>
+
+                      {/* Detail rows */}
+                      <View style={{ width: COL_ITEMS_CTR }}>
+                        {zone.items.map((item, ii) => (
+                          <View
+                            key={`item-${ii}`}
+                            style={{
+                              flexDirection: "row",
+                              borderBottom:
+                                ii < zone.items.length - 1
+                                  ? "1 solid #DDDDDD"
+                                  : undefined,
+                              minHeight: 18,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                width: COL_POS,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                                borderRight: "1 solid #DDDDDD",
+                              }}
+                            >
+                              {item.position}
+                            </Text>
+                            <Text
+                              style={{
+                                width: COL_PROD,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                                borderRight: "1 solid #DDDDDD",
+                              }}
+                            >
+                              {item.product}
+                            </Text>
+                            <Text
+                              style={{
+                                width: COL_CLR,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                                borderRight: "1 solid #DDDDDD",
+                              }}
+                            >
+                              {item.colorCode}
+                            </Text>
+                            <Text
+                              style={{
+                                width: COL_SUP,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                              }}
+                            >
+                              {item.supplier}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))
           )}
         </View>
 

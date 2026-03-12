@@ -69,7 +69,8 @@ export function extractVendor(text: string): {
   vendorName: string | null;
   vendorCode: string | null;
 } {
-  const m = text.match(/Payment In\s*:\s*\n\d+[A-Z]*\n(.+)\n([A-Z]{2,4}\d{3})/);
+  // Vendor codes can be 2+ letters + 2+ digits (e.g. DIY000, TIMLIFE001, SOUDAL002)
+  const m = text.match(/Payment In\s*:\s*\n\d+[A-Z]*\n(.+)\n([A-Z]{2,}\d{2,})/);
   if (!m) return { vendorName: null, vendorCode: null };
   return { vendorName: m[1].trim(), vendorCode: m[2].trim() };
 }
@@ -164,28 +165,52 @@ export function extractItems(
   text: string,
   siteCode: string | null,
 ): ParsedItem[] {
+  // Try Contract section first, then Balance Sheet section
   const contractMatch = text.match(/Contract\s*:\s*\d+\s*-\s*[^\n]+/);
-  if (!contractMatch || contractMatch.index === undefined) return [];
+  const balanceMatch = text.match(/Balance Sheet Item\(s\)/i);
 
-  const startIdx = contractMatch.index + contractMatch[0].length;
+  const sectionMatch = contractMatch ?? balanceMatch;
+  if (!sectionMatch || sectionMatch.index === undefined) return [];
+
+  const startIdx = sectionMatch.index + sectionMatch[0].length;
   const footerIdx = text.indexOf("Authorised Signatory", startIdx);
   const endIdx = footerIdx !== -1 ? footerIdx : text.length;
 
   const section = text.slice(startIdx, endIdx).trim();
   if (!section) return [];
 
-  // Split items by the "siteCode, Blank <lineNumber>" delimiter
-  const escCode = (siteCode || "\\d{4}").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const delimiterPattern = new RegExp(`${escCode},\\s*Blank\\s+\\d+`, "g");
-  const chunks = section
-    .split(delimiterPattern)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  if (contractMatch) {
+    // Contract-based POs: split by "siteCode, Blank <lineNumber>" delimiter
+    const escCode = (siteCode || "\\d{4}").replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&",
+    );
+    const delimiterPattern = new RegExp(`${escCode},\\s*Blank\\s+\\d+`, "g");
+    const chunks = section
+      .split(delimiterPattern)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
+    const items: ParsedItem[] = [];
+    for (const chunk of chunks) {
+      const parsed = parseItemChunk(chunk);
+      if (parsed) items.push(parsed);
+    }
+    return items;
+  }
+
+  // Balance Sheet POs: items are line-delimited, each starting with a
+  // line number + 6-digit material code (e.g. "1 080110 1838 Sandpaper ...")
+  const lines = section
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   const items: ParsedItem[] = [];
 
-  for (const chunk of chunks) {
-    const parsed = parseItemChunk(chunk);
+  for (const line of lines) {
+    // Strip leading line number (e.g. "1 " or "2 ")
+    const stripped = line.replace(/^\d+\s+/, "");
+    const parsed = parseItemChunk(stripped);
     if (parsed) items.push(parsed);
   }
 

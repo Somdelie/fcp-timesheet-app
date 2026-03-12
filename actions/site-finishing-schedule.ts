@@ -25,10 +25,28 @@ export async function getFinishingSchedule(scheduleId: string) {
   const schedule = await prisma.siteFinishingSchedule.findUnique({
     where: { id },
     include: {
+      site: { select: { id: true, name: true, code: true } },
       areas: {
-        orderBy: { sortOrder: "asc" },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         include: {
-          items: { orderBy: { sortOrder: "asc" } },
+          items: {
+            orderBy: [{ sortOrder: "asc" }],
+            include: {
+              finishingVariant: { select: { id: true, label: true } },
+              siteMaterial: {
+                select: {
+                  id: true,
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      supplier: { select: { id: true, name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -298,6 +316,7 @@ export async function addFinishingArea(input: {
     select: { id: true },
   });
 
+  revalidatePath(`/finishing-schedules`);
   revalidatePath(`/sites/${schedule.siteId}`);
   return { ok: true as const, id: area.id };
 }
@@ -366,11 +385,10 @@ export async function addFinishingItem(input: {
   areaId: string;
   zone: FinishingZone;
   position: string;
-  product?: string | null;
+  siteMaterialId?: string | null;
   colorCode?: string | null;
-  supplier?: string | null;
-  sortOrder?: number;
   note?: string | null;
+  sortOrder?: number;
 }) {
   const auth = await requireServerAuth();
   if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
@@ -389,20 +407,54 @@ export async function addFinishingItem(input: {
   });
   if (!area) return { ok: false as const, error: "Area not found." };
 
+  // Auto-fill from site material if provided
+  let productSnapshot: string | null = null;
+  let supplierSnapshot: string | null = null;
+  let procProductId: string | null = null;
+  let suppId: string | null = null;
+
+  const smId = input.siteMaterialId ? clean(input.siteMaterialId) : null;
+  if (smId) {
+    const sm = await prisma.siteMaterial.findUnique({
+      where: { id: smId },
+      select: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            supplier: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    if (sm) {
+      procProductId = sm.product.id;
+      productSnapshot = sm.product.name;
+      if (sm.product.supplier) {
+        suppId = sm.product.supplier.id;
+        supplierSnapshot = sm.product.supplier.name;
+      }
+    }
+  }
+
   const item = await prisma.siteFinishingScheduleItem.create({
     data: {
-      area: { connect: { id: areaId } },
+      areaId,
       zone: input.zone,
       position,
-      product: input.product ? clean(input.product) : null,
+      siteMaterialId: smId ?? undefined,
+      product: productSnapshot,
       colorCode: input.colorCode ? clean(input.colorCode) : null,
-      supplier: input.supplier ? clean(input.supplier) : null,
+      supplier: supplierSnapshot,
+      procurementProductId: procProductId ?? undefined,
+      supplierId: suppId ?? undefined,
       sortOrder: input.sortOrder ?? 0,
       note: input.note ? clean(input.note) : null,
     },
     select: { id: true },
   });
 
+  revalidatePath(`/finishing-schedules`);
   revalidatePath(`/sites/${area.schedule.siteId}`);
   return { ok: true as const, id: item.id };
 }
@@ -411,11 +463,10 @@ export async function updateFinishingItem(input: {
   id: string;
   zone?: FinishingZone;
   position?: string;
-  product?: string | null;
+  siteMaterialId?: string | null;
   colorCode?: string | null;
-  supplier?: string | null;
-  sortOrder?: number;
   note?: string | null;
+  sortOrder?: number;
 }) {
   const auth = await requireServerAuth();
   if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
@@ -431,29 +482,55 @@ export async function updateFinishingItem(input: {
   });
   if (!item) return { ok: false as const, error: "Item not found." };
 
-  await prisma.siteFinishingScheduleItem.update({
-    where: { id },
-    data: {
-      ...(input.zone !== undefined ? { zone: input.zone } : {}),
-      ...(input.position !== undefined
-        ? { position: clean(input.position) }
-        : {}),
-      ...(input.product !== undefined
-        ? { product: input.product ? clean(input.product) : null }
-        : {}),
-      ...(input.colorCode !== undefined
-        ? { colorCode: input.colorCode ? clean(input.colorCode) : null }
-        : {}),
-      ...(input.supplier !== undefined
-        ? { supplier: input.supplier ? clean(input.supplier) : null }
-        : {}),
-      ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
-      ...(input.note !== undefined
-        ? { note: input.note ? clean(input.note) : null }
-        : {}),
-    },
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {};
+  if (input.zone !== undefined) data.zone = input.zone;
+  if (input.position !== undefined) data.position = clean(input.position);
+  if (input.colorCode !== undefined)
+    data.colorCode = input.colorCode ? clean(input.colorCode) : null;
+  if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
+  if (input.note !== undefined)
+    data.note = input.note ? clean(input.note) : null;
 
+  // Auto-fill from site material if changed
+  if (input.siteMaterialId !== undefined) {
+    const smId = input.siteMaterialId ? clean(input.siteMaterialId) : null;
+    data.siteMaterialId = smId;
+    if (smId) {
+      const sm = await prisma.siteMaterial.findUnique({
+        where: { id: smId },
+        select: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              supplier: { select: { id: true, name: true } },
+            },
+          },
+        },
+      });
+      if (sm) {
+        data.procurementProductId = sm.product.id;
+        data.product = sm.product.name;
+        if (sm.product.supplier) {
+          data.supplierId = sm.product.supplier.id;
+          data.supplier = sm.product.supplier.name;
+        } else {
+          data.supplierId = null;
+          data.supplier = null;
+        }
+      }
+    } else {
+      data.product = null;
+      data.supplier = null;
+      data.procurementProductId = null;
+      data.supplierId = null;
+    }
+  }
+
+  await prisma.siteFinishingScheduleItem.update({ where: { id }, data });
+
+  revalidatePath(`/finishing-schedules`);
   revalidatePath(`/sites/${item.area.schedule.siteId}`);
   return { ok: true as const };
 }
@@ -516,6 +593,188 @@ export async function addFinishingItemsBulk(input: {
     })),
   });
 
+  revalidatePath(`/finishing-schedules`);
   revalidatePath(`/sites/${area.schedule.siteId}`);
   return { ok: true as const, added: input.items.length };
+}
+
+// ========================
+// REORDER
+// ========================
+
+export async function reorderFinishingAreas(input: {
+  scheduleId: string;
+  areaIds: string[];
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const scheduleId = clean(input.scheduleId);
+  if (!scheduleId)
+    return { ok: false as const, error: "Schedule ID is required." };
+
+  const schedule = await prisma.siteFinishingSchedule.findUnique({
+    where: { id: scheduleId },
+    select: { siteId: true },
+  });
+  if (!schedule) return { ok: false as const, error: "Schedule not found." };
+
+  await prisma.$transaction(
+    input.areaIds.map((id, i) =>
+      prisma.siteFinishingScheduleArea.update({
+        where: { id },
+        data: { sortOrder: i },
+      }),
+    ),
+  );
+
+  revalidatePath(`/finishing-schedules`);
+  revalidatePath(`/sites/${schedule.siteId}`);
+  return { ok: true as const };
+}
+
+export async function reorderFinishingItems(input: {
+  areaId: string;
+  itemIds: string[];
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const areaId = clean(input.areaId);
+  if (!areaId) return { ok: false as const, error: "Area ID is required." };
+
+  const area = await prisma.siteFinishingScheduleArea.findUnique({
+    where: { id: areaId },
+    select: { schedule: { select: { siteId: true } } },
+  });
+  if (!area) return { ok: false as const, error: "Area not found." };
+
+  await prisma.$transaction(
+    input.itemIds.map((id, i) =>
+      prisma.siteFinishingScheduleItem.update({
+        where: { id },
+        data: { sortOrder: i },
+      }),
+    ),
+  );
+
+  revalidatePath(`/finishing-schedules`);
+  revalidatePath(`/sites/${area.schedule.siteId}`);
+  return { ok: true as const };
+}
+
+// ========================
+// LIST SITE MATERIALS FOR SCHEDULE BUILDER
+// ========================
+
+export async function listSiteMaterialsForSchedule(siteId: string) {
+  await requireServerAuth();
+  const id = clean(siteId);
+  if (!id) return { ok: false as const, error: "Site ID is required." };
+
+  const materials = await prisma.siteMaterial.findMany({
+    where: { siteId: id },
+    orderBy: { product: { name: "asc" } },
+    select: {
+      id: true,
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          supplier: { select: { id: true, name: true } },
+        },
+      },
+      usages: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, label: true },
+      },
+    },
+  });
+
+  return { ok: true as const, materials };
+}
+
+// ========================
+// FINISHING VARIANT CRUD
+// ========================
+
+export async function listFinishingVariants() {
+  await requireServerAuth();
+  const variants = await prisma.finishingVariant.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+    select: { id: true, label: true, sortOrder: true },
+  });
+  return { ok: true as const, variants };
+}
+
+export async function createFinishingVariant(input: { label: string }) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const label = clean(input.label);
+  if (!label) return { ok: false as const, error: "Label is required." };
+
+  const normalized = label.toLowerCase().replace(/\s+/g, " ");
+
+  // Check for duplicate
+  const existing = await prisma.finishingVariant.findFirst({
+    where: { normalizedLabel: normalized },
+    select: { id: true, label: true, isActive: true },
+  });
+  if (existing) {
+    if (!existing.isActive) {
+      // Reactivate
+      await prisma.finishingVariant.update({
+        where: { id: existing.id },
+        data: { isActive: true, label },
+      });
+      return { ok: true as const, id: existing.id };
+    }
+    return { ok: false as const, error: `"${existing.label}" already exists.` };
+  }
+
+  const variant = await prisma.finishingVariant.create({
+    data: { label, normalizedLabel: normalized },
+    select: { id: true },
+  });
+
+  return { ok: true as const, id: variant.id };
+}
+
+export async function updateFinishingVariant(input: {
+  id: string;
+  label?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
+    return { ok: false as const, error: "Not authorized." };
+  }
+
+  const id = clean(input.id);
+  if (!id) return { ok: false as const, error: "Variant ID is required." };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {};
+  if (input.label !== undefined) {
+    const label = clean(input.label);
+    if (!label) return { ok: false as const, error: "Label is required." };
+    data.label = label;
+    data.normalizedLabel = label.toLowerCase().replace(/\s+/g, " ");
+  }
+  if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
+  if (input.isActive !== undefined) data.isActive = input.isActive;
+
+  await prisma.finishingVariant.update({ where: { id }, data });
+
+  return { ok: true as const };
 }

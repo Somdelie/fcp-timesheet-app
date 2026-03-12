@@ -1385,6 +1385,8 @@ model SiteMaterial {
 
   usages SiteMaterialUsage[]
 
+  finishingScheduleItems SiteFinishingScheduleItem[]
+
   @@unique([siteId, productId])
   @@index([siteId])
   @@index([productId])
@@ -1410,6 +1412,26 @@ model SiteMaterialUsage {
   updatedAt DateTime @updatedAt
 
   @@index([siteMaterialId])
+}
+
+// ============================
+// FINISHING VARIANTS (kept for backward compat – unused by builder UI)
+// ============================
+
+model FinishingVariant {
+  id              String  @id @default(cuid())
+  label           String
+  normalizedLabel String?
+  isActive        Boolean @default(true)
+  sortOrder       Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scheduleItems SiteFinishingScheduleItem[]
+
+  @@index([isActive, sortOrder])
+  @@index([normalizedLabel])
 }
 
 // ============================
@@ -1490,14 +1512,24 @@ model SiteFinishingScheduleItem {
 
   zone FinishingZone
 
-  position String
+  // e.g. "Walls", "Bottom Band", "Doors", "Skirting", "Ceilings"
+  position String @default("")
 
-  // Free-text snapshot/display values
+  // Legacy variant link (kept for backward compat – unused by builder UI)
+  finishingVariantId   String?
+  finishingVariant     FinishingVariant? @relation(fields: [finishingVariantId], references: [id], onDelete: SetNull)
+  variantLabelSnapshot String?
+
+  // Link directly to site material (primary product source)
+  siteMaterialId String?
+  siteMaterial   SiteMaterial? @relation(fields: [siteMaterialId], references: [id], onDelete: SetNull)
+
+  // Snapshot/display values (auto-filled from site material)
   product   String?
   colorCode String?
   supplier  String?
 
-  // Optional structured links for future reporting / procurement
+  // Structured links for reporting / procurement
   procurementProductId String?
   procurementProduct   ProcurementProduct? @relation(fields: [procurementProductId], references: [id], onDelete: SetNull)
 
@@ -1513,6 +1545,8 @@ model SiteFinishingScheduleItem {
 
   @@index([areaId])
   @@index([zone])
+  @@index([finishingVariantId])
+  @@index([siteMaterialId])
   @@index([procurementProductId])
   @@index([supplierId])
 }
