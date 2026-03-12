@@ -42,6 +42,7 @@ interface EditEmployeeFormProps {
     isActive: boolean;
     defaultDayRate?: string | null;
     userId?: string | null;
+    isSheRep?: boolean;
   };
 }
 
@@ -91,6 +92,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [defaultDayRate, setDefaultDayRate] = React.useState(
     employee.defaultDayRate ?? "",
   );
+  const [isSheRep, setIsSheRep] = React.useState(employee.isSheRep ?? false);
   const isForeman = !!employee.userId;
 
   async function handleUpload(file: File) {
@@ -155,6 +157,7 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     }
     if (isForeman) {
       payload.defaultDayRate = defaultDayRate || null;
+      payload.isSheRep = isSheRep;
     }
     startTransition(async () => {
       const res = await updateEmployee(payload);
@@ -259,6 +262,39 @@ export default function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 </button>
               </div>
             </div>
+
+            {/* SheRep toggle - only show for foreman employees */}
+            {isForeman && (
+              <div className="mt-3 flex items-center justify-between rounded border border-zinc-200 bg-zinc-50/60 px-3.5 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/40">
+                <div>
+                  <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                    SheRep
+                  </p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                    {isSheRep
+                      ? "Displayed as SheRep on the UI"
+                      : "Displayed as Foreman on the UI"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isSheRep}
+                  onClick={() => setIsSheRep(!isSheRep)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 ${
+                    isSheRep
+                      ? "bg-zinc-800 dark:bg-zinc-200"
+                      : "bg-zinc-200 dark:bg-zinc-600"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                      isSheRep ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
 
             {/* Day rate */}
             <div>

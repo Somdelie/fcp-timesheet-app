@@ -23,6 +23,7 @@ export type EmployeeDTO = {
   createdByUserName?: string | null;
   userId?: string | null; // If employee has been promoted to foreman
   linkedToForemanId?: string | null; // If linked to a foreman via ForemanEmployee
+  isSheRep?: boolean;
 };
 
 /** Return a phone string only if it looks like a real phone number (not an email). */
@@ -61,6 +62,7 @@ function serializeEmployee(e: any): EmployeeDTO & { isForeman: boolean } {
     userId: e.userId ?? null,
     linkedToForemanId,
     isForeman,
+    isSheRep: !!e.user?.isSheRep,
   };
 }
 
@@ -126,6 +128,7 @@ export async function listEmployees(input?: {
         select: {
           role: true,
           phone: true,
+          isSheRep: true,
           foreman: { select: { id: true } },
         },
       },
@@ -300,6 +303,7 @@ export async function updateEmployee(input: {
   isActive?: boolean;
   defaultDayRate?: string | null;
   phone?: string | null;
+  isSheRep?: boolean;
 }) {
   const auth = await requireServerAuth();
   const whereScope = employeeWhereFor(auth);
@@ -374,6 +378,7 @@ export async function updateEmployee(input: {
       user: {
         select: {
           phone: true,
+          isSheRep: true,
         },
       },
       foremanLinks: {
@@ -384,6 +389,14 @@ export async function updateEmployee(input: {
       },
     },
   });
+
+  // Update isSheRep on the linked User if provided
+  if (input.isSheRep !== undefined && canSee.userId && isForemanEmployee) {
+    await prisma.user.update({
+      where: { id: canSee.userId },
+      data: { isSheRep: input.isSheRep },
+    });
+  }
 
   return { ok: true as const, employee: serializeEmployee(employee) };
 }

@@ -62,6 +62,7 @@ export type Employee = {
   userId?: string | null;
   linkedToForemanId?: string | null;
   isForeman?: boolean;
+  isSheRep?: boolean;
 };
 
 function formatMoneyString(s: string) {
@@ -228,7 +229,7 @@ const columns: ColumnDef<Employee>[] = [
               )}
               {!e.linkedToForemanId && e.isForeman && (
                 <Badge variant="default" className="text-[11px]">
-                  Foreman
+                  {e.isSheRep ? "SheRep" : "Foreman"}
                 </Badge>
               )}
               {!e.linkedToForemanId && !e.isForeman && (

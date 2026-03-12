@@ -23,6 +23,7 @@ interface Employee {
   userId?: string | null;
   linkedForemanId?: string | null;
   isForeman?: boolean;
+  isSheRep?: boolean;
   foremanLinks?: Array<{
     foremanId: string;
     reason?: string | null;
@@ -158,7 +159,11 @@ export function EmployeeDetailContent({ employee }: { employee: Employee }) {
                 {employee.firstName} {employee.lastName}
               </h1>
               <div className="mt-2 flex flex-wrap gap-2">
-                {employee.isForeman && <Badge variant="default">Foreman</Badge>}
+                {employee.isForeman && (
+                  <Badge variant="default">
+                    {employee.isSheRep ? "SheRep" : "Foreman"}
+                  </Badge>
+                )}
                 {!employee.isForeman && (
                   <Badge variant="secondary">Individual</Badge>
                 )}

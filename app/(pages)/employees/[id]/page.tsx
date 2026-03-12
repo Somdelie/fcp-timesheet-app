@@ -29,6 +29,7 @@ export default async function EmployeeDetailPage({ params }) {
       user: {
         select: {
           role: true,
+          isSheRep: true,
           foreman: { select: { id: true } },
         },
       },
@@ -63,6 +64,7 @@ export default async function EmployeeDetailPage({ params }) {
   const isForeman = !!(
     employee.user?.role === "FOREMAN" && employee.user?.foreman
   );
+  const isSheRep = !!employee.user?.isSheRep;
 
   return (
     <EmployeeDetailContent
@@ -80,6 +82,7 @@ export default async function EmployeeDetailPage({ params }) {
         foremanLinks: employee.foremanLinks,
         userId: employee.userId,
         isForeman,
+        isSheRep,
       }}
     />
   );

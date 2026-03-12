@@ -15,6 +15,7 @@ export async function createNewUser(input: {
   role: UserRole;
   dayRate?: number;
   supervisorId?: string;
+  isSheRep?: boolean;
 }) {
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim();
@@ -62,6 +63,7 @@ export async function createNewUser(input: {
         name,
         role,
         password: passwordHash,
+        isSheRep: role === "FOREMAN" ? (input.isSheRep ?? false) : false,
       },
       select: {
         id: true,

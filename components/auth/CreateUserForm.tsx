@@ -46,6 +46,7 @@ const createUserSchema = z
     confirmPassword: z.string(),
     dayRate: z.string().optional(),
     supervisorId: z.string().optional(),
+    isSheRep: z.boolean().optional(),
   })
   .refine((v) => v.password === v.confirmPassword, {
     message: "Passwords do not match.",
@@ -91,6 +92,7 @@ export default function CreateUserForm() {
       confirmPassword: "",
       dayRate: "", // ✅ FIXED: Use empty string instead of undefined
       supervisorId: "", // ✅ FIXED: Use empty string instead of undefined
+      isSheRep: false,
     },
   });
 
@@ -103,6 +105,7 @@ export default function CreateUserForm() {
         role: values.role as UserRole,
         dayRate: values.dayRate ? Number(values.dayRate) : undefined,
         supervisorId: values.supervisorId || undefined,
+        isSheRep: values.isSheRep ?? false,
       });
 
       if (!res.ok) {
@@ -119,6 +122,7 @@ export default function CreateUserForm() {
         confirmPassword: "",
         dayRate: "", // ✅ FIXED: Reset to empty string
         supervisorId: "", // ✅ FIXED: Reset to empty string
+        isSheRep: false,
       });
     });
   }
@@ -273,6 +277,42 @@ export default function CreateUserForm() {
                   </Field>
                 )}
               />
+
+              <Controller
+                name="isSheRep"
+                control={form.control}
+                render={({ field }) => (
+                  <Field>
+                    <div className="flex items-center justify-between rounded border px-3.5 py-2.5">
+                      <div>
+                        <p className="text-sm font-medium">SheRep</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {field.value
+                            ? "Will be displayed as SheRep"
+                            : "Will be displayed as Foreman"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={!!field.value}
+                        onClick={() => field.onChange(!field.value)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 ${
+                          field.value
+                            ? "bg-zinc-800 dark:bg-zinc-200"
+                            : "bg-zinc-200 dark:bg-zinc-600"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                            field.value ? "translate-x-4" : "translate-x-0.5"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </Field>
+                )}
+              />
             </>
           )}
 
@@ -335,6 +375,7 @@ export default function CreateUserForm() {
               confirmPassword: "",
               dayRate: "",
               supervisorId: "",
+              isSheRep: false,
             })
           }
           disabled={pending}
