@@ -70,14 +70,12 @@ export type ComputeDayRateResult = {
  *
  * Priority (highest → lowest):
  *   1. EmployeeDayRateOverride  (site-specific > global; latest startsOn)
- *   2. Team default from CompanySettings (based on Foreman.defaultTeam)
- *   3. Foreman.defaultDayRate
+ *   2. SiteForemanDayRateOverride (per-foreman per-site; latest startsOn)
+ *   3. Team default from CompanySettings (based on Foreman.defaultTeam)
  *   4. Employee.defaultDayRate
- *   5. CompanySettings.defaultEmployeeDayRate
- *   6. 0  (final fallback — should not happen if settings exist)
- *
- * IMPORTANT: SiteForemanDayRateOverride is NOT part of this chain.
- * That model is reserved for rare manual exceptions only.
+ *   5. Foreman.defaultDayRate
+ *   6. CompanySettings.defaultEmployeeDayRate
+ *   7. 0  (final fallback — should not happen if settings exist)
  */
 export async function computeDayRateAtScan(opts: {
   employeeId: string;
@@ -95,48 +93,63 @@ export async function computeDayRateAtScan(opts: {
   workDateEnd.setUTCHours(23, 59, 59, 999);
 
   // Parallel: fetch overrides, foreman, employee, company settings
-  const [employeeOverrides, foreman, employee, settings] = await Promise.all([
-    // 1) All candidate EmployeeDayRateOverride rows
-    (prisma as any).employeeDayRateOverride.findMany({
-      where: {
-        employeeId,
-        startsOn: { lte: workDateEnd },
-        OR: [{ endsOn: null }, { endsOn: { gte: workDateStart } }],
-      },
-      select: {
-        siteId: true,
-        startsOn: true,
-        endsOn: true,
-        dayRate: true,
-      },
-    }) as Promise<OverrideRow[]>,
+  const [employeeOverrides, foremanSiteOverrides, foreman, employee, settings] =
+    await Promise.all([
+      // 1) All candidate EmployeeDayRateOverride rows
+      (prisma as any).employeeDayRateOverride.findMany({
+        where: {
+          employeeId,
+          startsOn: { lte: workDateEnd },
+          OR: [{ endsOn: null }, { endsOn: { gte: workDateStart } }],
+        },
+        select: {
+          siteId: true,
+          startsOn: true,
+          endsOn: true,
+          dayRate: true,
+        },
+      }) as Promise<OverrideRow[]>,
 
-    // 2) Foreman data (defaultDayRate + defaultTeam)
-    (prisma as any).foreman.findUnique({
-      where: { id: foremanId },
-      select: { defaultDayRate: true, defaultTeam: true },
-    }) as Promise<{
-      defaultDayRate: unknown;
-      defaultTeam: TeamType;
-    } | null>,
+      // 2) SiteForemanDayRateOverride rows for this foreman + site
+      (prisma as any).siteForemanDayRateOverride.findMany({
+        where: {
+          foremanId,
+          siteId,
+          startsOn: { lte: workDateEnd },
+          OR: [{ endsOn: null }, { endsOn: { gte: workDateStart } }],
+        },
+        select: {
+          startsOn: true,
+          dayRate: true,
+        },
+      }) as Promise<{ startsOn: Date; dayRate: unknown }[]>,
 
-    // 3) Employee defaultDayRate
-    (prisma as any).employee.findUnique({
-      where: { id: employeeId },
-      select: { defaultDayRate: true },
-    }) as Promise<{ defaultDayRate: unknown } | null>,
+      // 3) Foreman data (defaultDayRate + defaultTeam)
+      (prisma as any).foreman.findUnique({
+        where: { id: foremanId },
+        select: { defaultDayRate: true, defaultTeam: true },
+      }) as Promise<{
+        defaultDayRate: unknown;
+        defaultTeam: TeamType;
+      } | null>,
 
-    // 4) CompanySettings singleton
-    (prisma as any).companySettings.findUnique({
-      where: { id: "singleton" },
-      select: {
-        defaultEmployeeDayRate: true,
-        defaultPainterDayRate: true,
-        defaultBuildingDayRate: true,
-        defaultSpecialCoatingsDayRate: true,
-      },
-    }) as Promise<CompanySettingsRow | null>,
-  ]);
+      // 4) Employee defaultDayRate
+      (prisma as any).employee.findUnique({
+        where: { id: employeeId },
+        select: { defaultDayRate: true },
+      }) as Promise<{ defaultDayRate: unknown } | null>,
+
+      // 5) CompanySettings singleton
+      (prisma as any).companySettings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          defaultEmployeeDayRate: true,
+          defaultPainterDayRate: true,
+          defaultBuildingDayRate: true,
+          defaultSpecialCoatingsDayRate: true,
+        },
+      }) as Promise<CompanySettingsRow | null>,
+    ]);
 
   const team: TeamType | null = foreman?.defaultTeam ?? null;
 
@@ -155,16 +168,21 @@ export async function computeDayRateAtScan(opts: {
     }
   }
 
-  // --- Priority 2: Team default from CompanySettings ---
+  // --- Priority 2: SiteForemanDayRateOverride ---
+  if (foremanSiteOverrides.length > 0) {
+    const chosen = pickLatest(foremanSiteOverrides as { startsOn: Date }[]);
+    if (chosen) {
+      const rate = toNum(
+        (chosen as { startsOn: Date; dayRate: unknown }).dayRate,
+      );
+      if (rate > 0) return { dayRate: rate, team };
+    }
+  }
+
+  // --- Priority 3: Team default from CompanySettings ---
   if (team && settings) {
     const teamRate = getTeamDefaultRate(team, settings);
     if (teamRate > 0) return { dayRate: teamRate, team };
-  }
-
-  // --- Priority 3: Foreman.defaultDayRate ---
-  if (foreman) {
-    const foremanRate = toNum(foreman.defaultDayRate);
-    if (foremanRate > 0) return { dayRate: foremanRate, team };
   }
 
   // --- Priority 4: Employee.defaultDayRate ---
@@ -173,13 +191,19 @@ export async function computeDayRateAtScan(opts: {
     if (empRate > 0) return { dayRate: empRate, team };
   }
 
-  // --- Priority 5: CompanySettings.defaultEmployeeDayRate ---
+  // --- Priority 5: Foreman.defaultDayRate ---
+  if (foreman) {
+    const foremanRate = toNum(foreman.defaultDayRate);
+    if (foremanRate > 0) return { dayRate: foremanRate, team };
+  }
+
+  // --- Priority 6: CompanySettings.defaultEmployeeDayRate ---
   if (settings) {
     const companyRate = toNum(settings.defaultEmployeeDayRate);
     if (companyRate > 0) return { dayRate: companyRate, team };
   }
 
-  // --- Priority 6: final fallback ---
+  // --- Priority 7: final fallback ---
   if (!settings) {
     console.error(
       "[computeDayRateAtScan] CompanySettings row missing — returning 0",
