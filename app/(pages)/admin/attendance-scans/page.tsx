@@ -50,6 +50,7 @@ import {
   Loader2,
   MapPin,
   QrCode,
+  Trash2,
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -182,6 +183,37 @@ export default function AdminAttendanceScansPage() {
   const [pageIndexMap, setPageIndexMap] = useState<Record<string, number>>({});
   const [pageSize, setPageSize] = useState(20);
   const [activeTab, setActiveTab] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteScan = async (scanId: string) => {
+    if (!scanId) return;
+    if (
+      !window.confirm("Delete this attendance scan? This cannot be undone.")
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingId(scanId);
+      const res = await fetch(
+        `/api/admin/attendance-scans?id=${encodeURIComponent(scanId)}`,
+        {
+          method: "DELETE",
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to delete scan");
+      }
+
+      setScans((prev) => prev.filter((s) => s.id !== scanId));
+      toast.success("Scan deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete scan");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Set default active tab when data loads
   useEffect(() => {
@@ -467,6 +499,9 @@ export default function AdminAttendanceScansPage() {
                             </TableHead>
                             <TableHead className="border-x">Type</TableHead>
                             <TableHead className="border-x">Location</TableHead>
+                            <TableHead className="border-x w-12 text-right">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -547,6 +582,22 @@ export default function AdminAttendanceScansPage() {
                                     No location
                                   </span>
                                 )}
+                              </TableCell>
+                              <TableCell className="border-x text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteScan(scan.id)}
+                                  disabled={deletingId === scan.id}
+                                >
+                                  <span className="sr-only">Delete scan</span>
+                                  {deletingId === scan.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}

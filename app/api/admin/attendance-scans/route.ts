@@ -9,7 +9,7 @@ export const revalidate = 1800;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -182,4 +182,43 @@ export async function GET(req: Request) {
       },
     },
   );
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  const user = session?.user as any;
+
+  if (!user?.id) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS_HEADERS },
+    );
+  }
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: CORS_HEADERS },
+    );
+  }
+
+  const url = new URL(req.url);
+  const id = url.searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json(
+      { error: "Missing id" },
+      { status: 400, headers: CORS_HEADERS },
+    );
+  }
+
+  try {
+    await prisma.attendanceScan.delete({ where: { id } });
+    return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+  } catch (e: any) {
+    console.error("Error deleting attendance scan", e);
+    return NextResponse.json(
+      { error: "Failed to delete scan" },
+      { status: 500, headers: CORS_HEADERS },
+    );
+  }
 }

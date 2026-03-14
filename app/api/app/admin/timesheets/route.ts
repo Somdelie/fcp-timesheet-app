@@ -162,6 +162,8 @@ export async function GET(req: NextRequest) {
     const supervisorId = (url.searchParams.get("supervisorId") ?? "").trim();
     const statusFilter = (url.searchParams.get("status") ?? "").trim();
 
+    const rawPeriodParam = url.searchParams.get("period");
+
     const { periodId, startDate, endDate, startISO, endISO } =
       await resolvePeriod(req);
 
@@ -555,6 +557,33 @@ export async function GET(req: NextRequest) {
         return true;
       })
       .sort((a, b) => a.foreman.name.localeCompare(b.foreman.name));
+
+    console.log(
+      "Admin timesheets list",
+      timesheets.map((t) => ({
+        id: t.id,
+        startISO: t.startISO,
+        endISO: t.endISO,
+        status: t.status,
+        foremanId: t.foreman.id,
+        foremanName: t.foreman.name,
+        supervisorId: t.supervisor?.id ?? null,
+        supervisorName: t.supervisor?.name ?? null,
+        totalWorkerDays: t.totalWorkerDays,
+        totalWorkerWages: t.totalWorkerWages,
+        foremanDays: t.foremanDays,
+        foremanWages: t.foremanWages,
+        teamDays: t.teamDays,
+        teamWages: t.teamWages,
+        totalDeductions: t.totalDeductions,
+        totalOvertimeCost: t.totalOvertimeCost,
+        sites: t.sites.map((s) => ({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+        })),
+      })),
+    );
 
     return NextResponse.json(
       {

@@ -367,7 +367,22 @@ export async function GET(
       }
     }
 
-    const netPay = grossTotals.totalPay - totalDeductions;
+    // OVERTIME: sum overtime entries for this foreman/site in the period
+    const overtimeEntries = await prisma.overtimeEntry.findMany({
+      where: {
+        foremanId,
+        siteId,
+        workDate: { gte: startDate, lt: endExclusive },
+      },
+      select: { totalCost: true },
+    });
+
+    let overtimeTotal = 0;
+    for (const ot of overtimeEntries) {
+      overtimeTotal += decimalToNumber(ot.totalCost);
+    }
+
+    const netPay = grossTotals.totalPay + overtimeTotal - totalDeductions;
 
     // Get supervisor for this foreman (derived from site assignments)
     // If foreman is assigned to a site, and supervisor is assigned to that same site,
@@ -410,6 +425,7 @@ export async function GET(
           totals: {
             totalDays: grossTotals.totalDays,
             totalPay: grossTotals.totalPay,
+            overtimeTotal,
             totalDeductions,
             netPay,
           },

@@ -542,6 +542,18 @@ export default function TimesheetDetailSheet<
                           return;
                         }
 
+                        const totals = (detail as any)?.totals ?? {};
+                        const overtimeTotal = Number(totals.overtimeTotal ?? 0);
+                        const deductionsTotal = Number(
+                          totals.totalDeductions ?? totals.deductionsTotal ?? 0,
+                        );
+                        const netTotal =
+                          typeof totals.netPay === "number"
+                            ? Number(totals.netPay)
+                            : Number(totals.totalPay ?? 0) +
+                              overtimeTotal -
+                              deductionsTotal;
+
                         printTimesheet(gridModel, {
                           foremanName: foremanDisplay,
                           contractManagerName: contractManagerDisplay,
@@ -549,6 +561,9 @@ export default function TimesheetDetailSheet<
                           endDate: (detail as any)?.endISO,
                           sites: sites,
                           status: detailStatus,
+                          overtimeTotal,
+                          deductionsTotal,
+                          netTotal,
                         });
                       }}
                       disabled={!gridModel}

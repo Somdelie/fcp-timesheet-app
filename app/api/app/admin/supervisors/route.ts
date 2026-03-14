@@ -90,14 +90,6 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    console.log("=== SUPERVISORS ===");
-    for (const s of supervisors) {
-      console.log(
-        `  id: ${s.id}  |  name: ${s.name}  |  email: ${s.email}  |  supervisorId: ${s.supervisor?.id ?? "N/A"}`,
-      );
-    }
-    console.log("===================");
-
     return NextResponse.json(
       {
         ok: true,

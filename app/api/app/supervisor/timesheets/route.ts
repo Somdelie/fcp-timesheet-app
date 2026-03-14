@@ -399,6 +399,17 @@ export async function GET(req: Request) {
       })
       .sort((a, b) => a.foremanName.localeCompare(b.foremanName));
 
+    const rawPeriodParam = url.searchParams.get("period");
+
+    if (!rawPeriodParam) {
+      console.log("Supervisor timesheets for current fortnight", {
+        startISO,
+        endISO,
+        count: filtered.length,
+        timesheets: filtered,
+      });
+    }
+
     return NextResponse.json({
       timesheets: filtered,
       period: { id: `${startISO}_${endISO}`, startISO, endISO },

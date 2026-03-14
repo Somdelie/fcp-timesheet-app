@@ -907,6 +907,10 @@ export interface TimesheetPrintMeta {
   endDate?: string;
   sites?: Array<{ code?: string; name?: string }>;
   status?: string;
+  // Optional financial extras for print view
+  overtimeTotal?: number;
+  deductionsTotal?: number;
+  netTotal?: number;
 }
 
 function escapeHTML(str: string): string {
@@ -926,6 +930,15 @@ export function generateTimesheetPrintHTML(
 ): string {
   const formatCurrencyHtml = (n: number) =>
     `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const totals = model.totals;
+
+  const overtimeTotal = Number(meta?.overtimeTotal ?? 0);
+  const deductionsTotal = Number(meta?.deductionsTotal ?? 0);
+  const netTotal =
+    typeof meta?.netTotal === "number"
+      ? meta.netTotal
+      : (totals?.totalPay ?? 0) + overtimeTotal - deductionsTotal;
 
   // Build main table headers
   const tableHeaders = `
@@ -978,8 +991,6 @@ export function generateTimesheetPrintHTML(
     `;
     })
     .join("");
-
-  const totals = model.totals;
 
   // Total row
   const totalRow = `
@@ -1295,7 +1306,10 @@ export function generateTimesheetPrintHTML(
           <div class="totals-card grand">
             <div class="totals-label">Grand Total</div>
             <div class="totals-row"><span>Days</span><span class="totals-value">${totals.totalDays}</span></div>
-            <div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.totalPay)}</span></div>
+            <div class="totals-row"><span>Wages</span><span class="totals-value">${formatCurrencyHtml(totals.totalPay)}</span></div>
+            ${overtimeTotal > 0 ? `<div class="totals-row"><span>Overtime</span><span class="totals-value">${formatCurrencyHtml(overtimeTotal)}</span></div>` : ""}
+            ${deductionsTotal > 0 ? `<div class="totals-row"><span>Deductions</span><span class="totals-value">-${formatCurrencyHtml(deductionsTotal)}</span></div>` : ""}
+            <div class="totals-row"><span>Net Pay</span><span class="totals-value">${formatCurrencyHtml(netTotal)}</span></div>
           </div>
         </div>
       </div>
