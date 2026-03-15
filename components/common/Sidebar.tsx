@@ -24,6 +24,7 @@ import {
   Shield,
   Clock,
   ClipboardList,
+  Paintbrush,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -219,6 +220,12 @@ const menuGroups: {
         label: "Fortnight Meetings",
         icon: CalendarCheck,
         roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/paint-planning",
+        label: "Paint Planning",
+        icon: Paintbrush,
+        roles: ["ADMIN", "OFFICE"],
       },
     ],
   },

@@ -36,6 +36,7 @@ import {
   Timer,
   Calculator,
   Search,
+  Printer,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { printOvertimeEntries } from "@/lib/generateOvertimePrint";
 
 /* ─── Types ─── */
 
@@ -613,6 +615,28 @@ export default function OvertimeEntriesPage() {
           </div>
 
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              size="lg"
+              disabled={entries.length === 0}
+              onClick={() => {
+                const selectedSite =
+                  filterSiteId !== "all"
+                    ? sites.find((s) => s.id === filterSiteId)
+                    : undefined;
+                printOvertimeEntries(entries, {
+                  filterSiteName: selectedSite
+                    ? siteLabel(selectedSite.name, selectedSite.code)
+                    : undefined,
+                  filterFrom: filterFrom || undefined,
+                  filterTo: filterTo || undefined,
+                });
+              }}
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
             <Button className="gap-2" size="lg" onClick={openSheet}>
               <Plus className="h-4 w-4" />
               Add Overtime

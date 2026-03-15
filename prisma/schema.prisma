@@ -92,6 +92,13 @@ model User {
 
   // Claims created by this user
   siteClaims SiteClaim[] @relation("SiteClaimCreatedBy")
+
+  // Paint planning
+  paintPlans  SitePaintPlan[]  @relation("PaintPlanCreatedBy")
+  paintUsages SitePaintUsage[] @relation("PaintUsageCreatedBy")
+
+  // Notifications
+  notifications Notification[]
 }
 
 model PushToken {
@@ -310,6 +317,9 @@ model Site {
 
   costCodes SiteCostCode[]
   claims    SiteClaim[]
+
+  paintPlans    SitePaintPlan[]
+  notifications Notification[]
 
   @@index([isActive])
   @@index([name])
@@ -1100,6 +1110,9 @@ model ProcurementProduct {
 
   normalizedName String?
 
+  coverageProfiles ProcurementProductCoverage[]
+  paintPlans       SitePaintPlan[]
+
   @@unique([sku])
   @@index([isActive])
   @@index([categoryId])
@@ -1634,4 +1647,131 @@ model SiteClaim {
   @@index([siteId, claimDate])
   @@index([status])
   @@index([claimNo])
+}
+
+// ============================
+// PAINT PLANNING & USAGE
+// ============================
+
+model ProcurementProductCoverage {
+  id String @id @default(cuid())
+
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // optional size this coverage applies to, e.g. 20L
+  uom      ProductUom?
+  unitSize Decimal?    @db.Decimal(12, 3)
+
+  // how many square metres this size covers
+  coverageM2 Decimal @db.Decimal(12, 2)
+
+  // optional note, e.g. "2 coats on smooth plaster"
+  note String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paintPlans SitePaintPlan[]
+
+  @@index([productId, isActive])
+}
+
+model SitePaintPlan {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  boqReference String?
+  description  String
+
+  areaM2 Decimal @db.Decimal(12, 2)
+
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  coverageId String?
+  coverage   ProcurementProductCoverage? @relation(fields: [coverageId], references: [id], onDelete: SetNull)
+
+  coats Int @default(1)
+
+  requiredLitres     Decimal @db.Decimal(12, 2)
+  requiredContainers Decimal @db.Decimal(12, 2)
+  roundedContainers  Int
+
+  estimatedCost Decimal? @db.Decimal(14, 2)
+
+  note String?
+
+  createdByUserId String?
+  createdByUser   User?   @relation("PaintPlanCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usages SitePaintUsage[]
+
+  @@index([siteId, createdAt])
+  @@index([productId])
+}
+
+model SitePaintUsage {
+  id String @id @default(cuid())
+
+  planId String
+  plan   SitePaintPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  usedLitres     Decimal? @db.Decimal(12, 2)
+  usedContainers Decimal? @db.Decimal(12, 2)
+
+  note   String?
+  usedOn DateTime @default(now())
+
+  createdByUserId String?
+  createdByUser   User?   @relation("PaintUsageCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([planId, usedOn])
+}
+
+// ─── Notifications ────────────────────────────────────
+
+enum NotificationType {
+  PAINT_50_PERCENT
+  PAINT_90_PERCENT
+  SITE_CREATED
+  SITE_FINISHED
+  TIMESHEET_SUBMITTED
+  TIMESHEET_APPROVED
+  TIMESHEET_REJECTED
+  PHOTO_REQUESTED
+  MATERIAL_ORDER
+  GENERAL
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+
+  // Optional link to a related entity
+  siteId  String?
+  site    Site?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  linkUrl String?
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@index([siteId])
 }
