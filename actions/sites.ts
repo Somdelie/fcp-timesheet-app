@@ -57,6 +57,12 @@ function serializeSite(s: any) {
     code: s.code,
     client: s.client ?? null,
     location: s.location,
+    siteClaimDate:
+      s.siteClaimDate instanceof Date
+        ? s.siteClaimDate.toISOString()
+        : s.siteClaimDate
+          ? String(s.siteClaimDate)
+          : null,
     address: s.address ?? null,
     latitude: typeof s.latitude === "number" ? s.latitude : null,
     longitude: typeof s.longitude === "number" ? s.longitude : null,
@@ -124,7 +130,11 @@ export async function listSites(input?: {
           }
         : {}),
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      // Sites with a claim date should appear first; within that, newest sites first
+      { siteClaimDate: "asc" },
+      { createdAt: "desc" },
+    ],
     take,
     select: {
       id: true,
@@ -132,6 +142,7 @@ export async function listSites(input?: {
       code: true,
       client: true,
       location: true,
+      siteClaimDate: true,
       address: true,
       latitude: true,
       longitude: true,
@@ -271,6 +282,7 @@ export async function updateSiteLocation(input: {
   client?: string | null;
   location?: string | null;
   address?: string | null;
+  siteClaimDate?: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
 }) {
@@ -286,6 +298,12 @@ export async function updateSiteLocation(input: {
     input.location === undefined ? undefined : clean(input.location) || null;
   const address =
     input.address === undefined ? undefined : clean(input.address) || null;
+  const siteClaimDate =
+    input.siteClaimDate === undefined
+      ? undefined
+      : input.siteClaimDate
+        ? new Date(input.siteClaimDate + "T00:00:00.000Z")
+        : null;
   const latitude =
     input.latitude === undefined ? undefined : cleanNumber(input.latitude);
   const longitude =
@@ -319,6 +337,7 @@ export async function updateSiteLocation(input: {
         ...(client !== undefined ? { client } : {}),
         ...(location !== undefined ? { location } : {}),
         ...(address !== undefined ? { address } : {}),
+        ...(siteClaimDate !== undefined ? { siteClaimDate } : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -328,6 +347,7 @@ export async function updateSiteLocation(input: {
         code: true,
         client: true,
         location: true,
+        siteClaimDate: true,
         address: true,
         latitude: true,
         longitude: true,

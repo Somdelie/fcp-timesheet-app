@@ -25,6 +25,9 @@ import {
   Clock,
   ClipboardList,
   Paintbrush,
+  CalendarDays,
+  StickyNote,
+  CloudSun,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -68,6 +71,24 @@ const menuGroups: {
         href: "/",
         label: "Dashboard",
         icon: LayoutDashboard,
+        roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
+      },
+      {
+        href: "/scheduler",
+        label: "Scheduler",
+        icon: CalendarDays,
+        roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
+      },
+      {
+        href: "/notes",
+        label: "Notes",
+        icon: StickyNote,
+        roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
+      },
+      {
+        href: "/weather",
+        label: "Weather",
+        icon: CloudSun,
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
       },
     ],

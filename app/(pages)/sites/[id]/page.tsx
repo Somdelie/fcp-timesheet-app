@@ -36,6 +36,7 @@ export default async function SiteManagePage({
       latitude: true,
       longitude: true,
       isActive: true,
+      siteClaimDate: true,
       createdAt: true,
     },
   });
@@ -200,6 +201,11 @@ export default async function SiteManagePage({
                 initialAddress={site.address}
                 initialLatitude={site.latitude}
                 initialLongitude={site.longitude}
+                initialSiteClaimDate={
+                  site.siteClaimDate
+                    ? toISODate(site.siteClaimDate as Date)
+                    : null
+                }
               />
 
               <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 p-4 text-right">

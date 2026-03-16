@@ -99,6 +99,10 @@ model User {
 
   // Notifications
   notifications Notification[]
+
+  // Scheduler tasks
+  schedulerTasks SchedulerTask[]
+  userNotes      UserNote[]
 }
 
 model PushToken {
@@ -290,8 +294,9 @@ model Site {
 
   isActive Boolean @default(true)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  siteClaimDate DateTime?
 
   attendanceScans       AttendanceScan[]
   foremanAssignments    ForemanSiteAssignment[]
@@ -1629,9 +1634,10 @@ model SiteClaim {
   siteId String
   site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-  claimNo     String?
-  claimDate   DateTime
-  description String?
+  claimNo       String?
+  claimDate     DateTime
+  siteClaimDate DateTime?
+  description   String?
 
   amountClaimed  Decimal @default(0) @db.Decimal(14, 2)
   amountReceived Decimal @default(0) @db.Decimal(14, 2)
@@ -1774,4 +1780,95 @@ model Notification {
 
   @@index([userId, isRead, createdAt])
   @@index([siteId])
+}
+
+// ============================
+// SCHEDULER / TASK BOARD
+// ============================
+
+enum SchedulerTaskCategory {
+  MEETING
+  TODO
+  REMINDER
+  EVENT
+}
+
+enum SchedulerTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model SchedulerTask {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    SchedulerTaskCategory @default(TODO)
+  priority    SchedulerTaskPriority @default(MEDIUM)
+  time        String?
+  date        DateTime
+  column      String                @default("todo") // "todo" | "in-progress" | "done"
+  sortOrder   Int                   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, column])
+  @@index([userId, date])
+}
+
+// ============================
+// USER NOTES
+// ============================
+
+enum NoteColor {
+  DEFAULT
+  RED
+  ORANGE
+  YELLOW
+  GREEN
+  BLUE
+  PURPLE
+  PINK
+}
+
+model UserNote {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title    String    @default("")
+  content  String    @default("")
+  color    NoteColor @default(DEFAULT)
+  isPinned Boolean   @default(false)
+
+  attachments NoteAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isPinned, updatedAt])
+}
+
+model NoteAttachment {
+  id String @id @default(cuid())
+
+  noteId String
+  note   UserNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  url      String
+  publicId String @default("")
+  name     String
+  type     String // "image" | "pdf" | "excel" | "word" | "other"
+  size     Int    @default(0) // bytes
+  mimeType String @default("")
+
+  createdAt DateTime @default(now())
+
+  @@index([noteId])
 }

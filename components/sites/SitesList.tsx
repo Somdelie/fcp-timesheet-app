@@ -11,18 +11,7 @@ import {
   CalendarDays,
   SlidersHorizontal,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import CreateSiteForm from "./CreateSiteForm";
 import SitesTable, { type SiteRow } from "./SitesTable";
 import { requestSiteGroupPhoto, listSites } from "@/actions/sites";
 import { useUserRole } from "@/lib/user-role-context";
@@ -38,6 +27,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import CreateSiteForm from "./CreateSiteForm";
+import { Input } from "../ui/input";
 
 interface SitesListProps {
   initialSites: SiteRow[];
@@ -76,6 +82,9 @@ export default function SitesList({ initialSites }: SitesListProps) {
     SiteRow[] | null
   >(null);
   const [dateLoading, setDateLoading] = React.useState(false);
+  const [claimFilter, setClaimFilter] = React.useState<
+    "all" | "has" | "missing"
+  >("all");
 
   // The effective data set: if date range is applied use date-filtered data, otherwise initialSites
   const effectiveData = dateFilteredSites ?? initialSites;
@@ -134,7 +143,8 @@ export default function SitesList({ initialSites }: SitesListProps) {
   }
 
   /** Pure client-side filtering — instant, no server round-trips */
-  const filtered = React.useMemo(() => {
+  // Apply search filter first
+  const searchFiltered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return effectiveData;
     return effectiveData.filter(
@@ -144,6 +154,15 @@ export default function SitesList({ initialSites }: SitesListProps) {
         (s.location && s.location.toLowerCase().includes(q)),
     );
   }, [effectiveData, query]);
+
+  // Then apply claim-date filter (running vs not-running)
+  const filtered = React.useMemo(() => {
+    if (claimFilter === "all") return searchFiltered;
+    return searchFiltered.filter((s) => {
+      const hasClaim = !!s.siteClaimDate;
+      return claimFilter === "has" ? hasClaim : !hasClaim;
+    });
+  }, [searchFiltered, claimFilter]);
 
   async function handleSubmitPhotoRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -246,6 +265,32 @@ export default function SitesList({ initialSites }: SitesListProps) {
               Clear
             </Button>
           )}
+
+          {/* Claim date filter */}
+          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+            <Select
+              value={claimFilter}
+              onValueChange={(value) =>
+                setClaimFilter(value as "all" | "has" | "missing")
+              }
+            >
+              <SelectTrigger className="h-8 w-40 text-xs md:text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white">
+                <SelectValue
+                  placeholder="Claim status"
+                  aria-label="Filter by claim status"
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value="all">All sites</SelectItem>
+                <SelectItem value="has">With claim date</SelectItem>
+                <SelectItem value="missing">
+                  No claim date (not running)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Divider */}
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />

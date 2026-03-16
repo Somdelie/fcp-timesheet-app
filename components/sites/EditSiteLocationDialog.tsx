@@ -31,6 +31,7 @@ const schema = z.object({
   client: z.string().max(120, "Max 120 characters.").optional(),
   location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
+  siteClaimDate: z.string().max(10).optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -50,6 +51,7 @@ export default function EditSiteLocationDialog(props: {
   initialAddress?: string | null;
   initialLatitude?: number | null;
   initialLongitude?: number | null;
+  initialSiteClaimDate?: string | null;
 }) {
   const {
     siteId,
@@ -58,6 +60,7 @@ export default function EditSiteLocationDialog(props: {
     initialAddress,
     initialLatitude,
     initialLongitude,
+    initialSiteClaimDate,
   } = props;
 
   const router = useRouter();
@@ -71,6 +74,7 @@ export default function EditSiteLocationDialog(props: {
       client: initialClient ?? "",
       location: initialLocation ?? "",
       address: initialAddress ?? "",
+      siteClaimDate: initialSiteClaimDate ?? "",
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -85,6 +89,7 @@ export default function EditSiteLocationDialog(props: {
         client: values.client || null,
         location: values.location || null,
         address: values.address || null,
+        siteClaimDate: values.siteClaimDate || null,
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
       });

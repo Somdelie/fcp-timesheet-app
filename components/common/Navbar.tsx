@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Button } from "../ui/button";
+import { NotificationSheet } from "./NotificationSheet";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
   DropdownMenu,
@@ -115,6 +116,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
       </div>
       {/* right */}
       <div className="flex items-center gap-4">
+        <NotificationSheet />
         <ModeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -36,6 +36,7 @@ import {
   Hammer,
   Calculator,
   Loader2,
+  CalendarDays,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ export type SiteRow = {
   code: string | null;
   client: string | null;
   location: string | null;
+  siteClaimDate: string | null;
   isActive: boolean;
   createdAt: string;
   supervisorName: string | null;
@@ -372,7 +374,7 @@ export default function SitesTable({
   onSelectionChange,
 }: SitesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
-    { id: "code", desc: true },
+    { id: "siteClaimDate", desc: false },
   ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
@@ -497,6 +499,37 @@ export default function SitesTable({
         },
         cell: ({ row }) => (
           <span className="text-sm">{row.original.client ?? "—"}</span>
+        ),
+      },
+      {
+        id: "siteClaimDate",
+        accessorKey: "siteClaimDate",
+        size: 130,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <CalendarDays className="h-4 w-4 text-slate-600" />
+              Claim Date
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="text-xs">
+            {row.original.siteClaimDate
+              ? formatDate(row.original.siteClaimDate)
+              : "—"}
+          </span>
         ),
       },
       {
