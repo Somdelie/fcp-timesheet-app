@@ -8,6 +8,13 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   Plus,
   Edit2,
@@ -18,6 +25,8 @@ import {
   DollarSign,
   Calendar,
   Users,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -27,12 +36,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import ForemenTable, {
   type ForemanRow,
 } from "@/components/foremen/ForemenTable";
@@ -90,6 +105,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
   const [selectedForemanForAssistant, setSelectedForemanForAssistant] =
     useState<Foreman | null>(null);
   const [employees, setEmployees] = useState<AdminEmployee[]>([]);
+  const [assistantEmployeeOpen, setAssistantEmployeeOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] =
     useState<AdminEmployee | null>(null);
   const [isNewUserAssistant, setIsNewUserAssistant] = useState(true);
@@ -483,41 +499,73 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
           <form onSubmit={handleCreateAssistant} className="space-y-4">
             <div>
               <label className="text-sm font-medium">Select Employee</label>
-              <Select
-                value={createAssistantData.employeeId}
-                onValueChange={(value) => {
-                  const emp = employees.find((e) => e.id === value);
-                  if (emp) {
-                    handleSelectEmployeeForAssistant(emp);
-                  }
-                }}
+              <Popover
+                open={assistantEmployeeOpen}
+                onOpenChange={setAssistantEmployeeOpen}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose an employee..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
-                      No employees available
-                    </div>
-                  ) : (
-                    employees.map((emp) => (
-                      <SelectItem
-                        key={emp.id}
-                        value={emp.id}
-                        className="border-b"
-                      >
-                        <span>
-                          {emp.firstName} {emp.lastName}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({emp.qrCodeValue})
-                        </span>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={assistantEmployeeOpen}
+                    className="w-full justify-between mt-1"
+                  >
+                    {createAssistantData.employeeId
+                      ? (() => {
+                          const emp = employees.find(
+                            (e) => e.id === createAssistantData.employeeId,
+                          );
+                          return emp
+                            ? `${emp.firstName} ${emp.lastName}`
+                            : "Choose an employee...";
+                        })()
+                      : "Choose an employee..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search employees…" />
+                    <CommandList>
+                      <CommandEmpty>No employees found.</CommandEmpty>
+                      <CommandGroup>
+                        {employees.map((emp) => (
+                          <CommandItem
+                            key={emp.id}
+                            value={emp.id}
+                            keywords={[
+                              `${emp.firstName} ${emp.lastName}`,
+                              emp.qrCodeValue || "",
+                              emp.userEmail || "",
+                            ]}
+                            onSelect={() => {
+                              handleSelectEmployeeForAssistant(emp);
+                              setAssistantEmployeeOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${
+                                createAssistantData.employeeId === emp.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              }`}
+                            />
+                            <span>
+                              {emp.firstName} {emp.lastName}
+                            </span>
+                            {emp.qrCodeValue && (
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({emp.qrCodeValue})
+                              </span>
+                            )}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             {selectedEmployee && (
               <div className="rounded bg-blue-50 dark:bg-blue-950 p-3 text-sm">
