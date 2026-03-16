@@ -23,6 +23,7 @@ interface TaskCardProps {
   task: Task;
   isDragging?: boolean;
   onDelete?: (id: string) => void;
+  onClick?: (task: Task) => void;
 }
 
 const categoryConfig = {
@@ -80,7 +81,12 @@ const priorityConfig = {
   },
 };
 
-export function TaskCard({ task, isDragging, onDelete }: TaskCardProps) {
+export function TaskCard({
+  task,
+  isDragging,
+  onDelete,
+  onClick,
+}: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -112,20 +118,21 @@ export function TaskCard({ task, isDragging, onDelete }: TaskCardProps) {
       <div
         className={cn(
           "absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm",
-          `bg-gradient-to-br ${category.accent}`,
+          `bg-linear-to-br ${category.accent}`,
         )}
       />
 
       <Card
         className={cn(
           "relative cursor-grab active:cursor-grabbing",
-          "border bg-gradient-to-br backdrop-blur-sm",
+          "border bg-linear-to-br backdrop-blur-sm p-0",
           "transition-all duration-200",
           `${category.accent}`,
           "hover:shadow-lg hover:-translate-y-0.5",
           isActive && "opacity-60 rotate-1 scale-105 shadow-2xl",
           "bg-card/90",
         )}
+        onClick={() => onClick?.(task)}
       >
         {/* Priority left border bar */}
         <div
@@ -142,7 +149,7 @@ export function TaskCard({ task, isDragging, onDelete }: TaskCardProps) {
             <div
               {...attributes}
               {...listeners}
-              className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity shrink-0 touch-none"
+              className="mt-0.5 opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity shrink-0 touch-none"
             >
               <GripVertical className="size-3.5 text-muted-foreground" />
             </div>

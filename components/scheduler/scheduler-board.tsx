@@ -17,12 +17,14 @@ import { sortableKeyboardCoordinates, arrayMove } from "@dnd-kit/sortable";
 import { TaskColumn } from "./task-column";
 import { TaskCard } from "./task-card";
 import { AddTaskDialog } from "./add-task-dialog";
+import { ViewTaskDialog } from "./view-task-dialog";
 import type { Task } from "@/lib/types";
 import {
   getSchedulerTasks,
   createSchedulerTask,
   updateSchedulerTaskColumn,
   deleteSchedulerTask,
+  updateSchedulerTask,
 } from "@/actions/scheduler";
 
 const columns = [
@@ -34,6 +36,7 @@ const columns = [
 export function SchedulerBoard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [viewTask, setViewTask] = useState<Task | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -145,6 +148,19 @@ export function SchedulerBoard() {
     });
   };
 
+  const handleUpdateTask = (
+    taskId: string,
+    data: Partial<Omit<Task, "id">>,
+  ) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...data } : t)),
+    );
+    setViewTask((prev) => (prev?.id === taskId ? { ...prev, ...data } : prev));
+    startTransition(async () => {
+      await updateSchedulerTask(taskId, data);
+    });
+  };
+
   const getTasksByColumn = (columnId: string) =>
     tasks.filter((t) => t.column === columnId);
 
@@ -176,6 +192,7 @@ export function SchedulerBoard() {
               tasks={getTasksByColumn(column.id)}
               count={getTasksByColumn(column.id).length}
               onDeleteTask={handleDeleteTask}
+              onViewTask={setViewTask}
             />
           ))}
         </div>
@@ -184,6 +201,13 @@ export function SchedulerBoard() {
       <DragOverlay>
         {activeTask ? <TaskCard task={activeTask} isDragging /> : null}
       </DragOverlay>
+
+      <ViewTaskDialog
+        task={viewTask}
+        open={!!viewTask}
+        onOpenChange={(open) => !open && setViewTask(null)}
+        onUpdate={handleUpdateTask}
+      />
     </DndContext>
   );
 }

@@ -101,3 +101,31 @@ export async function deleteSchedulerTask(taskId: string): Promise<void> {
   });
   revalidatePath("/scheduler");
 }
+
+export async function updateSchedulerTask(
+  taskId: string,
+  input: Partial<Omit<Task, "id">>,
+): Promise<Task> {
+  const auth = await requireServerAuth();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: Record<string, any> = {};
+  if (input.title !== undefined) data.title = input.title;
+  if (input.description !== undefined)
+    data.description = input.description || null;
+  if (input.category !== undefined)
+    data.category = (categoryMap[input.category] ?? "TODO") as any;
+  if (input.priority !== undefined)
+    data.priority = (priorityMap[input.priority] ?? "MEDIUM") as any;
+  if (input.time !== undefined) data.time = input.time || null;
+  if (input.date !== undefined)
+    data.date = new Date(input.date + "T00:00:00.000Z");
+  if (input.column !== undefined) data.column = input.column;
+
+  const task = await prisma.schedulerTask.update({
+    where: { id: taskId, userId: auth.userId },
+    data,
+  });
+  revalidatePath("/scheduler");
+  return toClientTask(task);
+}

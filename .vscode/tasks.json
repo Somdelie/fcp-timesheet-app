@@ -11,6 +11,16 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "build-project",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"build"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

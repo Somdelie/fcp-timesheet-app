@@ -16,6 +16,7 @@ interface TaskColumnProps {
   tasks: Task[];
   count: number;
   onDeleteTask?: (id: string) => void;
+  onViewTask?: (task: Task) => void;
 }
 
 const columnConfig = {
@@ -54,6 +55,7 @@ export function TaskColumn({
   tasks,
   count,
   onDeleteTask,
+  onViewTask,
 }: TaskColumnProps) {
   const { isOver, setNodeRef } = useDroppable({ id });
 
@@ -128,7 +130,12 @@ export function TaskColumn({
         >
           <div className="flex flex-col gap-2">
             {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} onDelete={onDeleteTask} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onDelete={onDeleteTask}
+                onClick={onViewTask}
+              />
             ))}
 
             {tasks.length === 0 && (
