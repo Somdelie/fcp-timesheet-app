@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { toast } from "react-toastify";
-import { Plus, RotateCw, DollarSign, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  RotateCw,
+  DollarSign,
+  Pencil,
+  Trash2,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +44,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -151,6 +173,10 @@ export default function SupplierPricesPage() {
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<SupplierPrice | null>(null);
+
+  // Table state
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
   // Load lookups
   useEffect(() => {
@@ -308,6 +334,144 @@ export default function SupplierPricesPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<SupplierPrice>[]>(
+    () => [
+      {
+        id: "product",
+        accessorFn: (row) => row.product.name,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Product
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <div className="space-y-0.5">
+            <div className="font-medium leading-tight">
+              {row.original.product.name}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {row.original.product.sku ?? "No SKU"}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "supplier",
+        accessorFn: (row) => row.supplier.name,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              Supplier
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.supplier.name}</span>
+        ),
+      },
+      {
+        id: "size",
+        header: () => <span>Size</span>,
+        cell: ({ row }) => (
+          <span className="text-sm">
+            {row.original.uom
+              ? `${row.original.unitSize ?? ""}${uomLabel(row.original.uom)}`
+              : "" + "" + "—"}
+          </span>
+        ),
+      },
+      {
+        id: "price",
+        accessorKey: "price",
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors justify-end w-full"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <span>Price</span>
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="block text-right font-medium">
+            {formatCurrency(row.original.price)}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openEdit(row.original)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={() => setDeleteTarget(row.original)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: prices,
+    columns,
+    state: {
+      sorting,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
       <div className="flex items-center justify-between">
@@ -373,6 +537,16 @@ export default function SupplierPricesPage() {
         <Button variant="ghost" size="icon" onClick={load}>
           <RotateCw className="h-4 w-4" />
         </Button>
+
+        <Button
+          type="button"
+          variant={showInactive ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => setShowInactive((v) => !v)}
+        >
+          {showInactive ? "Showing active + inactive" : "Active only"}
+        </Button>
       </div>
 
       {/* Table */}
@@ -391,92 +565,160 @@ export default function SupplierPricesPage() {
           <div className="overflow-x-auto">
             <Table className="border-collapse">
               <TableHeader className="bg-muted/60">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                    Product
-                  </TableHead>
-                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                    SKU
-                  </TableHead>
-                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                    Size
-                  </TableHead>
-                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                    Supplier
-                  </TableHead>
-                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-right dark:border-zinc-700">
-                    Price
-                  </TableHead>
-                  <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-right dark:border-zinc-700">
-                    Actions
-                  </TableHead>
-                </TableRow>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
               </TableHeader>
+
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={columns.length}
                       className="h-24 text-center text-muted-foreground"
                     >
                       Loading...
                     </TableCell>
                   </TableRow>
-                ) : prices.length > 0 ? (
-                  prices.map((p) => (
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
                     <TableRow
-                      key={p.id}
+                      key={row.id}
                       className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
                     >
-                      <TableCell className="border border-zinc-200 px-3 py-2 align-top dark:border-zinc-700">
-                        <div className="font-medium">{p.product.name}</div>
-                      </TableCell>
-                      <TableCell className="border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
-                        {p.product.sku ?? "—"}
-                      </TableCell>
-                      <TableCell className="border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                        <span className="text-sm">
-                          {p.uom
-                            ? `${p.unitSize ?? ""}${uomLabel(p.uom)}`
-                            : "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
-                        {p.supplier.name}
-                      </TableCell>
-                      <TableCell className="border border-zinc-200 px-3 py-2 text-right font-medium dark:border-zinc-700">
-                        {formatCurrency(p.price)}
-                      </TableCell>
-                      <TableCell className="border border-zinc-200 px-3 py-2 text-right dark:border-zinc-700">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit(p)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => setDeleteTarget(p)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className="border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       No results.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/60">
+            <div className="text-muted-foreground hidden text-sm lg:flex gap-2">
+              <span>
+                Showing{" "}
+                {prices.length === 0
+                  ? 0
+                  : table.getState().pagination.pageIndex *
+                      table.getState().pagination.pageSize +
+                    1}{" "}
+                to{" "}
+                {Math.min(
+                  (table.getState().pagination.pageIndex + 1) *
+                    table.getState().pagination.pageSize,
+                  prices.length,
+                )}{" "}
+                of {prices.length} prices
+              </span>
+            </div>
+            <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+              <div className="hidden items-center gap-2 lg:flex">
+                <span className="text-sm font-medium">Rows per page</span>
+                <Select
+                  value={String(table.getState().pagination.pageSize)}
+                  onValueChange={(value) => {
+                    table.setPageSize(Number(value));
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-20">
+                    <SelectValue
+                      placeholder={table.getState().pagination.pageSize}
+                    />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[5, 10, 25, 50, 100].map((pageSize) => (
+                      <SelectItem key={pageSize} value={String(pageSize)}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-fit items-center justify-center text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount() || 1}
+              </div>
+              <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:flex"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
