@@ -24,6 +24,16 @@ export type NoteAttachmentItem = {
   mimeType: string;
 };
 
+export type NoteCommentItem = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type NoteItem = {
   id: string;
   title: string;
@@ -32,6 +42,7 @@ export type NoteItem = {
   isPinned: boolean;
   updatedAt: string;
   attachments: NoteAttachmentItem[];
+  comments: NoteCommentItem[];
 };
 
 function serialize(n: {
@@ -50,6 +61,14 @@ function serialize(n: {
     size: number;
     mimeType: string;
   }[];
+  comments: {
+    id: string;
+    userId: string;
+    user: { name: string | null; email: string };
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
 }): NoteItem {
   return {
     id: n.id,
@@ -67,6 +86,15 @@ function serialize(n: {
       size: a.size,
       mimeType: a.mimeType,
     })),
+    comments: n.comments.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      userName: c.user.name || "Anonymous",
+      userEmail: c.user.email,
+      content: c.content,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+    })),
   };
 }
 
@@ -75,7 +103,13 @@ export async function getNotes(): Promise<NoteItem[]> {
   const notes = await prisma.userNote.findMany({
     where: { userId: auth.userId },
     orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
-    include: { attachments: true },
+    include: {
+      attachments: true,
+      comments: {
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
   return notes.map(serialize);
 }
@@ -91,9 +125,19 @@ export async function createNote(input: {
       userId: auth.userId,
       title: input.title,
       content: input.content,
-      color: (input.color ?? "DEFAULT") as any,
+      color: input.color ?? "DEFAULT",
     },
-    include: { attachments: true },
+    include: {
+      attachments: true,
+      comments: {
+        include: {
+          user: {
+            select: { name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
   revalidatePath("/notes");
   return serialize(note);
@@ -182,5 +226,59 @@ export async function removeNoteAttachment(
   });
   if (!attachment || attachment.note.userId !== auth.userId) return;
   await prisma.noteAttachment.delete({ where: { id: attachmentId } });
+  revalidatePath("/notes");
+}
+
+export async function addNoteComment(
+  noteId: string,
+  content: string,
+): Promise<NoteCommentItem> {
+  const auth = await requireServerAuth();
+
+  // Verify note ownership
+  const note = await prisma.userNote.findFirst({
+    where: { id: noteId, userId: auth.userId },
+    select: { id: true },
+  });
+  if (!note) throw new Error("Note not found");
+
+  const comment = await prisma.noteComment.create({
+    data: {
+      noteId,
+      userId: auth.userId,
+      content,
+    },
+    include: {
+      user: { select: { name: true, email: true } },
+    },
+  });
+
+  revalidatePath("/notes");
+
+  return {
+    id: comment.id,
+    userId: comment.userId,
+    userName: comment.user.name || "Anonymous",
+    userEmail: comment.user.email,
+    content: comment.content,
+    createdAt: comment.createdAt.toISOString(),
+    updatedAt: comment.updatedAt.toISOString(),
+  };
+}
+
+export async function removeNoteComment(commentId: string): Promise<void> {
+  const auth = await requireServerAuth();
+
+  // Verify user created this comment
+  const comment = await prisma.noteComment.findUnique({
+    where: { id: commentId },
+    select: { userId: true },
+  });
+
+  if (!comment || comment.userId !== auth.userId) {
+    throw new Error("Unauthorized");
+  }
+
+  await prisma.noteComment.delete({ where: { id: commentId } });
   revalidatePath("/notes");
 }

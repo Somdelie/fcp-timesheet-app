@@ -103,6 +103,7 @@ model User {
   // Scheduler tasks
   schedulerTasks SchedulerTask[]
   userNotes      UserNote[]
+  noteComments   NoteComment[]   @relation("UserNoteComments")
 }
 
 model PushToken {
@@ -1848,6 +1849,7 @@ model UserNote {
   isPinned Boolean   @default(false)
 
   attachments NoteAttachment[]
+  comments    NoteComment[]    @relation("NoteComments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1871,4 +1873,22 @@ model NoteAttachment {
   createdAt DateTime @default(now())
 
   @@index([noteId])
+}
+
+model NoteComment {
+  id String @id @default(cuid())
+
+  noteId String
+  note   UserNote @relation("NoteComments", fields: [noteId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("UserNoteComments", fields: [userId], references: [id], onDelete: Cascade)
+
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([noteId])
+  @@index([userId])
 }
