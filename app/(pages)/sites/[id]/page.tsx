@@ -196,6 +196,8 @@ export default async function SiteManagePage({
             <div className="flex flex-col items-end gap-2">
               <EditSiteLocationDialog
                 siteId={site.id}
+                initialName={site.name}
+                initialCode={site.code}
                 initialClient={site.client}
                 initialLocation={site.location}
                 initialAddress={site.address}
@@ -206,6 +208,7 @@ export default async function SiteManagePage({
                     ? toISODate(site.siteClaimDate as Date)
                     : null
                 }
+                canEditCoreDetails={auth.role === "ADMIN"}
               />
 
               <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 p-4 text-right">

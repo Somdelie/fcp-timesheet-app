@@ -37,9 +37,10 @@ const categoryConfig = {
   todo: {
     icon: CheckCircle2,
     label: "To-Do",
-    accent: "from-violet-500/20 to-purple-500/10 border-violet-500/25",
-    iconBg: "bg-violet-500/15 text-violet-400",
-    dot: "bg-violet-400",
+    // Follow selected theme primary color for TODOs
+    accent: "from-primary/20 to-primary/5 border-primary/30",
+    iconBg: "bg-primary/15 text-primary-foreground/80",
+    dot: "bg-primary",
   },
   reminder: {
     icon: Bell,

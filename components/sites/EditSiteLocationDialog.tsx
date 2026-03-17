@@ -28,6 +28,11 @@ import SiteLocationPicker from "@/components/sites/SiteLocationPicker";
 import { updateSiteLocation } from "@/actions/sites";
 
 const schema = z.object({
+  name: z
+    .string()
+    .min(2, "Site name must be at least 2 characters.")
+    .max(80, "Max 80 characters."),
+  code: z.string().max(30, "Max 30 characters.").optional(),
   client: z.string().max(120, "Max 120 characters.").optional(),
   location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
@@ -46,21 +51,27 @@ const schema = z.object({
 
 export default function EditSiteLocationDialog(props: {
   siteId: string;
+  initialName: string;
+  initialCode?: string | null;
   initialClient?: string | null;
   initialLocation?: string | null;
   initialAddress?: string | null;
   initialLatitude?: number | null;
   initialLongitude?: number | null;
   initialSiteClaimDate?: string | null;
+  canEditCoreDetails?: boolean;
 }) {
   const {
     siteId,
+    initialName,
+    initialCode,
     initialClient,
     initialLocation,
     initialAddress,
     initialLatitude,
     initialLongitude,
     initialSiteClaimDate,
+    canEditCoreDetails = false,
   } = props;
 
   const router = useRouter();
@@ -71,6 +82,8 @@ export default function EditSiteLocationDialog(props: {
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
+      name: initialName,
+      code: initialCode ?? "",
       client: initialClient ?? "",
       location: initialLocation ?? "",
       address: initialAddress ?? "",
@@ -86,6 +99,12 @@ export default function EditSiteLocationDialog(props: {
     startTransition(async () => {
       const res = await updateSiteLocation({
         siteId,
+        ...(canEditCoreDetails
+          ? {
+              name: values.name,
+              code: values.code || null,
+            }
+          : {}),
         client: values.client || null,
         location: values.location || null,
         address: values.address || null,
@@ -124,15 +143,68 @@ export default function EditSiteLocationDialog(props: {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            Site location
+            Site details
           </DialogTitle>
           <DialogDescription>
-            Address and pin are optional. You can save either, both, or none.
+            Update the site name, client, address, claim date and pin
+            coordinates. Address and pin are optional.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-5 max-h-[70vh] overflow-y-auto pb-2"
+        >
           <FieldGroup>
+            {canEditCoreDetails && (
+              <>
+                <Controller
+                  name="name"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                        Site Name <span className="text-red-500">*</span>
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        placeholder="e.g. Mall of Africa"
+                        disabled={pending}
+                        className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="code"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                        Job Number{" "}
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                          (Optional)
+                        </span>
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        placeholder="e.g. MOA-001"
+                        disabled={pending}
+                        className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+              </>
+            )}
+
             <Controller
               name="client"
               control={form.control}

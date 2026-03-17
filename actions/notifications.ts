@@ -209,6 +209,5 @@ export async function getNotifications(): Promise<NotificationItem[]> {
   } catch {
     // Weather fetch failed – skip silently
   }
-
   return notifications;
 }

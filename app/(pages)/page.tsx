@@ -707,10 +707,10 @@ export default function HomePage() {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Active Employees */}
-          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-blue-800">
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-primary/70">
             {/* Water Background */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
-              <div className="absolute inset-0 bg-linear-to-r from-blue-500/25 to-blue-500/5 opacity-60" />
+              <div className="absolute inset-0 bg-linear-to-r from-primary/25 to-primary/5 opacity-60" />
               <svg
                 viewBox="0 0 2880 90"
                 preserveAspectRatio="none"
@@ -733,7 +733,7 @@ export default function HomePage() {
             <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-blue-400 font-medium">
+                  <p className="text-sm text-primary font-medium">
                     Active Employees
                   </p>
                   <p className="text-3xl font-bold text-slate-100">
@@ -741,17 +741,17 @@ export default function HomePage() {
                   </p>
                   <p className="text-xs text-slate-400">Total active staff</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-500/10 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-500" />
+                <div className="w-12 h-12 bg-primary/15 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Active Sites */}
-          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-cyan-800">
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-primary/70">
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
-              <div className="absolute inset-0 bg-linear-to-r from-cyan-500/25 to-cyan-500/5 opacity-60" />
+              <div className="absolute inset-0 bg-linear-to-r from-primary/25 to-primary/5 opacity-60" />
               <svg
                 viewBox="0 0 2880 90"
                 preserveAspectRatio="none"
@@ -774,7 +774,7 @@ export default function HomePage() {
             <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-cyan-400 font-medium">
+                  <p className="text-sm text-primary font-medium">
                     Active Sites
                   </p>
                   <p className="text-3xl font-bold text-slate-100">
@@ -782,17 +782,17 @@ export default function HomePage() {
                   </p>
                   <p className="text-xs text-slate-400">Across all regions</p>
                 </div>
-                <div className="w-12 h-12 bg-cyan-500/10 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-cyan-500" />
+                <div className="w-12 h-12 bg-primary/15 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Foremen */}
-          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-emerald-800">
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-primary/70">
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
-              <div className="absolute inset-0 bg-linear-to-r from-emerald-500/25 to-emerald-500/5 opacity-60" />
+              <div className="absolute inset-0 bg-linear-to-r from-primary/25 to-primary/5 opacity-60" />
               <svg
                 viewBox="0 0 2880 90"
                 preserveAspectRatio="none"
@@ -815,28 +815,26 @@ export default function HomePage() {
             <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-emerald-400 font-medium">
-                    Foremen
-                  </p>
+                  <p className="text-sm text-primary font-medium">Foremen</p>
                   <p className="text-3xl font-bold text-slate-100">
                     {metrics?.totalForemen ?? 0}
                   </p>
-                  <p className="text-xs text-emerald-500 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-primary" />
                     Team leads
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-emerald-500/10 flex items-center justify-center">
-                  <ClipboardCheck className="w-6 h-6 text-emerald-500" />
+                <div className="w-12 h-12 bg-primary/15 flex items-center justify-center">
+                  <ClipboardCheck className="w-6 h-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Supervisors */}
-          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-orange-800">
+          <Card className="p-4 relative overflow-hidden bg-slate-900/90 border-primary/70">
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14">
-              <div className="absolute inset-0 bg-linear-to-r from-orange-500/25 to-orange-500/5 opacity-60" />
+              <div className="absolute inset-0 bg-linear-to-r from-primary/25 to-primary/5 opacity-60" />
               <svg
                 viewBox="0 0 2880 90"
                 preserveAspectRatio="none"
@@ -859,19 +857,19 @@ export default function HomePage() {
             <CardContent className="p-0 relative z-10">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-orange-400 font-medium">
+                  <p className="text-sm text-primary font-medium">
                     Supervisors
                   </p>
                   <p className="text-3xl font-bold text-slate-100">
                     {metrics?.totalSupervisors ?? 0}
                   </p>
-                  <p className="text-xs text-orange-500 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-primary" />
                     Active Supervisors
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-orange-500/10 flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-orange-500" />
+                <div className="w-12 h-12 bg-primary/15 flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -881,7 +879,7 @@ export default function HomePage() {
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Weekly Attendance Trend */}
-          <Card className="max-h-75 flex flex-col">
+          <Card className="max-h-75 flex flex-col border border-primary/30 bg-card/95">
             <CardHeader className="pb-2">
               <CardTitle>Weekly Attendance Trend</CardTitle>
               <CardDescription>
@@ -918,7 +916,7 @@ export default function HomePage() {
           </Card>
 
           {/* Top 5 Site Wages */}
-          <Card className="max-h-75 flex flex-col">
+          <Card className="max-h-75 flex flex-col border border-primary/30 bg-card/95">
             <CardHeader className="pb-2">
               <CardTitle>Top 5 Site Wages</CardTitle>
               <CardDescription>Total wages by site</CardDescription>
@@ -938,7 +936,7 @@ export default function HomePage() {
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Site Activity */}
-          <Card className="max-h-75 flex flex-col">
+          <Card className="max-h-75 flex flex-col border border-primary/30 bg-card/95">
             <CardHeader className="pb-2">
               <CardTitle>Top Sites by Activity</CardTitle>
               <CardDescription>
@@ -971,7 +969,7 @@ export default function HomePage() {
           </Card>
 
           {/* Photo Verification */}
-          <Card className="max-h-75 flex flex-col">
+          <Card className="max-h-75 flex flex-col border border-primary/30 bg-card/95">
             <CardHeader className="pb-2">
               <CardTitle>Photo Verification Status</CardTitle>
               <CardDescription>
@@ -1012,7 +1010,7 @@ export default function HomePage() {
 
         {/* Recent Activity / Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 border border-primary/30 bg-card/95">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
               <CardDescription>
@@ -1067,7 +1065,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border border-primary/30 bg-card/95">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Common administrative tasks</CardDescription>

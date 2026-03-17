@@ -279,6 +279,8 @@ export async function createSite(input: {
 
 export async function updateSiteLocation(input: {
   siteId: string;
+  name?: string;
+  code?: string | null;
   client?: string | null;
   location?: string | null;
   address?: string | null;
@@ -292,6 +294,8 @@ export async function updateSiteLocation(input: {
 
   await requireCanManageSite(auth, siteId);
 
+  const name = input.name === undefined ? undefined : clean(input.name);
+  const code = input.code === undefined ? undefined : clean(input.code) || null;
   const client =
     input.client === undefined ? undefined : clean(input.client) || null;
   const location =
@@ -308,6 +312,17 @@ export async function updateSiteLocation(input: {
     input.latitude === undefined ? undefined : cleanNumber(input.latitude);
   const longitude =
     input.longitude === undefined ? undefined : cleanNumber(input.longitude);
+
+  if ((name !== undefined || code !== undefined) && auth.role !== "ADMIN") {
+    return {
+      ok: false as const,
+      error: "Only admin can update site name or job number.",
+    };
+  }
+
+  if (name !== undefined && !name) {
+    return { ok: false as const, error: "Site name is required." };
+  }
 
   if (
     latitude !== undefined &&
@@ -334,6 +349,8 @@ export async function updateSiteLocation(input: {
     const site = await prisma.site.update({
       where: { id: siteId },
       data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(code !== undefined ? { code } : {}),
         ...(client !== undefined ? { client } : {}),
         ...(location !== undefined ? { location } : {}),
         ...(address !== undefined ? { address } : {}),

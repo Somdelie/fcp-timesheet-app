@@ -28,7 +28,20 @@ export function NotificationSheet() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [opened, setOpened] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
+
+  const persistOpened = (next: Set<string>) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        "notification-opened-ids",
+        JSON.stringify(Array.from(next)),
+      );
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   const fetchNotifications = () => {
     startTransition(async () => {
@@ -46,12 +59,32 @@ export function NotificationSheet() {
   };
 
   const clearAll = () => {
-    setDismissed(new Set(notifications.map((n) => n.id)));
+    const allIds = new Set(notifications.map((n) => n.id));
+    setDismissed(allIds);
+    setOpened(() => {
+      persistOpened(allIds);
+      return allIds;
+    });
   };
 
   // Fetch on mount and when sheet opens
   useEffect(() => {
     fetchNotifications();
+  }, []);
+
+  // Load opened state from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("notification-opened-ids");
+      if (!raw) return;
+      const ids = JSON.parse(raw) as string[];
+      if (Array.isArray(ids)) {
+        setOpened(new Set(ids));
+      }
+    } catch {
+      // ignore parse errors
+    }
   }, []);
 
   const handleOpen = () => {
@@ -79,8 +112,11 @@ export function NotificationSheet() {
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="flex flex-col p-0">
-          <SheetHeader className="border-b px-4 py-4 mt-4">
+        <SheetContent
+          side="right"
+          className="flex h-full max-h-screen flex-col bg-background p-0"
+        >
+          <SheetHeader className="sticky top-0 z-10 border-b bg-background/95 px-4 py-4 backdrop-blur mt-4">
             <div className="flex items-center justify-between">
               <SheetTitle className="text-lg">Notifications</SheetTitle>
               {count > 0 && (
@@ -100,7 +136,7 @@ export function NotificationSheet() {
             </SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1 px-4 py-2">
+          <ScrollArea className="flex-1 overflow-y-auto px-4 py-3">
             {isPending && notifications.length === 0 ? (
               <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
                 Loading…
@@ -111,11 +147,19 @@ export function NotificationSheet() {
                 <p>No notifications right now</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 pb-4">
+              <div className="flex flex-col gap-3 pb-4">
                 {visible.map((n) => (
                   <NotificationCard
                     key={n.id}
                     notification={n}
+                    isOpened={opened.has(n.id)}
+                    onOpen={() =>
+                      setOpened((prev) => {
+                        const next = new Set(prev).add(n.id);
+                        persistOpened(next);
+                        return next;
+                      })
+                    }
                     onDismiss={dismissNotification}
                   />
                 ))}
@@ -130,9 +174,13 @@ export function NotificationSheet() {
 
 function NotificationCard({
   notification,
+  isOpened,
+  onOpen,
   onDismiss,
 }: {
   notification: NotificationItem;
+  isOpened: boolean;
+  onOpen: (id: string) => void;
   onDismiss: (id: string) => void;
 }) {
   const isClaim = notification.type === "CLAIM_DUE";
@@ -173,7 +221,23 @@ function NotificationCard({
         : "destructive";
 
   return (
-    <div className="group flex items-start gap-3 rounded border p-3 transition-colors hover:bg-muted/50">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(notification.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(notification.id);
+        }
+      }}
+      className={
+        "group flex w-full items-start gap-3 rounded border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring " +
+        (isOpened
+          ? "bg-muted/40 border-border"
+          : "bg-primary/15 border-primary shadow-sm hover:bg-primary/25")
+      }
+    >
       <div
         className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconBg}`}
       >
@@ -181,7 +245,14 @@ function NotificationCard({
       </div>
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{notification.title}</span>
+          <span
+            className={
+              "text-sm font-medium" +
+              (isOpened ? " text-muted-foreground" : " text-foreground")
+            }
+          >
+            {notification.title}
+          </span>
           <Badge
             variant={badgeVariant as "outline" | "destructive"}
             className="text-[10px] px-1.5 py-0"
@@ -189,10 +260,21 @@ function NotificationCard({
             {badgeLabel}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">{notification.message}</p>
+        <p
+          className={
+            "text-xs" +
+            (isOpened ? " text-muted-foreground/80" : " text-muted-foreground")
+          }
+        >
+          {notification.message}
+        </p>
       </div>
       <button
-        onClick={() => onDismiss(notification.id)}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDismiss(notification.id);
+        }}
         className="mt-0.5 shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
       >
         <X className="h-3.5 w-3.5" />
