@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useState, useTransition, useMemo } from "react";
+import { Search, StickyNote } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotesList } from "./notes-list";
 import { NoteDetail } from "./note-detail";
@@ -18,14 +18,36 @@ import {
   type NoteItem,
   type NoteColor,
   type NoteAttachmentItem,
-  type NoteCommentItem,
 } from "@/actions/notes";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 export function NotesBoard() {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
+
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 8,
+    },
+  });
+
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+
+  const sensors = useSensors(pointerSensor, keyboardSensor);
 
   useEffect(() => {
     startTransition(async () => {
@@ -34,8 +56,22 @@ export function NotesBoard() {
       if (data.length > 0 && !selectedNoteId) {
         setSelectedNoteId(data[0].id);
       }
+      setIsLoading(false);
     });
   }, []);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const oldIndex = notes.findIndex((note) => note.id === active.id);
+    const newIndex = notes.findIndex((note) => note.id === over.id);
+
+    if (oldIndex !== newIndex) {
+      const updatedNotes = arrayMove(notes, oldIndex, newIndex);
+      setNotes(updatedNotes);
+    }
+  };
 
   const handleAdd = (input: {
     title: string;
@@ -46,10 +82,12 @@ export function NotesBoard() {
     startTransition(async () => {
       const created = await createNote(input);
       const savedAttachments: NoteAttachmentItem[] = [];
+
       for (const a of input.pendingAttachments) {
         const saved = await addNoteAttachment(created.id, a);
         savedAttachments.push(saved);
       }
+
       created.attachments = savedAttachments;
       setNotes((prev) => [created, ...prev]);
       setSelectedNoteId(created.id);
@@ -66,16 +104,23 @@ export function NotesBoard() {
     },
   ) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...data } : n)));
+
     startTransition(async () => {
       await updateNote(id, data);
     });
   };
 
   const handleDelete = (id: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-    if (selectedNoteId === id) {
-      setSelectedNoteId(notes[0]?.id || null);
-    }
+    setNotes((prev) => {
+      const next = prev.filter((n) => n.id !== id);
+
+      if (selectedNoteId === id) {
+        setSelectedNoteId(next[0]?.id ?? null);
+      }
+
+      return next;
+    });
+
     startTransition(async () => {
       await deleteNote(id);
     });
@@ -108,6 +153,7 @@ export function NotesBoard() {
           : n,
       ),
     );
+
     startTransition(async () => {
       await removeNoteAttachment(attachmentId);
     });
@@ -131,6 +177,7 @@ export function NotesBoard() {
         comments: n.comments.filter((c) => c.id !== commentId),
       })),
     );
+
     startTransition(async () => {
       await removeNoteComment(commentId);
     });
@@ -140,68 +187,89 @@ export function NotesBoard() {
     notes.find((n) => n.id === selectedNoteId) || notes[0] || null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b px-4 py-4 sm:px-6 sm:py-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              My Notes
-            </h1>
-            <p className="text-sm text-muted-foreground sm:text-base mt-1">
-              {notes.length} note{notes.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <AddNoteDialog onAdd={handleAdd} />
-        </div>
-      </header>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        {/* Header */}
+        <header className="shrink-0 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-6 px-6 py-2">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded bg-primary/10">
+                <StickyNote className="size-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                  Notes
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {notes.length} {notes.length === 1 ? "note" : "notes"}
+                </p>
+              </div>
+            </div>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden gap-0 border-t">
-        {/* Sidebar */}
-        <div className="w-80 border-r overflow-hidden flex flex-col">
-          {/* Search */}
-          <div className="border-b p-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search notes..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 rounded-lg border-border/60 bg-secondary/30 pl-9 text-sm shadow-sm transition-shadow placeholder:text-muted-foreground/70 focus:shadow-md"
+            <AddNoteDialog onAdd={handleAdd} />
+          </div>
+        </header>
+
+        {/* Main content */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border/50 bg-card/30">
+            <div className="shrink-0 p-4">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                <Input
+                  placeholder="Search notes..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-10 rounded border-border/50 bg-background pl-10 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary/30 focus:shadow-md"
+                />
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {isLoading ? (
+                <div className="flex flex-col gap-2 p-4">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="animate-pulse rounded bg-secondary/50 p-4"
+                    ></div>
+                  ))}
+                </div>
+              ) : (
+                <NotesList
+                  notes={notes}
+                  selectedNoteId={selectedNoteId}
+                  onSelectNote={setSelectedNoteId}
+                  searchQuery={search}
+                  onDelete={handleDelete}
+                  onReorder={setNotes}
+                />
+              )}
+            </div>
+          </aside>
+
+          {/* Note Detail */}
+          <main className="flex-1 overflow-hidden">
+            {selectedNote && (
+              <NoteDetail
+                key={selectedNote.id}
+                note={selectedNote}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+                onAttachmentUploaded={handleAttachmentUploaded}
+                onAttachmentRemoved={handleAttachmentRemoved}
+                onCommentAdded={handleCommentAdded}
+                onCommentRemoved={handleCommentRemoved}
               />
-            </div>
-          </div>
-
-          {/* Notes List */}
-          <NotesList
-            notes={notes}
-            selectedNoteId={selectedNoteId}
-            onSelectNote={setSelectedNoteId}
-            searchQuery={search}
-          />
+            )}
+          </main>
         </div>
-
-        {/* Detail Pane */}
-        {selectedNote ? (
-          <NoteDetail
-            note={selectedNote}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            onAttachmentUploaded={handleAttachmentUploaded}
-            onAttachmentRemoved={handleAttachmentRemoved}
-            onCommentAdded={handleCommentAdded}
-            onCommentRemoved={handleCommentRemoved}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <p className="text-lg font-medium">No notes yet</p>
-              <p className="text-sm">Create a new note to get started</p>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+    </DndContext>
   );
 }

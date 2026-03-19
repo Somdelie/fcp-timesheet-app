@@ -145,11 +145,11 @@ export default function BuildSmartProductsPage() {
               </p>
             </div>
           ) : (
-            <div className="border bg-card overflow-x-auto rounded-md">
+            <div className="border bg-card overflow-x-auto rounded">
               <Table>
                 <TableHeader className="bg-muted/60">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[40px]" />
+                    <TableHead className="w-10" />
                     <TableHead>Product</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Supplier</TableHead>
@@ -168,7 +168,7 @@ export default function BuildSmartProductsPage() {
                       key={p.id}
                       className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
                     >
-                      <TableCell className="w-[40px]">
+                      <TableCell className="w-10">
                         {p.thumbnailUrl ? (
                           <img
                             src={p.thumbnailUrl}

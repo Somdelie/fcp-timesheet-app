@@ -379,7 +379,7 @@ export default function BuildsmartPdfSeedPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[620px] pr-3">
+              <ScrollArea className="h-155 pr-3">
                 <div className="space-y-3">
                   {!sortedFiles.length ? (
                     <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -394,7 +394,7 @@ export default function BuildsmartPdfSeedPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-3">
-                              <div className="rounded-xl border bg-muted p-2">
+                              <div className="rounded border bg-muted p-2">
                                 <FileText className="h-4 w-4" />
                               </div>
                               <div className="min-w-0">
@@ -435,7 +435,7 @@ export default function BuildsmartPdfSeedPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="rounded-xl"
+                              className="rounded"
                               onClick={() => removeFile(entry.id)}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -563,7 +563,7 @@ export default function BuildsmartPdfSeedPage() {
                   Process PDFs to preview generated orders.
                 </div>
               ) : (
-                <ScrollArea className="h-[560px] rounded border bg-muted/20 p-4">
+                <ScrollArea className="h-140 rounded border bg-muted/20 p-4">
                   <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">
                     {JSON.stringify(result.orders, null, 2)}
                   </pre>

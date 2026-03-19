@@ -11,6 +11,8 @@ import {
   Send,
   Paperclip,
   ChevronRight,
+  Share2,
+  Palette,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -24,26 +26,35 @@ import type {
   NoteCommentItem,
 } from "@/actions/notes";
 
-const COLOR_PALETTE: { key: NoteColor; hex: string; label: string }[] = [
-  { key: "DEFAULT", hex: "#94a3b8", label: "Slate" },
-  { key: "RED", hex: "#f87171", label: "Red" },
-  { key: "ORANGE", hex: "#fb923c", label: "Orange" },
-  { key: "YELLOW", hex: "#fbbf24", label: "Amber" },
-  { key: "GREEN", hex: "#34d399", label: "Green" },
-  { key: "BLUE", hex: "#60a5fa", label: "Blue" },
-  { key: "PURPLE", hex: "#a78bfa", label: "Purple" },
-  { key: "PINK", hex: "#f472b6", label: "Pink" },
+const COLOR_PALETTE: { key: NoteColor; label: string; class: string }[] = [
+  { key: "DEFAULT", label: "Slate", class: "bg-slate-400" },
+  { key: "RED", label: "Red", class: "bg-red-400" },
+  { key: "ORANGE", label: "Orange", class: "bg-orange-400" },
+  { key: "YELLOW", label: "Amber", class: "bg-amber-400" },
+  { key: "GREEN", label: "Green", class: "bg-emerald-400" },
+  { key: "BLUE", label: "Blue", class: "bg-blue-400" },
+  { key: "PURPLE", label: "Purple", class: "bg-violet-400" },
+  { key: "PINK", label: "Pink", class: "bg-pink-400" },
 ];
 
-const colorMeta: Record<NoteColor, { hex: string; tint: string }> = {
-  DEFAULT: { hex: "#94a3b8", tint: "rgba(148,163,184,0.08)" },
-  RED: { hex: "#f87171", tint: "rgba(239,68,68,0.07)" },
-  ORANGE: { hex: "#fb923c", tint: "rgba(249,115,22,0.07)" },
-  YELLOW: { hex: "#fbbf24", tint: "rgba(245,158,11,0.07)" },
-  GREEN: { hex: "#34d399", tint: "rgba(16,185,129,0.07)" },
-  BLUE: { hex: "#60a5fa", tint: "rgba(59,130,246,0.07)" },
-  PURPLE: { hex: "#a78bfa", tint: "rgba(139,92,246,0.07)" },
-  PINK: { hex: "#f472b6", tint: "rgba(236,72,153,0.07)" },
+const colorMeta: Record<NoteColor, { class: string; tint: string }> = {
+  DEFAULT: { class: "bg-slate-400", tint: "bg-slate-50 dark:bg-slate-900/20" },
+  RED: { class: "bg-red-400", tint: "bg-red-50 dark:bg-red-950/20" },
+  ORANGE: {
+    class: "bg-orange-400",
+    tint: "bg-orange-50 dark:bg-orange-950/20",
+  },
+  YELLOW: { class: "bg-amber-400", tint: "bg-amber-50 dark:bg-amber-950/20" },
+  GREEN: {
+    class: "bg-emerald-400",
+    tint: "bg-emerald-50 dark:bg-emerald-950/20",
+  },
+  BLUE: { class: "bg-blue-400", tint: "bg-blue-50 dark:bg-blue-950/20" },
+  PURPLE: {
+    class: "bg-violet-400",
+    tint: "bg-violet-50 dark:bg-violet-950/20",
+  },
+  PINK: { class: "bg-pink-400", tint: "bg-pink-50 dark:bg-pink-950/20" },
 };
 
 interface NoteDetailProps {
@@ -131,22 +142,40 @@ export function NoteDetail({
     }
   };
 
-  return (
-    <div
-      className="flex h-full flex-col"
-      style={{ background: "var(--color-background-primary)" }}
-    >
-      <div
-        className="h-0.5 w-full shrink-0 transition-all duration-500"
-        style={{ background: meta.hex, opacity: 0.7 }}
-      />
+  const handleShare = async () => {
+    const shareText = `${note.title || "Untitled"}\n\n${
+      note.content.replace(/<[^>]*>/g, "").trim() || "No content"
+    }`;
 
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: note.title || "Untitled",
+          text: shareText,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+    } catch {
+      // ignore cancelled share / clipboard errors
+    }
+  };
+
+  return (
+    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      {/* Color bar */}
+      <div className={cn("h-1 w-full shrink-0", meta.class)} />
+
+      {/* Header */}
       <div
-        className="shrink-0 border-b px-6 py-4 transition-colors duration-300"
-        style={{ borderColor: `${meta.hex}30`, background: meta.tint }}
+        className={cn(
+          "shrink-0 border-b border-border/40 px-8 py-4",
+          meta.tint,
+        )}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0 flex-1">
             {editing ? (
               <Input
                 value={title}
@@ -159,46 +188,40 @@ export function NoteDetail({
                   if (e.key === "Escape") cancel();
                 }}
                 placeholder="Note title…"
-                className="border-0 bg-transparent px-0 text-2xl font-bold shadow-none focus-visible:ring-0 h-auto py-0 leading-tight"
-                style={{ fontFamily: "'Lora', Georgia, serif" }}
+                className="h-auto border-0 bg-transparent px-0 py-0 text-2xl font-bold leading-tight shadow-none focus-visible:ring-0"
                 autoFocus
               />
             ) : (
-              <h1
-                className="text-2xl font-bold text-foreground leading-tight truncate"
-                style={{ fontFamily: "'Lora', Georgia, serif" }}
-              >
+              <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground">
                 {title || "Untitled"}
               </h1>
             )}
 
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-2">
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{ background: meta.hex }}
-              />
-              Updated {formatRelative(note.updatedAt)}
+            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+              <div className={cn("size-2 rounded-full", meta.class)} />
+              <span>Updated {formatRelative(note.updatedAt)}</span>
               {note.isPinned && (
-                <span className="inline-flex items-center gap-0.5 text-muted-foreground/60">
-                  · <Pin size={9} className="inline" /> pinned
+                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <Pin size={10} />
+                  Pinned
                 </span>
               )}
-            </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          {/* Actions */}
+          <div className="flex shrink-0 items-center gap-1">
             {editing ? (
               <>
                 <ToolButton
                   onClick={() => void save()}
-                  icon={<Check size={15} />}
+                  icon={<Check size={16} />}
                   label="Save"
-                  accent="#10b981"
-                  tint="rgba(16,185,129,0.1)"
+                  variant="success"
                 />
                 <ToolButton
                   onClick={cancel}
-                  icon={<X size={15} />}
+                  icon={<X size={16} />}
                   label="Cancel"
                 />
               </>
@@ -208,30 +231,31 @@ export function NoteDetail({
                   current={note.color}
                   onChange={(color) => void onUpdate(note.id, { color })}
                 />
-
+                <ToolButton
+                  onClick={handleShare}
+                  icon={<Share2 size={16} />}
+                  label="Share"
+                />
                 <ToolButton
                   onClick={() =>
                     void onUpdate(note.id, { isPinned: !note.isPinned })
                   }
                   icon={
-                    note.isPinned ? <PinOff size={15} /> : <Pin size={15} />
+                    note.isPinned ? <PinOff size={16} /> : <Pin size={16} />
                   }
                   label={note.isPinned ? "Unpin" : "Pin"}
-                  accent={note.isPinned ? "#f59e0b" : undefined}
+                  active={note.isPinned}
                 />
-
                 <ToolButton
                   onClick={() => setEditing(true)}
-                  icon={<Pencil size={15} />}
+                  icon={<Pencil size={16} />}
                   label="Edit"
                 />
-
                 <ToolButton
                   onClick={handleDelete}
-                  icon={<Trash2 size={15} />}
-                  label={deleteConfirm ? "Confirm delete?" : "Delete"}
-                  accent={deleteConfirm ? "#ef4444" : undefined}
-                  tint={deleteConfirm ? "rgba(239,68,68,0.1)" : undefined}
+                  icon={<Trash2 size={16} />}
+                  label={deleteConfirm ? "Click to confirm" : "Delete"}
+                  variant={deleteConfirm ? "danger" : undefined}
                 />
               </>
             )}
@@ -239,9 +263,11 @@ export function NoteDetail({
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="flex-1 p-6 pb-10">
+      {/* Content area */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Main content */}
+        <div className="custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex-1 p-8 pb-12">
             {editing ? (
               <RichTextEditor
                 content={content}
@@ -250,7 +276,7 @@ export function NoteDetail({
               />
             ) : (
               <div
-                className="prose prose-sm dark:prose-invert max-w-none cursor-text note-content"
+                className="note-content prose prose-sm max-w-none cursor-text text-foreground/90 dark:prose-invert"
                 onClick={(e) => {
                   const target = e.target as HTMLElement;
                   if (target.tagName === "IMG") {
@@ -260,49 +286,28 @@ export function NoteDetail({
                 dangerouslySetInnerHTML={{
                   __html:
                     content ||
-                    "<p class='text-muted-foreground italic text-sm'>Empty note — click edit to add content.</p>",
+                    "<p class='text-muted-foreground/60 italic'>Empty note — click edit to add content.</p>",
                 }}
               />
             )}
-
-            <div
-              className="mt-8 pt-6 border-t"
-              style={{ borderColor: `${meta.hex}25` }}
-            >
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-1.5">
-                <Paperclip size={10} /> Attachments
-              </h3>
-
-              <NoteAttachments
-                attachments={note.attachments}
-                noteId={note.id}
-                onRemove={(attachmentId) =>
-                  void onAttachmentRemoved(note.id, attachmentId)
-                }
-                onUploaded={(attachment) =>
-                  void onAttachmentUploaded(note.id, attachment)
-                }
-              />
-            </div>
           </div>
         </div>
 
+        {/* Comments sidebar */}
         <div
           className={cn(
-            "flex flex-col border-l shrink-0 transition-all duration-300",
-            commentsOpen ? "w-72" : "w-10",
+            "flex h-full min-h-0 shrink-0 flex-col border-l border-border/40 bg-card/30 transition-all duration-300",
+            commentsOpen ? "w-80" : "w-12",
           )}
-          style={{ borderColor: `${meta.hex}25` }}
         >
           <button
             onClick={() => setCommentsOpen(!commentsOpen)}
-            className="flex items-center gap-2 border-b px-3 py-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors w-full text-left shrink-0"
-            style={{ borderColor: `${meta.hex}20` }}
+            className="flex w-full shrink-0 items-center gap-2 border-b border-border/40 px-4 py-4 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronRight
-              size={13}
+              size={14}
               className={cn(
-                "transition-transform shrink-0",
+                "shrink-0 transition-transform duration-200",
                 commentsOpen && "rotate-180",
               )}
             />
@@ -310,10 +315,7 @@ export function NoteDetail({
             {commentsOpen && (
               <>
                 <span className="flex-1">Comments</span>
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                  style={{ background: meta.tint, color: meta.hex }}
-                >
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                   {note.comments.length}
                 </span>
               </>
@@ -322,21 +324,25 @@ export function NoteDetail({
 
           {commentsOpen && (
             <>
-              <div className="flex-1 overflow-y-auto comments-scroll">
+              <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
                 {note.comments.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2 px-4 text-center">
-                    <span className="text-xl opacity-20 select-none">💬</span>
+                  <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+                    <div className="flex size-10 items-center justify-center rounded-full bg-secondary/50">
+                      <span className="text-lg text-muted-foreground/30">
+                        💬
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground/50">
                       No comments yet
                     </p>
                   </div>
                 ) : (
-                  <div className="p-3 flex flex-col gap-2">
+                  <div className="flex flex-col gap-3 p-4">
                     {note.comments.map((comment) => (
                       <CommentCard
                         key={comment.id}
                         comment={comment}
-                        accentHex={meta.hex}
+                        colorClass={meta.class}
                         onRemove={() => void onCommentRemoved(comment.id)}
                       />
                     ))}
@@ -344,11 +350,9 @@ export function NoteDetail({
                 )}
               </div>
 
-              <div
-                className="border-t shrink-0 p-3"
-                style={{ borderColor: `${meta.hex}20` }}
-              >
-                <div className="flex gap-2 items-center">
+              {/* Comment input */}
+              <div className="shrink-0 border-t border-border/40 p-4">
+                <div className="flex items-center gap-2">
                   <input
                     ref={commentInputRef}
                     type="text"
@@ -362,17 +366,15 @@ export function NoteDetail({
                         void handleAddComment();
                       }
                     }}
-                    className="flex-1 text-xs bg-transparent border-b outline-none py-1.5 placeholder:text-muted-foreground/40 text-foreground transition-all"
-                    style={{ borderColor: `${meta.hex}40` }}
+                    className="flex-1 rounded border border-border/60 bg-background px-3 py-2 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/40 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
                   />
 
                   <button
                     onClick={() => void handleAddComment()}
                     disabled={!commentText.trim() || submitting}
-                    className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-all disabled:opacity-30"
-                    style={{ background: meta.tint, color: meta.hex }}
+                    className="flex size-9 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground transition-all disabled:opacity-40 hover:bg-primary/90"
                   >
-                    <Send size={12} />
+                    <Send size={14} />
                   </button>
                 </div>
               </div>
@@ -381,38 +383,27 @@ export function NoteDetail({
         </div>
       </div>
 
+      {/* Lightbox */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-8"
-          style={{ background: "rgba(0,0,0,0.8)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-8 backdrop-blur-sm"
           onClick={() => setLightboxUrl(null)}
         >
           <button
-            className="absolute top-4 right-4 text-white/60 hover:text-white"
+            className="absolute right-6 top-6 flex size-10 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-secondary/80 hover:text-foreground"
             onClick={() => setLightboxUrl(null)}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
 
           <img
             src={lightboxUrl}
             alt="Attachment preview"
-            className="max-h-full max-w-full rounded-lg shadow-2xl"
+            className="max-h-full max-w-full rounded shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap');
-        .comments-scroll::-webkit-scrollbar { width: 2px; }
-        .comments-scroll::-webkit-scrollbar-thumb {
-          background: color-mix(in srgb, currentColor 12%, transparent);
-          border-radius: 99px;
-        }
-        .note-content p { margin-bottom: 0.75em; }
-        .note-content p:last-child { margin-bottom: 0; }
-      `}</style>
     </div>
   );
 }
@@ -421,26 +412,28 @@ function ToolButton({
   onClick,
   icon,
   label,
-  accent,
-  tint,
+  variant,
+  active,
 }: {
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  accent?: string;
-  tint?: string;
+  variant?: "success" | "danger";
+  active?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={label}
-      className="flex items-center justify-center w-8 h-8 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-      style={
-        accent
-          ? { color: accent, background: tint ?? `${accent}12` }
-          : undefined
-      }
+      className={cn(
+        "flex size-9 items-center justify-center rounded text-muted-foreground transition-all hover:bg-secondary hover:text-foreground",
+        variant === "success" &&
+          "bg-emerald-100 text-emerald-600 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
+        variant === "danger" &&
+          "bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400",
+        active && "text-amber-600 dark:text-amber-400",
+      )}
     >
       {icon}
     </button>
@@ -468,7 +461,7 @@ function ColorPicker({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const currentHex = colorMeta[current]?.hex ?? "#94a3b8";
+  const currentMeta = colorMeta[current] ?? colorMeta.DEFAULT;
 
   return (
     <div className="relative" ref={ref}>
@@ -476,17 +469,14 @@ function ColorPicker({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         title="Change color"
-        className="flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:bg-secondary/60"
+        className="flex size-9 items-center justify-center rounded transition-all hover:bg-secondary"
       >
-        <span
-          className="w-3.5 h-3.5 rounded-full border-2"
-          style={{ background: currentHex, borderColor: `${currentHex}80` }}
-        />
+        <Palette size={16} className="text-muted-foreground" />
       </button>
 
       {open && (
-        <div className="absolute top-10 right-0 z-20 flex flex-col gap-1 p-2 rounded-xl border bg-popover shadow-xl min-w-30">
-          {COLOR_PALETTE.map(({ key, hex, label }) => (
+        <div className="absolute right-0 top-11 z-20 flex min-w-36 flex-col gap-1 rounded border border-border/60 bg-popover p-2 shadow-xl animate-in fade-in zoom-in-95">
+          {COLOR_PALETTE.map(({ key, label, class: colorClass }) => (
             <button
               key={key}
               type="button"
@@ -495,17 +485,14 @@ function ColorPicker({
                 setOpen(false);
               }}
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-left transition-colors hover:bg-secondary/60",
+                "flex items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition-colors hover:bg-secondary",
                 current === key && "bg-secondary",
               )}
             >
-              <span
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ background: hex }}
-              />
-              {label}
+              <div className={cn("size-3 rounded-full", colorClass)} />
+              <span className="text-foreground/80">{label}</span>
               {current === key && (
-                <Check size={10} className="ml-auto opacity-60" />
+                <Check size={12} className="ml-auto text-primary" />
               )}
             </button>
           ))}
@@ -517,11 +504,11 @@ function ColorPicker({
 
 function CommentCard({
   comment,
-  accentHex,
+  colorClass,
   onRemove,
 }: {
   comment: NoteCommentItem;
-  accentHex: string;
+  colorClass: string;
   onRemove: () => void;
 }) {
   const initials = (comment.userName ?? "?")
@@ -532,37 +519,36 @@ function CommentCard({
     .toUpperCase();
 
   return (
-    <div className="group flex gap-2 items-start">
+    <div className="group flex items-start gap-3 rounded bg-secondary/30 p-3 transition-colors hover:bg-secondary/50">
       <div
-        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5"
-        style={{
-          background: `${accentHex}22`,
-          color: accentHex,
-        }}
+        className={cn(
+          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white",
+          colorClass,
+        )}
       >
         {initials}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between gap-1 mb-0.5">
-          <span className="text-[11px] font-semibold text-foreground/80 truncate">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-sm font-medium text-foreground">
             {comment.userName ?? "Unknown"}
           </span>
 
           <button
             type="button"
             onClick={onRemove}
-            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-all shrink-0"
+            className="shrink-0 text-muted-foreground/50 opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
           >
-            <X size={10} />
+            <X size={12} />
           </button>
         </div>
 
-        <p className="text-xs text-foreground/90 leading-relaxed break-words">
+        <p className="mt-1 text-sm leading-relaxed text-foreground/80">
           {comment.content}
         </p>
 
-        <p className="text-[10px] text-muted-foreground/50 mt-1">
+        <p className="mt-2 text-[10px] text-muted-foreground/50">
           {formatRelative(comment.createdAt)}
         </p>
       </div>

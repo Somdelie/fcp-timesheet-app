@@ -26,6 +26,7 @@ import {
 } from "../ui/breadcrumb";
 import { signOut } from "next-auth/react";
 import { ModeToggle } from "./ModeToggle";
+import { NavbarCalendar } from "./NavbarCalendar";
 
 // Map of path segments to display labels
 const pathLabels: Record<string, string> = {
@@ -43,11 +44,9 @@ const pathLabels: Record<string, string> = {
 };
 
 function formatSegment(segment: string): string {
-  // Check if we have a custom label
   if (pathLabels[segment.toLowerCase()]) {
     return pathLabels[segment.toLowerCase()];
   }
-  // Capitalize first letter for unknown segments
   return segment.charAt(0).toUpperCase() + segment.slice(1);
 }
 
@@ -60,16 +59,13 @@ type NavbarProps = {
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
   const pathname = usePathname();
 
-  // Generate breadcrumbs from pathname
   const breadcrumbs = React.useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
 
-    // Always start with Dashboard
     const crumbs: { label: string; href?: string }[] = [
       { label: "Dashboard", href: "/" },
     ];
 
-    // Build path progressively
     let currentPath = "";
     segments.forEach((segment, index) => {
       currentPath += `/${segment}`;
@@ -84,13 +80,14 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
   }, [pathname]);
 
   return (
-    <header className="navbar flex h-16 shrink-0 w-full items-center justify-between border-b bg-card/80 px-4 backdrop-blur z-10">
+    <header className="navbar z-10 flex h-16 w-full shrink-0 items-center justify-between border-b bg-card/80 px-4 backdrop-blur">
       {/* left */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
           <Menu className="h-5 w-5" />
         </Button>
       </div>
+
       {/* center */}
       <div className="flex-1 px-4">
         <Breadcrumb>
@@ -114,10 +111,13 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
+
       {/* right */}
       <div className="flex items-center gap-4">
+        <NavbarCalendar />
         <NotificationSheet />
         <ModeToggle />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar size="lg">
@@ -138,7 +138,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
                 <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="bg-destructive rounded"
+                className="rounded bg-destructive"
                 onClick={() => signOut({ callbackUrl: "/login" })}
               >
                 Sign out

@@ -118,7 +118,7 @@ export function TaskCard({
       {/* Glow effect on hover */}
       <div
         className={cn(
-          "absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm",
+          "absolute -inset-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm",
           `bg-linear-to-br ${category.accent}`,
         )}
       />
@@ -157,10 +157,7 @@ export function TaskCard({
 
             {/* Category icon */}
             <div
-              className={cn(
-                "p-1.5 rounded-lg shrink-0 mt-0.5",
-                category.iconBg,
-              )}
+              className={cn("p-1.5 rounded shrink-0 mt-0.5", category.iconBg)}
             >
               <Icon className="size-3" />
             </div>
@@ -174,7 +171,7 @@ export function TaskCard({
                 {onDelete && (
                   <button
                     onClick={() => onDelete(task.id)}
-                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-150 p-1 rounded-md text-muted-foreground/60 hover:bg-destructive/15 hover:text-destructive"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-150 p-1 rounded text-muted-foreground/60 hover:bg-destructive/15 hover:text-destructive"
                     aria-label="Delete task"
                   >
                     <Trash2 className="size-3" />

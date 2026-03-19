@@ -320,7 +320,7 @@ export function WeatherDashboard() {
                 <div
                   key={h.time}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-xl px-3 py-3 min-w-18 shrink-0 transition-colors",
+                    "flex flex-col items-center gap-1.5 rounded px-3 py-3 min-w-18 shrink-0 transition-colors",
                     isNow
                       ? "bg-primary/10 ring-1 ring-primary/30"
                       : "hover:bg-muted/50",
@@ -384,7 +384,7 @@ export function WeatherDashboard() {
               <div
                 key={day}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
+                  "flex items-center gap-3 rounded px-3 py-2.5 transition-colors",
                   isToday ? "bg-primary/5" : "hover:bg-muted/40",
                 )}
               >

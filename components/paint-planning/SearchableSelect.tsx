@@ -75,7 +75,7 @@ export function SearchableSelect({
             {value && (
               <span
                 role="button"
-                className="rounded-sm opacity-50 hover:opacity-100 p-0.5"
+                className="rounded opacity-50 hover:opacity-100 p-0.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   onValueChange("");
@@ -114,7 +114,7 @@ export function SearchableSelect({
               role="option"
               aria-selected={opt.value === value}
               className={cn(
-                "relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground",
+                "relative flex cursor-pointer items-center rounded px-2 py-1.5 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground",
                 opt.value === value && "bg-accent/50",
               )}
               onClick={() => {

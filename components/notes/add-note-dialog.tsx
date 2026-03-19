@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -17,15 +18,15 @@ import { RichTextEditor } from "./rich-text-editor";
 import { NoteAttachments } from "./note-attachments";
 import type { NoteColor, NoteAttachmentItem } from "@/actions/notes";
 
-const colorOptions: { value: NoteColor; label: string; bg: string }[] = [
-  { value: "DEFAULT", label: "Default", bg: "bg-card" },
-  { value: "RED", label: "Red", bg: "bg-red-500/20" },
-  { value: "ORANGE", label: "Orange", bg: "bg-orange-500/20" },
-  { value: "YELLOW", label: "Yellow", bg: "bg-yellow-500/20" },
-  { value: "GREEN", label: "Green", bg: "bg-emerald-500/20" },
-  { value: "BLUE", label: "Blue", bg: "bg-blue-500/20" },
-  { value: "PURPLE", label: "Purple", bg: "bg-purple-500/20" },
-  { value: "PINK", label: "Pink", bg: "bg-pink-500/20" },
+const colorOptions: { value: NoteColor; label: string; class: string }[] = [
+  { value: "DEFAULT", label: "Slate", class: "bg-slate-400" },
+  { value: "RED", label: "Red", class: "bg-red-400" },
+  { value: "ORANGE", label: "Orange", class: "bg-orange-400" },
+  { value: "YELLOW", label: "Amber", class: "bg-amber-400" },
+  { value: "GREEN", label: "Green", class: "bg-emerald-400" },
+  { value: "BLUE", label: "Blue", class: "bg-blue-400" },
+  { value: "PURPLE", label: "Purple", class: "bg-violet-400" },
+  { value: "PINK", label: "Pink", class: "bg-pink-400" },
 ];
 
 interface AddNoteDialogProps {
@@ -68,56 +69,90 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
+        <Button className="gap-2 rounded shadow-sm">
           <Plus className="size-4" />
           New Note
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-card border-border">
-        <DialogHeader>
-          <DialogTitle>Create Note</DialogTitle>
+      <DialogContent className="sm:max-w-lg rounded border-border/50 bg-card p-0 overflow-hidden">
+        <div
+          className={cn(
+            "h-1 w-full",
+            colorOptions.find((c) => c.value === color)?.class ??
+              "bg-slate-400",
+          )}
+        />
+
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="text-xl font-semibold">
+            Create Note
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Add a new note with a title, content, and color.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="note-title">Title</Label>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-5 px-6 pb-6 pt-4"
+        >
+          <div className="space-y-2">
+            <Label
+              htmlFor="note-title"
+              className="text-sm font-medium text-foreground/80"
+            >
+              Title
+            </Label>
             <Input
               id="note-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Note title"
-              className="bg-input border-border"
+              placeholder="Enter note title..."
+              className="h-11 rounded border-border/50 bg-secondary/30 transition-all focus:bg-background"
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Content</Label>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-foreground/80">
+              Content
+            </Label>
             <RichTextEditor
               content={content}
               onChange={setContent}
               placeholder="Write your note..."
+              minHeight="120px"
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Color</Label>
-            <div className="flex gap-2 flex-wrap">
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-foreground/80">
+              Color
+            </Label>
+            <div className="flex flex-wrap gap-2">
               {colorOptions.map((c) => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setColor(c.value)}
                   className={cn(
-                    "size-7 rounded-full border-2 transition-all",
-                    c.bg,
+                    "group relative flex size-9 items-center justify-center rounded-full transition-all",
+                    c.class,
                     color === c.value
-                      ? "border-primary scale-110"
-                      : "border-transparent hover:border-muted-foreground/40",
+                      ? "ring-2 ring-foreground/20 ring-offset-2 ring-offset-background scale-110"
+                      : "hover:scale-105 hover:ring-2 hover:ring-foreground/10 hover:ring-offset-2 hover:ring-offset-background",
                   )}
                   title={c.label}
-                />
+                >
+                  {color === c.value && <Check className="size-4 text-white" />}
+                </button>
               ))}
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label>Attachments</Label>
+
+          {/* <div className="space-y-2">
+            <Label className="text-sm font-medium text-foreground/80">
+              Attachments
+            </Label>
             <NoteAttachments
               attachments={pendingAttachments}
               noteId={null}
@@ -126,8 +161,12 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
                 setPendingAttachments((prev) => prev.filter((a) => a.id !== id))
               }
             />
-          </div>
-          <Button type="submit" className="mt-2">
+          </div> */}
+
+          <Button
+            type="submit"
+            className="mt-2 h-11 rounded font-medium shadow-sm"
+          >
             Create Note
           </Button>
         </form>

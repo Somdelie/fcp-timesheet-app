@@ -817,7 +817,7 @@ export default function MaterialOrdersPage() {
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="h-8 w-[70px]">
+                <SelectTrigger className="h-8 w-17.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -875,7 +875,7 @@ export default function MaterialOrdersPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           side="bottom"
-          className="h-dvh max-h-dvh w-full p-0 border-0 rounded-none overflow-hidden overflow-y-auto"
+          className="h-dvh max-h-dvh w-full p-0 border-0 rounded overflow-hidden overflow-y-auto"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Procurement</SheetTitle>
@@ -1004,7 +1004,7 @@ export default function MaterialOrdersPage() {
                 </PopoverContent>
               </Popover>
               {/* order summary card */}
-              <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col rounded border border-border bg-card overflow-hidden">
                 <div className="border-b border-border px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Order Summary
@@ -1031,7 +1031,7 @@ export default function MaterialOrdersPage() {
                   </div>
 
                   {cart.length === 0 ? (
-                    <div className="flex flex-1 min-h-[160px] flex-col items-center justify-center rounded-md border border-dashed border-border/60 bg-muted/30 p-4 text-center">
+                    <div className="flex flex-1 min-h-40 flex-col items-center justify-center rounded border border-dashed border-border/60 bg-muted/30 p-4 text-center">
                       <p className="text-xs font-medium text-muted-foreground">
                         No items yet
                       </p>
@@ -1044,7 +1044,7 @@ export default function MaterialOrdersPage() {
                       {cart.map((c) => (
                         <div
                           key={c.key}
-                          className="flex items-center gap-2.5 rounded-md border border-border bg-background/50 p-2"
+                          className="flex items-center gap-2.5 rounded border border-border bg-background/50 p-2"
                         >
                           <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
                             <img
@@ -1168,7 +1168,7 @@ export default function MaterialOrdersPage() {
                             value={posCategory}
                             onValueChange={setPosCategory}
                           >
-                            <SelectTrigger className="h-8 w-[150px] text-xs">
+                            <SelectTrigger className="h-8 w-37.5 text-xs">
                               <SelectValue placeholder="All categories" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1217,7 +1217,7 @@ export default function MaterialOrdersPage() {
                                 key={c.key}
                                 className="group flex flex-col overflow-hidden rounded border border-border bg-card text-xs sm:text-sm shadow-sm transition hover:border-primary/40 hover:shadow-md"
                               >
-                                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                                <div className="relative aspect-4/3 overflow-hidden bg-muted">
                                   <img
                                     src={c.thumbnailUrl || "/thumnail.avif"}
                                     alt={c.productName}

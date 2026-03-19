@@ -107,7 +107,7 @@ export function NoteCard({
   return (
     <article
       className={cn(
-        "group relative flex flex-col rounded-2xl border shadow-sm transition-all duration-200",
+        "group relative flex flex-col roundedxl border shadow-sm transition-all duration-200",
         "hover:shadow-md hover:-translate-y-0.5",
         colors.card,
         colors.border,
@@ -135,14 +135,14 @@ export function NoteCard({
             <>
               <button
                 onClick={save}
-                className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
+                className="flex size-8 items-center justify-center rounded bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
                 aria-label="Save changes"
               >
                 <Check className="size-4" />
               </button>
               <button
                 onClick={cancel}
-                className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className="flex size-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 aria-label="Cancel editing"
               >
                 <X className="size-4" />
@@ -153,7 +153,7 @@ export function NoteCard({
               <button
                 onClick={() => onUpdate(note.id, { isPinned: !note.isPinned })}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-lg transition-colors",
+                  "flex size-8 items-center justify-center rounded transition-colors",
                   note.isPinned
                     ? "text-amber-500 hover:bg-amber-500/10"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -169,14 +169,14 @@ export function NoteCard({
               </button>
               <button
                 onClick={() => setEditing(true)}
-                className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className="flex size-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 aria-label="Edit note"
               >
                 <Pencil className="size-4" />
               </button>
               <button
                 onClick={() => onDelete(note.id)}
-                className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
+                className="flex size-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
                 aria-label="Delete note"
               >
                 <Trash2 className="size-4" />
@@ -251,7 +251,7 @@ export function NoteCard({
         {/* Timestamp */}
         <div
           className={cn(
-            "mt-4 rounded-lg px-2.5 py-1.5 text-center",
+            "mt-4 rounded px-2.5 py-1.5 text-center",
             colors.accent,
           )}
         >
@@ -265,7 +265,7 @@ export function NoteCard({
       {lightboxUrl &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/90 backdrop-blur-sm"
             onClick={() => setLightboxUrl(null)}
             role="dialog"
             aria-modal="true"
@@ -281,7 +281,7 @@ export function NoteCard({
             <img
               src={lightboxUrl}
               alt="Full size preview"
-              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+              className="max-h-[90vh] max-w-[90vw] rounded object-contain"
               onClick={(e) => e.stopPropagation()}
             />
           </div>,

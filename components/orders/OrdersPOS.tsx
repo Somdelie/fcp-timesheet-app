@@ -235,7 +235,7 @@ export default function OrdersPOS({
                     variant="outline"
                     role="combobox"
                     aria-expanded={foremanOpen}
-                    className="w-full justify-between rounded-none border-2 border-black dark:border-zinc-600 h-10 text-sm font-medium focus:ring-0 focus:ring-offset-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    className="w-full justify-between rounded border-2 border-black dark:border-zinc-600 h-10 text-sm font-medium focus:ring-0 focus:ring-offset-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900"
                   >
                     <span className="truncate">
                       {selectedForemanId
@@ -249,7 +249,7 @@ export default function OrdersPOS({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-none border-2 border-black dark:border-zinc-600 dark:bg-[#1A1A18]">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded border-2 border-black dark:border-zinc-600 dark:bg-[#1A1A18]">
                   <Command className="font-mono">
                     <CommandInput
                       placeholder="Search foreman..."
@@ -266,7 +266,7 @@ export default function OrdersPOS({
                               setSelectedForemanId(f.id);
                               setForemanOpen(false);
                             }}
-                            className="rounded-none font-mono text-sm dark:text-zinc-100"
+                            className="rounded font-mono text-sm dark:text-zinc-100"
                           >
                             <Check
                               className={cn(
@@ -377,7 +377,7 @@ export default function OrdersPOS({
                                 Math.max(1, Math.floor(n)),
                               );
                             }}
-                            className="h-7 w-16 rounded-none border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-sm text-right tabular-nums px-2 bg-white dark:bg-[#111110] dark:text-zinc-100"
+                            className="h-7 w-16 rounded border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-sm text-right tabular-nums px-2 bg-white dark:bg-[#111110] dark:text-zinc-100"
                           />
                         </TableCell>
                         <TableCell className="py-2.5 text-sm tabular-nums text-zinc-500 dark:text-zinc-400 text-right pr-3">
@@ -393,7 +393,7 @@ export default function OrdersPOS({
                               updateNote(item.productId, e.target.value)
                             }
                             placeholder="Note…"
-                            className="h-7 rounded-none border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-xs px-2 bg-white dark:bg-[#111110] dark:text-zinc-100 dark:placeholder:text-zinc-600"
+                            className="h-7 rounded border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-xs px-2 bg-white dark:bg-[#111110] dark:text-zinc-100 dark:placeholder:text-zinc-600"
                           />
                         </TableCell>
                         <TableCell className="py-2 pr-3 text-center">
@@ -465,7 +465,7 @@ export default function OrdersPOS({
                   placeholder="Search products…"
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="rounded-none border-2 border-black dark:border-zinc-600 focus:ring-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 text-sm h-9 w-full sm:max-w-72 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                  className="rounded border-2 border-black dark:border-zinc-600 focus:ring-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 text-sm h-9 w-full sm:max-w-72 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                 />
               </div>
             </div>

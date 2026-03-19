@@ -195,7 +195,7 @@ export function ViewTaskDialog({
             <div className="flex items-start gap-3">
               <div
                 className={cn(
-                  "p-2.5 rounded-xl shrink-0",
+                  "p-2.5 rounded shrink-0",
                   category.bg,
                   category.border,
                   "border",

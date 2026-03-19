@@ -1,41 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef } from "react";
 import {
   Paperclip,
-  FileText,
-  FileSpreadsheet,
-  File,
   X,
+  FileText,
+  Image as ImageIcon,
+  File,
   Upload,
-  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NoteAttachmentItem } from "@/actions/notes";
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fileIcon(type: string) {
-  switch (type) {
-    case "pdf":
-      return <FileText className="size-4 text-red-400" />;
-    case "excel":
-      return <FileSpreadsheet className="size-4 text-emerald-400" />;
-    case "word":
-      return <FileText className="size-4 text-blue-400" />;
-    default:
-      return <File className="size-4 text-muted-foreground" />;
-  }
-}
-
 interface NoteAttachmentsProps {
   attachments: NoteAttachmentItem[];
-  noteId: string | null; // null = note hasn't been created yet
+  noteId: string | null;
   onUploaded: (attachment: NoteAttachmentItem) => void;
   onRemove: (attachmentId: string) => void;
   editable?: boolean;
@@ -48,156 +27,168 @@ export function NoteAttachments({
   onRemove,
   editable = true,
 }: NoteAttachmentsProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
     setUploading(true);
-    try {
+
+    for (const file of Array.from(files)) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/uploads/note-file", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/uploads/note-file", {
+          method: "POST",
+          body: formData,
+        });
 
-      onUploaded({
-        id: data.publicId, // temporary id - will be replaced after server action
-        url: data.url,
-        publicId: data.publicId,
-        name: data.name,
-        type: data.type,
-        size: data.size,
-        mimeType: data.mimeType,
-      });
-    } catch {
-      // Silently fail
-    } finally {
-      setUploading(false);
+        if (!res.ok) throw new Error("Upload failed");
+
+        const data = await res.json();
+
+        onUploaded({
+          id: crypto.randomUUID(),
+          name: file.name,
+          type: file.type,
+          url: data.url,
+          size: file.size,
+          publicId: data.publicId, // Added missing property
+          mimeType: data.mimeType, // Added missing property
+        });
+      } catch {
+        // Silent fail - user can retry
+      }
     }
+
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith("image/")) return <ImageIcon className="size-4" />;
+    if (type.includes("pdf") || type.includes("document"))
+      return <FileText className="size-4" />;
+    return <File className="size-4" />;
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
-    <div className="space-y-2">
-      {/* Existing attachments */}
+    <div className="space-y-3">
+      {/* Attachments grid */}
       {attachments.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {attachments.map((a) =>
-            a.type === "image" ? (
-              <div key={a.id} className="group relative inline-block">
-                <button
-                  type="button"
-                  onClick={() => setLightboxUrl(a.url)}
-                  className="cursor-zoom-in"
-                >
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {attachments.map((attachment) => (
+            <div
+              key={attachment.id}
+              className={cn(
+                "group relative flex items-center gap-2 rounded border border-border/60 bg-secondary/30 p-2.5 transition-all hover:bg-secondary/50",
+                attachment.type.startsWith("image/") && "col-span-1",
+              )}
+            >
+              {attachment.type.startsWith("image/") ? (
+                <div className="relative aspect-square w-full overflow-hidden rounded">
                   <img
-                    src={a.url}
-                    alt={a.name}
-                    className="max-h-32 rounded border border-border object-cover"
+                    src={attachment.url}
+                    alt={attachment.name}
+                    className="h-full w-full object-cover"
                   />
-                </button>
-                {editable && (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(a.id)}
-                    className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div
-                key={a.id}
-                className="group flex items-center gap-2 rounded border border-border/50 bg-muted/30 px-2.5 py-1.5"
-              >
-                {fileIcon(a.type)}
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 min-w-0 text-xs font-medium text-foreground hover:underline truncate"
-                >
-                  {a.name}
-                </a>
-                <span className="text-[10px] text-muted-foreground shrink-0">
-                  {formatSize(a.size)}
-                </span>
-                {editable && (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(a.id)}
-                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </div>
-            ),
-          )}
+                  {editable && (
+                    <button
+                      onClick={() => onRemove(attachment.id)}
+                      className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition-all hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded bg-secondary text-muted-foreground">
+                    {getFileIcon(attachment.type)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-foreground">
+                      {attachment.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatSize(attachment.size)}
+                    </p>
+                  </div>
+                  {editable && (
+                    <button
+                      onClick={() => onRemove(attachment.id)}
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Upload button */}
+      {/* Upload area */}
       {editable && (
-        <>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            handleUpload(e.dataTransfer.files);
+          }}
+          className={cn(
+            "relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded border-2 border-dashed border-border/60 bg-secondary/20 px-4 py-6 transition-all hover:border-primary/30 hover:bg-secondary/40",
+            dragOver && "border-primary/50 bg-primary/5",
+            uploading && "pointer-events-none opacity-60",
+          )}
+          onClick={() => inputRef.current?.click()}
+        >
+          <div
             className={cn(
-              "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-              uploading && "opacity-50 cursor-not-allowed",
+              "flex size-10 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors",
+              dragOver && "bg-primary/10 text-primary",
             )}
           >
             {uploading ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <div className="size-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
             ) : (
-              <Paperclip className="size-3.5" />
+              <Upload className="size-4" />
             )}
-            {uploading ? "Uploading..." : "Attach file"}
-          </button>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-medium text-foreground">
+              {uploading
+                ? "Uploading..."
+                : "Drop files here or click to upload"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              Images, documents, and more
+            </p>
+          </div>
           <input
-            ref={fileInputRef}
+            ref={inputRef}
             type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip,.png,.jpg,.jpeg,.gif,.webp"
+            multiple
             className="hidden"
-            onChange={handleUpload}
+            onChange={(e) => handleUpload(e.target.files)}
           />
-        </>
+        </div>
       )}
-
-      {/* Lightbox via portal to escape parent stacking contexts */}
-      {lightboxUrl &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-            onClick={() => setLightboxUrl(null)}
-          >
-            <button
-              type="button"
-              onClick={() => setLightboxUrl(null)}
-              className="absolute top-4 right-4 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors"
-            >
-              <X className="size-5" />
-            </button>
-            <img
-              src={lightboxUrl}
-              alt="Full size"
-              className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>,
-          document.body,
-        )}
     </div>
   );
 }
