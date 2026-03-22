@@ -37,6 +37,7 @@ import {
   Calculator,
   Loader2,
   CalendarDays,
+  Plus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ import {
   type SiteMaterialRow,
 } from "@/actions/site-materials";
 import { Badge } from "@/components/ui/badge";
+import { AddMaterialsDialog } from "./SiteMaterialsPanel";
 
 export type SiteRow = {
   id: string;
@@ -153,14 +155,25 @@ function SiteRowActions({
   const [siteProducts, setSiteProducts] = React.useState<SiteMaterialRow[]>([]);
   const [loadingProducts, setLoadingProducts] = React.useState(false);
 
+  // Add Materials dialog state
+  const [addMaterialsOpen, setAddMaterialsOpen] = React.useState(false);
+
+  const loadSiteProducts = React.useCallback(async () => {
+    setLoadingProducts(true);
+    try {
+      const res = await listSiteMaterials(site.id);
+      if (res.ok) {
+        setSiteProducts(res.materials);
+      }
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [site.id]);
+
   React.useEffect(() => {
     if (!showProductsDialog) return;
-    setLoadingProducts(true);
-    listSiteMaterials(site.id).then((res) => {
-      if (res.ok) setSiteProducts(res.materials);
-      setLoadingProducts(false);
-    });
-  }, [showProductsDialog, site.id]);
+    loadSiteProducts();
+  }, [showProductsDialog, loadSiteProducts]);
 
   const handleMarkFinished = async () => {
     setIsFinishing(true);
@@ -217,6 +230,7 @@ function SiteRowActions({
             <ArrowRight className="h-4 w-4" />
             Manage
           </DropdownMenuItem>
+
           <DropdownMenuItem
             className="flex items-center gap-2"
             onSelect={(e) => {
@@ -227,6 +241,7 @@ function SiteRowActions({
             <Package className="h-4 w-4" />
             Site Products
           </DropdownMenuItem>
+
           {role === "ADMIN" && (
             <>
               <DropdownMenuItem
@@ -239,7 +254,9 @@ function SiteRowActions({
                 <Camera className="h-4 w-4" />
                 Request Photo
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
+
               {site.isActive && (
                 <DropdownMenuItem
                   className="flex items-center gap-2"
@@ -252,7 +269,9 @@ function SiteRowActions({
                   Mark Finished
                 </DropdownMenuItem>
               )}
+
               <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 className="flex items-center gap-2 text-red-600 focus:text-red-600"
                 onSelect={(e) => {
@@ -298,6 +317,7 @@ function SiteRowActions({
               Materials expected to be used on this job site.
             </DialogDescription>
           </DialogHeader>
+
           <div className="flex-1 overflow-y-auto min-h-0">
             {loadingProducts ? (
               <div className="flex items-center justify-center py-12">
@@ -332,30 +352,47 @@ function SiteRowActions({
                             {m.product.category.name}
                           </Badge>
                         ) : (
-                          <span className="text-slate-400">{"\u2014"}</span>
+                          <span className="text-slate-400">—</span>
                         )}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {m.product.sku || "\u2014"}
+                        {m.product.sku || "—"}
                       </TableCell>
-                      <TableCell>{m.quantity ?? "\u2014"}</TableCell>
+                      <TableCell>{m.quantity ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             )}
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="sm:justify-between">
             <Button
               variant="outline"
-              onClick={() => router.push(`/sites/${site.id}`)}
+              onClick={() => setShowProductsDialog(false)}
             >
-              <ArrowRight className="mr-1 h-4 w-4" />
-              Manage Site
+              Close
+            </Button>
+
+            <Button onClick={() => setAddMaterialsOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Materials
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Materials Dialog */}
+      <AddMaterialsDialog
+        siteId={site.id}
+        open={addMaterialsOpen}
+        onOpenChange={setAddMaterialsOpen}
+        existingProductIds={siteProducts.map((m) => m.productId)}
+        onAdded={async () => {
+          await loadSiteProducts();
+          router.refresh();
+        }}
+      />
     </>
   );
 }

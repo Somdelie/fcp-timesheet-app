@@ -322,7 +322,7 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
 /*  Add Materials Dialog                                               */
 /* ------------------------------------------------------------------ */
 
-function AddMaterialsDialog({
+export function AddMaterialsDialog({
   siteId,
   open,
   onOpenChange,
