@@ -1344,7 +1344,7 @@ export default function SettingsPage() {
                       fetchAuditLogs(1, auditSearch, val);
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectTrigger className="w-full sm:w-50">
                       <SelectValue placeholder="All actions" />
                     </SelectTrigger>
                     <SelectContent>
