@@ -391,6 +391,15 @@ export default function SettingsPage() {
   const [auditActionFilter, setAuditActionFilter] = useState("");
   const [auditLoading, setAuditLoading] = useState(false);
 
+  // Photo upload logs (server-side file logs)
+  const [uploadLogs, setUploadLogs] = useState<any[]>([]);
+  const [uploadLogsLoading, setUploadLogsLoading] = useState(false);
+  const [uploadFilter, setUploadFilter] = useState<"all" | "success" | "fail">(
+    "all",
+  );
+  const [importingLogs, setImportingLogs] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+
   type RecentLogin = {
     id: string;
     action: string;
@@ -431,6 +440,20 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchUploadLogs = async () => {
+    setUploadLogsLoading(true);
+    try {
+      const data = await getJson<{ logs: any[] }>(
+        `/api/app/admin/site-day-photos/upload-logs`,
+      );
+      setUploadLogs(data.logs ?? []);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load upload logs");
+    } finally {
+      setUploadLogsLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-muted/30">
       <div className="flex-1 p-6 space-y-6">
@@ -463,6 +486,7 @@ export default function SettingsPage() {
               value="logs"
               onClick={() => {
                 if (auditLogs.length === 0) fetchAuditLogs();
+                if (uploadLogs.length === 0) fetchUploadLogs();
               }}
             >
               Activity Logs
@@ -535,6 +559,199 @@ export default function SettingsPage() {
                 <div className="flex justify-end">
                   <Button onClick={handleSave}>Save Changes</Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Photo Upload Logs (server) */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <ScrollText className="h-5 w-5" />
+                  <div>
+                    <CardTitle>Photo Upload Logs</CardTitle>
+                    <CardDescription>
+                      Recent server-side logs for site-day photo uploads.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    size="sm"
+                    onClick={() => fetchUploadLogs()}
+                    disabled={uploadLogsLoading}
+                  >
+                    Refresh Logs
+                  </Button>
+
+                  <select
+                    value={uploadFilter}
+                    onChange={(e) => setUploadFilter(e.target.value as any)}
+                    className="text-sm px-2 py-1 border rounded bg-white"
+                  >
+                    <option value="all">All</option>
+                    <option value="success">Success</option>
+                    <option value="fail">Fail</option>
+                  </select>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      // export filtered logs as CSV
+                      try {
+                        const rows = (uploadLogs || []).filter((l) => {
+                          if (uploadFilter === "all") return true;
+                          if (uploadFilter === "success") return l.success;
+                          return !l.success;
+                        });
+                        const header = [
+                          "ts",
+                          "success",
+                          "userId",
+                          "actingForemanId",
+                          "siteDayId",
+                          "durationMs",
+                          "cloudinaryPublicId",
+                          "imageUrl",
+                          "errorText",
+                        ];
+                        const csv = [header.join(",")]
+                          .concat(
+                            rows.map((r: any) =>
+                              [
+                                r.ts,
+                                r.success,
+                                r.userId ?? "",
+                                r.actingForemanId ?? "",
+                                r.siteDayId ?? "",
+                                r.durationMs ?? "",
+                                r.cloudinaryPublicId ?? "",
+                                r.imageUrl ?? "",
+                                r.error ?? r.errorText ?? "",
+                              ]
+                                .map((c) => String(c).replace(/"/g, '""'))
+                                .map((c) => `"${c}"`)
+                                .join(","),
+                            ),
+                          )
+                          .join("\n");
+
+                        const blob = new Blob([csv], { type: "text/csv" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `photo-upload-logs-${new Date()
+                          .toISOString()
+                          .slice(0, 19)}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch (e) {
+                        toast.error("Failed to export CSV");
+                      }
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      if (
+                        !confirm("Rotate current log and import archived logs?")
+                      )
+                        return;
+                      setImportingLogs(true);
+                      setImportResult(null);
+                      try {
+                        const res = await postJson<any>(
+                          `/api/app/admin/site-day-photos/import-logs?includeCurrent=true`,
+                        );
+                        setImportResult(`Imported ${res.imported} rows`);
+                        toast.success(`Imported ${res.imported} rows`);
+                        await fetchUploadLogs();
+                      } catch (e: any) {
+                        console.error(e);
+                        toast.error(e?.message || "Import failed");
+                        setImportResult(`Error: ${e?.message ?? String(e)}`);
+                      } finally {
+                        setImportingLogs(false);
+                      }
+                    }}
+                    disabled={importingLogs}
+                  >
+                    {importingLogs ? "Importing…" : "Import & Archive"}
+                  </Button>
+
+                  <span className="text-sm text-muted-foreground">
+                    Showing {uploadLogs.length} recent entries
+                  </span>
+                </div>
+
+                {uploadLogsLoading ? (
+                  <div className="py-8 text-center">Loading…</div>
+                ) : uploadLogs.length === 0 ? (
+                  <div className="py-6 text-sm text-muted-foreground">
+                    No upload logs found.
+                  </div>
+                ) : (
+                  <div className="border rounded divide-y">
+                    {(uploadLogs || [])
+                      .filter((l) => {
+                        if (uploadFilter === "all") return true;
+                        if (uploadFilter === "success") return l.success;
+                        return !l.success;
+                      })
+                      .map((l, idx) => (
+                        <div
+                          key={idx}
+                          className="px-4 py-3 flex items-center justify-between gap-3"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono text-muted-foreground">
+                                {l.ts}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-mono"
+                              >
+                                {l.success ? "SUCCESS" : "FAIL"}
+                              </Badge>
+                              <span className="text-sm truncate ml-2">
+                                SiteDay: {l.siteDayId ?? "—"} • user:{" "}
+                                {l.userId ?? "—"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate max-w-lg">
+                              {l.error
+                                ? `Error: ${l.error}`
+                                : `Duration: ${l.durationMs}ms • Cloudinary: ${l.cloudinaryPublicId ?? "—"}`}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            {l.imageUrl ? (
+                              <a
+                                href={l.imageUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm underline"
+                              >
+                                View
+                              </a>
+                            ) : null}
+                            <span className="text-xs text-muted-foreground mt-1">
+                              {new Date(l.ts).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1281,6 +1498,90 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+                {/* Photo Upload Logs (also available here for quick correlation) */}
+                <Card className="mt-4">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <ScrollText className="h-5 w-5" />
+                      <div>
+                        <CardTitle>Photo Upload Logs</CardTitle>
+                        <CardDescription>
+                          Recent server-side logs for site-day photo uploads
+                          (errors and durations).
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Button
+                        size="sm"
+                        onClick={() => fetchUploadLogs()}
+                        disabled={uploadLogsLoading}
+                      >
+                        Refresh Logs
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Showing {uploadLogs.length} recent entries
+                      </span>
+                    </div>
+
+                    {uploadLogsLoading ? (
+                      <div className="py-8 text-center">Loading…</div>
+                    ) : uploadLogs.length === 0 ? (
+                      <div className="py-6 text-sm text-muted-foreground">
+                        No upload logs found.
+                      </div>
+                    ) : (
+                      <div className="border rounded divide-y">
+                        {uploadLogs.map((l, idx) => (
+                          <div
+                            key={idx}
+                            className="px-4 py-3 flex items-center justify-between gap-3"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-mono text-muted-foreground">
+                                  {l.ts}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-mono"
+                                >
+                                  {l.success ? "SUCCESS" : "FAIL"}
+                                </Badge>
+                                <span className="text-sm truncate ml-2">
+                                  SiteDay: {l.siteDayId ?? "—"} • user:{" "}
+                                  {l.userId ?? "—"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate max-w-lg">
+                                {l.error
+                                  ? `Error: ${l.error}`
+                                  : `Duration: ${l.durationMs}ms • Cloudinary: ${l.cloudinaryPublicId ?? "—"}`}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              {l.imageUrl ? (
+                                <a
+                                  href={l.imageUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sm underline"
+                                >
+                                  View
+                                </a>
+                              ) : null}
+                              <span className="text-xs text-muted-foreground mt-1">
+                                {new Date(l.ts).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
           </TabsContent>

@@ -49,6 +49,16 @@ interface SitesListProps {
   initialSites: SiteRow[];
 }
 
+// pnpm prisma migrate deploy
+
+// # Or with npx if you prefer:
+// npx prisma migrate deploy
+
+// # Then regenerate the client
+// pnpm prisma generate
+// # or
+// npx prisma generate
+
 export default function SitesList({ initialSites }: SitesListProps) {
   const router = useRouter();
   const sp = useSearchParams();

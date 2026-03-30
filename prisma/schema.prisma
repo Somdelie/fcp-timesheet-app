@@ -587,6 +587,31 @@ model SiteDayPhoto {
   @@index([requestId])
 }
 
+// Logs for site day photo uploads. This is non-destructive to add
+// (new table only). Run a Prisma migration to create the table
+// before enabling the import endpoint that persists logs to DB.
+model SiteDayPhotoUploadLog {
+  id                 String   @id @default(cuid())
+  ts                 DateTime @default(now())
+  durationMs         Int?
+  success            Boolean  @default(false)
+  userId             String?
+  actingForemanId    String?
+  siteDayId          String?
+  cloudinaryPublicId String?
+  imageUrl           String?
+  width              Int?
+  height             Int?
+  format             String?
+  errorText          String?
+
+  createdAt DateTime @default(now())
+
+  @@index([ts])
+  @@index([siteDayId])
+  @@index([userId])
+}
+
 model PhotoVerification {
   id      String                  @id @default(cuid())
   photoId String                  @unique
