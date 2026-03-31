@@ -90,6 +90,11 @@ export type CreateScheduleInput = {
   contractNo?: string | null;
   contractManager?: string | null;
   siteForeman?: string | null;
+
+  // ✅ NEW
+  fcpContractManager?: string | null;
+  fcpSiteForeman?: string | null;
+
   client?: string | null;
   startDate?: string | null;
   completionDate?: string | null;
@@ -136,11 +141,19 @@ export async function createFinishingSchedule(input: CreateScheduleInput) {
   const schedule = await prisma.siteFinishingSchedule.create({
     data: {
       site: { connect: { id: siteId } },
+
       contractNo: input.contractNo ? clean(input.contractNo) : null,
       contractManager: input.contractManager
         ? clean(input.contractManager)
         : null,
       siteForeman: input.siteForeman ? clean(input.siteForeman) : null,
+
+      // ✅ NEW
+      fcpContractManager: input.fcpContractManager
+        ? clean(input.fcpContractManager)
+        : null,
+      fcpSiteForeman: input.fcpSiteForeman ? clean(input.fcpSiteForeman) : null,
+
       client: input.client ? clean(input.client) : null,
       startDate: input.startDate ? new Date(input.startDate) : null,
       completionDate: input.completionDate
@@ -148,30 +161,7 @@ export async function createFinishingSchedule(input: CreateScheduleInput) {
         : null,
       drawingDetails: input.drawingDetails ? clean(input.drawingDetails) : null,
       contactInfo: input.contactInfo ? clean(input.contactInfo) : null,
-      areas: input.areas?.length
-        ? {
-            create: input.areas.map((area, ai) => ({
-              name: clean(area.name),
-              label: area.label ? clean(area.label) : null,
-              sortOrder: area.sortOrder ?? ai,
-              items: area.items?.length
-                ? {
-                    create: area.items.map((item, ii) => ({
-                      zone: item.zone,
-                      position: clean(item.position),
-                      product: item.product ? clean(item.product) : null,
-                      colorCode: item.colorCode ? clean(item.colorCode) : null,
-                      supplier: item.supplier ? clean(item.supplier) : null,
-                      sortOrder: item.sortOrder ?? ii,
-                      note: item.note ? clean(item.note) : null,
-                    })),
-                  }
-                : undefined,
-            })),
-          }
-        : undefined,
     },
-    select: { id: true },
   });
 
   revalidatePath(`/sites/${siteId}`);
@@ -187,6 +177,8 @@ export async function updateFinishingSchedule(input: {
   contractNo?: string | null;
   contractManager?: string | null;
   siteForeman?: string | null;
+  fcpContractManager?: string | null;
+  fcpSiteForeman?: string | null;
   client?: string | null;
   startDate?: string | null;
   completionDate?: string | null;
@@ -213,6 +205,7 @@ export async function updateFinishingSchedule(input: {
       ...(input.contractNo !== undefined
         ? { contractNo: input.contractNo ? clean(input.contractNo) : null }
         : {}),
+
       ...(input.contractManager !== undefined
         ? {
             contractManager: input.contractManager
@@ -220,15 +213,37 @@ export async function updateFinishingSchedule(input: {
               : null,
           }
         : {}),
+
       ...(input.siteForeman !== undefined
-        ? { siteForeman: input.siteForeman ? clean(input.siteForeman) : null }
+        ? {
+            siteForeman: input.siteForeman ? clean(input.siteForeman) : null,
+          }
         : {}),
+
+      ...(input.fcpContractManager !== undefined
+        ? {
+            fcpContractManager: input.fcpContractManager
+              ? clean(input.fcpContractManager)
+              : null,
+          }
+        : {}),
+
+      ...(input.fcpSiteForeman !== undefined
+        ? {
+            fcpSiteForeman: input.fcpSiteForeman
+              ? clean(input.fcpSiteForeman)
+              : null,
+          }
+        : {}),
+
       ...(input.client !== undefined
         ? { client: input.client ? clean(input.client) : null }
         : {}),
+
       ...(input.startDate !== undefined
         ? { startDate: input.startDate ? new Date(input.startDate) : null }
         : {}),
+
       ...(input.completionDate !== undefined
         ? {
             completionDate: input.completionDate
@@ -236,6 +251,7 @@ export async function updateFinishingSchedule(input: {
               : null,
           }
         : {}),
+
       ...(input.drawingDetails !== undefined
         ? {
             drawingDetails: input.drawingDetails
@@ -243,6 +259,7 @@ export async function updateFinishingSchedule(input: {
               : null,
           }
         : {}),
+
       ...(input.contactInfo !== undefined
         ? { contactInfo: input.contactInfo ? clean(input.contactInfo) : null }
         : {}),
@@ -250,6 +267,8 @@ export async function updateFinishingSchedule(input: {
   });
 
   revalidatePath(`/sites/${schedule.siteId}`);
+  revalidatePath(`/finishing-schedules/${id}`);
+
   return { ok: true as const };
 }
 

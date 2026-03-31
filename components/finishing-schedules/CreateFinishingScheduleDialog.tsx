@@ -31,15 +31,10 @@ import { createFinishingSchedule } from "@/actions/site-finishing-schedule";
 type SiteOption = { id: string; name: string; code: string | null };
 
 interface Props {
-  /** If provided, locks the dialog to this specific site (used on site detail page) */
   siteId?: string;
-  /** List of sites to choose from (only needed when siteId is not provided) */
   sites?: SiteOption[];
-  /** Button variant */
   variant?: "default" | "outline" | "ghost";
-  /** Button size */
   size?: "default" | "sm" | "lg" | "icon";
-  /** Custom trigger label */
   label?: string;
 }
 
@@ -55,9 +50,15 @@ export default function CreateFinishingScheduleDialog({
   const [pending, startTransition] = useTransition();
 
   const [selectedSiteId, setSelectedSiteId] = useState(fixedSiteId ?? "");
+
   const [contractNo, setContractNo] = useState("");
   const [contractManager, setContractManager] = useState("");
   const [siteForeman, setSiteForeman] = useState("");
+
+  // ✅ NEW
+  const [fcpContractManager, setFcpContractManager] = useState("");
+  const [fcpSiteForeman, setFcpSiteForeman] = useState("");
+
   const [client, setClient] = useState("");
   const [startDate, setStartDate] = useState("");
   const [completionDate, setCompletionDate] = useState("");
@@ -66,9 +67,14 @@ export default function CreateFinishingScheduleDialog({
 
   function reset() {
     if (!fixedSiteId) setSelectedSiteId("");
+
     setContractNo("");
     setContractManager("");
     setSiteForeman("");
+
+    setFcpContractManager("");
+    setFcpSiteForeman("");
+
     setClient("");
     setStartDate("");
     setCompletionDate("");
@@ -78,6 +84,7 @@ export default function CreateFinishingScheduleDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
     const siteId = fixedSiteId ?? selectedSiteId;
     if (!siteId) {
       toast.error("Please select a site.");
@@ -90,6 +97,11 @@ export default function CreateFinishingScheduleDialog({
         contractNo: contractNo || null,
         contractManager: contractManager || null,
         siteForeman: siteForeman || null,
+
+        // ✅ NEW
+        fcpContractManager: fcpContractManager || null,
+        fcpSiteForeman: fcpSiteForeman || null,
+
         client: client || null,
         startDate: startDate || null,
         completionDate: completionDate || null,
@@ -123,128 +135,129 @@ export default function CreateFinishingScheduleDialog({
           {label}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create Finishing Schedule</DialogTitle>
           <DialogDescription>
-            Create a new finishing schedule for a site. You can add areas and
-            items after creation.
+            Create a new finishing schedule for a site.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Site selector (only when not locked to a specific site) */}
-          {!fixedSiteId && sites && sites.length > 0 && (
-            <div className="space-y-1.5">
+          {!fixedSiteId && sites?.length ? (
+            <div>
               <Label>Site *</Label>
               <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a site…" />
+                  <SelectValue placeholder="Select site..." />
                 </SelectTrigger>
                 <SelectContent>
                   {sites.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                      {s.code ? ` (${s.code})` : ""}
+                      {s.name} {s.code ? `(${s.code})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
+          ) : null}
 
+          {/* Contract + Client */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="contractNo">Contract No</Label>
+            <div>
+              <Label>Contract No</Label>
               <Input
-                id="contractNo"
                 value={contractNo}
                 onChange={(e) => setContractNo(e.target.value)}
-                placeholder="e.g. FCP-2026-001"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="client">Client</Label>
+
+            <div>
+              <Label>Client</Label>
               <Input
-                id="client"
                 value={client}
                 onChange={(e) => setClient(e.target.value)}
-                placeholder="e.g. Growthpoint"
               />
             </div>
           </div>
 
+          {/* CLIENT SIDE */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="contractManager">Contract Manager</Label>
+            <div>
+              <Label>Contract Manager</Label>
               <Input
-                id="contractManager"
                 value={contractManager}
                 onChange={(e) => setContractManager(e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="siteForeman">Site Foreman</Label>
+
+            <div>
+              <Label>Site Foreman</Label>
               <Input
-                id="siteForeman"
                 value={siteForeman}
                 onChange={(e) => setSiteForeman(e.target.value)}
               />
             </div>
           </div>
 
+          {/* ✅ FCP SIDE */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="startDate">Start Date</Label>
+            <div>
+              <Label>FCP Contract Manager</Label>
               <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                value={fcpContractManager}
+                onChange={(e) => setFcpContractManager(e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="completionDate">Completion Date</Label>
+
+            <div>
+              <Label>FCP Site Foreman</Label>
               <Input
-                id="completionDate"
-                type="date"
-                value={completionDate}
-                onChange={(e) => setCompletionDate(e.target.value)}
+                value={fcpSiteForeman}
+                onChange={(e) => setFcpSiteForeman(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="drawingDetails">Drawing Details</Label>
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
             <Input
-              id="drawingDetails"
-              value={drawingDetails}
-              onChange={(e) => setDrawingDetails(e.target.value)}
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <Input
+              type="date"
+              value={completionDate}
+              onChange={(e) => setCompletionDate(e.target.value)}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="contactInfo">Contact Info</Label>
-            <Input
-              id="contactInfo"
-              value={contactInfo}
-              onChange={(e) => setContactInfo(e.target.value)}
-              placeholder='e.g. "Contact At Diy Savoy: 011 440 9834"'
-            />
-          </div>
+          <Input
+            placeholder="Drawing details"
+            value={drawingDetails}
+            onChange={(e) => setDrawingDetails(e.target.value)}
+          />
+
+          <Input
+            placeholder="Contact info"
+            value={contactInfo}
+            onChange={(e) => setContactInfo(e.target.value)}
+          />
 
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={pending}
             >
               Cancel
             </Button>
+
             <Button type="submit" disabled={pending}>
               {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Schedule
+              Create
             </Button>
           </DialogFooter>
         </form>
