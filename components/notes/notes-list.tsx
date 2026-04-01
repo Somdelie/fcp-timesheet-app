@@ -3,7 +3,16 @@
 import { cn } from "@/lib/utils";
 import type { NoteItem, NoteColor } from "@/actions/notes";
 import { formatRelative } from "./format-relative";
-import { Pin, MessageSquare, Paperclip, GripVertical } from "lucide-react";
+import {
+  Pin,
+  MessageSquare,
+  Paperclip,
+  GripVertical,
+  Users,
+  User,
+  Share2,
+  Mail,
+} from "lucide-react";
 import {
   SortableContext,
   useSortable,
@@ -75,24 +84,38 @@ export function NotesList({
   const filterNotes = (subset: NoteItem[]) => {
     if (!searchQuery) return subset;
     const q = searchQuery.toLowerCase();
-    return subset.filter(
-      (n) =>
+
+    return subset.filter((n) => {
+      const plainContent = n.content.replace(/<[^>]*>/g, "").toLowerCase();
+      const memberText = (n.members ?? [])
+        .map((m) => `${m.userName} ${m.userEmail}`.toLowerCase())
+        .join(" ");
+      const inviteText = (n.invites ?? [])
+        .map((i) => `${i.invitedUserName} ${i.invitedUserEmail}`.toLowerCase())
+        .join(" ");
+
+      return (
         n.title.toLowerCase().includes(q) ||
-        n.content
-          .replace(/<[^>]*>/g, "")
-          .toLowerCase()
-          .includes(q),
-    );
+        plainContent.includes(q) ||
+        memberText.includes(q) ||
+        inviteText.includes(q)
+      );
+    });
   };
 
   const pinned = filterNotes(notes.filter((n) => n.isPinned));
-  const unpinned = filterNotes(notes.filter((n) => !n.isPinned));
-  const isEmpty = pinned.length === 0 && unpinned.length === 0;
+  const shared = filterNotes(notes.filter((n) => !n.isPinned && n.isRoomNote));
+  const allNotes = filterNotes(
+    notes.filter((n) => !n.isPinned && !n.isRoomNote),
+  );
+
+  const isEmpty =
+    pinned.length === 0 && shared.length === 0 && allNotes.length === 0;
 
   return (
     <div className="custom-scrollbar flex h-full flex-col overflow-y-auto overflow-x-hidden">
       {pinned.length > 0 && (
-        <section className="px-3 pt-2">
+        <section className="pt-2">
           <SectionLabel icon={<Pin size={10} />} label="Pinned" />
           <SortableContext
             items={pinned.map((n) => n.id)}
@@ -113,17 +136,43 @@ export function NotesList({
         </section>
       )}
 
-      {unpinned.length > 0 && (
-        <section className="px-3 pt-2 pb-4">
-          {pinned.length > 0 && (
-            <SectionLabel label="All Notes" className="mt-4" />
-          )}
+      {shared.length > 0 && (
+        <section className="pt-2 pb-1">
+          <SectionLabel
+            icon={<Share2 size={10} />}
+            label="Shared"
+            className={pinned.length > 0 ? "mt-4" : undefined}
+          />
           <SortableContext
-            items={unpinned.map((n) => n.id)}
+            items={shared.map((n) => n.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="flex flex-col gap-1">
-              {unpinned.map((note, i) => (
+              {shared.map((note, i) => (
+                <SortableNoteListItem
+                  key={note.id}
+                  note={note}
+                  isSelected={selectedNoteId === note.id}
+                  onSelect={() => onSelectNote(note.id)}
+                  animDelay={i * 30}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </section>
+      )}
+
+      {allNotes.length > 0 && (
+        <section className="pt-2 pb-4">
+          {(pinned.length > 0 || shared.length > 0) && (
+            <SectionLabel label="All Notes" className="mt-4" />
+          )}
+          <SortableContext
+            items={allNotes.map((n) => n.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-1">
+              {allNotes.map((note, i) => (
                 <SortableNoteListItem
                   key={note.id}
                   note={note}
@@ -233,19 +282,20 @@ function NoteListItem({
   const accent = colorAccents[note.color] ?? colorAccents.DEFAULT;
   const plainContent = note.content.replace(/<[^>]*>/g, "").trim();
   const preview = plainContent.substring(0, 80);
+  const inviteCount =
+    note.invites?.filter((i) => i.status === "PENDING").length ?? 0;
 
   return (
     <div
       className={cn(
-        "group relative flex w-full items-stretch rounded transition-all duration-200",
+        "group relative flex w-full items-stretch border-b border-border/50 transition-all duration-200",
         "hover:bg-secondary/60",
         isSelected ? accent.activeBg : "bg-transparent",
-        isDragging && "shadow-lg ring-2 ring-primary/20",
+        isDragging && "shadow ring-2 ring-primary/20",
         "animate-in fade-in slide-in-from-left-2",
       )}
       style={{ animationDelay: `${animDelay}ms`, animationFillMode: "both" }}
     >
-      {/* Drag handle */}
       <button
         {...dragHandleProps}
         className={cn(
@@ -260,9 +310,8 @@ function NoteListItem({
 
       <button
         onClick={onSelect}
-        className="min-w-0 flex-1 overflow-hidden px-2 py-3 text-left"
+        className="min-w-0 flex-1 overflow-hidden px-1 py-2 text-left"
       >
-        {/* Color indicator */}
         <div
           className={cn(
             "absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-full transition-all",
@@ -272,13 +321,11 @@ function NoteListItem({
         />
 
         <div className="flex min-w-0 items-start gap-3">
-          {/* Color dot */}
           <div
             className={cn("mt-1.5 size-2 shrink-0 rounded-full", accent.dot)}
           />
 
           <div className="min-w-0 flex-1">
-            {/* Title row */}
             <div className="flex min-w-0 items-center justify-between gap-2">
               <h4
                 className={cn(
@@ -288,21 +335,32 @@ function NoteListItem({
               >
                 {note.title || "Untitled"}
               </h4>
-              {note.isPinned && (
-                <Pin size={11} className="shrink-0 text-amber-500/70" />
-              )}
+
+              <div className="flex shrink-0 items-center gap-2">
+                {note.isPinned && (
+                  <Pin size={11} className="text-amber-500/70" />
+                )}
+
+                {note.isRoomNote ? (
+                  <div className="flex items-center gap-1 text-muted-foreground/60">
+                    <Users size={14} />
+                    <span className="text-[10px]">
+                      {note.members?.length ?? 0}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-muted-foreground/40">
+                    <User size={14} />
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Preview */}
-            {preview && (
-              <p className="mt-1 line-clamp-2 break-words text-xs leading-relaxed text-muted-foreground/70">
-                {preview}
-                {plainContent.length > 80 && "…"}
-              </p>
-            )}
+            <div className="mt-1 truncate text-[11px] text-muted-foreground/65">
+              {preview || "Empty note"}
+            </div>
 
-            {/* Meta row */}
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="text-[10px] text-muted-foreground/50">
                 {formatRelative(note.updatedAt)}
               </span>
@@ -318,6 +376,20 @@ function NoteListItem({
                 <span className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
                   <Paperclip size={10} />
                   {note.attachments.length}
+                </span>
+              )}
+
+              {note.isRoomNote && (
+                <span className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400">
+                  <Share2 size={10} />
+                  Shared
+                </span>
+              )}
+
+              {inviteCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+                  <Mail size={10} />
+                  {inviteCount} invite{inviteCount === 1 ? "" : "s"}
                 </span>
               )}
             </div>

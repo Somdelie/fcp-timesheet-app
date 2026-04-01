@@ -36,74 +36,48 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Auth.js / NextAuth tables
   accounts Account[]
   sessions Session[]
 
-  // Audit trail
   auditEvents AuditEvent[]
+  employees   Employee[]   @relation("UserCreatedEmployees")
+  employee    Employee?    @relation("EmployeeUser")
+  foreman     Foreman?
+  supervisor  Supervisor?
 
-  // Employee creation linkage (optional)
-  employees Employee[] @relation("UserCreatedEmployees")
-
-  // Optional: a user can be linked to exactly one Employee record
-  employee Employee? @relation("EmployeeUser")
-
-  // Optional: a user can be linked to exactly one Foreman/Supervisor record
-  foreman    Foreman?
-  supervisor Supervisor?
-
-  // Photos workflow
   siteDayPhotos        SiteDayPhoto[]
   siteDayPhotoRequests SiteDayPhotoRequest[]
   photoVerifications   PhotoVerification[]
 
-  // Push notifications
   pushTokens PushToken[]
 
-  // ✅ NEW: who created admin deductions
-  createdDeductions        Deduction[]               @relation("DeductionCreatedByUser")
-  employeeDayRateOverrides EmployeeDayRateOverride[]
-
-  // Product orders created by this admin/user
-  productOrders ProductOrder[]
-
-  siteProductOrders SiteProductOrder[]
-
-  fortnightMeetings FortnightMeeting[]
-
-  // Reverse: employee transfers performed by this user
-  employeeTransfers AttendanceScan[] @relation("TransferredByUser")
-
-  // Overtime entries created by this user
-  overtimeEntries OvertimeEntry[]
-
-  // Site + foreman day-rate overrides created by this user
+  createdDeductions                  Deduction[]                  @relation("DeductionCreatedByUser")
+  employeeDayRateOverrides           EmployeeDayRateOverride[]
+  productOrders                      ProductOrder[]
+  siteProductOrders                  SiteProductOrder[]
+  fortnightMeetings                  FortnightMeeting[]
+  employeeTransfers                  AttendanceScan[]             @relation("TransferredByUser")
+  overtimeEntries                    OvertimeEntry[]
   createdSiteForemanDayRateOverrides SiteForemanDayRateOverride[] @relation("SiteForemanDayRateOverrideCreatedBy")
+  recordedEarlySignOuts              AttendanceScan[]             @relation("EarlySignOutCapturedByUser")
+  approvedFinishingSchedules         SiteFinishingSchedule[]      @relation("FinishingScheduleApprovedBy")
+  finalizedFortnightMeetings         FortnightMeeting[]           @relation("FortnightMeetingFinalizedBy")
+  siteClaims                         SiteClaim[]                  @relation("SiteClaimCreatedBy")
+  paintPlans                         SitePaintPlan[]              @relation("PaintPlanCreatedBy")
+  paintUsages                        SitePaintUsage[]             @relation("PaintUsageCreatedBy")
+  notifications                      Notification[]
+  schedulerTasks                     SchedulerTask[]
 
-  // Early sign-outs recorded by this user
-  recordedEarlySignOuts AttendanceScan[] @relation("EarlySignOutCapturedByUser")
+  // owner-created notes
+  userNotes UserNote[]
 
-  // Finishing schedules approved by this user
-  approvedFinishingSchedules SiteFinishingSchedule[] @relation("FinishingScheduleApprovedBy")
+  // comments
+  noteComments NoteComment[] @relation("UserNoteComments")
 
-  // Fortnight meetings finalized by this user
-  finalizedFortnightMeetings FortnightMeeting[] @relation("FortnightMeetingFinalizedBy")
-
-  // Claims created by this user
-  siteClaims SiteClaim[] @relation("SiteClaimCreatedBy")
-
-  // Paint planning
-  paintPlans  SitePaintPlan[]  @relation("PaintPlanCreatedBy")
-  paintUsages SitePaintUsage[] @relation("PaintUsageCreatedBy")
-
-  // Notifications
-  notifications Notification[]
-
-  // Scheduler tasks
-  schedulerTasks SchedulerTask[]
-  userNotes      UserNote[]
-  noteComments   NoteComment[]   @relation("UserNoteComments")
+  // NEW: room note memberships / invitations
+  noteMemberships     NoteMember[]
+  sentNoteInvites     NoteInvite[] @relation("NoteInviteSender")
+  receivedNoteInvites NoteInvite[] @relation("NoteInviteRecipient")
 }
 
 model PushToken {
@@ -1864,9 +1838,23 @@ enum NoteColor {
   PINK
 }
 
+enum NoteMemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum NoteInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
 model UserNote {
   id String @id @default(cuid())
 
+  // owner
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1875,13 +1863,65 @@ model UserNote {
   color    NoteColor @default(DEFAULT)
   isPinned Boolean   @default(false)
 
+  // NEW
+  isRoomNote Boolean @default(false)
+
   attachments NoteAttachment[]
   comments    NoteComment[]    @relation("NoteComments")
+
+  // NEW
+  members NoteMember[]
+  invites NoteInvite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, isPinned, updatedAt])
+  @@index([isRoomNote, updatedAt])
+}
+
+model NoteMember {
+  id String @id @default(cuid())
+
+  noteId String
+  note   UserNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role NoteMemberRole @default(VIEWER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([noteId, userId])
+  @@index([userId])
+  @@index([noteId])
+}
+
+model NoteInvite {
+  id String @id @default(cuid())
+
+  noteId String
+  note   UserNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  invitedByUserId String
+  invitedByUser   User   @relation("NoteInviteSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  invitedUserId String
+  invitedUser   User   @relation("NoteInviteRecipient", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  role   NoteMemberRole   @default(VIEWER)
+  status NoteInviteStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  acceptedAt DateTime?
+  declinedAt DateTime?
+
+  @@unique([noteId, invitedUserId])
+  @@index([invitedUserId, status])
+  @@index([noteId, status])
 }
 
 model NoteAttachment {
@@ -1893,8 +1933,8 @@ model NoteAttachment {
   url      String
   publicId String @default("")
   name     String
-  type     String // "image" | "pdf" | "excel" | "word" | "other"
-  size     Int    @default(0) // bytes
+  type     String
+  size     Int    @default(0)
   mimeType String @default("")
 
   createdAt DateTime @default(now())

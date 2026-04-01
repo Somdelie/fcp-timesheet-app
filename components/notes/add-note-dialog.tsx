@@ -69,9 +69,8 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 rounded shadow-sm">
+        <Button className="py-0 h-8 rounded">
           <Plus className="size-4" />
-          New Note
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg rounded border-border/50 bg-card p-0 overflow-hidden">
@@ -83,7 +82,7 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
           )}
         />
 
-        <DialogHeader className="px-6 pt-6">
+        <DialogHeader className="px-6">
           <DialogTitle className="text-xl font-semibold">
             Create Note
           </DialogTitle>
@@ -92,10 +91,7 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5 px-6 pb-6 pt-4"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6 pb-4">
           <div className="space-y-2">
             <Label
               htmlFor="note-title"
