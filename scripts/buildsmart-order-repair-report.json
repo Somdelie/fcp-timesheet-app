@@ -1,0 +1,3701 @@
+{
+  "generatedAt": "2026-04-08T12:19:02.292Z",
+  "mode": "APPLY",
+  "options": {
+    "deactivateUnusedDuplicates": true
+  },
+  "summary": {
+    "ordersScanned": 628,
+    "itemsScanned": 1378,
+    "candidateItems": 350,
+    "changedItems": 2,
+    "touchedOrders": 2,
+    "manualReviewCount": 247,
+    "duplicateCleanupScanned": 185,
+    "duplicateProductsDeactivated": 62,
+    "duplicateProductsStillUsed": 123
+  },
+  "changes": [
+    {
+      "orderId": "cmmluc1yk004dsgpvlit8qrm2",
+      "orderReference": "66841",
+      "orderSupplier": "Plascon",
+      "itemId": "cmmluc25j004fsgpvhnxjjo6f",
+      "rawName": "VLW",
+      "mode": "SHOP_ITEM",
+      "reason": "Safe canonical family target selected; Filled zero price from supplier/global pricing",
+      "oldProductId": "cmmluaw2j003jsgpvnnm22q3o",
+      "oldProductName": "VLW",
+      "newProductId": "cmmkuvvbl00cjooply5ar0pmy",
+      "newProductName": "Plascon Velvaglo White",
+      "oldPrice": "0.00",
+      "newPrice": "530.89"
+    },
+    {
+      "orderId": "cmnd8m54m000809lbua4s834g",
+      "orderReference": "67325",
+      "orderSupplier": "DIY Savoy Plascon",
+      "itemId": "cmnd8m54y000909lblrbnkpol",
+      "rawName": "VLW 000002 Velvaglo Non-Drip Waterbased Black",
+      "mode": "CANONICAL_FAMILY",
+      "reason": "Safe canonical family target selected; Filled zero price from supplier/global pricing",
+      "oldProductId": "cmnd8m4l1000009lb53ymlq10",
+      "oldProductName": "VLW 000002 Velvaglo Non-Drip Waterbased Black",
+      "newProductId": "cmmkuvvbl00cjooply5ar0pmy",
+      "newProductName": "Plascon Velvaglo White",
+      "oldPrice": "0.00",
+      "newPrice": "530.89"
+    }
+  ],
+  "manualReview": [
+    {
+      "orderId": "cmmlvvhvd00dtsgpvthzs5olx",
+      "orderReference": "66545",
+      "itemId": "cmmlvvi2f00dusgpv8n2se35p",
+      "rawName": "RBP Primer - Dark Grey GS02186-2",
+      "currentProductId": "cmmlvteuu00brsgpvs9ni4krq",
+      "currentProductName": "RBP Primer - Dark Grey GS02186-2",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvvhvd00dtsgpvthzs5olx",
+      "orderReference": "66545",
+      "itemId": "cmmlvvi2f00dvsgpvvmmftlun",
+      "rawName": "Marmoran Permaplast - Dark Grey GS02186-2",
+      "currentProductId": "cmmlvtg0y00bssgpvks7yxg2w",
+      "currentProductName": "Marmoran Permaplast - Dark Grey GS02186-2",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltt3rw000rsgpv6lbrz4wv",
+      "orderReference": "66632",
+      "itemId": "cmmltt3z2000tsgpv5wgrj0rq",
+      "rawName": "VERSUS - WALLSURE DESIGNER GREY 1 SHADE DARKER",
+      "currentProductId": "cmmlts8yg0004sgpvtuiukay9",
+      "currentProductName": "VERSUS - WALLSURE DESIGNER GREY 1 SHADE DARKER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltt3rw000rsgpv6lbrz4wv",
+      "orderReference": "66632",
+      "itemId": "cmmltt3z2000usgpv6kn8q15l",
+      "rawName": "VERSUS SATIN ENAMEL - PNSO",
+      "currentProductId": "cmmltsa5e0005sgpv6g3lo1fp",
+      "currentProductName": "VERSUS SATIN ENAMEL - PNSO",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvndx6007psgpvnwxj6xjr",
+      "orderReference": "66630",
+      "itemId": "cmmlvne4h007rsgpvhglw04ge",
+      "rawName": "ROCKGRIP - BLACK",
+      "currentProductId": "cmmlvmkui0073sgpvs2onafbz",
+      "currentProductName": "ROCKGRIP - BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvnkm4007usgpvutu2qiyg",
+      "orderReference": "66633",
+      "itemId": "cmmlvnktg007wsgpvcuixbghn",
+      "rawName": "DULUX SKIM COAT",
+      "currentProductId": "cmmlvmml50074sgpv7fcsfpww",
+      "currentProductName": "DULUX SKIM COAT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvnumy0083sgpvgzahzrjr",
+      "orderReference": "66637",
+      "itemId": "cmmlvnutz0087sgpvd4i590hg",
+      "rawName": "Plascon Skim Coats-Exterior Off-White",
+      "currentProductId": "cmmltsd7j0008sgpvdkbv19cs",
+      "currentProductName": "Plascon Skim Coats-Interior Off-White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvo5yv008osgpvnzpae4y7",
+      "orderReference": "66641",
+      "itemId": "cmmlvo669008rsgpvyxs5qpub",
+      "rawName": "ACRYLIC PVA - 00YT15/510 RED STALLION",
+      "currentProductId": "cmmlvmo150075sgpvaoxcidmh",
+      "currentProductName": "ACRYLIC PVA - 00YT15/510 RED STALLION",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvo94l008vsgpv2glqugv5",
+      "orderReference": "66642",
+      "itemId": "cmmlvo9bn008wsgpv26v6l0i5",
+      "rawName": "ELECTRIC KETTLE",
+      "currentProductId": "cmmlvmtyr0079sgpv4dwa1agl",
+      "currentProductName": "ELECTRIC KETTLE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvo94l008vsgpv2glqugv5",
+      "orderReference": "66642",
+      "itemId": "cmmlvo9bo008xsgpvobec0k5f",
+      "rawName": "SPONGE MATRESSES",
+      "currentProductId": "cmmlvmv4z007asgpvsr1ylnxp",
+      "currentProductName": "SPONGE MATRESSES",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvo94l008vsgpv2glqugv5",
+      "orderReference": "66642",
+      "itemId": "cmmlvo9bo008ysgpvlvc3wo05",
+      "rawName": "EXTENSION CABLE - 20M",
+      "currentProductId": "cmmlvmwhj007bsgpvu3rkiicw",
+      "currentProductName": "EXTENSION CABLE - 20M",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvo94l008vsgpv2glqugv5",
+      "orderReference": "66642",
+      "itemId": "cmmlvo9bo008zsgpvk2i6ratz",
+      "rawName": "ELECTRIC BUCKET",
+      "currentProductId": "cmmlvmy05007csgpvfkldaicn",
+      "currentProductName": "ELECTRIC BUCKET",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvpo47009osgpva7mkn0cx",
+      "orderReference": "66645",
+      "itemId": "cmmlvpob5009qsgpvxsbpbexe",
+      "rawName": "TARDE100 - 50YY63/041 DESIGNERS GREY",
+      "currentProductId": "cmmlvpc4q009hsgpv8vj1pzwu",
+      "currentProductName": "TARDE100 - 50YY63/041 DESIGNERS GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvpsx4009tsgpvm3sia6g2",
+      "orderReference": "66635",
+      "itemId": "cmmlvptar009usgpvpyktrr3j",
+      "rawName": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+      "currentProductId": "cmmlts7qk0003sgpvcf3go4bh",
+      "currentProductName": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvqdhx00aesgpv2qw3hh3l",
+      "orderReference": "66657",
+      "itemId": "cmmlvqdoy00agsgpvcuy38i5g",
+      "rawName": "ROOFGUARD - BLACK",
+      "currentProductId": "cmmltjjm50006scpvit3iouq1",
+      "currentProductName": "ROOFGUARD - BASIC BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvqdhx00aesgpv2qw3hh3l",
+      "orderReference": "66657",
+      "itemId": "cmmlvqdoy00ahsgpvopn5h67w",
+      "rawName": "TRADE65 - S0502-R50B",
+      "currentProductId": "cmmlvpdj9009isgpv2ertfpmb",
+      "currentProductName": "TRADE65 - S0502-R50B",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlucoga004wsgpvdcf8t21y",
+      "orderReference": "66670",
+      "itemId": "cmmlucon7004xsgpvtsgbfc2i",
+      "rawName": "UROCHEM 525 WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlucoga004wsgpvdcf8t21y",
+      "orderReference": "66670",
+      "itemId": "cmmlucon7004ysgpv9kzpuuvh",
+      "rawName": "12mm BACKING CORDPacks 2",
+      "currentProductId": "cmmlub2mw003osgpvv7c9hm98",
+      "currentProductName": "12mm BACKING CORDPacks 2",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvqie200aosgpvb6vogo7m",
+      "orderReference": "66659",
+      "itemId": "cmmlvqilc00apsgpvbq715123",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvqmfz00aqsgpvqm4oh0py",
+      "orderReference": "66660",
+      "itemId": "cmmlvqmof00atsgpvzxqb77os",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvqmfz00aqsgpvqm4oh0py",
+      "orderReference": "66660",
+      "itemId": "cmmlvqmog00awsgpvaxxtqs7x",
+      "rawName": "DURA100 - GRANITE GREY 00NN37/000",
+      "currentProductId": "cmmlvpi0h009lsgpvzvwo9x80",
+      "currentProductName": "DURA100 - GRANITE GREY 00NN37/000",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvvnut00e0sgpv9167lgal",
+      "orderReference": "66675",
+      "itemId": "cmmlvvo1q00e1sgpve1l4lshb",
+      "rawName": "230MM CUTTING DISC - CONCRETE",
+      "currentProductId": "cmmlvtirq00busgpvu81hc4w4",
+      "currentProductName": "230MM CUTTING DISC - CONCRETE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvvxd800easgpvmlbtp37n",
+      "orderReference": "66678",
+      "itemId": "cmmlvvxkc00ebsgpvf33xh4cx",
+      "rawName": "SPONGE MATRESS",
+      "currentProductId": "cmmlvtk5o00bvsgpv5yf744ye",
+      "currentProductName": "SPONGE MATRESS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvtp0400bysgpv5bemv4bi",
+      "orderReference": "66697",
+      "itemId": "cmmlvtp7g00c0sgpv49tetn75",
+      "rawName": "PLASTER MIXBag 2",
+      "currentProductId": "cmmlvszoz00bgsgpv4libfzdc",
+      "currentProductName": "PLASTER MIXBag 2",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvu4h500cgsgpv9wy8wgib",
+      "orderReference": "66703",
+      "itemId": "cmmlvu4oj00cisgpvge1gkb1m",
+      "rawName": "ACRYLIC PVA - Y4-C2-3 AFTERNOON SHOWER",
+      "currentProductId": "cmmlvt1ry00bhsgpvwlbpgu6c",
+      "currentProductName": "ACRYLIC PVA - Y4-C2-3 AFTERNOON SHOWER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvu7d700cjsgpvglhrt0pb",
+      "orderReference": "66704",
+      "itemId": "cmmlvu7kh00cksgpv90nealjc",
+      "rawName": "WALLGUARD - SMOKEY GLASS 50YR22/052",
+      "currentProductId": "cmmlvt3cp00bisgpvz1wp1gc5",
+      "currentProductName": "WALLGUARD - SMOKEY GLASS 50YR22/052",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvub0500clsgpvayshml83",
+      "orderReference": "66706",
+      "itemId": "cmmlvub7c00cosgpvhy8k16kb",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvudsb00cqsgpvs5uw6kz2",
+      "orderReference": "66707",
+      "itemId": "cmmlvudzg00crsgpvgvlfkwpn",
+      "rawName": "Coprox Masonry Waterproofing",
+      "currentProductId": "cmmlvt4ss00bjsgpv6smo2shn",
+      "currentProductName": "Coprox Masonry Waterproofing",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvuj0p00cvsgpv0o53zmhy",
+      "orderReference": "66709",
+      "itemId": "cmmlvuj7y00cwsgpvjnz11i9a",
+      "rawName": "GW 0037355L Dual Plascoguard Gehopon 3000 WB Navy Light Grey",
+      "currentProductId": "cmmlvt7re00blsgpvjulao0ni",
+      "currentProductName": "GW 0037355L Dual Plascoguard Gehopon 3000 WB Navy Light Grey",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvuj0p00cvsgpv0o53zmhy",
+      "orderReference": "66709",
+      "itemId": "cmmlvuj7y00cxsgpvudwjqh05",
+      "rawName": "GW0000075L Dual Plascoguard Gehopon Sealer Green",
+      "currentProductId": "cmmlvt8xi00bmsgpv9zr5txy6",
+      "currentProductName": "GW0000075L Dual Plascoguard Gehopon Sealer Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvv4dr00dhsgpvdlf9jrf3",
+      "orderReference": "66712",
+      "itemId": "cmmlvv4kv00disgpvq8t5qe12",
+      "rawName": "UROCHEM 525 WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvv4dr00dhsgpvdlf9jrf3",
+      "orderReference": "66712",
+      "itemId": "cmmlvv4kv00djsgpvpn982tb9",
+      "rawName": "UROCHEM 525 - GREY",
+      "currentProductId": "cmmluayi0003lsgpv6m41lt0m",
+      "currentProductName": "UROCHEM 525 - GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvv4dr00dhsgpvdlf9jrf3",
+      "orderReference": "66712",
+      "itemId": "cmmlvv4kv00dksgpvrvv9pwzt",
+      "rawName": "10MM BACKING CORDPack 1",
+      "currentProductId": "cmmlvtbqq00bosgpvttdhwl9y",
+      "currentProductName": "10MM BACKING CORDPack 1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvv6zd00dlsgpvsttv81yt",
+      "orderReference": "66724",
+      "itemId": "cmmlvv76k00dmsgpv78y0gsxq",
+      "rawName": "UROCHEM 525 - BLACK",
+      "currentProductId": "cmmltselw0009sgpv8h1rsbax",
+      "currentProductName": "UROCHEM 525 - BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvwavi00epsgpvzt0g8z12",
+      "orderReference": "66691",
+      "itemId": "cmmlvwb2l00essgpv4jtsbdgr",
+      "rawName": "TAP0010105L Polvin Super Acrylic Tintbase Pastel - TENT E16-5 1 SHADE LIGHTER",
+      "currentProductId": "cmmlvtlp400bwsgpvx3qgdkbs",
+      "currentProductName": "TAP0010105L Polvin Super Acrylic Tintbase Pastel - TENT E16-5 1 SHADE LIGHTER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvwhm400f0sgpv95ktf36t",
+      "orderReference": "66693",
+      "itemId": "cmmlvwht800f2sgpvkg40yyxd",
+      "rawName": "1951 Sandpaper P80 50m",
+      "currentProductId": "cmmlvtmvz00bxsgpvdpmj5nb2",
+      "currentProductName": "1951 Sandpaper P80 50m",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlvwmv500fasgpvgsuwwt2q",
+      "orderReference": "66695",
+      "itemId": "cmmlvwn2r00fbsgpv0tkyyem2",
+      "rawName": "1951 Sandpaper P80 50m",
+      "currentProductId": "cmmlvtmvz00bxsgpvdpmj5nb2",
+      "currentProductName": "1951 Sandpaper P80 50m",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw1m0900fnsgpv20chujmh",
+      "orderReference": "66735",
+      "itemId": "cmmlw1m9q00fqsgpvoa4rewg6",
+      "rawName": "857 Masking Tape 18mm",
+      "currentProductId": "cmmlw110e00fgsgpvx54m2fer",
+      "currentProductName": "857 Masking Tape 18mm",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw4ac300gwsgpvi5takc62",
+      "orderReference": "66728",
+      "itemId": "cmmlw4ant00gysgpvuimx1ew4",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw4ac300gwsgpvi5takc62",
+      "orderReference": "66728",
+      "itemId": "cmmlw4ant00gzsgpvb7nnq5k9",
+      "rawName": "ULS1 - TRADEPRO ULTRA SHEEN - WHITE 0",
+      "currentProductId": "cmmlw1e2b00flsgpv5gh0z03s",
+      "currentProductName": "ULS1 - TRADEPRO ULTRA SHEEN - WHITE 0",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw4wbb00h7sgpv941u8ps6",
+      "orderReference": "66733",
+      "itemId": "cmmlw4wm700h8sgpv463rvkmo",
+      "rawName": "ELR002 - ROOF PAINT BLACK",
+      "currentProductId": "cmmkiuanp006xckpv6j2fbb4m",
+      "currentProductName": "Dulux Trade Acrylic Roof Paint Red 20L",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw531f00h9sgpvmxheczym",
+      "orderReference": "66734",
+      "itemId": "cmmlw539500hbsgpvztqd5fvf",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw531f00h9sgpvmxheczym",
+      "orderReference": "66734",
+      "itemId": "cmmlw539500hesgpvkj80cecv",
+      "rawName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentProductId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+      "currentProductName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw1or800frsgpv1szebkiy",
+      "orderReference": "66737",
+      "itemId": "cmmlw1oyt00ftsgpvkuv3o3nm",
+      "rawName": "DULUX TRADE65 - QUITE HIDEAWAY 81YY81/016",
+      "currentProductId": "cmmlw14at00fhsgpv12rjeqnl",
+      "currentProductName": "DULUX TRADE65 - QUITE HIDEAWAY 81YY81/016",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw2yqh00g4sgpvt0mg6gl9",
+      "orderReference": "66743",
+      "itemId": "cmmlw2z3200g7sgpvxu267bve",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw2yqh00g4sgpvt0mg6gl9",
+      "orderReference": "66743",
+      "itemId": "cmmlw2z3300g8sgpvd4x14u0u",
+      "rawName": "TILE ADHESIVE CEMENT",
+      "currentProductId": "cmmlw18zc00fisgpvj15rcfel",
+      "currentProductName": "TILE ADHESIVE CEMENT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw3gsg00gesgpv2cwjktvg",
+      "orderReference": "66746",
+      "itemId": "cmmlw3h2800gjsgpv8q5absy9",
+      "rawName": "TRADE65 - THE PLAZA 50GY72/012",
+      "currentProductId": "cmmlw1bk500fksgpvxab56fcw",
+      "currentProductName": "TRADE65 - THE PLAZA 50GY72/012",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw75je00hnsgpvl9h8v9o4",
+      "orderReference": "66765",
+      "itemId": "cmmlw75qr00hosgpv9jzvdmml",
+      "rawName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentProductId": "cmmluauuu003isgpvdlp5hvko",
+      "currentProductName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw75je00hnsgpvl9h8v9o4",
+      "orderReference": "66765",
+      "itemId": "cmmlw75qr00hpsgpvqz6vgap0",
+      "rawName": "DULUX SKIM COAT",
+      "currentProductId": "cmmlvmml50074sgpv7fcsfpww",
+      "currentProductName": "DULUX SKIM COAT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw75je00hnsgpvl9h8v9o4",
+      "orderReference": "66765",
+      "itemId": "cmmlw75qr00hqsgpvjx28dcin",
+      "rawName": "DULUX LUXURIOUS SILK - SMOKEY GLASS 50YR22/052",
+      "currentProductId": "cmmlw6rj300hfsgpvlzi42193",
+      "currentProductName": "DULUX LUXURIOUS SILK - SMOKEY GLASS 50YR22/052",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw7m7600i5sgpvtg56sgjv",
+      "orderReference": "66771",
+      "itemId": "cmmlw7meh00i6sgpvtuxivj39",
+      "rawName": "RBP ACRYLIC PRIMER BLACK EBONY GS10132",
+      "currentProductId": "cmmlw6td400hgsgpvswzi92b4",
+      "currentProductName": "RBP ACRYLIC PRIMER BLACK EBONY GS10132",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw7m7600i5sgpvtg56sgjv",
+      "orderReference": "66771",
+      "itemId": "cmmlw7mei00i7sgpvyppuu4lm",
+      "rawName": "PERMAPLAST BLACK EBONY GS10132",
+      "currentProductId": "cmmlw6um200hhsgpvs2m12sos",
+      "currentProductName": "PERMAPLAST BLACK EBONY GS10132",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw9fdt00k6sgpvfxcr2den",
+      "orderReference": "66759",
+      "itemId": "cmmlw9fla00k7sgpvphsfoayd",
+      "rawName": "WALLGUARD - DARK STORM 16BB25/001",
+      "currentProductId": "cmmlw6z0n00hksgpvr70nuljw",
+      "currentProductName": "WALLGUARD - DARK STORM 16BB25/001",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw7syr00idsgpvlow3x67x",
+      "orderReference": "66775",
+      "itemId": "cmmlw7t5y00iesgpvzrv9ikwv",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw823b00imsgpve9il0rui",
+      "orderReference": "66778",
+      "itemId": "cmmlw82c300iosgpv4ggzotvn",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw89a400issgpvoai2vshp",
+      "orderReference": "66780",
+      "itemId": "cmmlw89i800iusgpvd3hlzyb7",
+      "rawName": "KBM1 2.5L Kitchen and Bathroom White 2.",
+      "currentProductId": "cmmltsin3000csgpvvjv7irkh",
+      "currentProductName": "KBM1 2.5L Kitchen and Bathroom White 2.",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlw8gcv00j2sgpvafv7mfre",
+      "orderReference": "66783",
+      "itemId": "cmmlw8gmo00j5sgpvsi0c4jv2",
+      "rawName": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+      "currentProductId": "cmmlw6w2y00hisgpvjazt8l3l",
+      "currentProductName": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltsojw000gsgpvqg9encdt",
+      "orderReference": "66807",
+      "itemId": "cmmltsoqv000hsgpv14w0o60n",
+      "rawName": "GLS - GOLD SHEEN STORM BIRD 20YY11/017",
+      "currentProductId": "cmmlts6320001sgpvb4cnyocb",
+      "currentProductName": "GLS - GOLD SHEEN STORM BIRD 20YY11/017",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltswns000nsgpvwal4qxjb",
+      "orderReference": "66811",
+      "itemId": "cmmltswul000osgpvfxlja0el",
+      "rawName": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+      "currentProductId": "cmmlts7qk0003sgpvcf3go4bh",
+      "currentProductName": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltt74w000vsgpvilxk9vsa",
+      "orderReference": "66817",
+      "itemId": "cmmltt7c2000wsgpvi6ng2avm",
+      "rawName": "HARNESSDL - SAFETY HARNESS DOUBLE LANYARD and SCAFFOLD HOOKS",
+      "currentProductId": "cmmltsbsl0007sgpv623i5u03",
+      "currentProductName": "HARNESSDL - SAFETY HARNESS DOUBLE LANYARD and SCAFFOLD HOOKS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlttaar000xsgpvp1cvccp9",
+      "orderReference": "66818",
+      "itemId": "cmmlttahy000ysgpvq9pfdp0k",
+      "rawName": "Plascon Skim Coats-Interior Off-White",
+      "currentProductId": "cmmltsd7j0008sgpvdkbv19cs",
+      "currentProductName": "Plascon Skim Coats-Interior Off-White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltti350018sgpv33nno52i",
+      "orderReference": "66796",
+      "itemId": "cmmlttiag001csgpvnnk72hyb",
+      "rawName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+      "currentProductId": "cmmltjid90005scpvyesrugvl",
+      "currentProductName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlttktn001gsgpvzyc0ccu5",
+      "orderReference": "66797",
+      "itemId": "cmmlttldr001hsgpvrb5xdv3q",
+      "rawName": "ROOFGUARD - BASIC BLACK",
+      "currentProductId": "cmmltjjm50006scpvit3iouq1",
+      "currentProductName": "ROOFGUARD - BASIC BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlttqhp001msgpvc8swzoo2",
+      "orderReference": "66799",
+      "itemId": "cmmlttqos001nsgpvnd9vlscu",
+      "rawName": "UROCHEM 525 - BLACK",
+      "currentProductId": "cmmltselw0009sgpv8h1rsbax",
+      "currentProductName": "UROCHEM 525 - BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlttqhp001msgpvc8swzoo2",
+      "orderReference": "66799",
+      "itemId": "cmmlttqos001osgpvwzeivib6",
+      "rawName": "15MM BACKING CORD",
+      "currentProductId": "cmmltsftv000asgpvtvtr959v",
+      "currentProductName": "15MM BACKING CORD",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltu1nn0021sgpv2dm2c8j5",
+      "orderReference": "66804",
+      "itemId": "cmmltu1v10022sgpv3ne1l5u4",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmltu5d80023sgpvsh57ftue",
+      "orderReference": "66805",
+      "itemId": "cmmltu5kg0027sgpv7hnrmafv",
+      "rawName": "KBM1 2.5L Kitchen and Bathroom White 2.",
+      "currentProductId": "cmmltsin3000csgpvvjv7irkh",
+      "currentProductName": "KBM1 2.5L Kitchen and Bathroom White 2.",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu96br002jsgpv8rxue5ig",
+      "orderReference": "66820",
+      "itemId": "cmmlu96ip002nsgpvykgx78v0",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmkiu7v7006jckpv756ogb5i",
+      "currentProductName": "Dulux Trade Luxurious Silk White 20L",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu96br002jsgpv8rxue5ig",
+      "orderReference": "66820",
+      "itemId": "cmmlu96ip002osgpv5knlbx3w",
+      "rawName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu96br002jsgpv8rxue5ig",
+      "orderReference": "66820",
+      "itemId": "cmmlu96ip002psgpvmevokxg6",
+      "rawName": "DURA100 - DEW DROP 11GY85/016",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu9aga002tsgpvtjm7yb0n",
+      "orderReference": "66822",
+      "itemId": "cmmlu9and002wsgpvucw01atw",
+      "rawName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu9d6r002xsgpvezs7nk97",
+      "orderReference": "66823",
+      "itemId": "cmmlu9ddn002ysgpv00hg5hon",
+      "rawName": "WHITE WOODFILLA",
+      "currentProductId": "cmmlu8y9f002esgpv1pbpr0lv",
+      "currentProductName": "WHITE WOODFILLA",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmluchx1004ssgpv6u4xy57o",
+      "orderReference": "66812",
+      "itemId": "cmmluci44004tsgpvy1f1hpc9",
+      "rawName": "YELLOW RIPPLE ROLLER 225MM",
+      "currentProductId": "cmmlub1aj003nsgpvc4hs191s",
+      "currentProductName": "YELLOW RIPPLE ROLLER 225MM",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlucki8004usgpva91874fl",
+      "orderReference": "66813",
+      "itemId": "cmmluckpd004vsgpvlwq9unu8",
+      "rawName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentProductId": "cmmluauuu003isgpvdlp5hvko",
+      "currentProductName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu9i7r0032sgpv90xc6602",
+      "orderReference": "66825",
+      "itemId": "cmmlu9iep0033sgpvv4jsvi5r",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlu9l8u0034sgpvh5zy67p4",
+      "orderReference": "66826",
+      "itemId": "cmmlu9lgb0035sgpvpc2rddn1",
+      "rawName": "STEEL TROWEL",
+      "currentProductId": "cmmlu8zu7002gsgpvr9r6jvqh",
+      "currentProductName": "STEEL TROWEL",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlubfuk003xsgpv440f78nm",
+      "orderReference": "66836",
+      "itemId": "cmmlubg1w003ysgpv3sve9rnx",
+      "rawName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentProductId": "cmmluauuu003isgpvdlp5hvko",
+      "currentProductName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmluccku004msgpvs4eapcd5",
+      "orderReference": "66844",
+      "itemId": "cmmluccs7004nsgpv3holmcsi",
+      "rawName": "UROCHEM 525 - BLACK",
+      "currentProductId": "cmmltselw0009sgpv8h1rsbax",
+      "currentProductName": "UROCHEM 525 - BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmluccku004msgpvs4eapcd5",
+      "orderReference": "66844",
+      "itemId": "cmmluccs8004osgpv3dk78d8q",
+      "rawName": "UROCHEM 525 - GREY",
+      "currentProductId": "cmmluayi0003lsgpv6m41lt0m",
+      "currentProductName": "UROCHEM 525 - GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmluccku004msgpvs4eapcd5",
+      "orderReference": "66844",
+      "itemId": "cmmluccs8004psgpv1agz0utv",
+      "rawName": "UROCHEM 525 - WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlud0020057sgpv687s32aj",
+      "orderReference": "66849",
+      "itemId": "cmmlud0730058sgpvc5dag9zq",
+      "rawName": "UROCHEM 525 - GREY",
+      "currentProductId": "cmmluayi0003lsgpv6m41lt0m",
+      "currentProductName": "UROCHEM 525 - GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlud4420059sgpvvtzfpqhr",
+      "orderReference": "66850",
+      "itemId": "cmmlud4bc005asgpvshcnop5s",
+      "rawName": "TILE GROUT - DOVE GREY",
+      "currentProductId": "cmmlub42k003psgpv0hhksabq",
+      "currentProductName": "TILE GROUT - DOVE GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlud4420059sgpvvtzfpqhr",
+      "orderReference": "66850",
+      "itemId": "cmmlud4bd005bsgpvbmvgfc1y",
+      "rawName": "12HR PORCELAIN GLUE",
+      "currentProductId": "cmmlub5mq003qsgpvwvob9us8",
+      "currentProductName": "12HR PORCELAIN GLUE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmluhjj4005nsgpvg07hhc7l",
+      "orderReference": "66856",
+      "itemId": "cmmluhjq3005osgpvv218ws87",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmluhqxf005tsgpvqg8zc58h",
+      "orderReference": "66864",
+      "itemId": "cmmluhr4b005usgpvyr39rbhn",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlumtow0065sgpv0b7fgt0b",
+      "orderReference": "66862",
+      "itemId": "cmmlumtw00067sgpvz46k8agx",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlumtow0065sgpv0b7fgt0b",
+      "orderReference": "66862",
+      "itemId": "cmmlumtw00068sgpvox9sf3ap",
+      "rawName": "CEMENT",
+      "currentProductId": "cmmlumfs7005vsgpvn9rd919x",
+      "currentProductName": "CEMENT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmlumtow0065sgpv0b7fgt0b",
+      "orderReference": "66862",
+      "itemId": "cmmlumtw10069sgpvzmsuo4v6",
+      "rawName": "HAMMER SCUTCH COMBS",
+      "currentProductId": "cmmlumgz7005wsgpvq36j816t",
+      "currentProductName": "HAMMER SCUTCH COMBS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmm8rxf40002uoplmfntu7g9",
+      "orderReference": "66878",
+      "itemId": "cmmm8rxm40003uopldddhbbc6",
+      "rawName": "Plascon Skim Coats-Interior Off-White",
+      "currentProductId": "cmmltsd7j0008sgpvdkbv19cs",
+      "currentProductName": "Plascon Skim Coats-Interior Off-White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmm8s5xh000auoplr2lu4crb",
+      "orderReference": "66883",
+      "itemId": "cmmm8s648000buopl7ybsrakv",
+      "rawName": "UROCHEM 525 WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmm8s9bw000cuopl8n01k5be",
+      "orderReference": "66885",
+      "itemId": "cmmm8s9im000duoplqogdbsd0",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmm8s9bw000cuopl8n01k5be",
+      "orderReference": "66885",
+      "itemId": "cmmm8s9im000fuoplmx9atyck",
+      "rawName": "CEMENT",
+      "currentProductId": "cmmlumfs7005vsgpvn9rd919x",
+      "currentProductName": "CEMENT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmn23q1p000609l8i9i82519",
+      "orderReference": "66900",
+      "itemId": "cmmn23q29000709l8vyaprrzs",
+      "rawName": "LUX SILK - JUST PEACHY 20YY67/216",
+      "currentProductId": "cmmn23pmb000009l8tmo92ksn",
+      "currentProductName": "LUX SILK - JUST PEACHY 20YY67/216",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmn23q1p000609l8i9i82519",
+      "orderReference": "66900",
+      "itemId": "cmmn23q2a000809l8z1v2kkyb",
+      "rawName": "LUX SILK - CEDAR SHADOW 50YR36/263",
+      "currentProductId": "cmmn23pnd000109l810v84pre",
+      "currentProductName": "LUX SILK - CEDAR SHADOW 50YR36/263",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmn23q1p000609l8i9i82519",
+      "orderReference": "66900",
+      "itemId": "cmmn23q2a000909l8yafsgatj",
+      "rawName": "LUX SILK - MASSIVE MAHOGANY 21YY67/216",
+      "currentProductId": "cmmn23poe000209l8pvlpsdh9",
+      "currentProductName": "LUX SILK - MASSIVE MAHOGANY 21YY67/216",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmn23qfl000f09l8r1f31fih",
+      "orderReference": "66897",
+      "itemId": "cmmn23qfp000g09l8p97u7kxf",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmn23qm9000k09l8cr5n2r2g",
+      "orderReference": "66890",
+      "itemId": "cmmn23qmd000l09l876z7wkal",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmn23qp5000n09l83izi45e6",
+      "orderReference": "66892",
+      "itemId": "cmmn23qp8000o09l8rr5i1tsl",
+      "rawName": "DURA65 - GREENSIDE OFF WHITE S0502-R50B",
+      "currentProductId": "cmmn23psg000509l8r5p1nl2m",
+      "currentProductName": "DURA65 - GREENSIDE OFF WHITE S0502-R50B",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmnrn7ra000c09lbv0m0ze4i",
+      "orderReference": "66917",
+      "itemId": "cmmnrn7rg000e09lbs3jhx2yv",
+      "rawName": "GALVANIZZED IRON PRIMER",
+      "currentProductId": "cmmnrn754000209lbiepvs8z3",
+      "currentProductName": "GALVANIZZED IRON PRIMER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmnrn7uf000f09lbfutszt9m",
+      "orderReference": "66918",
+      "itemId": "cmmnrn7uk000h09lbyeg6ldku",
+      "rawName": "TRADE65 - SS0502-R50B",
+      "currentProductId": "cmmnrn75q000309lbv5fk4tfl",
+      "currentProductName": "TRADE65 - SS0502-R50B",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmnrn7wi000j09lbvhmrmjnq",
+      "orderReference": "66919",
+      "itemId": "cmmnrn7wl000k09lbj3org7pl",
+      "rawName": "1951 Sandpaper P80 50m",
+      "currentProductId": "cmmlvtmvz00bxsgpvdpmj5nb2",
+      "currentProductName": "1951 Sandpaper P80 50m",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmnxfvxx000xwcplrgck6rw8",
+      "orderReference": "66928",
+      "itemId": "cmmnxfw4v000ywcplnirynuik",
+      "rawName": "SMX35 - WHITE 600ML",
+      "currentProductId": "cmmnxfnam000swcpljsuxbumh",
+      "currentProductName": "SMX35 - WHITE 600ML",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm17e6000d6gplk3dk3org",
+      "orderReference": "66933",
+      "itemId": "cmmrm17l0000i6gpli3iabyqn",
+      "rawName": "WBS",
+      "currentProductId": "cmmrm0ups00016gplhfsbl3at",
+      "currentProductName": "WBS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm1wyg001h6gpl2c2fefoo",
+      "orderReference": "66947",
+      "itemId": "cmmrm1x51001i6gpl7q6g59nz",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm1wyg001h6gpl2c2fefoo",
+      "orderReference": "66947",
+      "itemId": "cmmrm1x51001j6gplu5dy5pwf",
+      "rawName": "CEMENT",
+      "currentProductId": "cmmlumfs7005vsgpvn9rd919x",
+      "currentProductName": "CEMENT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm23l8001o6gpl9vjhx7d9",
+      "orderReference": "66938",
+      "itemId": "cmmrm23ru001p6gplq0omfmjs",
+      "rawName": "BACKING CORD - 20MMPacks 2",
+      "currentProductId": "cmmltsftv000asgpvtvtr959v",
+      "currentProductName": "15MM BACKING CORD",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm25sr001q6gplesgnydvi",
+      "orderReference": "66940",
+      "itemId": "cmmrm25zd001r6gpl59h1xaun",
+      "rawName": "PLASTIC DROP SHEET",
+      "currentProductId": "cmmrm121e000a6gpl6tnzbw70",
+      "currentProductName": "PLASTIC DROP SHEET",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm2e4b00206gplbbe0g4fy",
+      "orderReference": "66936",
+      "itemId": "cmmrm2eay00226gplxz1dds9k",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm2e4b00206gplbbe0g4fy",
+      "orderReference": "66936",
+      "itemId": "cmmrm2eay00236gply665o8kd",
+      "rawName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentProductId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+      "currentProductName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmrm2ikl00296gplb07yvd6z",
+      "orderReference": "66934",
+      "itemId": "cmmrm2ir7002a6gpls4rh10qe",
+      "rawName": "SAFE081P - FFP2 PREMIUM FACE MASK WITH VALVE - 15/box Boxes 3",
+      "currentProductId": "cmmrm14d6000c6gpl0e3nw117",
+      "currentProductName": "SAFE081P - FFP2 PREMIUM FACE MASK WITH VALVE - 15/box Boxes 3",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxme9000j09i81fc0y3pt",
+      "orderReference": "67002",
+      "itemId": "cmmsxxmel000m09i82z9q9ddw",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxme9000j09i81fc0y3pt",
+      "orderReference": "67002",
+      "itemId": "cmmsxxmel000n09i8r6cy03ra",
+      "rawName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentProductId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+      "currentProductName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxme9000j09i81fc0y3pt",
+      "orderReference": "67002",
+      "itemId": "cmmsxxmel000o09i873o17ivl",
+      "rawName": "DURA100 - PEACH SANDTON GATE 0550-80YR/003",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxme9000j09i81fc0y3pt",
+      "orderReference": "67002",
+      "itemId": "cmmsxxmem000p09i8m0x5g8an",
+      "rawName": "DURA100 - BELLA BLUE SANDTON GATE BSR-230525-1",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxme9000j09i81fc0y3pt",
+      "orderReference": "67002",
+      "itemId": "cmmsxxmem000q09i8grwieoo3",
+      "rawName": "CURA100 - DARK BLUE SANDTON GATE BSR-230525-1",
+      "currentProductId": "cmmsxxlrw000109i8pz19xgi6",
+      "currentProductName": "CURA100 - DARK BLUE SANDTON GATE BSR-230525-1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxmg9000r09i8s1mptp0n",
+      "orderReference": "67001",
+      "itemId": "cmmsxxmgt000s09i8mzx7zdzm",
+      "rawName": "PERMAPLAST BLACK EBONY GS10132",
+      "currentProductId": "cmmlw6um200hhsgpvs2m12sos",
+      "currentProductName": "PERMAPLAST BLACK EBONY GS10132",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxmpx001i09i8x1xx8usg",
+      "orderReference": "66991",
+      "itemId": "cmmsxxmqa001n09i8b4ux754x",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxms5001o09i8jmbclamh",
+      "orderReference": "66989",
+      "itemId": "cmmsxxms8001p09i8ox40bv4r",
+      "rawName": "UROCHEM 525 WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxms5001o09i8jmbclamh",
+      "orderReference": "66989",
+      "itemId": "cmmsxxms8001q09i83me4l26e",
+      "rawName": "BACKING CORD 15MM",
+      "currentProductId": "cmmltsftv000asgpvtvtr959v",
+      "currentProductName": "15MM BACKING CORD",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxms5001o09i8jmbclamh",
+      "orderReference": "66989",
+      "itemId": "cmmsxxms8001r09i8uos61aiq",
+      "rawName": "BACKING CORD 12MM",
+      "currentProductId": "cmmsxxlva000309i87l7t6d3p",
+      "currentProductName": "BACKING CORD 12MM",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxmu7001u09i8ptgwxiog",
+      "orderReference": "66988",
+      "itemId": "cmmsxxmuc001w09i87eccxyy7",
+      "rawName": "ROOFGUARD - BASIC BLACK",
+      "currentProductId": "cmmltjjm50006scpvit3iouq1",
+      "currentProductName": "ROOFGUARD - BASIC BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxn14002409i8x48bj75b",
+      "orderReference": "66984",
+      "itemId": "cmmsxxn1d002c09i8b7jkfwsf",
+      "rawName": "TRADE65 - SNOWFIELD 00NN72/000",
+      "currentProductId": "cmmsxxlzk000909i8cuel3mgj",
+      "currentProductName": "TRADE65 - SNOWFIELD 00NN72/000",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxn38002j09i8mldcxi9h",
+      "orderReference": "66982",
+      "itemId": "cmmsxxn3a002k09i8olvy4f0j",
+      "rawName": "UROCHEM 525 - GREY",
+      "currentProductId": "cmmluayi0003lsgpv6m41lt0m",
+      "currentProductName": "UROCHEM 525 - GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxn38002j09i8mldcxi9h",
+      "orderReference": "66982",
+      "itemId": "cmmsxxn3a002l09i8v8y7k03u",
+      "rawName": "UROCHEM 525 - WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxn5c002o09i8oxg1mm1h",
+      "orderReference": "66980",
+      "itemId": "cmmsxxn5e002x09i817qtpa9b",
+      "rawName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GENEVA MORN GR-Y01",
+      "currentProductId": "cmmltjid90005scpvyesrugvl",
+      "currentProductName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmsxxnen003p09i88xq046hk",
+      "orderReference": "66968",
+      "itemId": "cmmsxxnep003r09i8ou7csydc",
+      "rawName": "PLASTER KEY",
+      "currentProductId": "cmmsxxm2m000e09i8wpzyrgfn",
+      "currentProductName": "PLASTER KEY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmule03g000909l23njd26ls",
+      "orderReference": "67021",
+      "itemId": "cmmule03j000a09l2fpa4qowp",
+      "rawName": "Plascon Skim Coats-Interior Off-White",
+      "currentProductId": "cmmltsd7j0008sgpvdkbv19cs",
+      "currentProductName": "Plascon Skim Coats-Interior Off-White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmule07e000f09l241udzy8k",
+      "orderReference": "67024",
+      "itemId": "cmmule07h000h09l288hdi11z",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmule0k5001109l2mhv7t08f",
+      "orderReference": "67031",
+      "itemId": "cmmule0k8001309l207od9w6q",
+      "rawName": "TP 0000545L Roadmarking Paint Yellow",
+      "currentProductId": "cmmkiuagq006wckpvmltsjj6v",
+      "currentProductName": "Dulux Trade Acrylic Roof Paint Red 5L",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gpzz004109ifi74qywxz",
+      "orderReference": "67047",
+      "itemId": "cmmx2gq01004209if3br4kngm",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gpzz004109ifi74qywxz",
+      "orderReference": "67047",
+      "itemId": "cmmx2gq01004509ifz4p7rjzh",
+      "rawName": "DURA100 - DEW DROP 11GY85/016",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gpzz004109ifi74qywxz",
+      "orderReference": "67047",
+      "itemId": "cmmx2gq01004609if71d2ushg",
+      "rawName": "ACRYLIC PVA - 81YR06/",
+      "currentProductId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+      "currentProductName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gpzz004109ifi74qywxz",
+      "orderReference": "67047",
+      "itemId": "cmmx2gq01004909if4usj9uvg",
+      "rawName": "DURA100 - GRANITE GREY 00NN37/000",
+      "currentProductId": "cmmlvpi0h009lsgpvzvwo9x80",
+      "currentProductName": "DURA100 - GRANITE GREY 00NN37/000",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gbl1000909iffd7gn9jw",
+      "orderReference": "67072",
+      "itemId": "cmmx2gbl4000a09iffy59e9yw",
+      "rawName": "ROOFGUARD - BLACK",
+      "currentProductId": "cmmltjjm50006scpvit3iouq1",
+      "currentProductName": "ROOFGUARD - BASIC BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gbs9000m09ifmipweoso",
+      "orderReference": "67068",
+      "itemId": "cmmx2gbsc000t09ifz8k2mkki",
+      "rawName": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+      "currentProductId": "cmmlw6w2y00hisgpvjazt8l3l",
+      "currentProductName": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gbt4000u09ifngt5ehfj",
+      "orderReference": "67067",
+      "itemId": "cmmx2gbt6000v09ifq6xuaf7k",
+      "rawName": "LUX SILK - FANCOURT 280-F5-01",
+      "currentProductId": "cmmluauuu003isgpvdlp5hvko",
+      "currentProductName": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gbuu001009iftj4hr9x3",
+      "orderReference": "67065",
+      "itemId": "cmmx2gbuw001309if3zmncgie",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gc3t001v09ifxxeqm8tp",
+      "orderReference": "67088",
+      "itemId": "cmmx2gc3w001x09ifsem2kuqq",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gc78002b09ifrp60bl9q",
+      "orderReference": "67085",
+      "itemId": "cmmx2gc7a002c09ifgaoy0aso",
+      "rawName": "HSWS25KG - Handyskim 25kg Interior",
+      "currentProductId": "cmmx2gbg1000609ifjgaf93dv",
+      "currentProductName": "HSWS25KG - Handyskim 25kg Interior",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gprd003f09ifhdwvfzif",
+      "orderReference": "67057",
+      "itemId": "cmmx2gprf003g09ifyiy9cwjf",
+      "rawName": "LUX SILK - DUSTED MOSS 3 - 1 SHADE LIGHTER",
+      "currentProductId": "cmmx2gpji002u09ifihyf5sdb",
+      "currentProductName": "LUX SILK - DUSTED MOSS 3 - 1 SHADE LIGHTER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gpuf003p09ifsavyu7kb",
+      "orderReference": "67053",
+      "itemId": "cmmx2gpuh003q09if6jbvzm2d",
+      "rawName": "DUST MASKS",
+      "currentProductId": "cmmx2gpk0002v09ifxpim1keg",
+      "currentProductName": "DUST MASKS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gpv5003r09ifyqryqbx4",
+      "orderReference": "67052",
+      "itemId": "cmmx2gpv8003s09ifgk0r1pgo",
+      "rawName": "TRADE65 - QUITE HIDEAWAY 81YY81/016",
+      "currentProductId": "cmmlw14at00fhsgpv12rjeqnl",
+      "currentProductName": "DULUX TRADE65 - QUITE HIDEAWAY 81YY81/016",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gby4001e09ifrt8qy3l4",
+      "orderReference": "67096",
+      "itemId": "cmmx2gby6001f09if964gns23",
+      "rawName": "WEATHERGUARD - ALLOY TOUCH 21BG45/002",
+      "currentProductId": "cmmx2gb74000309ifgwanhzd5",
+      "currentProductName": "WEATHERGUARD - ALLOY TOUCH 21BG45/002",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gc0o001l09if979t5m2j",
+      "orderReference": "67093",
+      "itemId": "cmmx2gc0q001m09ifou6n1ebl",
+      "rawName": "ACRYLIC PVA - BLACK RAL9004",
+      "currentProductId": "cmmkiu9v6006tckpvi9c46915",
+      "currentProductName": "Dulux Trade Super Acrylic PVA White 20L",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gc0o001l09if979t5m2j",
+      "orderReference": "67093",
+      "itemId": "cmmx2gc0r001n09ifuizvqgv2",
+      "rawName": "ACRYLIC PVA - LILY POLLEN 76YR27/556",
+      "currentProductId": "cmmx2gb9j000409ifyolvgwee",
+      "currentProductName": "ACRYLIC PVA - LILY POLLEN 76YR27/556",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmmx2gc1q001o09if5y33so1l",
+      "orderReference": "67092",
+      "itemId": "cmmx2gc1s001q09if89hrgftq",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbj73000409jm2fif2rv9",
+      "orderReference": "67102",
+      "itemId": "cmn2sbj7k000609jmb53baicz",
+      "rawName": "TRADE65 - SS0502-R50B",
+      "currentProductId": "cmmnrn75q000309lbv5fk4tfl",
+      "currentProductName": "TRADE65 - SS0502-R50B",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbk1y002309jmf73ee5jg",
+      "orderReference": "67098",
+      "itemId": "cmn2sbk24002409jmtnxl2xwf",
+      "rawName": "CEMCOTE SKIMMED - DARK GREY",
+      "currentProductId": "cmn2sbj1m000309jmq4fx0adh",
+      "currentProductName": "CEMCOTE SKIMMED - DARK GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbk44002709jmvve9dq7z",
+      "orderReference": "67105",
+      "itemId": "cmn2sbk47002b09jmo4ddeel3",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarak000a09juc8weljcy",
+      "orderReference": "67140",
+      "itemId": "cmn2saran000b09jukbxgo2xs",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarcl000c09juxf96whgo",
+      "orderReference": "67139",
+      "itemId": "cmn2sarcn000d09juoq3gekld",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarhx000i09juwqhsj2hg",
+      "orderReference": "67137",
+      "itemId": "cmn2saric000k09juzid21mnj",
+      "rawName": "1951 Sandpaper P80 50m",
+      "currentProductId": "cmmlvtmvz00bxsgpvdpmj5nb2",
+      "currentProductName": "1951 Sandpaper P80 50m",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarrh000y09ju8m1iu4yw",
+      "orderReference": "67133",
+      "itemId": "cmn2sarrj001009juu9y6i8zw",
+      "rawName": "ACRYLIC PVA - CHILTEN WHITE 40YY73/028",
+      "currentProductId": "cmn2saqwc000009ju3p6c53ai",
+      "currentProductName": "ACRYLIC PVA - CHILTEN WHITE 40YY73/028",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarrh000y09ju8m1iu4yw",
+      "orderReference": "67133",
+      "itemId": "cmn2sarrj001109juy6myzwus",
+      "rawName": "WEATHERGUARD - BRILLIANT WHITE",
+      "currentProductId": "cmn2saqx7000109ju1y9mfkyj",
+      "currentProductName": "WEATHERGUARD - BRILLIANT WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarsi001209ju1zfjofb0",
+      "orderReference": "67130",
+      "itemId": "cmn2sarsl001509jut23d20h1",
+      "rawName": "VERSUS PIGMENTED SEALER - AL-Y03 GREY ALUMINIUM",
+      "currentProductId": "cmn2saqy0000209jujyy7ave3",
+      "currentProductName": "VERSUS PIGMENTED SEALER - AL-Y03 GREY ALUMINIUM",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sartk001609julvjo8prg",
+      "orderReference": "67129",
+      "itemId": "cmn2sartn001909jukc1yxduu",
+      "rawName": "G 0000065L Super Universal Enamel Medium Yellow",
+      "currentProductId": "cmn2saqyu000309jutb6jnmlj",
+      "currentProductName": "G 0000065L Super Universal Enamel Medium Yellow",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2saruo001a09jukl018qbm",
+      "orderReference": "67128",
+      "itemId": "cmn2saruq001b09jupec0kb32",
+      "rawName": "UROCHEM 525 WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2saruo001a09jukl018qbm",
+      "orderReference": "67128",
+      "itemId": "cmn2saruq001c09ju8uofk718",
+      "rawName": "10MM BACKING CORDRoll 1",
+      "currentProductId": "cmmlvtbqq00bosgpvttdhwl9y",
+      "currentProductName": "10MM BACKING CORDPack 1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2saruo001a09jukl018qbm",
+      "orderReference": "67128",
+      "itemId": "cmn2saruq001d09jucsu33u3d",
+      "rawName": "12MM BACKING CORDRoll 1",
+      "currentProductId": "cmmlub2mw003osgpvv7c9hm98",
+      "currentProductName": "12mm BACKING CORDPacks 2",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sarwj001g09ju5q46q8ek",
+      "orderReference": "67126",
+      "itemId": "cmn2sarwl001i09jun7rgiyly",
+      "rawName": "TRADE65 - STUCCO GREY",
+      "currentProductId": "cmn2saqzl000409juxndw8h47",
+      "currentProductName": "TRADE65 - STUCCO GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sas2i002309juhwmp9rp0",
+      "orderReference": "67120",
+      "itemId": "cmn2sas2l002409ju27wq64fd",
+      "rawName": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+      "currentProductId": "cmmlw6w2y00hisgpvjazt8l3l",
+      "currentProductName": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjs3001e09jmba6kayw4",
+      "orderReference": "67113",
+      "itemId": "cmn2sbjs6001f09jmwroc5nq5",
+      "rawName": "TAP0010105L Polvin Super Acrylic Tintbase Pastel - APS",
+      "currentProductId": "cmmlvtlp400bwsgpvx3qgdkbs",
+      "currentProductName": "TAP0010105L Polvin Super Acrylic Tintbase Pastel - TENT E16-5 1 SHADE LIGHTER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjxn001o09jmpi44yvvv",
+      "orderReference": "67109",
+      "itemId": "cmn2sbjxr001q09jma0jk2cjd",
+      "rawName": "857 Masking Tape 18mm",
+      "currentProductId": "cmmlw110e00fgsgpvx54m2fer",
+      "currentProductName": "857 Masking Tape 18mm",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjzn001t09jm5ltqhm27",
+      "orderReference": "67108",
+      "itemId": "cmn2sbjzq001u09jmaqpww3ck",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjzn001t09jm5ltqhm27",
+      "orderReference": "67108",
+      "itemId": "cmn2sbjzq001x09jmkb3svta9",
+      "rawName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentProductId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+      "currentProductName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjzn001t09jm5ltqhm27",
+      "orderReference": "67108",
+      "itemId": "cmn2sbjzq001y09jmf7c6wwsj",
+      "rawName": "DURA100 - DARK BLUE SANDTON GATE BSR230525-1",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjkv001009jmbbqpwtp6",
+      "orderReference": "67146",
+      "itemId": "cmn2sbjky001109jms53m0818",
+      "rawName": "15MM BACKING CORDPack 1",
+      "currentProductId": "cmmlvtbqq00bosgpvttdhwl9y",
+      "currentProductName": "10MM BACKING CORDPack 1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2sbjkv001009jmbbqpwtp6",
+      "orderReference": "67146",
+      "itemId": "cmn2sbjky001209jmisnjkkdp",
+      "rawName": "12MM BACKING CORDPack 1",
+      "currentProductId": "cmmlvtbqq00bosgpvttdhwl9y",
+      "currentProductName": "10MM BACKING CORDPack 1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2txhl1000g09l8cj2m0f40",
+      "orderReference": "67158",
+      "itemId": "cmn2txhl4000j09l888d33fr9",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn2txhn7000p09l84iofia4d",
+      "orderReference": "67160",
+      "itemId": "cmn2txhna000q09l8fm5ozvul",
+      "rawName": "FLEXOTHANE 27 GREY",
+      "currentProductId": "cmn2thnl6000409l8qhdovse5",
+      "currentProductName": "FLEXOTHANE 27 GREY - 600ML",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn4f1wj0000009jistlsx7li",
+      "orderReference": "67188",
+      "itemId": "cmn4f1wj3000209jiq9o4avay",
+      "rawName": "GW003735 Plascoguard Gehopon 3000 WB Navy Light Grey",
+      "currentProductId": "cmmlvt7re00blsgpvjulao0ni",
+      "currentProductName": "GW 0037355L Dual Plascoguard Gehopon 3000 WB Navy Light Grey",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn4f1wj0000009jistlsx7li",
+      "orderReference": "67188",
+      "itemId": "cmn4f1wj3000309jiqkrbdp2f",
+      "rawName": "GW0000075L Dual Plascoguard Gehopon Sealer Green",
+      "currentProductId": "cmmlvt8xi00bmsgpv9zr5txy6",
+      "currentProductName": "GW0000075L Dual Plascoguard Gehopon Sealer Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn4f1wko000409ji5rjmb042",
+      "orderReference": "67187",
+      "itemId": "cmn4f1wl8000509ji2je0wbyf",
+      "rawName": "857 Masking Tape 18mm",
+      "currentProductId": "cmmlw110e00fgsgpvx54m2fer",
+      "currentProductName": "857 Masking Tape 18mm",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmn4f1wur000d09jikrjv3s2a",
+      "orderReference": "67185",
+      "itemId": "cmn4f1wut000e09jizp41idyp",
+      "rawName": "PLASTER MIX",
+      "currentProductId": "cmmltshg0000bsgpv0it111x4",
+      "currentProductName": "PLASTER MIX",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm1bfv001b09jvq67echuk",
+      "orderReference": "67168",
+      "itemId": "cmnfm1bg6001i09jv2d7p0eul",
+      "rawName": "EMS",
+      "currentProductId": "cmnfm1aix000409jvnin80vyu",
+      "currentProductName": "EMS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm1bnb001y09jvs3ernnot",
+      "orderReference": "67173",
+      "itemId": "cmnfm1bnd001z09jvwticu342",
+      "rawName": "HYPERDESMO HAA GREY",
+      "currentProductId": "cmnd8m4qu000209lbeiyuph7n",
+      "currentProductName": "HYPERDESMO HAA GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm1bnb001y09jvs3ernnot",
+      "orderReference": "67173",
+      "itemId": "cmnfm1bnd002009jvzvk8bkih",
+      "rawName": "HYPERDESMO ADYE - GREY RAL740",
+      "currentProductId": "cmnfm1akk000509jvw85uzx47",
+      "currentProductName": "HYPERDESMO ADYE - GREY RAL740",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fyt003b09jvnh7nvfzn",
+      "orderReference": "67178",
+      "itemId": "cmnfm2fyw003d09jvqbh1glfl",
+      "rawName": "LUXURIOUS SILK - CEDAR SHADOW 50YR36/263",
+      "currentProductId": "cmmn23pnd000109l810v84pre",
+      "currentProductName": "LUX SILK - CEDAR SHADOW 50YR36/263",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fyt003b09jvnh7nvfzn",
+      "orderReference": "67178",
+      "itemId": "cmnfm2fyw003e09jvskx61rp8",
+      "rawName": "LUXURIOUS SILK - JUST PEACHY 20YY67/216",
+      "currentProductId": "cmmn23pmb000009l8tmo92ksn",
+      "currentProductName": "LUX SILK - JUST PEACHY 20YY67/216",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmneh98rn001109k1e9g5osv3",
+      "orderReference": "67219",
+      "itemId": "cmneh98rr001209k1euj8resq",
+      "rawName": "HSWS25KG - Handyskim 25kg Interior",
+      "currentProductId": "cmmx2gbg1000609ifjgaf93dv",
+      "currentProductName": "HSWS25KG - Handyskim 25kg Interior",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk2u001s09lgv9bvvjpq",
+      "orderReference": "67206",
+      "itemId": "cmnehbk2x001t09lguzuxv9we",
+      "rawName": "TRADE65 - QUIET HIDEAWAY 81YY81/016",
+      "currentProductId": "cmmlw14at00fhsgpv12rjeqnl",
+      "currentProductName": "DULUX TRADE65 - QUITE HIDEAWAY 81YY81/016",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk69001z09lg0frtmtme",
+      "orderReference": "67223",
+      "itemId": "cmnehbk6c002009lg8qg6v67z",
+      "rawName": "DROP SHEET - 1MX10M",
+      "currentProductId": "cmnehbj67000d09lgxx4rwzrj",
+      "currentProductName": "DROP SHEET - 1MX10M",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk77002109lgqydjp8r2",
+      "orderReference": "67222",
+      "itemId": "cmnehbk7a002209lgguyuwg1v",
+      "rawName": "DROP SHEET - 1MX10M",
+      "currentProductId": "cmnehbj67000d09lgxx4rwzrj",
+      "currentProductName": "DROP SHEET - 1MX10M",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm1b7r000p09jvq4ezujg6",
+      "orderReference": "67198",
+      "itemId": "cmnfm1b7t000q09jvw1thb9uf",
+      "rawName": "ACETONE CLEANER",
+      "currentProductId": "cmnfm1afk000109jvqwmb3m9i",
+      "currentProductName": "ACETONE CLEANER",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm1bat000x09jvu0gxrkl9",
+      "orderReference": "67201",
+      "itemId": "cmnfm1bav000z09jv7t0lpdn6",
+      "rawName": "DURA100 WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm1bat000x09jvu0gxrkl9",
+      "orderReference": "67201",
+      "itemId": "cmnfm1bav001109jvxcgs2ijo",
+      "rawName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentProductId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+      "currentProductName": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fqt002m09jvj75toycw",
+      "orderReference": "67203",
+      "itemId": "cmnfm2fqw002n09jvu9azh98c",
+      "rawName": "STEEL WOOL",
+      "currentProductId": "cmnfm2f90002109jviqfnqbri",
+      "currentProductName": "STEEL WOOL",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fv1002z09jv5lokf9z2",
+      "orderReference": "67213",
+      "itemId": "cmnfm2fv3003009jv4omkt4as",
+      "rawName": "UROCHEM 525 - WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fv1002z09jv5lokf9z2",
+      "orderReference": "67213",
+      "itemId": "cmnfm2fv3003109jv8ujbyuaf",
+      "rawName": "UROCHEM 525 - BLACK",
+      "currentProductId": "cmmltselw0009sgpv8h1rsbax",
+      "currentProductName": "UROCHEM 525 - BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fv1002z09jv5lokf9z2",
+      "orderReference": "67213",
+      "itemId": "cmnfm2fv3003209jvm2p0ixw6",
+      "rawName": "UROCHEM 525 GREY",
+      "currentProductId": "cmmluayi0003lsgpv6m41lt0m",
+      "currentProductName": "UROCHEM 525 - GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fxn003709jv13cfg4t0",
+      "orderReference": "67208",
+      "itemId": "cmnfm2fxy003a09jv6w7a8qz4",
+      "rawName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - RAL9001 CREAM",
+      "currentProductId": "cmmltjid90005scpvyesrugvl",
+      "currentProductName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjqp000x09lgrn0szby1",
+      "orderReference": "67246",
+      "itemId": "cmnehbjqr000y09lgk5i62grx",
+      "rawName": "UROCHEM 5252 WHITE",
+      "currentProductId": "cmnehbiws000009lgh5j23i1v",
+      "currentProductName": "UROCHEM 5252 WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjsa000z09lgvzcrqddw",
+      "orderReference": "67256",
+      "itemId": "cmnehbjse001009lgbzg1qv94",
+      "rawName": "TRADE65 - SS0502-R50B",
+      "currentProductId": "cmmnrn75q000309lbv5fk4tfl",
+      "currentProductName": "TRADE65 - SS0502-R50B",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjsa000z09lgvzcrqddw",
+      "orderReference": "67256",
+      "itemId": "cmnehbjse001109lgohf7m0mm",
+      "rawName": "ROOFGUARD - BLACK",
+      "currentProductId": "cmmltjjm50006scpvit3iouq1",
+      "currentProductName": "ROOFGUARD - BASIC BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjvo001409lg38x6ur47",
+      "orderReference": "67243",
+      "itemId": "cmnehbjvq001509lggue7w03g",
+      "rawName": "RBP Primer - Flawless GS10309-9",
+      "currentProductId": "cmnehbiz5000209lga5lhk6oy",
+      "currentProductName": "RBP Primer - Flawless GS10309-9",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjvo001409lg38x6ur47",
+      "orderReference": "67243",
+      "itemId": "cmnehbjvq001609lgarmleedg",
+      "rawName": "Marmoran Caledonplast - Flawless GS10309-9",
+      "currentProductId": "cmnehbizr000309lgsnvu0utg",
+      "currentProductName": "Marmoran Caledonplast - Flawless GS10309-9",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjvo001409lg38x6ur47",
+      "orderReference": "67243",
+      "itemId": "cmnehbjvq001709lgbobua61d",
+      "rawName": "RBP Primer - Mumbai Pink - GS10309-6",
+      "currentProductId": "cmnehbj05000409lgkb0zelqd",
+      "currentProductName": "RBP Primer - Mumbai Pink - GS10309-6",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjvo001409lg38x6ur47",
+      "orderReference": "67243",
+      "itemId": "cmnehbjvq001809lgym46ggwq",
+      "rawName": "Marmoran Permasuede - Mumbai Pink - GS10309-6",
+      "currentProductId": "cmnehbj0j000509lgnbdfd7vr",
+      "currentProductName": "Marmoran Permasuede - Mumbai Pink - GS10309-6",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjvo001409lg38x6ur47",
+      "orderReference": "67243",
+      "itemId": "cmnehbjvq001909lg24gel9lx",
+      "rawName": "RBP Primer - Mumbai Pink - GS10309-5",
+      "currentProductId": "cmnehbj0w000609lgxu724cy7",
+      "currentProductName": "RBP Primer - Mumbai Pink - GS10309-5",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjvo001409lg38x6ur47",
+      "orderReference": "67243",
+      "itemId": "cmnehbjvq001a09lgkx9336qu",
+      "rawName": "Marmoran Caledonplast - Mumbai Pink - GS10309-5",
+      "currentProductId": "cmnehbj1a000709lgcld7g395",
+      "currentProductName": "Marmoran Caledonplast - Mumbai Pink - GS10309-5",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbjz5001g09lg6n6rbvz2",
+      "orderReference": "67260",
+      "itemId": "cmnehbjz8001k09lg714u0x9h",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk4m001u09lgceffjdhk",
+      "orderReference": "67242",
+      "itemId": "cmnehbk55001v09lgixzepw7o",
+      "rawName": "Penetrating Pigmented Primer - COLOUR: TP1210 – 141-1 KNIGHTS NIGHT",
+      "currentProductId": "cmnehbj36000909lgrgkgk0zo",
+      "currentProductName": "Penetrating Pigmented Primer - COLOUR: TP1210 – 141-1 KNIGHTS NIGHT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk4m001u09lgceffjdhk",
+      "orderReference": "67242",
+      "itemId": "cmnehbk55001w09lg7ehmj7ow",
+      "rawName": "TERRACO GRAVITEX EXCEL 1MM, COLOUR: TP1210 – 141-1 KNIGHTS NIGHT - 25KG",
+      "currentProductId": "cmnehbj3w000a09lg09qw0xxc",
+      "currentProductName": "TERRACO GRAVITEX EXCEL 1MM, COLOUR: TP1210 – 141-1 KNIGHTS NIGHT - 25KG",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk4m001u09lgceffjdhk",
+      "orderReference": "67242",
+      "itemId": "cmnehbk55001x09lgsi5etxt7",
+      "rawName": "Penetrating Pigmented Primer - COLOUR: TP1210 – 140-6 BRAVURA",
+      "currentProductId": "cmnehbj4i000b09lg7014guk4",
+      "currentProductName": "Penetrating Pigmented Primer - COLOUR: TP1210 – 140-6 BRAVURA",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk4m001u09lgceffjdhk",
+      "orderReference": "67242",
+      "itemId": "cmnehbk55001y09lgami7udh8",
+      "rawName": "TERRACO GRAVITEX EXCEL 1MM, COLOUR: TP1210 – 140-6 BRAVURA - 25KG",
+      "currentProductId": "cmnehbj56000c09lgf9555iyi",
+      "currentProductName": "TERRACO GRAVITEX EXCEL 1MM, COLOUR: TP1210 – 140-6 BRAVURA - 25KG",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbk9s002709lgh0xfflni",
+      "orderReference": "67267",
+      "itemId": "cmnehbk9v002909lgv8fqs7o8",
+      "rawName": "SPONGE MATRESS",
+      "currentProductId": "cmmlvtk5o00bvsgpv5yf744ye",
+      "currentProductName": "SPONGE MATRESS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbki3002c09lg63fgx36t",
+      "orderReference": "67270",
+      "itemId": "cmnehbki5002d09lgtq0oct4u",
+      "rawName": "PRE-MIX PLASTER SAND",
+      "currentProductId": "cmmuf9xei000009l7szght5q2",
+      "currentProductName": "Pre-Mix Plaster",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbki3002c09lg63fgx36t",
+      "orderReference": "67270",
+      "itemId": "cmnehbki5002e09lgyzb308xn",
+      "rawName": "CEMENT",
+      "currentProductId": "cmmlumfs7005vsgpvn9rd919x",
+      "currentProductName": "CEMENT",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbkn6002n09lg7q4n0a3v",
+      "orderReference": "67273",
+      "itemId": "cmnehbkn9002o09lga45wja5m",
+      "rawName": "6.4X900X2.700mm Gyproc rhino board",
+      "currentProductId": "cmnehbjb2000h09lgmvbms3zf",
+      "currentProductName": "6.4X900X2.700mm Gyproc rhino board",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbkn6002n09lg7q4n0a3v",
+      "orderReference": "67273",
+      "itemId": "cmnehbkn9002p09lgqjqfkulf",
+      "rawName": "25mm drywall screws 50PCSPack 1",
+      "currentProductId": "cmnehbjbj000i09lgtvwecoso",
+      "currentProductName": "25mm drywall screws 50PCSPack 1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbkn6002n09lg7q4n0a3v",
+      "orderReference": "67273",
+      "itemId": "cmnehbkn9002q09lgzrdpc95k",
+      "rawName": "RHINOLITE",
+      "currentProductId": "cmnehbjbx000j09lgvca7147k",
+      "currentProductName": "RHINOLITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbko2002r09lgps1rg28u",
+      "orderReference": "67268",
+      "itemId": "cmnehbko5002s09lgizweq5iu",
+      "rawName": "UROCHEM 525 GREY",
+      "currentProductId": "cmmluayi0003lsgpv6m41lt0m",
+      "currentProductName": "UROCHEM 525 - GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbkuz003909lgyrqumggi",
+      "orderReference": "67281",
+      "itemId": "cmnehbkv2003a09lgu7eu6v94",
+      "rawName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - Y4-C2-3 AFTERNOON SHOWER",
+      "currentProductId": "cmmltjid90005scpvyesrugvl",
+      "currentProductName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehbkw0003b09lggkkf02pd",
+      "orderReference": "67283",
+      "itemId": "cmnehbkw3003d09lgd2633c4j",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcpuj000909l7zaazx1u9",
+      "orderReference": "67293",
+      "itemId": "cmnehcpul000a09l714w4ctnl",
+      "rawName": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+      "currentProductId": "cmmlts7qk0003sgpvcf3go4bh",
+      "currentProductName": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcpxv000l09l7f2rokdts",
+      "orderReference": "67301",
+      "itemId": "cmnehcpxx000o09l7u90wik1r",
+      "rawName": "RAINSHIELD",
+      "currentProductId": "cmnehcpg9000009l7ggqbvckm",
+      "currentProductName": "RAINSHIELD",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcq2m000v09l7d70jlpcc",
+      "orderReference": "67304",
+      "itemId": "cmnehcq2o000w09l7b7epulwz",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcq4a001109l7ykqj1hm0",
+      "orderReference": "67307",
+      "itemId": "cmnehcq4c001209l7gkks2mji",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcq7y001409l7xq85vrbc",
+      "orderReference": "67308",
+      "itemId": "cmnehcq80001909l72meu153f",
+      "rawName": "KBM1 2.5L Kitchen and Bathroom White 2.",
+      "currentProductId": "cmmltsin3000csgpvvjv7irkh",
+      "currentProductName": "KBM1 2.5L Kitchen and Bathroom White 2.",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcqdk001e09l7tqplgp68",
+      "orderReference": "67295",
+      "itemId": "cmnehcqdn001f09l7r4ibgqh4",
+      "rawName": "HAM SUPA SOAKA ABSORBENT FLEECE - 10M",
+      "currentProductId": "cmnehcph9000109l7i4quzaga",
+      "currentProductName": "HAM SUPA SOAKA ABSORBENT FLEECE - 10M",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehd8dr003109l7zxdt53vr",
+      "orderReference": "67297",
+      "itemId": "cmnehd8dt003209l7bb5iwflt",
+      "rawName": "HAM SUPA SOAKA ABSORBENT FLEECE - 10M",
+      "currentProductId": "cmnehcph9000109l7i4quzaga",
+      "currentProductName": "HAM SUPA SOAKA ABSORBENT FLEECE - 10M",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnd8m5u4000k09lbl2lss4ud",
+      "orderReference": "67327",
+      "itemId": "cmnd8m5u9000l09lb5jr5l93l",
+      "rawName": "HYPERDESMO HAA GREY",
+      "currentProductId": "cmnd8m4qu000209lbeiyuph7n",
+      "currentProductName": "HYPERDESMO HAA GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnd8m5u4000k09lbl2lss4ud",
+      "orderReference": "67327",
+      "itemId": "cmnd8m5u9000m09lbb804w4lo",
+      "rawName": "GEOTEXTILE - 1X5METRERoll 1",
+      "currentProductId": "cmnd8m4s8000309lbfjznd6mp",
+      "currentProductName": "GEOTEXTILE - 1X5METRERoll 1",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnd8m6a4001109lbamf0yqb4",
+      "orderReference": "67338",
+      "itemId": "cmnd8m6a7001209lb71nb9iit",
+      "rawName": "Epoxy SB Floors and Walls Black",
+      "currentProductId": "cmnd8m4v6000609lby8ehsgnp",
+      "currentProductName": "Epoxy SB Floors and Walls Black",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnd8m6a4001109lbamf0yqb4",
+      "orderReference": "67338",
+      "itemId": "cmnd8m6a7001309lbjz4tlocs",
+      "rawName": "SA65 Thinners",
+      "currentProductId": "cmnd8m4wo000709lbstfzbmhx",
+      "currentProductName": "SA65 Thinners",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnd8m6c2001409lb1lu4q7z5",
+      "orderReference": "67321",
+      "itemId": "cmnd8m6c6001509lbdvjpa8lu",
+      "rawName": "857 Masking Tape 18mm",
+      "currentProductId": "cmmlw110e00fgsgpvx54m2fer",
+      "currentProductName": "857 Masking Tape 18mm",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcqeb001g09l7rpc8djed",
+      "orderReference": "67309",
+      "itemId": "cmnehcqed001h09l7xol333tz",
+      "rawName": "HANDYSKIM - INTERIOR 25KG",
+      "currentProductId": "cmmx2gbg1000609ifjgaf93dv",
+      "currentProductName": "HSWS25KG - Handyskim 25kg Interior",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehcqf3001i09l787l233r1",
+      "orderReference": "67310",
+      "itemId": "cmnehcqf5001j09l7pkskg71e",
+      "rawName": "DUST MASKS",
+      "currentProductId": "cmmx2gpk0002v09ifxpim1keg",
+      "currentProductName": "DUST MASKS",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehd86p002j09l7a2hh4a9v",
+      "orderReference": "67319",
+      "itemId": "cmnehd86r002k09l7bibioz61",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehd8aj002l09l7zvjt838a",
+      "orderReference": "67320",
+      "itemId": "cmnehd8am002n09l7chjq9vix",
+      "rawName": "DURA100 - WHITE",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehd8aj002l09l7zvjt838a",
+      "orderReference": "67320",
+      "itemId": "cmnehd8am002s09l76t68nrs3",
+      "rawName": "DURA100 - ZEPPELIN 30YY46/036",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehd8aj002l09l7zvjt838a",
+      "orderReference": "67320",
+      "itemId": "cmnehd8am002t09l782j88txx",
+      "rawName": "DURA100 - SNOWFIELD 00NN72/000",
+      "currentProductId": "cmmlu8u53002bsgpvtabe4yqm",
+      "currentProductName": "DURA100 - CABLE GREY 03BB17/015",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnehd8cu002y09l7j7jduo8w",
+      "orderReference": "67315",
+      "itemId": "cmnehd8cx002z09l7kn8vnncz",
+      "rawName": "ROOFGUARD - BASIC BLACK",
+      "currentProductId": "cmmltjjm50006scpvit3iouq1",
+      "currentProductName": "ROOFGUARD - BASIC BLACK",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2fpv002k09jvdvbzutz6",
+      "orderReference": "67362",
+      "itemId": "cmnfm2fpy002l09jvgy1s4345",
+      "rawName": "UROCHEM 525 - WHITE",
+      "currentProductId": "cmmluazpu003msgpv607vx7rl",
+      "currentProductName": "UROCHEM 525 - WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2g3i003r09jv8h85mcvr",
+      "orderReference": "67342",
+      "itemId": "cmnfm2g3k003s09jvd2jya0gz",
+      "rawName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - RAL9001 CREAM",
+      "currentProductId": "cmmltjid90005scpvyesrugvl",
+      "currentProductName": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2gas004j09jvkuumpgvz",
+      "orderReference": "67352",
+      "itemId": "cmnfm2gau004k09jvwxkog3bt",
+      "rawName": "TRADE65 - SS0502-R50B",
+      "currentProductId": "cmmnrn75q000309lbv5fk4tfl",
+      "currentProductName": "TRADE65 - SS0502-R50B",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm2gdi004t09jvggm0zx4s",
+      "orderReference": "67355",
+      "itemId": "cmnfm2gdk004x09jvj93b97s8",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnfm3m7r005209jvpid5o6t5",
+      "orderReference": "67385",
+      "itemId": "cmnfm3m7u005309jvf7z232v5",
+      "rawName": "TRADE65 - 30GY83/021 CHIFFON WHITE",
+      "currentProductId": "cmnfm3m6l005109jvrk57fbpp",
+      "currentProductName": "TRADE65 - 30GY83/021 CHIFFON WHITE",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnftuqsv000309l7ryc5bxyv",
+      "orderReference": "67414",
+      "itemId": "cmnftuqtc000909l7hfxywtx0",
+      "rawName": "TLS00100020L - PLASTER E16-",
+      "currentProductId": "cmnftuqdx000209l7ikqwmwir",
+      "currentProductName": "TLS00100020L - PLASTER E16-",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnftuqz1000g09l7ojpgqa8w",
+      "orderReference": "67411",
+      "itemId": "cmnftuqz4000m09l7wq7ykmzs",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnftur0f000n09l75i8x12x8",
+      "orderReference": "67410",
+      "itemId": "cmnftur0k000o09l70jpss3d0",
+      "rawName": "FLEXOTHANE 27 GREY",
+      "currentProductId": "cmn2thnl6000409l8qhdovse5",
+      "currentProductName": "FLEXOTHANE 27 GREY - 600ML",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnh1hf9z000709l5lr4fvprg",
+      "orderReference": "67415",
+      "itemId": "cmnh1hfb3000d09l5j738owj3",
+      "rawName": "TVW - SAMOVAR",
+      "currentProductId": "cmnh1hezi000009l5ic2te5v4",
+      "currentProductName": "TVW - SAMOVAR",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnh1hfe1000e09l50r5z76tf",
+      "orderReference": "67416",
+      "itemId": "cmnh1hfe4000f09l5f4cnwmye",
+      "rawName": "URP4 - Trade Pro Roof and More - Black",
+      "currentProductId": "cmmlu8wvf002dsgpvqjb3ywxi",
+      "currentProductName": "URP8 - Trade Pro Roof and More - Heritage Green",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnh1hfhu000g09l563repd2l",
+      "orderReference": "67417",
+      "itemId": "cmnh1hfib000h09l5b2r87w4r",
+      "rawName": "HANDYSKIM INTERIOR - 25KG",
+      "currentProductId": "cmmx2gbg1000609ifjgaf93dv",
+      "currentProductName": "HSWS25KG - Handyskim 25kg Interior",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnh1hfoh000l09l5mtjcvgxg",
+      "orderReference": "67419",
+      "itemId": "cmnh1hfol000p09l529ssra5h",
+      "rawName": "TRADE65 - 30YY56/060 FOSSIL GREY",
+      "currentProductId": "cmmsxxlye000609i8giktvqk0",
+      "currentProductName": "TRADE100 - 30YY56/060 FOSSIL GREY",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnhbtdd6000609l8x0ttns4b",
+      "orderReference": "67423",
+      "itemId": "cmnhbtddb000709l8zbfenvii",
+      "rawName": "PRE-MIX PLASTER SAND",
+      "currentProductId": "cmmuf9xei000009l7szght5q2",
+      "currentProductName": "Pre-Mix Plaster",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    },
+    {
+      "orderId": "cmnhbtdd6000609l8x0ttns4b",
+      "orderReference": "67423",
+      "itemId": "cmnhbtddb000809l8mcvael7f",
+      "rawName": "CEMENT 32.",
+      "currentProductId": "cmnhbtd4c000109l8fgcrctu4",
+      "currentProductName": "CEMENT 32.",
+      "currentPrice": "0.00",
+      "mode": "SHOP_ITEM",
+      "reason": "No safe relink; No safe existing shop item match found; No supplier/global price found for repair"
+    }
+  ],
+  "duplicateCleanup": {
+    "deactivated": [
+      {
+        "productId": "cmnehbjel000m09lg1fgbyiha",
+        "name": "50mm SPONGE ROLLER",
+        "description": "BuildSmart import (PO 67282)"
+      },
+      {
+        "productId": "cmmm8rvid0001uoplrpr9tgo5",
+        "name": "CEMENT",
+        "description": "BuildSmart import (PO 66885)"
+      },
+      {
+        "productId": "cmmrm0z0000066gpl367h2q9u",
+        "name": "CEMENT",
+        "description": "BuildSmart import (PO 66947)"
+      },
+      {
+        "productId": "cmnehbj8u000f09lgxhsutjlv",
+        "name": "CEMENT",
+        "description": "BuildSmart import (PO 67270)"
+      },
+      {
+        "productId": "cmnfm5t48005709jvefctmdhx",
+        "name": "CEMENT",
+        "description": "BuildSmart import (PO 67270)"
+      },
+      {
+        "productId": "cmnfm1ahq000309jvq87h7kyw",
+        "name": "DAMPSEAL",
+        "description": "BuildSmart import (PO 67167)"
+      },
+      {
+        "productId": "cmneh97zr000009k1vd0ybjdp",
+        "name": "DISH WASHING LIQUID",
+        "description": "BuildSmart import (PO 67245)"
+      },
+      {
+        "productId": "cmnehbj6v000e09lgtjha3o94",
+        "name": "DROP SHEET - 1MX10M",
+        "description": "BuildSmart import (PO 67222)"
+      },
+      {
+        "productId": "cmnfm69ss005a09jv9rpvvpgg",
+        "name": "DROP SHEET - 1MX10M",
+        "description": "BuildSmart import (PO 67223)"
+      },
+      {
+        "productId": "cmnfm69t9005b09jv10abg3g9",
+        "name": "DROP SHEET - 1MX10M",
+        "description": "BuildSmart import (PO 67222)"
+      },
+      {
+        "productId": "cmnehcphp000209l727lwv3nn",
+        "name": "DUST MASKS",
+        "description": "BuildSmart import (PO 67310)"
+      },
+      {
+        "productId": "cmnfm542m005609jvag1dhm54",
+        "name": "DUST MASKS",
+        "description": "BuildSmart import (PO 67310)"
+      },
+      {
+        "productId": "cmnehbje1000l09lgsqoa1n4n",
+        "name": "F0203 Brush EVERYMAN 25mm",
+        "description": "BuildSmart import (PO 67282)"
+      },
+      {
+        "productId": "cmnfm1agg000209jvu6uo231p",
+        "name": "F0205 Brush EVERYMAN 50mm",
+        "description": "BuildSmart import (PO 67165)"
+      },
+      {
+        "productId": "cmnon0mxw000c48pv0juicj0s",
+        "name": "Matt",
+        "description": "Canonical family seeded from multiple Prominent Matt variants"
+      },
+      {
+        "productId": "cmnfm5t87005909jvi6u41uzj",
+        "name": "RAINSHIELD",
+        "description": "BuildSmart import (PO 67301)"
+      },
+      {
+        "productId": "cmnfm5t5w005809jv8vidoy3y",
+        "name": "RHINOLITE",
+        "description": "BuildSmart import (PO 67273)"
+      },
+      {
+        "productId": "cmmlvmsln0078sgpv6s952t5v",
+        "name": "S/B PEARLGLO - DARK SEA GREY",
+        "description": "BuildSmart import (PO 66641)"
+      },
+      {
+        "productId": "cmmsxxlth000209i863bhfsvm",
+        "name": "TRADE100 - 00NN20- 000 NIGHT JEWEL 3",
+        "description": "BuildSmart import (PO 66999)"
+      },
+      {
+        "productId": "cmmlvmp6x0076sgpvp3ooffxq",
+        "name": "TRADE100 - 00NN31/000 GREY STEEL",
+        "description": "BuildSmart import (PO 66641)"
+      },
+      {
+        "productId": "cmnfm2fii002309jvoin16521",
+        "name": "TRADE100 - 30GG61/010 SILVER QUILL",
+        "description": "BuildSmart import (PO 67215)"
+      },
+      {
+        "productId": "cmmlvth8000btsgpvgyew4j8b",
+        "name": "TRADE100 - 30YY78/018 WINTER BIRD",
+        "description": "BuildSmart import (PO 66674)"
+      },
+      {
+        "productId": "cmmlzqv0600kesgpvp0xg3p4i",
+        "name": "TRADE100 - 44YY75/033 CITY LIFE",
+        "description": "BuildSmart import (PO 66875)"
+      },
+      {
+        "productId": "cmmlvt5z100bksgpvwwlw7dpx",
+        "name": "TRADE100 - 50YY836/029 NEUTRAL WHITE",
+        "description": "BuildSmart import (PO 66708)"
+      },
+      {
+        "productId": "cmmsxxly0000509i8hbrroj13",
+        "name": "TRADE100 - 90YY63/",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmlw1a9t00fjsgpvzcax644l",
+        "name": "TRADE100 - ANTIQUE STARLING 30GY56/017",
+        "description": "BuildSmart import (PO 66746)"
+      },
+      {
+        "productId": "cmnehbiya000109lg6w19zkz9",
+        "name": "TRADE100 - ANTIQUE STERLING 30GY56/107",
+        "description": "BuildSmart import (PO 67256)"
+      },
+      {
+        "productId": "cmnfm1abt000009jv8uruxwsy",
+        "name": "TRADE100 - AWAKENING FEEL 82YY67/046",
+        "description": "BuildSmart import (PO 67192)"
+      },
+      {
+        "productId": "cmmn23pp1000309l87rroga5w",
+        "name": "TRADE100 - BLACK 00NN05/000",
+        "description": "BuildSmart import (PO 66900)"
+      },
+      {
+        "productId": "cmmluax9s003ksgpv8esska48",
+        "name": "TRADE100 - BSC081025-4 PELI WHITE",
+        "description": "BuildSmart import (PO 66842)"
+      },
+      {
+        "productId": "cmnh1hf2n000209l5lbdek8pf",
+        "name": "TRADE100 - BUTTER MINT 66YY83/272",
+        "description": "BuildSmart import (PO 67420)"
+      },
+      {
+        "productId": "cmmrm0xv700056gpl249co83h",
+        "name": "TRADE100 - CITY FOG GR-N01 SPESHAL REF 61164",
+        "description": "BuildSmart import (PO 66948)"
+      },
+      {
+        "productId": "cmmsxxm0d000b09i857pi5d5k",
+        "name": "TRADE100 - EGYPTIAN COTTON 40YY65/061",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmsxxlys000709i8pwcmw6x0",
+        "name": "TRADE100 - FORGED METAL 26BB10/008",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmlvn0q3007esgpvd54zgy0d",
+        "name": "TRADE100 - FROST GREY 30GG52/011",
+        "description": "BuildSmart import (PO 66620)"
+      },
+      {
+        "productId": "cmnh1hf3e000409l5hlcly4ts",
+        "name": "TRADE100 - GREY FOREST 12GY10/087",
+        "description": "BuildSmart import (PO 67420)"
+      },
+      {
+        "productId": "cmmlvmr8v0077sgpv4zufmsn6",
+        "name": "TRADE100 - MONEY KIOSK PURPLE",
+        "description": "BuildSmart import (PO 66641)"
+      },
+      {
+        "productId": "cmmnrn78m000609lbhadggd65",
+        "name": "TRADE100 - MOON GREY",
+        "description": "BuildSmart import (PO 66926)"
+      },
+      {
+        "productId": "cmmx2gb4x000209ifpb8hqt01",
+        "name": "TRADE100 - NOTORIOUS PURPLE 77BB07/344",
+        "description": "BuildSmart import (PO 67097)"
+      },
+      {
+        "productId": "cmnh1hf3v000509l5y9yhgly2",
+        "name": "TRADE100 - RASPBERRY WHITE",
+        "description": "BuildSmart import (PO 67420)"
+      },
+      {
+        "productId": "cmmsxxlzz000a09i82s8m7tyr",
+        "name": "TRADE100 - SILVER BUCKLE 28GG22/002",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmsxxlz7000809i886yjnc8l",
+        "name": "TRADE100 - SNOWFIELD 00NN72/000",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmnh1hf2a000109l54fld70uh",
+        "name": "TRADE100 - SOFT CLOUD 90BG72/088",
+        "description": "BuildSmart import (PO 67420)"
+      },
+      {
+        "productId": "cmnfm2fji002509jvqhzyh12d",
+        "name": "TRADE100 - SONG PORCELAIN 00NN83/000",
+        "description": "BuildSmart import (PO 67172)"
+      },
+      {
+        "productId": "cmmlvpf9y009jsgpv6oqpyvql",
+        "name": "TRADE100 - SPHERIC WHITE 16GY15/037",
+        "description": "BuildSmart import (PO 66657)"
+      },
+      {
+        "productId": "cmmrm0wq000046gplsdok3xl7",
+        "name": "TRADE100 - SULPHUR SPRING SPECIAL (LITEGLO YELLOW)",
+        "description": "BuildSmart import (PO 66955)"
+      },
+      {
+        "productId": "cmnfm2fj4002409jvjo4tacl2",
+        "name": "TRADE100 - TERRACOTTA POT 26YR18/404",
+        "description": "BuildSmart import (PO 67172)"
+      },
+      {
+        "productId": "cmmlw6xbr00hjsgpvvp356a5j",
+        "name": "TRADE100 - TRAFFIC BLACK 9017",
+        "description": "BuildSmart import (PO 66788)"
+      },
+      {
+        "productId": "cmnehbjcw000k09lg8axuu7nx",
+        "name": "TRADE100 - UNIVERSAL 2 SHADES DARKER",
+        "description": "BuildSmart import (PO 67277)"
+      },
+      {
+        "productId": "cmnh1hf31000309l5y7q65uj4",
+        "name": "TRADE100 - WOODLAND MYSTERY 90YY52/138",
+        "description": "BuildSmart import (PO 67420)"
+      },
+      {
+        "productId": "cmmlvtd3n00bpsgpvtaijrdwe",
+        "name": "UROCHEM 525 - BLACKBoxes 5",
+        "description": "BuildSmart import (PO 66724)"
+      },
+      {
+        "productId": "cmmluaw2j003jsgpvnnm22q3o",
+        "name": "VLW",
+        "description": "BuildSmart import (PO 66841)"
+      },
+      {
+        "productId": "cmnd8m4l1000009lb53ymlq10",
+        "name": "VLW 000002 Velvaglo Non-Drip Waterbased Black",
+        "description": "BuildSmart import (PO 67325)"
+      },
+      {
+        "productId": "cmmsxxm16000d09i8h6nerdjb",
+        "name": "W/B PEARLGLO - 49GG52/001 SILK STONE",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmlvpgh1009ksgpvsjaphvg8",
+        "name": "W/B PEARLGLO - DEEP LEAD 81YR06/006",
+        "description": "BuildSmart import (PO 66660)"
+      },
+      {
+        "productId": "cmnh1hf48000609l5t3fiy8gg",
+        "name": "W/B PEARLGLO - GORGEOUS OAK 09YY08/048",
+        "description": "BuildSmart import (PO 67420)"
+      },
+      {
+        "productId": "cmmrm137y000b6gpl4431xytc",
+        "name": "W/B PEARLGLO - GREY FLOW 00BB06/017",
+        "description": "BuildSmart import (PO 66936)"
+      },
+      {
+        "productId": "cmnehbj9l000g09lglw0f05x9",
+        "name": "W/B PEARLGLO - KING OF KINGS 5S1-8",
+        "description": "BuildSmart import (PO 67272)"
+      },
+      {
+        "productId": "cmmlu8vou002csgpv91u4qgeb",
+        "name": "W/B PEARLGLO - NOBLE GREY 30BB10/019",
+        "description": "BuildSmart import (PO 66820)"
+      },
+      {
+        "productId": "cmmsxxm0s000c09i8ybxho9uy",
+        "name": "W/B PEARLGLO - SILVER BUCKLE 28GG22/002",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmnrn74e000109lb4bjupqxd",
+        "name": "W/B PEARLGLO - SILVER GREY RAL9022",
+        "description": "BuildSmart import (PO 66917)"
+      },
+      {
+        "productId": "cmmnrn763000409lbkrgfkx9t",
+        "name": "W/B PEARLGLO - THE PLAZA 50GY72/012",
+        "description": "BuildSmart import (PO 66918)"
+      }
+    ],
+    "stillUsed": [
+      {
+        "productId": "cmmluat6t003gsgpv9uqo7hca",
+        "name": "1010022251 Polycell Polyfilla Interior 12KG Pack 1",
+        "description": "BuildSmart import (PO 66834)"
+      },
+      {
+        "productId": "cmmlvmz6h007dsgpvspran1u5",
+        "name": "1019032251 Polycell Polyfilla Exterior 12KG Pack 2",
+        "description": "BuildSmart import (PO 66643)"
+      },
+      {
+        "productId": "cmmlvtbqq00bosgpvttdhwl9y",
+        "name": "10MM BACKING CORDPack 1",
+        "description": "BuildSmart import (PO 66712)"
+      },
+      {
+        "productId": "cmmlub5mq003qsgpvwvob9us8",
+        "name": "12HR PORCELAIN GLUE",
+        "description": "BuildSmart import (PO 66850)"
+      },
+      {
+        "productId": "cmmlub2mw003osgpvv7c9hm98",
+        "name": "12mm BACKING CORDPacks 2",
+        "description": "BuildSmart import (PO 66670)"
+      },
+      {
+        "productId": "cmmltsftv000asgpvtvtr959v",
+        "name": "15MM BACKING CORD",
+        "description": "BuildSmart import (PO 66799)"
+      },
+      {
+        "productId": "cmmlvtmvz00bxsgpvdpmj5nb2",
+        "name": "1951 Sandpaper P80 50m",
+        "description": "BuildSmart import (PO 66693)"
+      },
+      {
+        "productId": "cmmlvtirq00busgpvu81hc4w4",
+        "name": "230MM CUTTING DISC - CONCRETE",
+        "description": "BuildSmart import (PO 66675)"
+      },
+      {
+        "productId": "cmnehbjbj000i09lgtvwecoso",
+        "name": "25mm drywall screws 50PCSPack 1",
+        "description": "BuildSmart import (PO 67273)"
+      },
+      {
+        "productId": "cmmlvtak600bnsgpvlps6m4il",
+        "name": "292 Acrylic Silicone - WHITE",
+        "description": "BuildSmart import (PO 66715)"
+      },
+      {
+        "productId": "cmnehbjb2000h09lgmvbms3zf",
+        "name": "6.4X900X2.700mm Gyproc rhino board",
+        "description": "BuildSmart import (PO 67273)"
+      },
+      {
+        "productId": "cmmlw110e00fgsgpvx54m2fer",
+        "name": "857 Masking Tape 18mm",
+        "description": "BuildSmart import (PO 66735)"
+      },
+      {
+        "productId": "cmnfm1afk000109jvqwmb3m9i",
+        "name": "ACETONE CLEANER",
+        "description": "BuildSmart import (PO 67198)"
+      },
+      {
+        "productId": "cmmlvmo150075sgpvaoxcidmh",
+        "name": "ACRYLIC PVA - 00YT15/510 RED STALLION",
+        "description": "BuildSmart import (PO 66641)"
+      },
+      {
+        "productId": "cmn2saqwc000009ju3p6c53ai",
+        "name": "ACRYLIC PVA - CHILTEN WHITE 40YY73/028",
+        "description": "BuildSmart import (PO 67133)"
+      },
+      {
+        "productId": "cmmlw1fyt00fmsgpvz5ktrf7s",
+        "name": "ACRYLIC PVA - DEEP LEAD 81YR06/003",
+        "description": "BuildSmart import (PO 66734)"
+      },
+      {
+        "productId": "cmmx2gb9j000409ifyolvgwee",
+        "name": "ACRYLIC PVA - LILY POLLEN 76YR27/556",
+        "description": "BuildSmart import (PO 67093)"
+      },
+      {
+        "productId": "cmmlvt1ry00bhsgpvwlbpgu6c",
+        "name": "ACRYLIC PVA - Y4-C2-3 AFTERNOON SHOWER",
+        "description": "BuildSmart import (PO 66703)"
+      },
+      {
+        "productId": "cmmsxxlva000309i87l7t6d3p",
+        "name": "BACKING CORD 12MM",
+        "description": "BuildSmart import (PO 66989)"
+      },
+      {
+        "productId": "cmmsxxlxd000409i8l81v1m4d",
+        "name": "BERGER NUKOTE WHITE",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmn2sbj1m000309jmq4fx0adh",
+        "name": "CEMCOTE SKIMMED - DARK GREY",
+        "description": "BuildSmart import (PO 67098)"
+      },
+      {
+        "productId": "cmmlumfs7005vsgpvn9rd919x",
+        "name": "CEMENT",
+        "description": "BuildSmart import (PO 66862)"
+      },
+      {
+        "productId": "cmnhbtd4c000109l8fgcrctu4",
+        "name": "CEMENT 32.",
+        "description": "BuildSmart import (PO 67423)"
+      },
+      {
+        "productId": "cmmsxxlrw000109i8pz19xgi6",
+        "name": "CURA100 - DARK BLUE SANDTON GATE BSR-230525-1",
+        "description": "BuildSmart import (PO 67002)"
+      },
+      {
+        "productId": "cmmlvt4ss00bjsgpv6smo2shn",
+        "name": "Coprox Masonry Waterproofing",
+        "description": "BuildSmart import (PO 66707)"
+      },
+      {
+        "productId": "cmnehbj67000d09lgxx4rwzrj",
+        "name": "DROP SHEET - 1MX10M",
+        "description": "BuildSmart import (PO 67223)"
+      },
+      {
+        "productId": "cmmluauuu003isgpvdlp5hvko",
+        "name": "DULUX LUXURIOUS SILK - FANCOURT 280-F5-01",
+        "description": "BuildSmart import (PO 66836)"
+      },
+      {
+        "productId": "cmmlw6rj300hfsgpvlzi42193",
+        "name": "DULUX LUXURIOUS SILK - SMOKEY GLASS 50YR22/052",
+        "description": "BuildSmart import (PO 66765)"
+      },
+      {
+        "productId": "cmmlvmml50074sgpv7fcsfpww",
+        "name": "DULUX SKIM COAT",
+        "description": "BuildSmart import (PO 66633)"
+      },
+      {
+        "productId": "cmmlw14at00fhsgpv12rjeqnl",
+        "name": "DULUX TRADE65 - QUITE HIDEAWAY 81YY81/016",
+        "description": "BuildSmart import (PO 66737)"
+      },
+      {
+        "productId": "cmmlu8u53002bsgpvtabe4yqm",
+        "name": "DURA100 - CABLE GREY 03BB17/015",
+        "description": "BuildSmart import (PO 66820)"
+      },
+      {
+        "productId": "cmmlvpi0h009lsgpvzvwo9x80",
+        "name": "DURA100 - GRANITE GREY 00NN37/000",
+        "description": "BuildSmart import (PO 66660)"
+      },
+      {
+        "productId": "cmmn23psg000509l8r5p1nl2m",
+        "name": "DURA65 - GREENSIDE OFF WHITE S0502-R50B",
+        "description": "BuildSmart import (PO 66892)"
+      },
+      {
+        "productId": "cmmx2gpk0002v09ifxpim1keg",
+        "name": "DUST MASKS",
+        "description": "BuildSmart import (PO 67053)"
+      },
+      {
+        "productId": "cmmlvmy05007csgpvfkldaicn",
+        "name": "ELECTRIC BUCKET",
+        "description": "BuildSmart import (PO 66642)"
+      },
+      {
+        "productId": "cmmlvmtyr0079sgpv4dwa1agl",
+        "name": "ELECTRIC KETTLE",
+        "description": "BuildSmart import (PO 66642)"
+      },
+      {
+        "productId": "cmnfm1aix000409jvnin80vyu",
+        "name": "EMS",
+        "description": "BuildSmart import (PO 67168)"
+      },
+      {
+        "productId": "cmmlvmwhj007bsgpvu3rkiicw",
+        "name": "EXTENSION CABLE - 20M",
+        "description": "BuildSmart import (PO 66642)"
+      },
+      {
+        "productId": "cmnd8m4v6000609lby8ehsgnp",
+        "name": "Epoxy SB Floors and Walls Black",
+        "description": "BuildSmart import (PO 67338)"
+      },
+      {
+        "productId": "cmn2saqyu000309jutb6jnmlj",
+        "name": "G 0000065L Super Universal Enamel Medium Yellow",
+        "description": "BuildSmart import (PO 67129)"
+      },
+      {
+        "productId": "cmmnrn754000209lbiepvs8z3",
+        "name": "GALVANIZZED IRON PRIMER",
+        "description": "BuildSmart import (PO 66917)"
+      },
+      {
+        "productId": "cmnd8m4s8000309lbfjznd6mp",
+        "name": "GEOTEXTILE - 1X5METRERoll 1",
+        "description": "BuildSmart import (PO 67327)"
+      },
+      {
+        "productId": "cmmlw6w2y00hisgpvjazt8l3l",
+        "name": "GIC0000012 x 5L Metalcare Galvanised Iron Cleaner",
+        "description": "BuildSmart import (PO 66783)"
+      },
+      {
+        "productId": "cmmlts6320001sgpvb4cnyocb",
+        "name": "GLS - GOLD SHEEN STORM BIRD 20YY11/017",
+        "description": "BuildSmart import (PO 66807)"
+      },
+      {
+        "productId": "cmmlvt7re00blsgpvjulao0ni",
+        "name": "GW 0037355L Dual Plascoguard Gehopon 3000 WB Navy Light Grey",
+        "description": "BuildSmart import (PO 66709)"
+      },
+      {
+        "productId": "cmmlvt8xi00bmsgpv9zr5txy6",
+        "name": "GW0000075L Dual Plascoguard Gehopon Sealer Green",
+        "description": "BuildSmart import (PO 66709)"
+      },
+      {
+        "productId": "cmnehcph9000109l7i4quzaga",
+        "name": "HAM SUPA SOAKA ABSORBENT FLEECE - 10M",
+        "description": "BuildSmart import (PO 67295)"
+      },
+      {
+        "productId": "cmmlumgz7005wsgpvq36j816t",
+        "name": "HAMMER SCUTCH COMBS",
+        "description": "BuildSmart import (PO 66862)"
+      },
+      {
+        "productId": "cmmltsbsl0007sgpv623i5u03",
+        "name": "HARNESSDL - SAFETY HARNESS DOUBLE LANYARD and SCAFFOLD HOOKS",
+        "description": "BuildSmart import (PO 66817)"
+      },
+      {
+        "productId": "cmmx2gbg1000609ifjgaf93dv",
+        "name": "HSWS25KG - Handyskim 25kg Interior",
+        "description": "BuildSmart import (PO 67085)"
+      },
+      {
+        "productId": "cmnfm1akk000509jvw85uzx47",
+        "name": "HYPERDESMO ADYE - GREY RAL740",
+        "description": "BuildSmart import (PO 67173)"
+      },
+      {
+        "productId": "cmnd8m4qu000209lbeiyuph7n",
+        "name": "HYPERDESMO HAA GREY",
+        "description": "BuildSmart import (PO 67327)"
+      },
+      {
+        "productId": "cmmltsin3000csgpvvjv7irkh",
+        "name": "KBM1 2.5L Kitchen and Bathroom White 2.",
+        "description": "BuildSmart import (PO 66805)"
+      },
+      {
+        "productId": "cmmn23pnd000109l810v84pre",
+        "name": "LUX SILK - CEDAR SHADOW 50YR36/263",
+        "description": "BuildSmart import (PO 66900)"
+      },
+      {
+        "productId": "cmmx2gpji002u09ifihyf5sdb",
+        "name": "LUX SILK - DUSTED MOSS 3 - 1 SHADE LIGHTER",
+        "description": "BuildSmart import (PO 67057)"
+      },
+      {
+        "productId": "cmmn23pmb000009l8tmo92ksn",
+        "name": "LUX SILK - JUST PEACHY 20YY67/216",
+        "description": "BuildSmart import (PO 66900)"
+      },
+      {
+        "productId": "cmmn23poe000209l8pvlpsdh9",
+        "name": "LUX SILK - MASSIVE MAHOGANY 21YY67/216",
+        "description": "BuildSmart import (PO 66900)"
+      },
+      {
+        "productId": "cmnehbizr000309lgsnvu0utg",
+        "name": "Marmoran Caledonplast - Flawless GS10309-9",
+        "description": "BuildSmart import (PO 67243)"
+      },
+      {
+        "productId": "cmnehbj1a000709lgcld7g395",
+        "name": "Marmoran Caledonplast - Mumbai Pink - GS10309-5",
+        "description": "BuildSmart import (PO 67243)"
+      },
+      {
+        "productId": "cmmlvtg0y00bssgpvks7yxg2w",
+        "name": "Marmoran Permaplast - Dark Grey GS02186-2",
+        "description": "BuildSmart import (PO 66545)"
+      },
+      {
+        "productId": "cmnehbj0j000509lgnbdfd7vr",
+        "name": "Marmoran Permasuede - Mumbai Pink - GS10309-6",
+        "description": "BuildSmart import (PO 67243)"
+      },
+      {
+        "productId": "cmmlw6um200hhsgpvs2m12sos",
+        "name": "PERMAPLAST BLACK EBONY GS10132",
+        "description": "BuildSmart import (PO 66771)"
+      },
+      {
+        "productId": "cmmsxxm2m000e09i8wpzyrgfn",
+        "name": "PLASTER KEY",
+        "description": "BuildSmart import (PO 66968)"
+      },
+      {
+        "productId": "cmmltshg0000bsgpv0it111x4",
+        "name": "PLASTER MIX",
+        "description": "BuildSmart import (PO 66804)"
+      },
+      {
+        "productId": "cmmlvszoz00bgsgpv4libfzdc",
+        "name": "PLASTER MIXBag 2",
+        "description": "BuildSmart import (PO 66697)"
+      },
+      {
+        "productId": "cmmrm121e000a6gpl6tnzbw70",
+        "name": "PLASTIC DROP SHEET",
+        "description": "BuildSmart import (PO 66940)"
+      },
+      {
+        "productId": "cmmlts7qk0003sgpvcf3go4bh",
+        "name": "PTX 00140020L Prof. Marroca Rippled Low Sheen White",
+        "description": "BuildSmart import (PO 66811)"
+      },
+      {
+        "productId": "cmnehbj4i000b09lg7014guk4",
+        "name": "Penetrating Pigmented Primer - COLOUR: TP1210 – 140-6 BRAVURA",
+        "description": "BuildSmart import (PO 67242)"
+      },
+      {
+        "productId": "cmnehbj36000909lgrgkgk0zo",
+        "name": "Penetrating Pigmented Primer - COLOUR: TP1210 – 141-1 KNIGHTS NIGHT",
+        "description": "BuildSmart import (PO 67242)"
+      },
+      {
+        "productId": "cmmltsd7j0008sgpvdkbv19cs",
+        "name": "Plascon Skim Coats-Interior Off-White",
+        "description": "BuildSmart import (PO 66818)"
+      },
+      {
+        "productId": "cmnehcpg9000009l7ggqbvckm",
+        "name": "RAINSHIELD",
+        "description": "BuildSmart import (PO 67301)"
+      },
+      {
+        "productId": "cmmlw6td400hgsgpvswzi92b4",
+        "name": "RBP ACRYLIC PRIMER BLACK EBONY GS10132",
+        "description": "BuildSmart import (PO 66771)"
+      },
+      {
+        "productId": "cmmlvteuu00brsgpvs9ni4krq",
+        "name": "RBP Primer - Dark Grey GS02186-2",
+        "description": "BuildSmart import (PO 66545)"
+      },
+      {
+        "productId": "cmnehbiz5000209lga5lhk6oy",
+        "name": "RBP Primer - Flawless GS10309-9",
+        "description": "BuildSmart import (PO 67243)"
+      },
+      {
+        "productId": "cmnehbj0w000609lgxu724cy7",
+        "name": "RBP Primer - Mumbai Pink - GS10309-5",
+        "description": "BuildSmart import (PO 67243)"
+      },
+      {
+        "productId": "cmnehbj05000409lgkb0zelqd",
+        "name": "RBP Primer - Mumbai Pink - GS10309-6",
+        "description": "BuildSmart import (PO 67243)"
+      },
+      {
+        "productId": "cmnehbjbx000j09lgvca7147k",
+        "name": "RHINOLITE",
+        "description": "BuildSmart import (PO 67273)"
+      },
+      {
+        "productId": "cmmlvmkui0073sgpvs2onafbz",
+        "name": "ROCKGRIP - BLACK",
+        "description": "BuildSmart import (PO 66630)"
+      },
+      {
+        "productId": "cmmltjjm50006scpvit3iouq1",
+        "name": "ROOFGUARD - BASIC BLACK",
+        "description": "BuildSmart import (PO 66797)"
+      },
+      {
+        "productId": "cmnd8m4wo000709lbstfzbmhx",
+        "name": "SA65 Thinners",
+        "description": "BuildSmart import (PO 67338)"
+      },
+      {
+        "productId": "cmmrm14d6000c6gpl0e3nw117",
+        "name": "SAFE081P - FFP2 PREMIUM FACE MASK WITH VALVE - 15/box Boxes 3",
+        "description": "BuildSmart import (PO 66934)"
+      },
+      {
+        "productId": "cmmnxfnam000swcpljsuxbumh",
+        "name": "SMX35 - WHITE 600ML",
+        "description": "BuildSmart import (PO 66928)"
+      },
+      {
+        "productId": "cmmlvtk5o00bvsgpv5yf744ye",
+        "name": "SPONGE MATRESS",
+        "description": "BuildSmart import (PO 66678)"
+      },
+      {
+        "productId": "cmmlvmv4z007asgpvsr1ylnxp",
+        "name": "SPONGE MATRESSES",
+        "description": "BuildSmart import (PO 66642)"
+      },
+      {
+        "productId": "cmmlu8zu7002gsgpvr9r6jvqh",
+        "name": "STEEL TROWEL",
+        "description": "BuildSmart import (PO 66826)"
+      },
+      {
+        "productId": "cmnfm2f90002109jviqfnqbri",
+        "name": "STEEL WOOL",
+        "description": "BuildSmart import (PO 67203)"
+      },
+      {
+        "productId": "cmmrm10ir00086gpl10l67y4j",
+        "name": "Standard Health and Safety File",
+        "description": "BuildSmart import (PO 66946)"
+      },
+      {
+        "productId": "cmmlvtlp400bwsgpvx3qgdkbs",
+        "name": "TAP0010105L Polvin Super Acrylic Tintbase Pastel - TENT E16-5 1 SHADE LIGHTER",
+        "description": "BuildSmart import (PO 66691)"
+      },
+      {
+        "productId": "cmmlvpc4q009hsgpv8vj1pzwu",
+        "name": "TARDE100 - 50YY63/041 DESIGNERS GREY",
+        "description": "BuildSmart import (PO 66645)"
+      },
+      {
+        "productId": "cmmltjid90005scpvyesrugvl",
+        "name": "TEG00100020L Prof. Eggshell Enamel T/Base Pastel - GR-Y01 GENEVA MORN",
+        "description": "BuildSmart import (PO 66796)"
+      },
+      {
+        "productId": "cmnehbj56000c09lgf9555iyi",
+        "name": "TERRACO GRAVITEX EXCEL 1MM, COLOUR: TP1210 – 140-6 BRAVURA - 25KG",
+        "description": "BuildSmart import (PO 67242)"
+      },
+      {
+        "productId": "cmnehbj3w000a09lg09qw0xxc",
+        "name": "TERRACO GRAVITEX EXCEL 1MM, COLOUR: TP1210 – 141-1 KNIGHTS NIGHT - 25KG",
+        "description": "BuildSmart import (PO 67242)"
+      },
+      {
+        "productId": "cmmlw18zc00fisgpvj15rcfel",
+        "name": "TILE ADHESIVE CEMENT",
+        "description": "BuildSmart import (PO 66743)"
+      },
+      {
+        "productId": "cmmlub42k003psgpv0hhksabq",
+        "name": "TILE GROUT - DOVE GREY",
+        "description": "BuildSmart import (PO 66850)"
+      },
+      {
+        "productId": "cmnftuqdx000209l7ikqwmwir",
+        "name": "TLS00100020L - PLASTER E16-",
+        "description": "BuildSmart import (PO 67414)"
+      },
+      {
+        "productId": "cmmluhds3005ksgpviw0pqkv3",
+        "name": "TP 00002420L Hysheen Rd Mark Pnt SABS731 LF White",
+        "description": "BuildSmart import (PO 66858)"
+      },
+      {
+        "productId": "cmmluhf2c005lsgpvj3au687u",
+        "name": "TP 0000285L Roadmarking Paint Black",
+        "description": "BuildSmart import (PO 66858)"
+      },
+      {
+        "productId": "cmmluhglt005msgpvf1g784j6",
+        "name": "TP 0000415L Hysheen Rd Mark Pnt SABS731 LF Yellow",
+        "description": "BuildSmart import (PO 66858)"
+      },
+      {
+        "productId": "cmmsxxlye000609i8giktvqk0",
+        "name": "TRADE100 - 30YY56/060 FOSSIL GREY",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmnfm3m6l005109jvrk57fbpp",
+        "name": "TRADE65 - 30GY83/021 CHIFFON WHITE",
+        "description": "BuildSmart import (PO 67385)"
+      },
+      {
+        "productId": "cmmlvpdj9009isgpv2ertfpmb",
+        "name": "TRADE65 - S0502-R50B",
+        "description": "BuildSmart import (PO 66657)"
+      },
+      {
+        "productId": "cmmsxxlzk000909i8cuel3mgj",
+        "name": "TRADE65 - SNOWFIELD 00NN72/000",
+        "description": "BuildSmart import (PO 66984)"
+      },
+      {
+        "productId": "cmmnrn75q000309lbv5fk4tfl",
+        "name": "TRADE65 - SS0502-R50B",
+        "description": "BuildSmart import (PO 66918)"
+      },
+      {
+        "productId": "cmn2saqzl000409juxndw8h47",
+        "name": "TRADE65 - STUCCO GREY",
+        "description": "BuildSmart import (PO 67126)"
+      },
+      {
+        "productId": "cmmlw1bk500fksgpvxab56fcw",
+        "name": "TRADE65 - THE PLAZA 50GY72/012",
+        "description": "BuildSmart import (PO 66746)"
+      },
+      {
+        "productId": "cmnh1hezi000009l5ic2te5v4",
+        "name": "TVW - SAMOVAR",
+        "description": "BuildSmart import (PO 67415)"
+      },
+      {
+        "productId": "cmmlw1e2b00flsgpv5gh0z03s",
+        "name": "ULS1 - TRADEPRO ULTRA SHEEN - WHITE 0",
+        "description": "BuildSmart import (PO 66728)"
+      },
+      {
+        "productId": "cmmltselw0009sgpv8h1rsbax",
+        "name": "UROCHEM 525 - BLACK",
+        "description": "BuildSmart import (PO 66799)"
+      },
+      {
+        "productId": "cmmluayi0003lsgpv6m41lt0m",
+        "name": "UROCHEM 525 - GREY",
+        "description": "BuildSmart import (PO 66844)"
+      },
+      {
+        "productId": "cmmluazpu003msgpv607vx7rl",
+        "name": "UROCHEM 525 - WHITE",
+        "description": "BuildSmart import (PO 66844)"
+      },
+      {
+        "productId": "cmnehbiws000009lgh5j23i1v",
+        "name": "UROCHEM 5252 WHITE",
+        "description": "BuildSmart import (PO 67246)"
+      },
+      {
+        "productId": "cmmlu8wvf002dsgpvqjb3ywxi",
+        "name": "URP8 - Trade Pro Roof and More - Heritage Green",
+        "description": "BuildSmart import (PO 66822)"
+      },
+      {
+        "productId": "cmmlts8yg0004sgpvtuiukay9",
+        "name": "VERSUS - WALLSURE DESIGNER GREY 1 SHADE DARKER",
+        "description": "BuildSmart import (PO 66632)"
+      },
+      {
+        "productId": "cmn2saqy0000209jujyy7ave3",
+        "name": "VERSUS PIGMENTED SEALER - AL-Y03 GREY ALUMINIUM",
+        "description": "BuildSmart import (PO 67130)"
+      },
+      {
+        "productId": "cmmltsa5e0005sgpv6g3lo1fp",
+        "name": "VERSUS SATIN ENAMEL - PNSO",
+        "description": "BuildSmart import (PO 66632)"
+      },
+      {
+        "productId": "cmmlw6z0n00hksgpvr70nuljw",
+        "name": "WALLGUARD - DARK STORM 16BB25/001",
+        "description": "BuildSmart import (PO 66759)"
+      },
+      {
+        "productId": "cmmlvt3cp00bisgpvz1wp1gc5",
+        "name": "WALLGUARD - SMOKEY GLASS 50YR22/052",
+        "description": "BuildSmart import (PO 66704)"
+      },
+      {
+        "productId": "cmmrm0ups00016gplhfsbl3at",
+        "name": "WBS",
+        "description": "BuildSmart import (PO 66933)"
+      },
+      {
+        "productId": "cmmx2gb74000309ifgwanhzd5",
+        "name": "WEATHERGUARD - ALLOY TOUCH 21BG45/002",
+        "description": "BuildSmart import (PO 67096)"
+      },
+      {
+        "productId": "cmn2saqx7000109ju1y9mfkyj",
+        "name": "WEATHERGUARD - BRILLIANT WHITE",
+        "description": "BuildSmart import (PO 67133)"
+      },
+      {
+        "productId": "cmmlu8y9f002esgpv1pbpr0lv",
+        "name": "WHITE WOODFILLA",
+        "description": "BuildSmart import (PO 66823)"
+      },
+      {
+        "productId": "cmn2szbzd000f09l7cecxawki",
+        "name": "X 0000335L Woodcare Ultra Varnish - Gloss Clear",
+        "description": "BuildSmart import (PO 67156)"
+      },
+      {
+        "productId": "cmmlub1aj003nsgpvc4hs191s",
+        "name": "YELLOW RIPPLE ROLLER 225MM",
+        "description": "BuildSmart import (PO 66812)"
+      }
+    ],
+    "scanned": 185
+  }
+}

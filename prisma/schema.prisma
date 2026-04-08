@@ -1057,6 +1057,12 @@ model ProductCategory {
   @@index([normalizedName])
 }
 
+// NEW: supplier type for brand/shop hierarchy
+enum SupplierType {
+  BRAND
+  VENDOR
+}
+
 model Supplier {
   id             String  @id @default(cuid())
   name           String
@@ -1069,6 +1075,13 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // NEW: brand/shop hierarchy
+  supplierType SupplierType @default(VENDOR)
+
+  parentSupplierId String?
+  parentSupplier   Supplier?  @relation("SupplierHierarchy", fields: [parentSupplierId], references: [id], onDelete: SetNull)
+  childSuppliers   Supplier[] @relation("SupplierHierarchy")
+
   // relations
   products               ProcurementProduct[]
   orders                 SiteProductOrder[]
@@ -1078,6 +1091,8 @@ model Supplier {
   @@unique([name])
   @@index([isActive])
   @@index([normalizedName])
+  @@index([parentSupplierId])
+  @@index([supplierType])
 }
 
 // A product in the procurement catalog (paints, cement, etc.)

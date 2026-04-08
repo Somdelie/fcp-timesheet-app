@@ -1,7 +1,11 @@
+import { resolveDuluxBaseProduct } from "../src/lib/procurement/resolveDuluxBaseProduct";
+import { resolvePlasconBaseProduct } from "../src/lib/procurement/resolvePlasconBaseProduct";
+import normalizeProductName from "../src/lib/procurement/normalizeProductName";
 import fs from "fs";
 import path from "path";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdf = require("pdf-parse/lib/pdf-parse");
+// local parsers defined below
+import { normalizeSupplierName } from "../lib/buildsmart-import-mappings";
+let pdf: any = null;
 
 type ParsedItem = {
   rawDescription: string;
@@ -53,42 +57,7 @@ const SUPPLIER_MAP: Array<{
   },
 ];
 
-/**
- * Product normalization
- * Add to this list as you discover more BuildSmart descriptions.
- *
- * Rule from you:
- * - Any Prof Superior Low Sheen Acrylic T/Base Pastel/Deep/Transparent 5L
- *   becomes Plascon Superior Low Sheen 5L
- * - Ignore tint codes
- */
-function normalizeProductName(raw: string): string | null {
-  const text = cleanText(raw);
-
-  if (/424\s*Turps\s*5L/i.test(text)) {
-    return "424 Turps 5L";
-  }
-
-  if (/Paint\s*Stripper/i.test(text)) {
-    return "Paint Stripper";
-  }
-
-  if (/Dish\s*Washing\s*Liquid/i.test(text)) {
-    return "DISH WASHING LIQUID";
-  }
-
-  if (
-    /Prof\.?\s*Superior\s*Low\s*Sheen/i.test(text) ||
-    /Superior\s*Low\s*Sheen\s*Acrylic/i.test(text)
-  ) {
-    if (/5L/i.test(text)) {
-      return "Plascon Superior Low Sheen 5L";
-    }
-  }
-
-  return null;
-}
-
+/* Use centralized normalization helper in src/lib/procurement/normalizeProductName.ts */
 function cleanText(input: string): string {
   return input
     .replace(/\r/g, "\n")
@@ -144,7 +113,10 @@ function extractSupplierBlock(text: string): string {
 /**
  * Extract item blocks from the material section.
  */
-function extractItems(text: string): ParsedItem[] {
+function extractItems(
+  text: string,
+  supplierName?: string | null,
+): ParsedItem[] {
   const materialStart = text.indexOf("Material");
   if (materialStart === -1) return [];
 
@@ -192,7 +164,8 @@ function extractItems(text: string): ParsedItem[] {
       .replace(/\b(?:1L|2L|5L|20L|25KG|50KG)\s+\d+\s*$/i, "")
       .trim();
 
-    const normalizedProductName = normalizeProductName(rawDescription);
+    const normalized = normalizeProductName(rawDescription, supplierName);
+    const normalizedProductName = normalized.canonicalName;
 
     items.push({
       rawDescription,
@@ -211,17 +184,14 @@ function extractItems(text: string): ParsedItem[] {
       if (/^Contract\s*:/i.test(line)) continue;
       if (/Authorised Signatory/i.test(line)) continue;
 
-      const normalizedProductName = normalizeProductName(line);
+      const normalizedObj = normalizeProductName(line, supplierName);
+      const normalizedProductName = normalizedObj?.canonicalName ?? null;
       if (!normalizedProductName) continue;
 
       const qtyMatch = line.match(/\b(\d+)\b(?!.*\b\d+\b)/);
       const quantity = qtyMatch ? Number(qtyMatch[1]) : 1;
 
-      items.push({
-        rawDescription: line,
-        quantity,
-        normalizedProductName,
-      });
+      items.push({ rawDescription: line, quantity, normalizedProductName });
     }
   }
 
@@ -230,6 +200,10 @@ function extractItems(text: string): ParsedItem[] {
 
 async function parsePdfFile(filePath: string): Promise<ParsedOrder | null> {
   const buffer = fs.readFileSync(filePath);
+  if (!pdf) {
+    const mod = await import("pdf-parse/lib/pdf-parse");
+    pdf = (mod && (mod.default ?? mod)) as any;
+  }
   const data = await pdf(buffer);
   const text = cleanText(data.text);
 
@@ -237,10 +211,18 @@ async function parsePdfFile(filePath: string): Promise<ParsedOrder | null> {
   if (!orderNumber) return null;
 
   const supplierBlock = extractSupplierBlock(text);
-  const { supplierCode, supplierName } = normalizeSupplier(supplierBlock);
+  const canonicalSupplier = normalizeSupplierName(supplierBlock);
+  const supplierMapHit = SUPPLIER_MAP.find(
+    (s) =>
+      s.supplierName.toLowerCase() === canonicalSupplier.trim().toLowerCase(),
+  );
+  const supplierCode = supplierMapHit ? supplierMapHit.supplierCode : null;
+  const supplierName = supplierMapHit
+    ? supplierMapHit.supplierName
+    : canonicalSupplier;
 
   const { siteCode, siteName } = extractContract(text);
-  const items = extractItems(text);
+  const items = extractItems(text, supplierName);
 
   return {
     orderNumber,

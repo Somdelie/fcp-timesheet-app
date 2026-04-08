@@ -94,7 +94,31 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-      <FieldGroup>
+      <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <Controller
+          name="code"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel
+                htmlFor="code"
+                className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+              >
+                Job Number <span className="text-red-500">*</span>
+              </FieldLabel>
+              <Input
+                {...field}
+                id="code"
+                aria-invalid={fieldState.invalid}
+                placeholder="e.g. 6254"
+                autoComplete="off"
+                disabled={pending}
+                className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
         <Controller
           name="name"
           control={form.control}
@@ -110,35 +134,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
                 {...field}
                 id="name"
                 aria-invalid={fieldState.invalid}
-                placeholder="e.g. Mall of Africa"
-                autoComplete="off"
-                disabled={pending}
-                className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
-              />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
-        />
-
-        <Controller
-          name="code"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel
-                htmlFor="code"
-                className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
-              >
-                Job Number{" "}
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
-                  (Optional)
-                </span>
-              </FieldLabel>
-              <Input
-                {...field}
-                id="code"
-                aria-invalid={fieldState.invalid}
-                placeholder="e.g. MOA-001"
+                placeholder="e.g. Ellipse Phase 3"
                 autoComplete="off"
                 disabled={pending}
                 className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
@@ -208,7 +204,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
           name="address"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
+            <Field data-invalid={fieldState.invalid} className="col-span-2">
               <FieldLabel
                 htmlFor="address"
                 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
@@ -232,7 +228,7 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
           )}
         />
 
-        <div className="space-y-2">
+        <div className="col-span-2">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
               Pin Location{" "}

@@ -1,0 +1,1455 @@
+{
+  "timestamp": "2026-04-07T10:23:46.938Z",
+  "threshold": 0.65,
+  "applied": [
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Wood Primer Pink",
+      "price": 380.26,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Wood Primer",
+      "price": 400,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "M/Care Galvanised Iron Primer",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascosafe 18 WB Primer Red Oxide",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Epiwash Strong Chromate Primer Yellow",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Rainshield (White & Grey)",
+      "price": 2,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Multi-Surface Primer White",
+      "price": 394.34,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "BERGER NUKOTE WHITE",
+      "price": 475,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Dulux Trade Smooth Ripple Finish White 5L",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade 65 White",
+      "price": 720,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade 65 - Pastel 7",
+      "price": 750,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade 65 - Medium 8",
+      "price": 850,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade 65 - Deep 9",
+      "price": 950,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Trade 100 Lowsheen White",
+      "price": 921.88,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade 100 Lowsheen White",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade 100 Lowsheen - Pastel 7",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade100 Lowsheen - U. Deep 6",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "M/Care Silvershine Aluminium",
+      "price": 864.99,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Lux Silk - Deep 9",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Lux Silk - U/Deep 6",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Rainshield (White & Grey)",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Prof. Damp Plaster Paint",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "All Purpose Undercoat",
+      "price": 940.58,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade Universal Undercoat",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Super Universal Enamel Super White",
+      "price": 384.36,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Super Universal Enamel (Plascon)",
+      "price": 457.52,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Velvaglo White",
+      "price": 530.89,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Solvent Base Pearlglo White",
+      "price": 620,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Solvent Base Pearlglo - Base 7",
+      "price": 640,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Solvent Base Pearlglo - Base 8",
+      "price": 660,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Solvent Base Pearlglo - Base 9",
+      "price": 680,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Solvent Base Pearlglo - Base 6",
+      "price": 750,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Velvaglo White",
+      "price": 482.48,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Waterbase Pearlglo - White",
+      "price": 470,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Velvaglo White",
+      "price": 489.83,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Waterbase Pearlglo - Pebble Black",
+      "price": 470,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Velvaglo White",
+      "price": 482.44,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Waterbased Pearlglo - Base 7",
+      "price": 470,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Velvaglo White",
+      "price": 498.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Waterbased Pearlglo - Base 8",
+      "price": 490,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Velvaglo White",
+      "price": 522.67,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Waterbased Pearlglo - Base 9",
+      "price": 510,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Waterbased Pearlglo - Base 6",
+      "price": 560,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon SkimCoat Interior",
+      "price": 425,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Prepaint Smoothover Int/Ext 35KG",
+      "price": 630,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon SkimCoat Interior",
+      "price": 425,
+      "action": "updated"
+    },
+    {
+      "supplier": "PROMINENT",
+      "productName": "Plascon SkimCoat Interior",
+      "price": 371.16,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Weatherguard Fine Textured - White & Std Colours",
+      "price": 930,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Weatherguard Fine Textured - Base 6",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Wall&All White",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Timba Preservative Clear - All Colours",
+      "price": 530,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "WG Timbavarnish Int/Ext - Clear & All Colours",
+      "price": 500,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Woodgard Rubbol Clear & All Colours",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "X 0000335L Woodcare Ultra Varnish - Gloss Clear",
+      "price": 637.5,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Brickseal Clear",
+      "price": 621.35,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Brick & Plasto Dressing Clear",
+      "price": 565.25,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Brick and Slasto Dressing",
+      "price": 590,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Tuffcote Epoxy WB Light Grey",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Tuffcote Epoxy WB Dairy White",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "TR Hi-Chem Enamel S/B - Light Grey",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "TR Hi-Chem Enamel S/B - Dark Grey",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Stoep Enamel Black",
+      "price": 432.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Floorcote SB Black",
+      "price": 570,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Stoep Enamel Green",
+      "price": 432.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Floorcote SB Brilliant Grn",
+      "price": 570,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Stoep Enamel Red",
+      "price": 432.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Floorcote SB Red Oxide",
+      "price": 570,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Stoep Enamel Grey",
+      "price": 432.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Floorcote SB Dark Sea Grey",
+      "price": 570,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Stoep Enamel Terra Cotta",
+      "price": 432.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Floorcote SB Chrom Oxid Grn",
+      "price": 570,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Stoep Enamel Navy Light Grey",
+      "price": 432.5,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascotuff Pitch Coat Black",
+      "price": 933.28,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Weatherguard Ultra Smooth Base 6",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascotuff 3500 Grey",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascotuff 3500 Hardener",
+      "price": 291.37,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "P/Thane 9000 Hardener",
+      "price": 210.4,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "P/Thane 9000 T/Base Pastel",
+      "price": 2,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "P/Thane 9000 T/Base Trans.",
+      "price": 558.39,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Plascon Cashmere White",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Prof. Elastoshield White",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade Wallclad Base 9",
+      "price": 1,
+      "action": "created"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Trade Wallclad Base 6",
+      "price": 2,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Prof. Gloss Enamel T/Base Pastel",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "DULUX",
+      "productName": "Sterishield Diamond E/Shell Medium Tint",
+      "price": 940,
+      "action": "created"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Prof. Super Matt White",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Prof. Super Matt T/Base Pastel",
+      "price": 1,
+      "action": "updated"
+    },
+    {
+      "supplier": "PLASCON",
+      "productName": "Prof. Super Matt T/Base Deep",
+      "price": 1,
+      "action": "updated"
+    }
+  ],
+  "skipped": [],
+  "totals": {
+    "proposed": 227,
+    "filtered": [
+      {
+        "rowIndex": 5,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "UC2 WOOD PRIMER - PINK",
+        "parsedPrice": 380.26,
+        "candidateId": "cmmkuvu7200cdoopl5o8devwc",
+        "candidateName": "Plascon Wood Primer Pink",
+        "confidence": 0.75
+      },
+      {
+        "rowIndex": 5,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WOOD PRIMER",
+        "parsedPrice": 400,
+        "candidateId": "cmmkufhms0035g8plq8l83azh",
+        "candidateName": "Wood Primer",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 9,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "GIP  METALCARE GALVANISED IRON PRIMER - YELLOW",
+        "parsedPrice": 1,
+        "candidateId": "cmmkugt3o009zg8pl0hc57b2q",
+        "candidateName": "M/Care Galvanised Iron Primer",
+        "confidence": 0.6511627906976745
+      },
+      {
+        "rowIndex": 10,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "EMS18  PLASCOSAFE - 18 - PRIMER  RED OXIDE",
+        "parsedPrice": 1,
+        "candidateId": "cmmkugre8009qg8pl38yooupk",
+        "candidateName": "Plascosafe 18 WB Primer Red Oxide",
+        "confidence": 0.75
+      },
+      {
+        "rowIndex": 11,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "AW225 EPIWASH STRON.CHROM.PRIMER-YELLOW 10L",
+        "parsedPrice": 1,
+        "candidateId": "cmmkugqn2009mg8plvt695n3w",
+        "candidateName": "Epiwash Strong Chromate Primer Yellow",
+        "confidence": 0.7435897435897436
+      },
+      {
+        "rowIndex": 12,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "RUST SHIELD W/BASE - GREY",
+        "parsedPrice": 2,
+        "candidateId": "cmmhulyx00044l8plxaa9ezdu",
+        "candidateName": "Rainshield (White & Grey)",
+        "confidence": 0.6521739130434783
+      },
+      {
+        "rowIndex": 13,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "WUP1 MULTI-SURFACE PRIMER - WHITE",
+        "parsedPrice": 394.34,
+        "candidateId": "cmmkuvwth00croopla2ow96cn",
+        "candidateName": "Plascon Multi-Surface Primer White",
+        "confidence": 0.7941176470588236
+      },
+      {
+        "rowIndex": 15,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "BERGER NUKOTE WHITE",
+        "parsedPrice": 475,
+        "candidateId": "cmmsxxlxd000409i8l81v1m4d",
+        "candidateName": "BERGER NUKOTE WHITE",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 17,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "SMOOTH RIPPLE FINISH - WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmklb38o009jo4pvjnp5kmo8",
+        "candidateName": "Dulux Trade Smooth Ripple Finish White 5L",
+        "confidence": 0.6842105263157895,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 20,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE 65 WHITE",
+        "parsedPrice": 720,
+        "candidateId": "cmmhulr680030l8plt6mxkkve",
+        "candidateName": "Trade 65 White",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 21,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE  65 - PASTEL7",
+        "parsedPrice": 750,
+        "candidateId": "cmmhulrk70032l8pl5b1hfwal",
+        "candidateName": "Trade 65 - Pastel 7",
+        "confidence": 0.9411764705882353,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 22,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE 65  - MEDIUM 8",
+        "parsedPrice": 850,
+        "candidateId": "cmmhulry50034l8pltq7viw63",
+        "candidateName": "Trade 65 - Medium 8",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 23,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE 65 - DEEP 9",
+        "parsedPrice": 950,
+        "candidateId": "cmmhulsc20036l8plivgmmbgt",
+        "candidateName": "Trade 65 - Deep 9",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 25,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PEM 1000 LOW SHEEN WHITE",
+        "parsedPrice": 921.88,
+        "candidateId": "cmmhulsq20038l8plfkbl3zvp",
+        "candidateName": "Trade 100 Lowsheen White",
+        "confidence": 0.7083333333333333,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 25,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE 100 LOWSHEEN WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmhulsq20038l8plfkbl3zvp",
+        "candidateName": "Trade 100 Lowsheen White",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 26,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE 100 LOWSHEEN -  PASTEL 7",
+        "parsedPrice": 1,
+        "candidateId": "cmmhult3x003al8pl4mn6z0vv",
+        "candidateName": "Trade 100 Lowsheen - Pastel 7",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 29,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE100 LOWSHEEN -  U. DEEP 6",
+        "parsedPrice": 1,
+        "candidateId": "cmmhulu9p003gl8pl34i4t07o",
+        "candidateName": "Trade100 Lowsheen - U. Deep 6",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 30,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "ASS1  METAL CARE SILVERSHINE ALUMINIUM",
+        "parsedPrice": 864.99,
+        "candidateId": "cmmkugqga009lg8plwj78bwzy",
+        "candidateName": "M/Care Silvershine Aluminium",
+        "confidence": 0.7567567567567568
+      },
+      {
+        "rowIndex": 42,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "LUX SILK -  DEEP 9",
+        "parsedPrice": 1,
+        "candidateId": "cmmhuly570040l8pl5r61voso",
+        "candidateName": "Lux Silk - Deep 9",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 43,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "LUX SILK - U/DEEP 6",
+        "parsedPrice": 1,
+        "candidateId": "cmmhulyj30042l8plzwhf2sh5",
+        "candidateName": "Lux Silk - U/Deep 6",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 45,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "RAINSHIELD (WHITE & GREY)",
+        "parsedPrice": 1,
+        "candidateId": "cmmhulyx00044l8plxaa9ezdu",
+        "candidateName": "Rainshield (White & Grey)",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 47,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PSB600 PROF DAMP PLASTER PAINT",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvhe400ahooplonj7yawg",
+        "candidateName": "Prof. Damp Plaster Paint",
+        "confidence": 0.7666666666666666
+      },
+      {
+        "rowIndex": 49,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PU800  ALL PURPOSE UNDERCOAT",
+        "parsedPrice": 940.58,
+        "candidateId": "cmmkuewwn0008g8plrguflo08",
+        "candidateName": "All Purpose Undercoat",
+        "confidence": 0.7777777777777778
+      },
+      {
+        "rowIndex": 49,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE UNIVERSAL UNDERCOAT",
+        "parsedPrice": 1,
+        "candidateId": "cmmhulzoy0048l8plzg9r5ij5",
+        "candidateName": "Trade Universal Undercoat",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 51,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "NY1 SUPER UNIVERSAL ENAMEL - SUPER WHITE",
+        "parsedPrice": 384.36,
+        "candidateId": "cmmkugthd00a1g8pl4wttx6ns",
+        "candidateName": "Plascon Super Universal Enamel Super White",
+        "confidence": 0.8333333333333334
+      },
+      {
+        "rowIndex": 53,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SUPER UNIVERSAL G/ENAMEL - G13",
+        "parsedPrice": 457.52,
+        "candidateId": "cmmkuf871001sg8pl1clq4m5z",
+        "candidateName": "Super Universal Enamel (Plascon)",
+        "confidence": 0.7
+      },
+      {
+        "rowIndex": 58,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "VLO - VELVAGLO WHITE & BLACK",
+        "parsedPrice": 530.89,
+        "candidateId": "cmmkuvvbl00cjooply5ar0pmy",
+        "candidateName": "Plascon Velvaglo White",
+        "confidence": 0.7272727272727273,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 58,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "SOLVENT BASE PEARLGLO WHITE",
+        "parsedPrice": 620,
+        "candidateId": "cmmhvb2e40000msplxuk1cvqc",
+        "candidateName": "Solvent Base Pearlglo White",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 59,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "SOLVENT BASE PEARLGLO - BASE 7",
+        "parsedPrice": 640,
+        "candidateId": "cmmhvb2rx0002mspl5rqt0j2t",
+        "candidateName": "Solvent Base Pearlglo - Base 7",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 60,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "SOLVENT BASE PEARLGLO  - BASE 8",
+        "parsedPrice": 660,
+        "candidateId": "cmmhvb35i0004mspl8zsrh3sl",
+        "candidateName": "Solvent Base Pearlglo - Base 8",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 61,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "SOLVENT BASE  PEARLGLO  - BASE 9",
+        "parsedPrice": 680,
+        "candidateId": "cmmhvb3j70006msplp7gsp5pm",
+        "candidateName": "Solvent Base Pearlglo - Base 9",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 62,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "SOLVENT BASE  PEARLGLO - BASE 6",
+        "parsedPrice": 750,
+        "candidateId": "cmmhvb3wp0008mspld3kpywoq",
+        "candidateName": "Solvent Base Pearlglo - Base 6",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 64,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "VLW 1 WATERBASE VELVAGLO - WHITE",
+        "parsedPrice": 482.48,
+        "candidateId": "cmmkuvvbl00cjooply5ar0pmy",
+        "candidateName": "Plascon Velvaglo White",
+        "confidence": 0.7272727272727273,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 64,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WATERBASE PEARLGLO - WHITE",
+        "parsedPrice": 470,
+        "candidateId": "cmmhvb4a7000amsplz8zml8yk",
+        "candidateName": "Waterbase Pearlglo - White",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 65,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "VLW2 WATERBASE VELVAGLO  - BLACK",
+        "parsedPrice": 489.83,
+        "candidateId": "cmmkuvvbl00cjooply5ar0pmy",
+        "candidateName": "Plascon Velvaglo White",
+        "confidence": 0.7272727272727273
+      },
+      {
+        "rowIndex": 65,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WATERBASE PEARLGLO - PEBBLE BLACK",
+        "parsedPrice": 470,
+        "candidateId": "cmmhvb4np000cmsplm7yerfcm",
+        "candidateName": "Waterbase Pearlglo - Pebble Black",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 66,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TVW - WATERBASE VELVAGLO - PASTEL BASE",
+        "parsedPrice": 482.44,
+        "candidateId": "cmmkuvvbl00cjooply5ar0pmy",
+        "candidateName": "Plascon Velvaglo White",
+        "confidence": 0.7272727272727273,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 66,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WATERBASED PEARLGLO -  BASE 7",
+        "parsedPrice": 470,
+        "candidateId": "cmmhvb513000emsplm4pa03mf",
+        "candidateName": "Waterbased Pearlglo - Base 7",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 67,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TVW - WATERBASE VELVAGLO -  DEEP BASE",
+        "parsedPrice": 498.5,
+        "candidateId": "cmmkuvvbl00cjooply5ar0pmy",
+        "candidateName": "Plascon Velvaglo White",
+        "confidence": 0.7272727272727273,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 67,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WATERBASED PEARLGLO - BASE 8",
+        "parsedPrice": 490,
+        "candidateId": "cmmhvb5eo000gmsple35janjr",
+        "candidateName": "Waterbased Pearlglo - Base 8",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 68,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TVW - WATERBASE VELVAGLO -  TRANSPARENT BASE",
+        "parsedPrice": 522.67,
+        "candidateId": "cmmkuvvbl00cjooply5ar0pmy",
+        "candidateName": "Plascon Velvaglo White",
+        "confidence": 0.7272727272727273,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 68,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WATERBASED  PEARLGLO - BASE 9",
+        "parsedPrice": 510,
+        "candidateId": "cmmhvb5s3000imsply6gh8tht",
+        "candidateName": "Waterbased Pearlglo - Base 9",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 69,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WATERBASED PEARLGLO - BASE 6",
+        "parsedPrice": 560,
+        "candidateId": "cmmhvb65j000kmspl7t5p19oj",
+        "candidateName": "Waterbased Pearlglo - Base 6",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 71,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PSI1 PLASCON SKIMCOAT INTERIOR - 23KG",
+        "parsedPrice": 425,
+        "candidateId": "cmmkw12ty00csawplvk74jh46",
+        "candidateName": "Plascon SkimCoat Interior",
+        "confidence": 0.8333333333333334
+      },
+      {
+        "rowIndex": 71,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "PREPAINT SMOOTHOVER INT/EXT 35KG",
+        "parsedPrice": 630,
+        "candidateId": "cmmhvb6j0000mmspl82z2pfge",
+        "candidateName": "Prepaint Smoothover Int/Ext 35KG",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 72,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PSE1 PLASCON SKIMCOAT EXTERIOR - 23KG",
+        "parsedPrice": 425,
+        "candidateId": "cmmkw12ty00csawplvk74jh46",
+        "candidateName": "Plascon SkimCoat Interior",
+        "confidence": 0.7666666666666666
+      },
+      {
+        "rowIndex": 72,
+        "supplierLabel": "PROMINENT",
+        "supplierId": "cmnog4opm0000ocpvu6yt79mp",
+        "csvProductName": "SKIMMIT SKIMCOAT INTERIOR - 15KG",
+        "parsedPrice": 371.16,
+        "candidateId": "cmmkw12ty00csawplvk74jh46",
+        "candidateName": "Plascon SkimCoat Interior",
+        "confidence": 0.72
+      },
+      {
+        "rowIndex": 74,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "W/GUARD FINE TEXTURED - WHITE & STD COLOURS",
+        "parsedPrice": 930,
+        "candidateId": "cmmhvb6we000omsplzkwk6sxy",
+        "candidateName": "Weatherguard Fine Textured - White & Std Colours",
+        "confidence": 0.8636363636363636
+      },
+      {
+        "rowIndex": 78,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WEATHERGUARD FINE TEXTURED - BASE 6",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvb8fo000wmspl85a1u7so",
+        "candidateName": "Weatherguard Fine Textured - Base 6",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 82,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "WAA 1 WALL & ALL - WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvw2i00cnoopl0vntdf9o",
+        "candidateName": "Plascon Wall&All White",
+        "confidence": 0.7272727272727273
+      },
+      {
+        "rowIndex": 87,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TIMBA PRESERVATIVE CLEAR - ALL COLOURS",
+        "parsedPrice": 530,
+        "candidateId": "cmmhvbasx0018mspluukhgl18",
+        "candidateName": "Timba Preservative Clear - All Colours",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 89,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WG TIMBAVARNISH INT/EXT - CLEAR & ALL COLOURS",
+        "parsedPrice": 500,
+        "candidateId": "cmmhvbb6n001amsplfcuyv4iq",
+        "candidateName": "WG Timbavarnish Int/Ext - Clear & All Colours",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 90,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WOODGARD RUBBOL CLEAR & ALL COLOURS",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbbk3001cmsplwrkj8t2k",
+        "candidateName": "Woodgard Rubbol Clear & All Colours",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 92,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "X44 WOODCARE ULTRA VARNISH - SUEDE  - CLEAR",
+        "parsedPrice": 637.5,
+        "candidateId": "cmn2szbzd000f09l7cecxawki",
+        "candidateName": "X 0000335L Woodcare Ultra Varnish - Gloss Clear",
+        "confidence": 0.8157894736842105
+      },
+      {
+        "rowIndex": 94,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "WBS 1 PLASCON BRICKSEAL - CLEAR",
+        "parsedPrice": 621.35,
+        "candidateId": "cmmkuvwg000cpooplsjzwb4iz",
+        "candidateName": "Plascon Brickseal Clear",
+        "confidence": 0.7931034482758621
+      },
+      {
+        "rowIndex": 95,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TBD 1 PLASCON BRICK & SLASTO DRESSING - CLEAR",
+        "parsedPrice": 565.25,
+        "candidateId": "cmmkuvk2g00avooplmp3l6co1",
+        "candidateName": "Plascon Brick & Plasto Dressing Clear",
+        "confidence": 0.8292682926829268
+      },
+      {
+        "rowIndex": 95,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "BRICK/SLASTO DRESSING S/B",
+        "parsedPrice": 590,
+        "candidateId": "cmmkueyzk000jg8ploep41q1j",
+        "candidateName": "Brick and Slasto Dressing",
+        "confidence": 0.6799999999999999
+      },
+      {
+        "rowIndex": 97,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TUFFCOTE EPOXY WB LIGHT GREY",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbhnv0028mspl6gunxsb6",
+        "candidateName": "Tuffcote Epoxy WB Light Grey",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 98,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TUFFCOTE EPOXY WB DAIRY WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbi1e002amspl5bd40q03",
+        "candidateName": "Tuffcote Epoxy WB Dairy White",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 102,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TR- HI-CHEM ENAMEL S/B - LIGHT GREY",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbkno002omsplcp8u07e4",
+        "candidateName": "TR Hi-Chem Enamel S/B - Light Grey",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 103,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TR- HI-CHEM ENAMEL S/B - DARK GREY",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbl15002qmspl7jfwne4m",
+        "candidateName": "TR Hi-Chem Enamel S/B - Dark Grey",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 105,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SP1 STOEP ENAMEL BLACK",
+        "parsedPrice": 432.5,
+        "candidateId": "cmmkuvidf00amoopldux01foi",
+        "candidateName": "Plascon Stoep Enamel Black",
+        "confidence": 0.7692307692307692
+      },
+      {
+        "rowIndex": 105,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "FLOORCOTE SB BLACK",
+        "parsedPrice": 570,
+        "candidateId": "cmmhvbcb2001gmspl8hvykybt",
+        "candidateName": "Floorcote SB Black",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 106,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SP2 STOEP ENAMEL GREEN",
+        "parsedPrice": 432.5,
+        "candidateId": "cmmkuvik600anoopl1vbr3dya",
+        "candidateName": "Plascon Stoep Enamel Green",
+        "confidence": 0.7692307692307692
+      },
+      {
+        "rowIndex": 106,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "FLOORCOTE SB BRILLIANT GRN",
+        "parsedPrice": 570,
+        "candidateId": "cmmhvbcog001imspl1i5fg0ua",
+        "candidateName": "Floorcote SB Brilliant Grn",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 107,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SP3 STOEP ENAMEL RED",
+        "parsedPrice": 432.5,
+        "candidateId": "cmmkuviqx00aoooplzx9mhetm",
+        "candidateName": "Plascon Stoep Enamel Red",
+        "confidence": 0.75
+      },
+      {
+        "rowIndex": 107,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "FLOORCOTE SB RED OXIDE",
+        "parsedPrice": 570,
+        "candidateId": "cmmhvbdt3001omspllcbuhui8",
+        "candidateName": "Floorcote SB Red Oxide",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 108,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SP7 STOEP ENAMEL GREY",
+        "parsedPrice": 432.5,
+        "candidateId": "cmmkuvixo00apoopld330ng06",
+        "candidateName": "Plascon Stoep Enamel Grey",
+        "confidence": 0.76
+      },
+      {
+        "rowIndex": 108,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "FLOORCOTE SB DARK SEA GREY",
+        "parsedPrice": 570,
+        "candidateId": "cmmhvbdf8001mmsply5y1m8fo",
+        "candidateName": "Floorcote SB Dark Sea Grey",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 109,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SP13 STOEP ENAMEL TERRA COTTA",
+        "parsedPrice": 432.5,
+        "candidateId": "cmmkuvj4e00aqooplgwzp1bua",
+        "candidateName": "Plascon Stoep Enamel Terra Cotta",
+        "confidence": 0.8125
+      },
+      {
+        "rowIndex": 109,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "FLOORCOTE SB CHROM OXID GRN",
+        "parsedPrice": 570,
+        "candidateId": "cmmhvbd1u001kmspluybim05i",
+        "candidateName": "Floorcote SB Chrom Oxid Grn",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 110,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "SP16 STOEP ENAMEL NAVY LIGHT GREY",
+        "parsedPrice": 432.5,
+        "candidateId": "cmmkuvjb600aroopl9uscpbgd",
+        "candidateName": "Plascon Stoep Enamel Navy Light Grey",
+        "confidence": 0.8333333333333334
+      },
+      {
+        "rowIndex": 114,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "EPD1 PLASCOTUFF PITCH COAT BLACK DL",
+        "parsedPrice": 933.28,
+        "candidateId": "cmmkugrs2009sg8plsbv536t0",
+        "candidateName": "Plascotuff Pitch Coat Black",
+        "confidence": 0.7714285714285715
+      },
+      {
+        "rowIndex": 114,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "WEATHERGUARD ULTRA SMOOTH BASE 6",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbhae0026mspl93gilml9",
+        "candidateName": "Weatherguard Ultra Smooth Base 6",
+        "confidence": 1
+      },
+      {
+        "rowIndex": 115,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PEX3500 PLASCOTUFF 3500 - GREY 4L",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvg4w00abooplhefl2ais",
+        "candidateName": "Plascotuff 3500 Grey",
+        "confidence": 0.7142857142857143
+      },
+      {
+        "rowIndex": 116,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PEH3500 PLASCOTUFF 3500 HARDENER 1L",
+        "parsedPrice": 291.37,
+        "candidateId": "cmmkugto800a2g8plkrc05ydq",
+        "candidateName": "Plascotuff 3500 Hardener",
+        "confidence": 0.75
+      },
+      {
+        "rowIndex": 118,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PRH9 P/THANE -9000- HARDENER  715ML",
+        "parsedPrice": 210.4,
+        "candidateId": "cmmkuvgpy00aeooplj61gyedd",
+        "candidateName": "P/Thane 9000 Hardener",
+        "confidence": 0.65625
+      },
+      {
+        "rowIndex": 119,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PRT9001 P/THANE -9000- T/BASE-PASTEL  4",
+        "parsedPrice": 2,
+        "candidateId": "cmmkuvh0o00afoopl65c7bvbq",
+        "candidateName": "P/Thane 9000 T/Base Pastel",
+        "confidence": 0.7222222222222222
+      },
+      {
+        "rowIndex": 120,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PRT9003 P/THANE -9000 - T/BASE-TRANS 3.9L",
+        "parsedPrice": 558.39,
+        "candidateId": "cmmkuvh7e00agooplju23bznb",
+        "candidateName": "P/Thane 9000 T/Base Trans.",
+        "confidence": 0.7575757575757576
+      },
+      {
+        "rowIndex": 122,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "CAS 1  CASHMERE - WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmkugr7h009pg8pldwg5pps2",
+        "candidateName": "Plascon Cashmere White",
+        "confidence": 0.7727272727272727,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 127,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PES 1 PROF ELASTOSHIELD - WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvfy600aaooplp9u6uiqd",
+        "candidateName": "Prof. Elastoshield White",
+        "confidence": 0.7931034482758621
+      },
+      {
+        "rowIndex": 130,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE WALLCLAD BASE 9",
+        "parsedPrice": 1,
+        "candidateId": "cmmhvbfe8001wmsplltkir9ks",
+        "candidateName": "Trade Wallclad Base 9",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 131,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "TRADE WALLCLAD BASE 6",
+        "parsedPrice": 2,
+        "candidateId": "cmmhvbfru001ymspls0olfe2a",
+        "candidateName": "Trade Wallclad Base 6",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 134,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TEG1 EGGSHELL ENAMEL T/BASE PASTEL",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvlxv00b5ooplx3xncwf2",
+        "candidateName": "Prof. Gloss Enamel T/Base Pastel",
+        "confidence": 0.6764705882352942
+      },
+      {
+        "rowIndex": 135,
+        "supplierLabel": "DULUX",
+        "supplierId": "cmmluau8b003hsgpvfibyazkz",
+        "csvProductName": "STERISHIELD DIAMOND E/SHELL MEDIUM TINT",
+        "parsedPrice": 940,
+        "candidateId": "cmmhvbjja002imspljd90hube",
+        "candidateName": "Sterishield Diamond E/Shell Medium Tint",
+        "confidence": 1,
+        "note": "hadVariant"
+      },
+      {
+        "rowIndex": 136,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "PEM950 PROF SUPER MATT - WHITE",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvf5x00a6oopl8thevk0n",
+        "candidateName": "Prof. Super Matt White",
+        "confidence": 0.75
+      },
+      {
+        "rowIndex": 137,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TPM1000 PROF SUPER MATT T/BASE -PASTEL",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvrdi00byooplnh2sgthq",
+        "candidateName": "Prof. Super Matt T/Base Pastel",
+        "confidence": 0.7837837837837838
+      },
+      {
+        "rowIndex": 138,
+        "supplierLabel": "PLASCON",
+        "supplierId": "cmmdxdol60009w8plpxqwnxct",
+        "csvProductName": "TPM2000 PROF SUPER MATT T/BASE - DEEP",
+        "parsedPrice": 1,
+        "candidateId": "cmmkuvrrc00c0ooplmv0105x5",
+        "candidateName": "Prof. Super Matt T/Base Deep",
+        "confidence": 0.7714285714285715
+      }
+    ],
+    "created": 50,
+    "updated": 38,
+    "errors": 0
+  }
+}

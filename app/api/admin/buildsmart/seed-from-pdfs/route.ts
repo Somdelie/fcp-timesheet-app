@@ -16,8 +16,12 @@ import { recalcOrderTotal } from "@/lib/procurement/recalcOrderTotal";
 import {
   normalizeSupplierName,
   mapDescriptionToProduct,
-  stripColorTokens,
 } from "@/lib/buildsmart-import-mappings";
+import {
+  matchBuildSmartProduct,
+  normalizeImportedProductName,
+  shouldCreateNewProduct,
+} from "@/lib/procurement/buildsmartProductMatcher";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,10 +87,13 @@ export async function POST(req: NextRequest) {
   // ── Load all products with suppliers for matching ──
   const allProducts = await prisma.procurementProduct.findMany({
     where: { isActive: true },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
     select: {
       id: true,
       name: true,
+      normalizedName: true,
       sku: true,
+      description: true,
       uom: true,
       unitSize: true,
       supplierId: true,
@@ -100,12 +107,6 @@ export async function POST(req: NextRequest) {
     if (p.sku) skuLookup.set(p.sku, p);
   }
 
-  // Build a name → product lookup (case-insensitive) for explicit mappings
-  const nameLookup = new Map<string, (typeof allProducts)[number]>();
-  for (const p of allProducts) {
-    nameLookup.set(p.name.toLowerCase(), p);
-  }
-
   // Build a supplier name → id lookup (case-insensitive) for normalized matching
   const allSuppliers = await prisma.supplier.findMany({
     select: { id: true, name: true },
@@ -115,58 +116,25 @@ export async function POST(req: NextRequest) {
     supplierNameLookup.set(s.name.toLowerCase(), s.id);
   }
 
-  // ── Name-based fallback matching ──
   type Product = (typeof allProducts)[number];
 
-  function tokenize(text: string): Set<string> {
-    return new Set(
-      text
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, " ")
-        .split(/\s+/)
-        .filter((t) => t.length > 0),
+  function findMatchedProduct(
+    rawDescription: string,
+    options?: {
+      supplierName?: string | null;
+      mappedCanonicalName?: string | null;
+      trustedCode?: string | null;
+    },
+  ) {
+    return matchBuildSmartProduct(
+      {
+        rawDescription,
+        supplierName: options?.supplierName ?? null,
+        mappedCanonicalName: options?.mappedCanonicalName ?? null,
+        trustedCode: options?.trustedCode ?? null,
+      },
+      allProducts as Product[],
     );
-  }
-
-  function findProductByName(
-    rawDesc: string,
-    unit: string,
-  ): Product | undefined {
-    // Strip product code prefix (e.g. "PP 00070020L", "5147607", "TLS001000")
-    const descOnly = rawDesc
-      .replace(/^[A-Z]{2,4}\s*[\d\s]+(?:[A-Z]{1,3})?\s*/i, "")
-      .trim();
-
-    if (!descOnly) return undefined;
-
-    // Build search tokens from description + unit
-    const searchText = unit ? `${descOnly} ${unit}` : descOnly;
-    const searchTokens = tokenize(searchText);
-
-    if (searchTokens.size < 2) return undefined;
-
-    let bestProduct: Product | undefined;
-    let bestScore = 0;
-
-    for (const p of allProducts) {
-      const nameTokens = tokenize(p.name);
-
-      let matchCount = 0;
-      for (const t of searchTokens) {
-        if (nameTokens.has(t)) matchCount++;
-      }
-
-      // Score: proportion of search tokens found in product name
-      const score = matchCount / searchTokens.size;
-
-      // Require at least 60% overlap and min 2 matching tokens
-      if (score > bestScore && score >= 0.6 && matchCount >= 2) {
-        bestScore = score;
-        bestProduct = p;
-      }
-    }
-
-    return bestProduct;
   }
 
   // ── Load sites for siteCode → siteId resolution ──
@@ -199,37 +167,15 @@ export async function POST(req: NextRequest) {
     let resolvedSupplierId: string | null = null;
 
     for (const item of order.items) {
-      // 1) Try exact SKU match (Plascon-style codes)
-      let product = item.candidateSku
-        ? skuLookup.get(item.candidateSku)
-        : undefined;
-
-      // 2) Explicit mapping rules (known products from specific suppliers)
-      if (!product) {
-        const mapped = mapDescriptionToProduct(item.rawDescription);
-        if (mapped) {
-          product = nameLookup.get(mapped.toLowerCase());
-        }
-      }
-
-      // 3) Fallback: name-based fuzzy match (Dulux & others)
-      if (!product) {
-        product = findProductByName(item.rawDescription, item.unit);
-      }
-
-      // 4) Fallback: strip color/tint tokens and retry fuzzy match
-      if (!product) {
-        const stripped = stripColorTokens(item.rawDescription);
-        if (stripped !== item.rawDescription) {
-          product = findProductByName(stripped, item.unit);
-        }
-      }
+      const mappedCanonicalName = mapDescriptionToProduct(item.rawDescription);
+      const match = findMatchedProduct(item.rawDescription, {
+        supplierName: order.vendorName ?? null,
+        mappedCanonicalName,
+        trustedCode: item.candidateSku ?? null,
+      });
+      const product = match.matched ? (match.product as Product) : undefined;
 
       if (product) {
-        if (!resolvedSupplierId && product.supplierId) {
-          resolvedSupplierId = product.supplierId;
-        }
-
         matchedItems.push({
           productId: product.id,
           sku: product.sku ?? "",
@@ -317,36 +263,60 @@ export async function POST(req: NextRequest) {
       const name =
         item.rawDescription.trim() || `BuildSmart item ${item.costCode}`;
       const sku = item.candidateSku ?? null;
+      const mappedCanonicalName = mapDescriptionToProduct(item.rawDescription);
 
-      // Avoid creating duplicates within the same import if another item used the
-      // same SKU earlier in this run.
-      let product: Product | undefined = sku ? skuLookup.get(sku) : undefined;
+      let product: Product | undefined;
+      const match = findMatchedProduct(name, {
+        supplierName: order.vendorName ?? null,
+        mappedCanonicalName,
+        trustedCode: sku,
+      });
+
+      if (match.matched) {
+        product = match.product as Product;
+      }
 
       if (!product) {
-        product = await prisma.procurementProduct.create({
-          data: {
-            name,
-            sku,
-            uom: derivedUom as any,
-            unitSize: derivedUnitSize ?? undefined,
-            description: `BuildSmart import (PO ${order.orderNumber})`,
-            supplier: { connect: { id: resolvedSupplierId } },
-          },
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            uom: true,
-            unitSize: true,
-            supplierId: true,
-            supplier: { select: { id: true, name: true } },
-          },
-        });
+        if (!shouldCreateNewProduct(match)) {
+          unmatchedDescs.push(`${match.reason}: "${item.rawDescription}"`);
+          continue;
+        }
 
-        // Keep in-memory lookups in sync so subsequent items can match this product
-        allProducts.push(product as any);
-        if (sku) skuLookup.set(sku, product as any);
-        nameLookup.set(product.name.toLowerCase(), product as any);
+        if (!resolvedSupplierId) {
+          unmatchedDescs.push(
+            `No supplier resolved for new shop item: "${item.rawDescription}"`,
+          );
+          continue;
+        }
+
+        if (!product) {
+          product = await prisma.procurementProduct.create({
+            data: {
+              name,
+              normalizedName: normalizeImportedProductName(name).toLowerCase(),
+              sku,
+              uom: derivedUom as any,
+              unitSize: derivedUnitSize ?? undefined,
+              description: `BuildSmart import (PO ${order.orderNumber})`,
+              supplier: { connect: { id: resolvedSupplierId } },
+            },
+            select: {
+              id: true,
+              name: true,
+              normalizedName: true,
+              sku: true,
+              description: true,
+              uom: true,
+              unitSize: true,
+              supplierId: true,
+              supplier: { select: { id: true, name: true } },
+            },
+          });
+
+          // Keep in-memory lookups in sync so subsequent items can match this product
+          allProducts.push(product as any);
+          if (sku) skuLookup.set(sku, product as any);
+        }
       }
 
       matchedItems.push({
@@ -548,10 +518,16 @@ export async function POST(req: NextRequest) {
         quantity: i.quantity,
         candidateSku: i.candidateSku,
         matchedProduct: (() => {
-          const p =
-            (i.candidateSku ? skuLookup.get(i.candidateSku) : undefined) ??
-            findProductByName(i.rawDescription, i.unit);
-          return p ? { name: p.name, sku: p.sku } : null;
+          const mappedCanonicalName = mapDescriptionToProduct(i.rawDescription);
+          const match = findMatchedProduct(i.rawDescription, {
+            supplierName: o.vendorName ?? null,
+            mappedCanonicalName,
+            trustedCode: i.candidateSku ?? null,
+          });
+          const product = match.matched ? (match.product as Product) : null;
+          return product
+            ? { name: product.name, sku: product.sku, reason: match.reason }
+            : null;
         })(),
       })),
     })),
