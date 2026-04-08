@@ -12,7 +12,11 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import SitesTable, { type SiteRow } from "./SitesTable";
+import type { VisibilityState } from "@tanstack/react-table";
+import SitesTable, {
+  SITE_TABLE_COLUMN_OPTIONS,
+  type SiteRow,
+} from "./SitesTable";
 import { requestSiteGroupPhoto, listSites } from "@/actions/sites";
 import { useUserRole } from "@/lib/user-role-context";
 import {
@@ -23,6 +27,7 @@ import {
 } from "@/lib/generateSitesPdf";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -48,6 +53,9 @@ import { Input } from "../ui/input";
 interface SitesListProps {
   initialSites: SiteRow[];
 }
+
+const ALL_SUPERVISORS = "__all_supervisors__";
+const UNASSIGNED_SUPERVISOR = "__unassigned_supervisor__";
 
 // pnpm prisma migrate deploy
 
@@ -95,9 +103,35 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const [claimFilter, setClaimFilter] = React.useState<
     "all" | "has" | "missing"
   >("all");
+  const [supervisorFilter, setSupervisorFilter] =
+    React.useState(ALL_SUPERVISORS);
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>(() =>
+      Object.fromEntries(SITE_TABLE_COLUMN_OPTIONS.map(({ id }) => [id, true])),
+    );
 
   // The effective data set: if date range is applied use date-filtered data, otherwise initialSites
   const effectiveData = dateFilteredSites ?? initialSites;
+
+  const supervisorOptions = React.useMemo(() => {
+    return Array.from(
+      new Set(
+        effectiveData
+          .map((site) => site.supervisorName?.trim())
+          .filter((name): name is string => Boolean(name)),
+      ),
+    ).sort((left, right) => left.localeCompare(right));
+  }, [effectiveData]);
+
+  React.useEffect(() => {
+    if (
+      supervisorFilter !== ALL_SUPERVISORS &&
+      supervisorFilter !== UNASSIGNED_SUPERVISOR &&
+      !supervisorOptions.includes(supervisorFilter)
+    ) {
+      setSupervisorFilter(ALL_SUPERVISORS);
+    }
+  }, [supervisorFilter, supervisorOptions]);
 
   async function handleApplyDateRange() {
     if (!dateFrom && !dateTo) {
@@ -165,14 +199,24 @@ export default function SitesList({ initialSites }: SitesListProps) {
     );
   }, [effectiveData, query]);
 
+  const supervisorFiltered = React.useMemo(() => {
+    if (supervisorFilter === ALL_SUPERVISORS) return searchFiltered;
+    if (supervisorFilter === UNASSIGNED_SUPERVISOR) {
+      return searchFiltered.filter((site) => !site.supervisorName?.trim());
+    }
+    return searchFiltered.filter(
+      (site) => site.supervisorName?.trim() === supervisorFilter,
+    );
+  }, [searchFiltered, supervisorFilter]);
+
   // Then apply claim-date filter (running vs not-running)
   const filtered = React.useMemo(() => {
-    if (claimFilter === "all") return searchFiltered;
-    return searchFiltered.filter((s) => {
+    if (claimFilter === "all") return supervisorFiltered;
+    return supervisorFiltered.filter((s) => {
       const hasClaim = !!s.siteClaimDate;
       return claimFilter === "has" ? hasClaim : !hasClaim;
     });
-  }, [searchFiltered, claimFilter]);
+  }, [supervisorFiltered, claimFilter]);
 
   async function handleSubmitPhotoRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -235,6 +279,30 @@ export default function SitesList({ initialSites }: SitesListProps) {
           {/* Divider */}
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
 
+          <div className="flex items-center gap-1.5">
+            <Select
+              value={supervisorFilter}
+              onValueChange={setSupervisorFilter}
+            >
+              <SelectTrigger className="h-8 w-48 text-xs md:text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white">
+                <SelectValue placeholder="Supervisor" />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value={ALL_SUPERVISORS}>All supervisors</SelectItem>
+                <SelectItem value={UNASSIGNED_SUPERVISOR}>
+                  Unassigned
+                </SelectItem>
+                {supervisorOptions.map((supervisorName) => (
+                  <SelectItem key={supervisorName} value={supervisorName}>
+                    {supervisorName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+
           {/* From */}
           <div className="flex items-center gap-1.5">
             <CalendarDays className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
@@ -277,7 +345,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
           )}
 
           {/* Claim date filter */}
-          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+          {/* <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
           <div className="flex items-center gap-1.5">
             <CalendarDays className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
             <Select
@@ -300,7 +368,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 </SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
           {/* Divider */}
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
@@ -357,6 +425,34 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span className="hidden md:inline">Columns</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {SITE_TABLE_COLUMN_OPTIONS.map(({ id, label }) => (
+                  <DropdownMenuCheckboxItem
+                    key={id}
+                    checked={columnVisibility[id] !== false}
+                    onCheckedChange={(checked) => {
+                      setColumnVisibility((prev) => ({
+                        ...prev,
+                        [id]: checked === true,
+                      }));
+                    }}
+                  >
+                    {label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span className="hidden md:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
@@ -455,6 +551,8 @@ export default function SitesList({ initialSites }: SitesListProps) {
             setPhotoDialogOpen(true);
           }}
           onSelectionChange={setSelectedSites}
+          columnVisibility={columnVisibility}
+          onColumnVisibilityChange={setColumnVisibility}
         />
       )}
 

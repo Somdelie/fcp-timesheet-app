@@ -11,8 +11,10 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type OnChangeFn,
   type SortingState,
   type RowSelectionState,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import {
   ArrowRight,
@@ -20,6 +22,7 @@ import {
   MoreHorizontal,
   CheckCircle,
   Trash2,
+  Pencil,
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
@@ -81,6 +84,7 @@ import {
 } from "@/actions/site-materials";
 import { Badge } from "@/components/ui/badge";
 import { AddMaterialsDialog } from "./SiteMaterialsPanel";
+import EditSiteLocationDialog from "./EditSiteLocationDialog";
 
 export type SiteRow = {
   id: string;
@@ -88,6 +92,9 @@ export type SiteRow = {
   code: string | null;
   client: string | null;
   location: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   siteClaimDate: string | null;
   isActive: boolean;
   createdAt: string;
@@ -95,6 +102,19 @@ export type SiteRow = {
   totalWages: number;
   totalMaterialCost: number;
 };
+
+export const SITE_TABLE_COLUMN_OPTIONS = [
+  { id: "select", label: "Select" },
+  { id: "code", label: "Job Number" },
+  { id: "name", label: "Name" },
+  { id: "client", label: "Client" },
+  { id: "siteClaimDate", label: "Claim Date" },
+  { id: "supervisorName", label: "Supervisor" },
+  { id: "totalWages", label: "Total Wages" },
+  { id: "totalMaterialCost", label: "Total Material Cost" },
+  { id: "totalCost", label: "Total Cost" },
+  { id: "actions", label: "Actions" },
+] as const;
 
 function classNames(...xs: Array<string | false | undefined | null>) {
   return xs.filter(Boolean).join(" ");
@@ -145,6 +165,7 @@ function SiteRowActions({
   onRequestPhoto: () => void;
 }) {
   const router = useRouter();
+  const [showEditDialog, setShowEditDialog] = React.useState(false);
   const [showFinishDialog, setShowFinishDialog] = React.useState(false);
   const [isFinishing, setIsFinishing] = React.useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
@@ -224,6 +245,17 @@ function SiteRowActions({
             className="flex items-center gap-2"
             onSelect={(e) => {
               e.preventDefault();
+              setShowEditDialog(true);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+            Quick Edit
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="flex items-center gap-2"
+            onSelect={(e) => {
+              e.preventDefault();
               router.push(`/sites/${site.id}`);
             }}
           >
@@ -286,6 +318,22 @@ function SiteRowActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <EditSiteLocationDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        hideTrigger
+        siteId={site.id}
+        initialName={site.name}
+        initialCode={site.code}
+        initialClient={site.client}
+        initialLocation={site.location}
+        initialAddress={site.address}
+        initialLatitude={site.latitude}
+        initialLongitude={site.longitude}
+        initialSiteClaimDate={site.siteClaimDate}
+        canEditCoreDetails={role === "ADMIN"}
+      />
 
       <ConfirmationDialog
         open={showFinishDialog}
@@ -402,6 +450,8 @@ interface SitesTableProps {
   role: string;
   onRequestPhoto: (site: SiteRow) => void;
   onSelectionChange?: (selectedSites: SiteRow[]) => void;
+  columnVisibility?: VisibilityState;
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>;
 }
 
 export default function SitesTable({
@@ -409,6 +459,8 @@ export default function SitesTable({
   role,
   onRequestPhoto,
   onSelectionChange,
+  columnVisibility,
+  onColumnVisibilityChange,
 }: SitesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "siteClaimDate", desc: false },
@@ -660,10 +712,12 @@ export default function SitesTable({
       sorting,
       pagination,
       rowSelection,
+      columnVisibility,
     },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange,
     enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

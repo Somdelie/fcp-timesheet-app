@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { toast } from "react-toastify";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -60,6 +61,9 @@ export default function EditSiteLocationDialog(props: {
   initialLongitude?: number | null;
   initialSiteClaimDate?: string | null;
   canEditCoreDetails?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const {
     siteId,
@@ -72,12 +76,23 @@ export default function EditSiteLocationDialog(props: {
     initialLongitude,
     initialSiteClaimDate,
     canEditCoreDetails = false,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    hideTrigger = false,
   } = props;
 
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+
+  const setOpen = (next: boolean) => {
+    controlledOnOpenChange?.(next);
+    if (controlledOpen === undefined) {
+      setInternalOpen(next);
+    }
+  };
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -87,13 +102,48 @@ export default function EditSiteLocationDialog(props: {
       client: initialClient ?? "",
       location: initialLocation ?? "",
       address: initialAddress ?? "",
-      siteClaimDate: initialSiteClaimDate ?? "",
+      siteClaimDate: initialSiteClaimDate?.slice(0, 10) ?? "",
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
         typeof initialLongitude === "number" ? initialLongitude : undefined,
     },
   });
+
+  function normalizeDateInput(value?: string | null) {
+    if (!value) return "";
+    return value.slice(0, 10);
+  }
+
+  function resetFormValues() {
+    form.reset({
+      name: initialName,
+      code: initialCode ?? "",
+      client: initialClient ?? "",
+      location: initialLocation ?? "",
+      address: initialAddress ?? "",
+      siteClaimDate: normalizeDateInput(initialSiteClaimDate),
+      latitude:
+        typeof initialLatitude === "number" ? initialLatitude : undefined,
+      longitude:
+        typeof initialLongitude === "number" ? initialLongitude : undefined,
+    });
+  }
+
+  React.useEffect(() => {
+    if (!open) return;
+    resetFormValues();
+  }, [
+    open,
+    initialName,
+    initialCode,
+    initialClient,
+    initialLocation,
+    initialAddress,
+    initialLatitude,
+    initialLongitude,
+    initialSiteClaimDate,
+  ]);
 
   function onSubmit(values: z.infer<typeof schema>) {
     startTransition(async () => {
@@ -118,7 +168,7 @@ export default function EditSiteLocationDialog(props: {
         return;
       }
 
-      toast.success("Site location updated.");
+      toast.success("Site updated.");
       setOpen(false);
       setPickerOpen(false);
       router.refresh();
@@ -130,15 +180,21 @@ export default function EditSiteLocationDialog(props: {
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) setPickerOpen(false);
+        if (v) {
+          resetFormValues();
+        } else {
+          setPickerOpen(false);
+        }
       }}
     >
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Pencil className="h-4 w-4" />
-          Edit location
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="outline" className="gap-2">
+            <Pencil className="h-4 w-4" />
+            Edit location
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -250,6 +306,43 @@ export default function EditSiteLocationDialog(props: {
                     disabled={pending}
                     className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
                   />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="siteClaimDate"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Claim Date{" "}
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                      (Optional)
+                    </span>
+                  </FieldLabel>
+                  <div className="mt-1.5 flex gap-2">
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      type="date"
+                      disabled={pending}
+                      className="dark:bg-zinc-800/50 dark:border-zinc-700/50"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => field.onChange("")}
+                      disabled={pending || !field.value}
+                    >
+                      Clear
+                    </Button>
+                  </div>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

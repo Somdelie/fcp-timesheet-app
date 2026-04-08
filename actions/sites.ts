@@ -374,11 +374,12 @@ export async function updateSiteLocation(input: {
     });
 
     revalidatePath(`/sites/${siteId}`);
+    revalidatePath(`/sites`);
     revalidatePath(`/sites/map`);
 
     return { ok: true as const, site: serializeSite(site) };
   } catch (e: any) {
-    return { ok: false as const, error: "Failed to update site location." };
+    return { ok: false as const, error: "Failed to update site." };
   }
 }
 
