@@ -22,6 +22,7 @@ import {
   ChevronsRight,
   Printer,
   Download,
+  X,
 } from "lucide-react";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
@@ -45,6 +46,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 import TimesheetDetailSheet, {
   type TimesheetAction,
@@ -116,6 +124,41 @@ type SupervisorRow = {
   rowKey?: string;
 };
 
+type WageAnalyticsRow = {
+  periodId: string;
+  periodLabel: string;
+  startISO: string;
+  endISO: string;
+  monthIndex: number;
+  monthLabel: string;
+  supervisorId: string;
+  supervisorName: string;
+  foremanName: string;
+  siteId: string;
+  siteCode: string;
+  siteName: string;
+  status: string;
+  wages: number;
+  days: number;
+};
+
+type MonthlySortKey = "month" | "wages" | "pct" | "rank";
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
 function ensureUniqueRowKeys<T extends { id: string; rowKey?: string }>(
   rows: T[],
 ): T[] {
@@ -150,6 +193,19 @@ function prettyRange(startISO: string, endISO: string) {
   const fmt = (d: Date) =>
     d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
   return `${fmt(a)} – ${fmt(b)}`;
+}
+
+function overlapsRange(period: PeriodOption, fromISO: string, toISO: string) {
+  if (!fromISO || !toISO) return true;
+  return !(period.endISO < fromISO || period.startISO > toISO);
+}
+
+function csvEsc(value: string | number) {
+  const s = String(value ?? "");
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
 }
 
 function iso10(v: any) {
@@ -286,6 +342,29 @@ export default function TimesheetsListClient({ mode }: Props) {
   const [q, setQ] = useState("");
   const [qDebounced, setQDebounced] = useState("");
   const [status, setStatus] = useState<string>("ALL");
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsErr, setAnalyticsErr] = useState<string | null>(null);
+  const [analyticsRows, setAnalyticsRows] = useState<WageAnalyticsRow[]>([]);
+  const [analyticsFromISO, setAnalyticsFromISO] = useState("");
+  const [analyticsToISO, setAnalyticsToISO] = useState("");
+  const [analyticsMonth, setAnalyticsMonth] = useState<string>("ALL");
+  const [monthlySortBy, setMonthlySortBy] = useState<MonthlySortKey>("rank");
+  const [monthlySortDir, setMonthlySortDir] = useState<"asc" | "desc">("asc");
+  const [monthlyPagination, setMonthlyPagination] = useState({
+    pageIndex: 0,
+    pageSize: 6,
+  });
+  const [analyticsFortnightId, setAnalyticsFortnightId] =
+    useState<string>("ALL");
+  const [analyticsSupervisorId, setAnalyticsSupervisorId] =
+    useState<string>("ALL");
+  const [analyticsSearch, setAnalyticsSearch] = useState("");
+  const [analyticsSearchDebounced, setAnalyticsSearchDebounced] = useState("");
+  const [siteAnalyticsPagination, setSiteAnalyticsPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const [supervisorId, setSupervisorId] = useState<string>("ALL");
 
@@ -333,6 +412,11 @@ export default function TimesheetsListClient({ mode }: Props) {
   const currentPeriod = useMemo(
     () => periods.find((p) => p.id === periodId) ?? null,
     [periods, periodId],
+  );
+
+  const periodsSorted = useMemo(
+    () => [...periods].sort((a, b) => a.startISO.localeCompare(b.startISO)),
+    [periods],
   );
 
   const totalWages = useMemo(() => {
@@ -964,6 +1048,22 @@ export default function TimesheetsListClient({ mode }: Props) {
     return () => clearTimeout(t);
   }, [q]);
 
+  useEffect(() => {
+    const t = setTimeout(
+      () => setAnalyticsSearchDebounced(analyticsSearch.trim()),
+      250,
+    );
+    return () => clearTimeout(t);
+  }, [analyticsSearch]);
+
+  useEffect(() => {
+    if (mode !== "ADMIN" || !periodsSorted.length) return;
+    setAnalyticsFromISO((prev) => prev || periodsSorted[0].startISO);
+    setAnalyticsToISO(
+      (prev) => prev || periodsSorted[periodsSorted.length - 1].endISO,
+    );
+  }, [mode, periodsSorted]);
+
   // load supervisors (admin only)
   useEffect(() => {
     if (mode !== "ADMIN") {
@@ -1163,6 +1263,443 @@ export default function TimesheetsListClient({ mode }: Props) {
     loadList();
     return () => listAbortRef.current?.abort();
   }, [loadList, periodId]);
+
+  const loadWageAnalytics = useCallback(async () => {
+    if (mode !== "ADMIN") return;
+    if (!periodsSorted.length) {
+      setAnalyticsRows([]);
+      setAnalyticsErr(null);
+      return;
+    }
+
+    const fromISO = analyticsFromISO || periodsSorted[0].startISO;
+    const toISO =
+      analyticsToISO || periodsSorted[periodsSorted.length - 1].endISO;
+
+    if (fromISO > toISO) {
+      setAnalyticsErr("From date must be before To date.");
+      setAnalyticsRows([]);
+      return;
+    }
+
+    const targetPeriods = periodsSorted.filter(
+      (p) =>
+        (analyticsFortnightId === "ALL" || p.id === analyticsFortnightId) &&
+        overlapsRange(p, fromISO, toISO),
+    );
+
+    if (!targetPeriods.length) {
+      setAnalyticsRows([]);
+      setAnalyticsErr(null);
+      return;
+    }
+
+    setAnalyticsLoading(true);
+    setAnalyticsErr(null);
+
+    try {
+      const payloads = await Promise.all(
+        targetPeriods.map(async (period) => {
+          const url = new URL(
+            "/api/app/admin/timesheets",
+            window.location.origin,
+          );
+          url.searchParams.set("period", period.id);
+          if (analyticsSupervisorId !== "ALL") {
+            url.searchParams.set("supervisorId", analyticsSupervisorId);
+          }
+          if (analyticsSearchDebounced) {
+            url.searchParams.set("q", analyticsSearchDebounced);
+          }
+
+          const res = await fetch(url.toString(), {
+            cache: "no-store",
+            credentials: "include",
+            headers: { accept: "application/json" },
+          });
+
+          const body = await res.json().catch(() => null);
+          if (!res.ok) {
+            const msg =
+              body?.error ||
+              body?.message ||
+              `Failed to load analytics for ${period.id} (${res.status})`;
+            throw new Error(msg);
+          }
+
+          const rows =
+            (Array.isArray(body?.timesheets) &&
+              (body.timesheets as AdminRow[])) ||
+            [];
+
+          return { period, rows };
+        }),
+      );
+
+      const mapped = payloads.flatMap(({ period, rows }) => {
+        const monthIndex = new Date(
+          `${period.startISO}T00:00:00.000Z`,
+        ).getUTCMonth();
+        const monthLabel = MONTH_LABELS[monthIndex] ?? "—";
+
+        return rows
+          .map((row) => {
+            const firstSite = row.sites?.[0];
+            if (!firstSite) return null;
+
+            return {
+              periodId: period.id,
+              periodLabel: prettyRange(period.startISO, period.endISO),
+              startISO: period.startISO,
+              endISO: period.endISO,
+              monthIndex,
+              monthLabel,
+              supervisorId: row.supervisor?.id ?? "UNASSIGNED",
+              supervisorName: row.supervisor?.name ?? "Unassigned",
+              foremanName: row.foreman?.name ?? "Foreman",
+              siteId: firstSite.id,
+              siteCode: String(firstSite.code ?? "").trim(),
+              siteName: firstSite.name,
+              status: row.status,
+              wages: Number(row.totalWorkerWages ?? 0),
+              days: Number(row.totalWorkerDays ?? 0),
+            } as WageAnalyticsRow;
+          })
+          .filter(Boolean) as WageAnalyticsRow[];
+      });
+
+      setAnalyticsRows(mapped);
+    } catch (e) {
+      setAnalyticsRows([]);
+      setAnalyticsErr(toSafeErrorText(e));
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [
+    mode,
+    periodsSorted,
+    analyticsFromISO,
+    analyticsToISO,
+    analyticsFortnightId,
+    analyticsSupervisorId,
+    analyticsSearchDebounced,
+  ]);
+
+  useEffect(() => {
+    if (!analyticsOpen || mode !== "ADMIN") return;
+    loadWageAnalytics();
+  }, [analyticsOpen, mode, loadWageAnalytics]);
+
+  const analyticsRowsFiltered = useMemo(() => {
+    return analyticsRows.filter((r) => {
+      if (analyticsMonth !== "ALL" && String(r.monthIndex) !== analyticsMonth) {
+        return false;
+      }
+      return true;
+    });
+  }, [analyticsRows, analyticsMonth]);
+
+  const analyticsTotalWages = useMemo(
+    () => analyticsRowsFiltered.reduce((sum, r) => sum + r.wages, 0),
+    [analyticsRowsFiltered],
+  );
+
+  const analyticsMonthlyBreakdown = useMemo(() => {
+    return MONTH_LABELS.map((label, monthIndex) => {
+      const total = analyticsRowsFiltered.reduce((sum, row) => {
+        if (row.monthIndex !== monthIndex) return sum;
+        return sum + row.wages;
+      }, 0);
+      const pct =
+        analyticsTotalWages > 0 ? (total / analyticsTotalWages) * 100 : 0;
+      return { monthIndex, label, total, pct };
+    });
+  }, [analyticsRowsFiltered, analyticsTotalWages]);
+
+  const analyticsMonthlyRows = useMemo(() => {
+    const rankSeed = [...analyticsMonthlyBreakdown]
+      .sort((a, b) => {
+        if (b.total !== a.total) return b.total - a.total;
+        return a.monthIndex - b.monthIndex;
+      })
+      .map((r, idx) => ({ monthIndex: r.monthIndex, rank: idx + 1 }));
+
+    const rankMap = new Map<number, number>(
+      rankSeed.map((x) => [x.monthIndex, x.rank]),
+    );
+
+    const rows = analyticsMonthlyBreakdown.map((m) => ({
+      ...m,
+      rank: rankMap.get(m.monthIndex) ?? 99,
+    }));
+
+    const dir = monthlySortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      if (monthlySortBy === "month") return (a.monthIndex - b.monthIndex) * dir;
+      if (monthlySortBy === "wages") return (a.total - b.total) * dir;
+      if (monthlySortBy === "pct") return (a.pct - b.pct) * dir;
+      return (a.rank - b.rank) * dir;
+    });
+  }, [analyticsMonthlyBreakdown, monthlySortBy, monthlySortDir]);
+
+  const toggleMonthlySort = useCallback((key: MonthlySortKey) => {
+    setMonthlySortBy((prev) => {
+      if (prev === key) {
+        setMonthlySortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setMonthlySortDir(key === "rank" ? "asc" : "desc");
+      return key;
+    });
+  }, []);
+
+  const monthlySortIcon = useCallback(
+    (key: MonthlySortKey) => {
+      if (monthlySortBy !== key) {
+        return <ArrowUpDown className="h-4 w-4 text-muted-foreground" />;
+      }
+      return monthlySortDir === "asc" ? (
+        <ChevronUp className="h-4 w-4" />
+      ) : (
+        <ChevronDown className="h-4 w-4" />
+      );
+    },
+    [monthlySortBy, monthlySortDir],
+  );
+
+  const analyticsSitesByFortnight = useMemo(() => {
+    const byPeriod = new Map<
+      string,
+      {
+        periodLabel: string;
+        startISO: string;
+        sites: Map<
+          string,
+          { siteCode: string; siteName: string; wages: number }
+        >;
+      }
+    >();
+
+    for (const row of analyticsRowsFiltered) {
+      const periodBucket = byPeriod.get(row.periodId) ?? {
+        periodLabel: row.periodLabel,
+        startISO: row.startISO,
+        sites: new Map<
+          string,
+          { siteCode: string; siteName: string; wages: number }
+        >(),
+      };
+
+      const siteKey = `${row.siteId}`;
+      const prev = periodBucket.sites.get(siteKey);
+      periodBucket.sites.set(siteKey, {
+        siteCode: row.siteCode,
+        siteName: row.siteName,
+        wages: (prev?.wages ?? 0) + row.wages,
+      });
+
+      byPeriod.set(row.periodId, periodBucket);
+    }
+
+    return Array.from(byPeriod.entries())
+      .flatMap(([periodId, period]) => {
+        const rankedSites = Array.from(period.sites.values()).sort(
+          (a, b) => b.wages - a.wages,
+        );
+
+        return rankedSites.map((site, idx) => ({
+          periodId,
+          periodLabel: period.periodLabel,
+          startISO: period.startISO,
+          siteCode: site.siteCode,
+          siteName: site.siteName,
+          wages: site.wages,
+          rank: idx + 1,
+          isTop: idx === 0,
+        }));
+      })
+      .sort((a, b) => {
+        if (a.startISO !== b.startISO) {
+          return a.startISO.localeCompare(b.startISO);
+        }
+        return a.rank - b.rank;
+      });
+  }, [analyticsRowsFiltered]);
+
+  const analyticsTopSiteByFortnight = useMemo(() => {
+    const seen = new Set<string>();
+    return analyticsSitesByFortnight
+      .filter((row) => {
+        if (!row.isTop) return false;
+        if (seen.has(row.periodId)) return false;
+        seen.add(row.periodId);
+        return true;
+      })
+      .map((row) => ({
+        periodId: row.periodId,
+        periodLabel: row.periodLabel,
+        siteCode: row.siteCode,
+        siteName: row.siteName,
+        wages: row.wages,
+      }));
+  }, [analyticsSitesByFortnight]);
+
+  const monthlyPageCount = Math.max(
+    1,
+    Math.ceil(analyticsMonthlyRows.length / monthlyPagination.pageSize),
+  );
+
+  const pagedMonthlyRows = useMemo(() => {
+    const start = monthlyPagination.pageIndex * monthlyPagination.pageSize;
+    return analyticsMonthlyRows.slice(
+      start,
+      start + monthlyPagination.pageSize,
+    );
+  }, [
+    analyticsMonthlyRows,
+    monthlyPagination.pageIndex,
+    monthlyPagination.pageSize,
+  ]);
+
+  const siteAnalyticsPageCount = Math.max(
+    1,
+    Math.ceil(
+      analyticsSitesByFortnight.length / siteAnalyticsPagination.pageSize,
+    ),
+  );
+
+  const pagedSiteAnalyticsRows = useMemo(() => {
+    const start =
+      siteAnalyticsPagination.pageIndex * siteAnalyticsPagination.pageSize;
+    return analyticsSitesByFortnight.slice(
+      start,
+      start + siteAnalyticsPagination.pageSize,
+    );
+  }, [
+    analyticsSitesByFortnight,
+    siteAnalyticsPagination.pageIndex,
+    siteAnalyticsPagination.pageSize,
+  ]);
+
+  useEffect(() => {
+    setMonthlyPagination((prev) => {
+      const safeIndex = Math.min(
+        prev.pageIndex,
+        Math.max(0, monthlyPageCount - 1),
+      );
+      if (safeIndex === prev.pageIndex) return prev;
+      return { ...prev, pageIndex: safeIndex };
+    });
+  }, [monthlyPageCount]);
+
+  useEffect(() => {
+    setSiteAnalyticsPagination((prev) => {
+      const safeIndex = Math.min(
+        prev.pageIndex,
+        Math.max(0, siteAnalyticsPageCount - 1),
+      );
+      if (safeIndex === prev.pageIndex) return prev;
+      return { ...prev, pageIndex: safeIndex };
+    });
+  }, [siteAnalyticsPageCount]);
+
+  useEffect(() => {
+    setMonthlyPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    setSiteAnalyticsPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [
+    analyticsMonth,
+    analyticsFortnightId,
+    analyticsSupervisorId,
+    analyticsFromISO,
+    analyticsToISO,
+    analyticsSearchDebounced,
+  ]);
+
+  const downloadAnalyticsBreakdown = useCallback(() => {
+    if (!analyticsRowsFiltered.length) {
+      toast.info("No analytics rows to download");
+      return;
+    }
+
+    const lines: string[] = [];
+    lines.push(
+      [
+        "Fortnight",
+        "Start",
+        "End",
+        "Month",
+        "Supervisor",
+        "Foreman",
+        "Site Code",
+        "Site Name",
+        "Status",
+        "Worker Days",
+        "Wages",
+      ].join(","),
+    );
+
+    for (const r of analyticsRowsFiltered) {
+      lines.push(
+        [
+          csvEsc(r.periodLabel),
+          csvEsc(r.startISO),
+          csvEsc(r.endISO),
+          csvEsc(r.monthLabel),
+          csvEsc(r.supervisorName),
+          csvEsc(r.foremanName),
+          csvEsc(r.siteCode),
+          csvEsc(r.siteName),
+          csvEsc(r.status),
+          csvEsc(r.days),
+          csvEsc(r.wages.toFixed(2)),
+        ].join(","),
+      );
+    }
+
+    lines.push("");
+    lines.push("Monthly Analytics");
+    lines.push("Month,Total Wages,Percentage");
+    for (const m of analyticsMonthlyBreakdown) {
+      lines.push(
+        [
+          csvEsc(m.label),
+          csvEsc(m.total.toFixed(2)),
+          csvEsc(`${m.pct.toFixed(2)}%`),
+        ].join(","),
+      );
+    }
+
+    lines.push("");
+    lines.push("Top Site by Fortnight");
+    lines.push("Fortnight,Top Site,Top Site Wages");
+    for (const item of analyticsTopSiteByFortnight) {
+      const siteDisplay = item.siteCode
+        ? `${item.siteCode} — ${item.siteName}`
+        : item.siteName;
+      lines.push(
+        [
+          csvEsc(item.periodLabel),
+          csvEsc(siteDisplay),
+          csvEsc(item.wages.toFixed(2)),
+        ].join(","),
+      );
+    }
+
+    const csv = `${lines.join("\n")}\n`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wage-cost-breakdown-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [
+    analyticsRowsFiltered,
+    analyticsMonthlyBreakdown,
+    analyticsTopSiteByFortnight,
+  ]);
 
   const openDetail = useCallback(
     async (id: string, siteId?: string | null) => {
@@ -1391,6 +1928,16 @@ export default function TimesheetsListClient({ mode }: Props) {
             >
               Refresh
             </Button>
+
+            {mode === "ADMIN" ? (
+              <Button
+                variant="outline"
+                onClick={() => setAnalyticsOpen(true)}
+                disabled={!periods.length}
+              >
+                Wage Cost Analytics
+              </Button>
+            ) : null}
 
             <Button
               className="bg-sky-600 hover:bg-sky-600/90 text-white"
@@ -1975,6 +2522,577 @@ export default function TimesheetsListClient({ mode }: Props) {
         prettyRange={prettyRange}
         mode={mode}
       />
+
+      <Sheet open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
+        <SheetContent
+          side="bottom"
+          className="h-screen w-screen overflow-y-auto px-4 [&>button]:z-50 [&>button]:rounded-md [&>button]:bg-background"
+        >
+          <SheetHeader className="sticky top-0 z-30 -mx-4 border-b bg-background/95 px-4 pb-3 pt-2 backdrop-blur">
+            <div className="flex items-start justify-between gap-2 pr-10">
+              <div>
+                <SheetTitle>Overall Wage Cost Analytics</SheetTitle>
+                <SheetDescription>
+                  Breakdown by date range, month (Jan–Dec), supervisor,
+                  fortnight, and job/site search.
+                </SheetDescription>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => setAnalyticsOpen(false)}
+                aria-label="Close analytics sheet"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </SheetHeader>
+
+          {mode === "ADMIN" ? (
+            <div className="mt-0 space-y-4">
+              <div className="sticky top-19 z-20 -mx-4 border-b bg-background/95 px-4 py-3 backdrop-blur">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      From
+                    </div>
+                    <Input
+                      type="date"
+                      value={analyticsFromISO}
+                      onChange={(e) => setAnalyticsFromISO(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      To
+                    </div>
+                    <Input
+                      type="date"
+                      value={analyticsToISO}
+                      onChange={(e) => setAnalyticsToISO(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Month
+                    </div>
+                    <Select
+                      value={analyticsMonth}
+                      onValueChange={setAnalyticsMonth}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All months" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All months</SelectItem>
+                        {MONTH_LABELS.map((label, index) => (
+                          <SelectItem key={label} value={String(index)}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Fortnight
+                    </div>
+                    <Select
+                      value={analyticsFortnightId}
+                      onValueChange={setAnalyticsFortnightId}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All fortnights" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All fortnights</SelectItem>
+                        {periodsSorted.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {prettyRange(p.startISO, p.endISO)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Supervisor
+                    </div>
+                    <Select
+                      value={analyticsSupervisorId}
+                      onValueChange={setAnalyticsSupervisorId}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All supervisors" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All supervisors</SelectItem>
+                        {supervisors.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Search (Job code / site / foreman)
+                    </div>
+                    <Input
+                      value={analyticsSearch}
+                      onChange={(e) => setAnalyticsSearch(e.target.value)}
+                      placeholder="e.g. JN-1001, site code, or name"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={loadWageAnalytics}
+                    disabled={analyticsLoading}
+                  >
+                    {analyticsLoading ? "Loading…" : "Apply Filters"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={downloadAnalyticsBreakdown}
+                    disabled={analyticsLoading || !analyticsRowsFiltered.length}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Breakdown
+                  </Button>
+                  <Badge variant="secondary" className="ml-auto">
+                    Total wages: {money(analyticsTotalWages)}
+                  </Badge>
+                </div>
+
+                {analyticsErr ? (
+                  <div className="mt-2 text-sm text-rose-600 dark:text-rose-400">
+                    {analyticsErr}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded border bg-card overflow-hidden">
+                <div className="border-b px-4 py-2 text-sm font-semibold">
+                  Monthly Percentage Analytics (Jan–Dec)
+                </div>
+                <div className="overflow-x-auto">
+                  <Table className="border-collapse">
+                    <TableHeader className="bg-muted/60">
+                      <TableRow>
+                        <TableHead className="border-r border-zinc-200 dark:border-zinc-700">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1"
+                            onClick={() => toggleMonthlySort("month")}
+                          >
+                            Month
+                            {monthlySortIcon("month")}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right border-r border-zinc-200 dark:border-zinc-700">
+                          <button
+                            type="button"
+                            className="ml-auto inline-flex items-center gap-1"
+                            onClick={() => toggleMonthlySort("wages")}
+                          >
+                            Total Wages
+                            {monthlySortIcon("wages")}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right border-r border-zinc-200 dark:border-zinc-700">
+                          <button
+                            type="button"
+                            className="ml-auto inline-flex items-center gap-1"
+                            onClick={() => toggleMonthlySort("pct")}
+                          >
+                            % of Selected Total
+                            {monthlySortIcon("pct")}
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-center">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1"
+                            onClick={() => toggleMonthlySort("rank")}
+                          >
+                            Rank
+                            {monthlySortIcon("rank")}
+                          </button>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pagedMonthlyRows.length ? (
+                        pagedMonthlyRows.map((m) => {
+                          const rowTone =
+                            m.rank === 1
+                              ? "bg-emerald-600/12 dark:bg-emerald-600/18"
+                              : m.rank === 2
+                                ? "bg-sky-600/12 dark:bg-sky-600/18"
+                                : m.rank === 3
+                                  ? "bg-amber-600/12 dark:bg-amber-600/18"
+                                  : "";
+
+                          return (
+                            <TableRow key={m.monthIndex} className={rowTone}>
+                              <TableCell className="font-medium border-r border-zinc-200 dark:border-zinc-700">
+                                {m.label}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold border-r border-zinc-200 dark:border-zinc-700">
+                                {money(m.total)}
+                              </TableCell>
+                              <TableCell className="text-right border-r border-zinc-200 dark:border-zinc-700">
+                                {m.pct.toFixed(2)}%
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {m.rank === 1 ? (
+                                  <Badge variant="secondary">1st</Badge>
+                                ) : m.rank === 2 ? (
+                                  <Badge variant="secondary">2nd</Badge>
+                                ) : m.rank === 3 ? (
+                                  <Badge variant="secondary">3rd</Badge>
+                                ) : (
+                                  m.rank
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-20 text-center">
+                            No monthly analytics for this selection.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex items-center justify-between border-t px-4 py-3">
+                  <div className="text-muted-foreground hidden text-sm lg:flex">
+                    Showing{" "}
+                    {analyticsMonthlyRows.length
+                      ? monthlyPagination.pageIndex *
+                          monthlyPagination.pageSize +
+                        1
+                      : 0}{" "}
+                    to{" "}
+                    {Math.min(
+                      (monthlyPagination.pageIndex + 1) *
+                        monthlyPagination.pageSize,
+                      analyticsMonthlyRows.length,
+                    )}{" "}
+                    of {analyticsMonthlyRows.length} months
+                  </div>
+
+                  <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+                    <div className="hidden items-center gap-2 lg:flex">
+                      <span className="text-sm font-medium">Rows per page</span>
+                      <Select
+                        value={String(monthlyPagination.pageSize)}
+                        onValueChange={(value) =>
+                          setMonthlyPagination({
+                            pageIndex: 0,
+                            pageSize: Number(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-20">
+                          <SelectValue
+                            placeholder={monthlyPagination.pageSize}
+                          />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                          {[6, 12].map((size) => (
+                            <SelectItem key={size} value={String(size)}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex w-fit items-center justify-center text-sm font-medium">
+                      Page {monthlyPagination.pageIndex + 1} of{" "}
+                      {monthlyPageCount}
+                    </div>
+
+                    <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="hidden h-8 w-8 lg:flex"
+                        onClick={() =>
+                          setMonthlyPagination((prev) => ({
+                            ...prev,
+                            pageIndex: 0,
+                          }))
+                        }
+                        disabled={monthlyPagination.pageIndex <= 0}
+                      >
+                        <span className="sr-only">Go to first page</span>
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          setMonthlyPagination((prev) => ({
+                            ...prev,
+                            pageIndex: Math.max(0, prev.pageIndex - 1),
+                          }))
+                        }
+                        disabled={monthlyPagination.pageIndex <= 0}
+                      >
+                        <span className="sr-only">Go to previous page</span>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          setMonthlyPagination((prev) => ({
+                            ...prev,
+                            pageIndex: Math.min(
+                              monthlyPageCount - 1,
+                              prev.pageIndex + 1,
+                            ),
+                          }))
+                        }
+                        disabled={
+                          monthlyPagination.pageIndex >= monthlyPageCount - 1
+                        }
+                      >
+                        <span className="sr-only">Go to next page</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="hidden h-8 w-8 lg:flex"
+                        onClick={() =>
+                          setMonthlyPagination((prev) => ({
+                            ...prev,
+                            pageIndex: monthlyPageCount - 1,
+                          }))
+                        }
+                        disabled={
+                          monthlyPagination.pageIndex >= monthlyPageCount - 1
+                        }
+                      >
+                        <span className="sr-only">Go to last page</span>
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded border bg-card overflow-hidden">
+                <div className="border-b px-4 py-2 text-sm font-semibold">
+                  Site Wage Costs by Fortnight (All Sites)
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/60">
+                      <TableRow>
+                        <TableHead className="border-r border-zinc-200 dark:border-zinc-700">
+                          Fortnight
+                        </TableHead>
+                        <TableHead className="border-r border-zinc-200 dark:border-zinc-700">
+                          Site
+                        </TableHead>
+                        <TableHead className="text-right border-r border-zinc-200 dark:border-zinc-700">
+                          Wages
+                        </TableHead>
+                        <TableHead className="text-center">Rank</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pagedSiteAnalyticsRows.length ? (
+                        pagedSiteAnalyticsRows.map((item) => (
+                          <TableRow
+                            key={`${item.periodId}-${item.rank}-${item.siteName}`}
+                            className={
+                              item.isTop
+                                ? "bg-emerald-600/10 dark:bg-emerald-600/16"
+                                : undefined
+                            }
+                          >
+                            <TableCell className="border-r border-zinc-200 dark:border-zinc-700">
+                              {item.periodLabel}
+                            </TableCell>
+                            <TableCell className="border-r border-zinc-200 dark:border-zinc-700">
+                              {item.siteCode
+                                ? `${item.siteCode} — ${item.siteName}`
+                                : item.siteName}
+                            </TableCell>
+                            <TableCell className="text-right font-medium border-r border-zinc-200 dark:border-zinc-700">
+                              {money(item.wages)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.isTop ? (
+                                <Badge variant="secondary">Highest</Badge>
+                              ) : (
+                                item.rank
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center h-20">
+                            No fortnight wage data for this selection.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex items-center justify-between border-t px-4 py-3">
+                  <div className="text-muted-foreground hidden text-sm lg:flex">
+                    Showing{" "}
+                    {analyticsSitesByFortnight.length
+                      ? siteAnalyticsPagination.pageIndex *
+                          siteAnalyticsPagination.pageSize +
+                        1
+                      : 0}{" "}
+                    to{" "}
+                    {Math.min(
+                      (siteAnalyticsPagination.pageIndex + 1) *
+                        siteAnalyticsPagination.pageSize,
+                      analyticsSitesByFortnight.length,
+                    )}{" "}
+                    of {analyticsSitesByFortnight.length} site rows
+                  </div>
+
+                  <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+                    <div className="hidden items-center gap-2 lg:flex">
+                      <span className="text-sm font-medium">Rows per page</span>
+                      <Select
+                        value={String(siteAnalyticsPagination.pageSize)}
+                        onValueChange={(value) =>
+                          setSiteAnalyticsPagination({
+                            pageIndex: 0,
+                            pageSize: Number(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-20">
+                          <SelectValue
+                            placeholder={siteAnalyticsPagination.pageSize}
+                          />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                          {[10, 25, 50].map((size) => (
+                            <SelectItem key={size} value={String(size)}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex w-fit items-center justify-center text-sm font-medium">
+                      Page {siteAnalyticsPagination.pageIndex + 1} of{" "}
+                      {siteAnalyticsPageCount}
+                    </div>
+
+                    <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="hidden h-8 w-8 lg:flex"
+                        onClick={() =>
+                          setSiteAnalyticsPagination((prev) => ({
+                            ...prev,
+                            pageIndex: 0,
+                          }))
+                        }
+                        disabled={siteAnalyticsPagination.pageIndex <= 0}
+                      >
+                        <span className="sr-only">Go to first page</span>
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          setSiteAnalyticsPagination((prev) => ({
+                            ...prev,
+                            pageIndex: Math.max(0, prev.pageIndex - 1),
+                          }))
+                        }
+                        disabled={siteAnalyticsPagination.pageIndex <= 0}
+                      >
+                        <span className="sr-only">Go to previous page</span>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          setSiteAnalyticsPagination((prev) => ({
+                            ...prev,
+                            pageIndex: Math.min(
+                              siteAnalyticsPageCount - 1,
+                              prev.pageIndex + 1,
+                            ),
+                          }))
+                        }
+                        disabled={
+                          siteAnalyticsPagination.pageIndex >=
+                          siteAnalyticsPageCount - 1
+                        }
+                      >
+                        <span className="sr-only">Go to next page</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="hidden h-8 w-8 lg:flex"
+                        onClick={() =>
+                          setSiteAnalyticsPagination((prev) => ({
+                            ...prev,
+                            pageIndex: siteAnalyticsPageCount - 1,
+                          }))
+                        }
+                        disabled={
+                          siteAnalyticsPagination.pageIndex >=
+                          siteAnalyticsPageCount - 1
+                        }
+                      >
+                        <span className="sr-only">Go to last page</span>
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 text-sm text-muted-foreground">
+              Wage cost analytics is available for admin role.
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
