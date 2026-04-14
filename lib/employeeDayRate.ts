@@ -34,6 +34,7 @@ type CompanySettingsRow = {
   defaultPainterDayRate: unknown;
   defaultBuildingDayRate: unknown;
   defaultSpecialCoatingsDayRate: unknown;
+  defaultCapeTownDayRate: unknown;
   defaultEmployeeDayRate: unknown;
 };
 
@@ -53,6 +54,8 @@ export function getTeamDefaultRate(
       return toNum(settings.defaultBuildingDayRate);
     case "SPECIAL_COATINGS":
       return toNum(settings.defaultSpecialCoatingsDayRate);
+    case "CAPE_TOWN":
+      return toNum(settings.defaultCapeTownDayRate);
     default:
       return 0;
   }
@@ -147,6 +150,7 @@ export async function computeDayRateAtScan(opts: {
           defaultPainterDayRate: true,
           defaultBuildingDayRate: true,
           defaultSpecialCoatingsDayRate: true,
+          defaultCapeTownDayRate: true,
         },
       }) as Promise<CompanySettingsRow | null>,
     ]);

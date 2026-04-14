@@ -117,6 +117,7 @@ export default function SettingsPage() {
   const [defaultBuildingDayRate, setDefaultBuildingDayRate] = useState("");
   const [defaultSpecialCoatingsDayRate, setDefaultSpecialCoatingsDayRate] =
     useState("");
+  const [defaultCapeTownDayRate, setDefaultCapeTownDayRate] = useState("");
   const [isSavingTeamRates, setIsSavingTeamRates] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -155,6 +156,9 @@ export default function SettingsPage() {
           );
           setDefaultSpecialCoatingsDayRate(
             String(res.settings.defaultSpecialCoatingsDayRate ?? "0"),
+          );
+          setDefaultCapeTownDayRate(
+            String(res.settings.defaultCapeTownDayRate ?? "0"),
           );
         }
       } catch (err) {
@@ -245,6 +249,7 @@ export default function SettingsPage() {
     const painters = Number(defaultPainterDayRate.trim());
     const building = Number(defaultBuildingDayRate.trim());
     const specialCoatings = Number(defaultSpecialCoatingsDayRate.trim());
+    const capeTown = Number(defaultCapeTownDayRate.trim());
 
     if (
       !Number.isFinite(painters) ||
@@ -252,7 +257,9 @@ export default function SettingsPage() {
       !Number.isFinite(building) ||
       building < 0 ||
       !Number.isFinite(specialCoatings) ||
-      specialCoatings < 0
+      specialCoatings < 0 ||
+      !Number.isFinite(capeTown) ||
+      capeTown < 0
     ) {
       toast.error("Please enter valid team rates (0 or above).");
       return;
@@ -264,6 +271,7 @@ export default function SettingsPage() {
         defaultPainterDayRate: defaultPainterDayRate.trim(),
         defaultBuildingDayRate: defaultBuildingDayRate.trim(),
         defaultSpecialCoatingsDayRate: defaultSpecialCoatingsDayRate.trim(),
+        defaultCapeTownDayRate: defaultCapeTownDayRate.trim(),
       });
       if (res.ok) toast.success("Team default rates updated!");
       else toast.error(res.error || "Failed to save team rates.");
@@ -852,6 +860,24 @@ export default function SettingsPage() {
                       onChange={(e) =>
                         setDefaultSpecialCoatingsDayRate(e.target.value)
                       }
+                      disabled={isLoadingSettings}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="capeTownRate">
+                      Cape Town Rate (R)
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Applied when a foreman is switched to Cape Town. All
+                      workers he scans will receive this rate.
+                    </p>
+                    <Input
+                      id="capeTownRate"
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 500.00"
+                      value={defaultCapeTownDayRate}
+                      onChange={(e) => setDefaultCapeTownDayRate(e.target.value)}
                       disabled={isLoadingSettings}
                     />
                   </div>

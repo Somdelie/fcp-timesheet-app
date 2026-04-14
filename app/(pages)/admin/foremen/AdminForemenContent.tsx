@@ -62,12 +62,14 @@ const TEAM_OPTIONS = [
   { value: "PAINTERS", label: "Painters" },
   { value: "BUILDING", label: "Building" },
   { value: "SPECIAL_COATINGS", label: "Special Coatings" },
+  { value: "CAPE_TOWN", label: "Cape Town" },
 ] as const;
 
 const TEAM_LABELS: Record<string, string> = {
   PAINTERS: "Painters",
   BUILDING: "Building",
   SPECIAL_COATINGS: "Special Coatings",
+  CAPE_TOWN: "Cape Town",
 };
 
 const TEAM_COLORS: Record<string, string> = {
@@ -76,6 +78,8 @@ const TEAM_COLORS: Record<string, string> = {
     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   SPECIAL_COATINGS:
     "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+  CAPE_TOWN:
+    "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
 interface Foreman {

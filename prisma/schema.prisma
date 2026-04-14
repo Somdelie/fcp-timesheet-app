@@ -886,6 +886,9 @@ model CompanySettings {
   defaultBuildingDayRate        Decimal @default(0) @db.Decimal(12, 2)
   defaultSpecialCoatingsDayRate Decimal @default(0) @db.Decimal(12, 2)
 
+  // Cape Town location rate — applies when a foreman is switched to CAPE_TOWN
+  defaultCapeTownDayRate Decimal @default(0) @db.Decimal(12, 2)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -994,6 +997,7 @@ enum TeamType {
   PAINTERS
   BUILDING
   SPECIAL_COATINGS
+  CAPE_TOWN
 }
 
 //

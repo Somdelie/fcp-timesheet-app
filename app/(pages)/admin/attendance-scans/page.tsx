@@ -60,6 +60,7 @@ interface Scan {
   employeeId: string;
   employeeName: string;
   employeeCode: string;
+  employeePhotoUrl: string | null;
   siteId: string;
   siteName: string;
   foremanId: string;
@@ -184,6 +185,7 @@ export default function AdminAttendanceScansPage() {
   const [pageSize, setPageSize] = useState(20);
   const [activeTab, setActiveTab] = useState<string>("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewPhoto, setViewPhoto] = useState<{ url: string; name: string } | null>(null);
 
   const handleDeleteScan = async (scanId: string) => {
     if (!scanId) return;
@@ -508,12 +510,38 @@ export default function AdminAttendanceScansPage() {
                           {pageScans.map((scan) => (
                             <TableRow key={scan.id}>
                               <TableCell className="border-x">
-                                <div>
-                                  <div className="font-medium">
-                                    {scan.employeeName}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {scan.employeeCode}
+                                <div className="flex items-center gap-3">
+                                  {scan.employeePhotoUrl ? (
+                                    <button
+                                      type="button"
+                                      className="shrink-0 focus:outline-none"
+                                      onClick={() => setViewPhoto({ url: scan.employeePhotoUrl!, name: scan.employeeName })}
+                                    >
+                                      <img
+                                        src={scan.employeePhotoUrl}
+                                        alt={scan.employeeName}
+                                        className="h-9 w-9 rounded object-cover hover:opacity-80 transition-opacity cursor-pointer"
+                                      />
+                                    </button>
+                                  ) : (
+                                    <div className="h-9 w-9 rounded bg-orange-500 flex items-center justify-center shrink-0">
+                                      <span className="text-xs font-semibold text-white">
+                                        {scan.employeeName
+                                          .split(" ")
+                                          .map((n) => n[0])
+                                          .join("")
+                                          .slice(0, 2)
+                                          .toUpperCase()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="font-medium">
+                                      {scan.employeeName}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {scan.employeeCode}
+                                    </div>
                                   </div>
                                 </div>
                               </TableCell>
@@ -699,6 +727,35 @@ export default function AdminAttendanceScansPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Photo lightbox */}
+      {viewPhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+          onClick={() => setViewPhoto(null)}
+        >
+          <div
+            className="relative max-w-sm w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={viewPhoto.url}
+              alt={viewPhoto.name}
+              className="w-full rounded object-contain max-h-[80vh]"
+            />
+            <p className="mt-2 text-center text-sm text-white font-medium">
+              {viewPhoto.name}
+            </p>
+            <button
+              type="button"
+              className="absolute -top-3 -right-3 h-7 w-7 rounded-full bg-white text-black flex items-center justify-center text-sm font-bold shadow hover:bg-gray-100"
+              onClick={() => setViewPhoto(null)}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

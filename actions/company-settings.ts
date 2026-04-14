@@ -10,6 +10,7 @@ export type CompanySettingsDTO = {
   defaultPainterDayRate: string;
   defaultBuildingDayRate: string;
   defaultSpecialCoatingsDayRate: string;
+  defaultCapeTownDayRate: string;
   updatedAt: string;
 };
 
@@ -22,6 +23,7 @@ function serializeSettings(s: any): CompanySettingsDTO {
     defaultSpecialCoatingsDayRate: String(
       s.defaultSpecialCoatingsDayRate ?? "0",
     ),
+    defaultCapeTownDayRate: String(s.defaultCapeTownDayRate ?? "0"),
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()
@@ -155,6 +157,7 @@ export async function updateTeamDefaultRates(input: {
   defaultPainterDayRate?: string | number;
   defaultBuildingDayRate?: string | number;
   defaultSpecialCoatingsDayRate?: string | number;
+  defaultCapeTownDayRate?: string | number;
 }) {
   const auth = await requireServerAuth();
 
@@ -184,6 +187,12 @@ export async function updateTeamDefaultRates(input: {
         error: "Special Coatings day rate is invalid.",
       };
     data.defaultSpecialCoatingsDayRate = v;
+  }
+  if (input.defaultCapeTownDayRate !== undefined) {
+    const v = parseMoneyAllowZero(input.defaultCapeTownDayRate);
+    if (v === null)
+      return { ok: false as const, error: "Cape Town day rate is invalid." };
+    data.defaultCapeTownDayRate = v;
   }
 
   if (Object.keys(data).length === 0) {

@@ -6,7 +6,7 @@ import { writeAuditEvent } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import type { TeamType } from "@/generated/prisma/client";
 
-const VALID_TEAMS: TeamType[] = ["PAINTERS", "BUILDING", "SPECIAL_COATINGS"];
+const VALID_TEAMS: TeamType[] = ["PAINTERS", "BUILDING", "SPECIAL_COATINGS", "CAPE_TOWN"];
 
 /**
  * Switch a foreman's default team.

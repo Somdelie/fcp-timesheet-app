@@ -76,6 +76,7 @@ export async function GET(req: Request) {
           firstName: true,
           lastName: true,
           qrCodeValue: true,
+          faceImageUrl: true,
         },
       },
       site: {
@@ -124,6 +125,7 @@ export async function GET(req: Request) {
       employeeName:
         `${scan.employee.firstName} ${scan.employee.lastName}`.trim(),
       employeeCode: scan.employee.qrCodeValue,
+      employeePhotoUrl: scan.employee.faceImageUrl ?? null,
       siteId: scan.site.id,
       siteName: scan.site.name,
       foremanId: scan.siteDay.foreman.id,
