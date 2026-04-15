@@ -67,6 +67,7 @@ export type NoteItem = {
   color: NoteColor;
   isPinned: boolean;
   isRoomNote: boolean;
+  background: string;
   updatedAt: string;
   ownerId: string;
   canEdit: boolean;
@@ -94,6 +95,7 @@ function serialize(
     color: string;
     isPinned: boolean;
     isRoomNote: boolean;
+    background: string;
     updatedAt: Date;
     attachments: {
       id: string;
@@ -143,6 +145,7 @@ function serialize(
     color: n.color as NoteColor,
     isPinned: n.isPinned,
     isRoomNote: n.isRoomNote,
+    background: n.background ?? "",
     updatedAt: n.updatedAt.toISOString(),
     ownerId: n.userId,
     canEdit:
@@ -298,6 +301,7 @@ export async function createNote(input: {
       content: input.content,
       color: input.color ?? "DEFAULT",
       isRoomNote: input.isRoomNote ?? false,
+      background: "note-bg",
       members: {
         create: {
           userId: auth.userId,
@@ -334,6 +338,7 @@ export async function updateNote(
     color?: NoteColor;
     isPinned?: boolean;
     isRoomNote?: boolean;
+    background?: string;
   },
 ): Promise<void> {
   const auth = await requireServerAuth();
@@ -352,6 +357,9 @@ export async function updateNote(
       ...(input.isPinned !== undefined ? { isPinned: input.isPinned } : {}),
       ...(input.isRoomNote !== undefined
         ? { isRoomNote: input.isRoomNote }
+        : {}),
+      ...(input.background !== undefined
+        ? { background: input.background }
         : {}),
     },
   });

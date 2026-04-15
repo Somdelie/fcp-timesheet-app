@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { addDaysUTC } from "@/lib/dateUtc";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const revalidate = 1800;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -35,36 +35,54 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
-  const siteId = url.searchParams.get("siteId");
-  const foremanId = url.searchParams.get("foremanId");
-  const supervisorId = url.searchParams.get("supervisorId");
+  const siteId = url.searchParams.get("siteId") || null;
+  const foremanId = url.searchParams.get("foremanId") || null;
+  const supervisorId = url.searchParams.get("supervisorId") || null;
   const dateStr = url.searchParams.get("date"); // YYYY-MM-DD
+
+  const now = new Date();
 
   // Default to last 7 days
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
   const sevenDaysAgo = addDaysUTC(todayStart, -7);
 
-  // Build where clause
+  // ── Resolve supervisor → site IDs at DB level ──────────────────────
+  let supervisorSiteIds: string[] | null = null;
+  if (supervisorId) {
+    const assignments = await prisma.supervisorSiteAssignment.findMany({
+      where: {
+        supervisorId,
+        startsOn: { lte: now },
+        OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+      },
+      select: { siteId: true },
+    });
+    supervisorSiteIds = assignments.map((a) => a.siteId);
+  }
+
+  // ── Build DB where clause ───────────────────────────────────────────
   const whereClause: any = {
     scannedAt: { gte: sevenDaysAgo },
   };
 
-  if (siteId) {
-    whereClause.siteId = siteId;
-  }
-
-  if (foremanId) {
-    whereClause.siteDay = { ...whereClause.siteDay, foremanId };
-  }
-
   if (dateStr) {
     const targetDate = new Date(`${dateStr}T00:00:00.000Z`);
     const nextDay = addDaysUTC(targetDate, 1);
-    whereClause.workDate = {
-      gte: targetDate,
-      lt: nextDay,
-    };
+    whereClause.workDate = { gte: targetDate, lt: nextDay };
+  }
+
+  // Site filter: if both supervisor and explicit site are set, use explicit site
+  // (the supervisor check below will validate it belongs to the supervisor)
+  if (siteId) {
+    whereClause.siteId = siteId;
+  } else if (supervisorSiteIds !== null) {
+    // No explicit site filter — restrict to supervisor's sites
+    whereClause.siteId = { in: supervisorSiteIds };
+  }
+
+  if (foremanId) {
+    whereClause.siteDay = { foremanId };
   }
 
   const scans = await prisma.attendanceScan.findMany({
@@ -85,9 +103,10 @@ export async function GET(req: Request) {
           name: true,
           supervisorAssignments: {
             where: {
-              startsOn: { lte: new Date() },
-              OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+              startsOn: { lte: now },
+              OR: [{ endsOn: null }, { endsOn: { gt: now } }],
             },
+            orderBy: { startsOn: "desc" },
             include: {
               supervisor: {
                 include: {
@@ -113,10 +132,10 @@ export async function GET(req: Request) {
       },
     },
     orderBy: { scannedAt: "desc" },
-    take: 500, // Limit for performance
+    take: 500,
   });
 
-  // Map to response format with supervisor info
+  // ── Map to response format ──────────────────────────────────────────
   let result = scans.map((scan) => {
     const supervisorAssignment = scan.site.supervisorAssignments[0];
     return {
@@ -142,12 +161,12 @@ export async function GET(req: Request) {
     };
   });
 
-  // Filter by supervisor if specified
-  if (supervisorId) {
-    result = result.filter((s) => s.supervisorId === supervisorId);
+  // ── If explicit siteId + supervisorId: validate the site belongs to supervisor ─
+  if (siteId && supervisorSiteIds !== null && !supervisorSiteIds.includes(siteId)) {
+    result = [];
   }
 
-  // Get unique sites, foremen and supervisors for filter dropdowns
+  // ── Build dropdown options from the full filtered result ────────────
   const sitesMap = new Map<string, string>();
   const foremenMap = new Map<string, string>();
   const supervisorsMap = new Map<string, string>();
@@ -160,27 +179,16 @@ export async function GET(req: Request) {
     }
   }
 
-  const sites = Array.from(sitesMap.entries()).map(([id, name]) => ({
-    id,
-    name,
-  }));
-  const foremen = Array.from(foremenMap.entries()).map(([id, name]) => ({
-    id,
-    name,
-  }));
-  const supervisors = Array.from(supervisorsMap.entries()).map(
-    ([id, name]) => ({
-      id,
-      name,
-    }),
-  );
+  const sites = Array.from(sitesMap.entries()).map(([id, name]) => ({ id, name }));
+  const foremen = Array.from(foremenMap.entries()).map(([id, name]) => ({ id, name }));
+  const supervisors = Array.from(supervisorsMap.entries()).map(([id, name]) => ({ id, name }));
 
   return NextResponse.json(
     { scans: result, sites, foremen, supervisors },
     {
       headers: {
         ...CORS_HEADERS,
-        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+        "Cache-Control": "no-store",
       },
     },
   );

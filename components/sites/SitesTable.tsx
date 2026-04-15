@@ -41,6 +41,8 @@ import {
   Loader2,
   CalendarDays,
   Plus,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -96,6 +98,7 @@ export type SiteRow = {
   latitude?: number | null;
   longitude?: number | null;
   siteClaimDate: string | null;
+  amountClaimed: number;
   isActive: boolean;
   createdAt: string;
   supervisorName: string | null;
@@ -113,6 +116,8 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "totalWages", label: "Total Wages" },
   { id: "totalMaterialCost", label: "Total Material Cost" },
   { id: "totalCost", label: "Total Cost" },
+  { id: "amountClaimed", label: "Amount Claimed" },
+  { id: "profitLoss", label: "Profit / Loss" },
   { id: "actions", label: "Actions" },
 ] as const;
 
@@ -332,6 +337,7 @@ function SiteRowActions({
         initialLatitude={site.latitude}
         initialLongitude={site.longitude}
         initialSiteClaimDate={site.siteClaimDate}
+        initialAmountClaimed={site.amountClaimed}
         canEditCoreDetails={role === "ADMIN"}
       />
 
@@ -540,6 +546,7 @@ export default function SitesTable({
       {
         id: "name",
         accessorKey: "name",
+        size: 220,
         header: ({ column }) => {
           const isSorted = column.getIsSorted();
           return (
@@ -560,7 +567,12 @@ export default function SitesTable({
           );
         },
         cell: ({ row }) => (
-          <span className="font-semibold uppercase">{row.original.name}</span>
+          <span
+            className="block font-semibold uppercase truncate max-w-50"
+            title={row.original.name}
+          >
+            {row.original.name}
+          </span>
         ),
       },
       {
@@ -647,11 +659,21 @@ export default function SitesTable({
             Total Wages
           </div>
         ),
-        cell: ({ row }) => (
-          <span className="block text-right text-sm font-medium">
-            {formatCurrency(row.original.totalWages ?? 0)}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const amount = row.original.totalWages ?? 0;
+          const claimed = row.original.amountClaimed ?? 0;
+          const pct = claimed > 0 ? (amount / claimed) * 100 : null;
+          return (
+            <div className="text-right">
+              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">{formatCurrency(amount)}</span>
+              {pct !== null && (
+                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                  {pct.toFixed(1)}%
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: "totalMaterialCost",
@@ -660,14 +682,24 @@ export default function SitesTable({
         header: () => (
           <div className="flex items-center gap-2">
             <Hammer className="h-4 w-4 text-orange-600" />
-            Total Material Cost
+            Material Cost
           </div>
         ),
-        cell: ({ row }) => (
-          <span className="block text-right text-sm font-medium">
-            {formatCurrency(row.original.totalMaterialCost ?? 0)}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const amount = row.original.totalMaterialCost ?? 0;
+          const claimed = row.original.amountClaimed ?? 0;
+          const pct = claimed > 0 ? (amount / claimed) * 100 : null;
+          return (
+            <div className="text-right">
+              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">{formatCurrency(amount)}</span>
+              {pct !== null && (
+                <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-400">
+                  {pct.toFixed(1)}%
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: "totalCost",
@@ -679,13 +711,65 @@ export default function SitesTable({
           </div>
         ),
         cell: ({ row }) => (
-          <span className="block text-right text-sm font-semibold">
+          <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">
             {formatCurrency(
               (row.original.totalWages ?? 0) +
                 (row.original.totalMaterialCost ?? 0),
             )}
           </span>
         ),
+      },
+      {
+        id: "amountClaimed",
+        accessorKey: "amountClaimed",
+        size: 150,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-teal-600" />
+            Amount Claimed
+          </div>
+        ),
+        cell: ({ row }) => (
+          <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">
+            {formatCurrency(row.original.amountClaimed ?? 0)}
+          </span>
+        ),
+      },
+      {
+        id: "profitLoss",
+        size: 150,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-violet-600" />
+            Profit / Loss
+          </div>
+        ),
+        cell: ({ row }) => {
+          const claimed = row.original.amountClaimed ?? 0;
+          const totalCost = (row.original.totalWages ?? 0) + (row.original.totalMaterialCost ?? 0);
+          if (claimed === 0) {
+            return <span className="block text-right text-xs text-muted-foreground">—</span>;
+          }
+          const pl = claimed - totalCost;
+          const isProfit = pl >= 0;
+          const pct = (pl / claimed) * 100;
+          return (
+            <div className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                {isProfit
+                  ? <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                  : <TrendingDown className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                }
+                <span className={`text-sm font-bold ${isProfit ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                  {isProfit ? "+" : ""}{formatCurrency(pl)}
+                </span>
+              </div>
+              <span className={`text-[11px] font-semibold ${isProfit ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {isProfit ? "+" : ""}{pct.toFixed(1)}%
+              </span>
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -727,7 +811,7 @@ export default function SitesTable({
   return (
     <div className="border bg-card">
       <div className="overflow-x-auto">
-        <Table className="border-collapse">
+        <Table className="border-separate border-spacing-0">
           <TableHeader className="bg-muted/60">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -738,12 +822,24 @@ export default function SitesTable({
                       width: header.column.getSize(),
                       minWidth: header.column.id === "select" ? 48 : undefined,
                       maxWidth: header.column.id === "select" ? 48 : undefined,
+                      position: ["select", "code", "name"].includes(header.column.id) ? "sticky" : undefined,
+                      left: header.column.id === "select" ? 0 : header.column.id === "code" ? 48 : header.column.id === "name" ? 168 : undefined,
                     }}
                     className={classNames(
                       "border border-zinc-200 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700",
                       header.column.id === "select"
                         ? "px-3 py-2 text-center"
                         : "px-3 py-1",
+                      ["select", "code", "name"].includes(header.column.id) &&
+                        "z-20 bg-muted",
+                      header.column.id === "totalWages" &&
+                        "bg-emerald-200 dark:bg-emerald-900/60",
+                      header.column.id === "totalMaterialCost" &&
+                        "bg-orange-200 dark:bg-orange-900/60",
+                      header.column.id === "amountClaimed" &&
+                        "bg-teal-200 dark:bg-teal-900/60",
+                      header.column.id === "profitLoss" &&
+                        "bg-violet-200 dark:bg-violet-900/60",
                     )}
                   >
                     {header.isPlaceholder
@@ -772,12 +868,24 @@ export default function SitesTable({
                         width: cell.column.getSize(),
                         minWidth: cell.column.id === "select" ? 48 : undefined,
                         maxWidth: cell.column.id === "select" ? 48 : undefined,
+                        position: ["select", "code", "name"].includes(cell.column.id) ? "sticky" : undefined,
+                        left: cell.column.id === "select" ? 0 : cell.column.id === "code" ? 48 : cell.column.id === "name" ? 168 : undefined,
                       }}
                       className={classNames(
                         "border border-zinc-200 dark:border-zinc-700",
                         cell.column.id === "select"
                           ? "px-3 py-2 text-center"
                           : "px-3 py-1",
+                        ["select", "code", "name"].includes(cell.column.id) &&
+                          "z-10 bg-card",
+                        cell.column.id === "totalWages" &&
+                          "bg-emerald-100 dark:bg-emerald-900/40",
+                        cell.column.id === "totalMaterialCost" &&
+                          "bg-orange-100 dark:bg-orange-900/40",
+                        cell.column.id === "amountClaimed" &&
+                          "bg-teal-100 dark:bg-teal-900/40",
+                        cell.column.id === "profitLoss" &&
+                          "bg-violet-100 dark:bg-violet-900/40",
                       )}
                     >
                       {flexRender(

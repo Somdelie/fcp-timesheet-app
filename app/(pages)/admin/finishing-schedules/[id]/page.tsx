@@ -9,40 +9,47 @@ export default async function FinishingScheduleDetailPage({
 }) {
   const { id } = await params;
 
-  const schedule = await prisma.siteFinishingSchedule.findUnique({
-    where: { id },
-    include: {
-      site: {
-        select: {
-          id: true,
-          name: true,
-          code: true,
-          siteMaterials: {
-            orderBy: { product: { name: "asc" } },
-            select: {
-              id: true,
-              product: {
-                select: {
-                  id: true,
-                  name: true,
-                  sku: true,
-                  supplier: { select: { id: true, name: true } },
+  const [schedule, suppliers] = await Promise.all([
+    prisma.siteFinishingSchedule.findUnique({
+      where: { id },
+      include: {
+        site: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            siteMaterials: {
+              orderBy: { product: { name: "asc" } },
+              select: {
+                id: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                    supplier: { select: { id: true, name: true } },
+                  },
                 },
               },
             },
           },
         },
-      },
-      areas: {
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        include: {
-          items: {
-            orderBy: [{ zone: "asc" }, { sortOrder: "asc" }],
+        areas: {
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          include: {
+            items: {
+              orderBy: [{ zone: "asc" }, { sortOrder: "asc" }],
+            },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.supplier.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   if (!schedule) notFound();
 
@@ -50,6 +57,7 @@ export default async function FinishingScheduleDetailPage({
     <FinishingScheduleBuilder
       schedule={schedule}
       siteMaterials={schedule.site.siteMaterials}
+      suppliers={suppliers}
     />
   );
 }

@@ -42,6 +42,8 @@ type SiteMaterialOption = {
   };
 };
 
+type SupplierOption = { id: string; name: string };
+
 type ItemData = {
   id: string;
   zone: "INTERNAL" | "EXTERNAL";
@@ -49,6 +51,7 @@ type ItemData = {
   product: string | null;
   colorCode: string | null;
   supplier: string | null;
+  supplierId: string | null;
   note: string | null;
   siteMaterialId: string | null;
 };
@@ -56,33 +59,26 @@ type ItemData = {
 interface Props {
   item: ItemData;
   siteMaterials: SiteMaterialOption[];
+  suppliers: SupplierOption[];
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export default function EditItemDialog({ item, siteMaterials }: Props) {
+export default function EditItemDialog({ item, siteMaterials, suppliers }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  // Form state initialized from item
   const [zone, setZone] = useState<FinishingZone>(item.zone);
   const [position, setPosition] = useState(item.position ?? "");
   const [materialId, setMaterialId] = useState(item.siteMaterialId ?? "");
   const [materialSearch, setMaterialSearch] = useState("");
+  const [product, setProduct] = useState(item.product ?? "");
+  const [supplierId, setSupplierId] = useState(item.supplierId ?? "");
   const [colorCode, setColorCode] = useState(item.colorCode ?? "");
   const [note, setNote] = useState(item.note ?? "");
-
-  // Auto-fill
-  const selectedMaterial = useMemo(
-    () => siteMaterials.find((m) => m.id === materialId),
-    [siteMaterials, materialId],
-  );
-  const autoProduct = selectedMaterial?.product.name ?? item.product ?? "";
-  const autoSupplier =
-    selectedMaterial?.product.supplier?.name ?? item.supplier ?? "";
 
   const filteredMaterials = useMemo(() => {
     if (!materialSearch.trim()) return siteMaterials;
@@ -94,11 +90,23 @@ export default function EditItemDialog({ item, siteMaterials }: Props) {
     );
   }, [siteMaterials, materialSearch]);
 
+  function handleMaterialChange(id: string) {
+    setMaterialId(id);
+    if (!id) return;
+    const m = siteMaterials.find((s) => s.id === id);
+    if (!m) return;
+    // Auto-fill product and supplier from site material
+    setProduct(m.product.name);
+    if (m.product.supplier) setSupplierId(m.product.supplier.id);
+  }
+
   function resetToItem() {
     setZone(item.zone);
     setPosition(item.position ?? "");
     setMaterialId(item.siteMaterialId ?? "");
     setMaterialSearch("");
+    setProduct(item.product ?? "");
+    setSupplierId(item.supplierId ?? "");
     setColorCode(item.colorCode ?? "");
     setNote(item.note ?? "");
   }
@@ -116,6 +124,8 @@ export default function EditItemDialog({ item, siteMaterials }: Props) {
         zone,
         position: position.trim(),
         siteMaterialId: materialId || null,
+        product: product.trim() || null,
+        supplierId: supplierId || null,
         colorCode: colorCode.trim() || null,
         note: note.trim() || null,
       });
@@ -150,10 +160,7 @@ export default function EditItemDialog({ item, siteMaterials }: Props) {
           {/* Zone */}
           <div className="space-y-1.5">
             <Label>Zone</Label>
-            <Select
-              value={zone}
-              onValueChange={(v) => setZone(v as FinishingZone)}
-            >
+            <Select value={zone} onValueChange={(v) => setZone(v as FinishingZone)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -174,49 +181,61 @@ export default function EditItemDialog({ item, siteMaterials }: Props) {
             />
           </div>
 
-          {/* Site Material */}
+          {/* Site Material (optional — auto-fills product/supplier) */}
+          {siteMaterials.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Site Material <span className="text-xs text-muted-foreground font-normal">(auto-fills product & supplier)</span></Label>
+              <Input
+                placeholder="Search materials…"
+                value={materialSearch}
+                onChange={(e) => setMaterialSearch(e.target.value)}
+                className="mb-1"
+              />
+              <Select value={materialId || "__none__"} onValueChange={(v) => handleMaterialChange(v === "__none__" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select site material…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {filteredMaterials.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.product.name}
+                      {m.product.sku && ` (${m.product.sku})`}
+                      {m.product.supplier && ` — ${m.product.supplier.name}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Product — editable text */}
           <div className="space-y-1.5">
-            <Label>Site Material (Product)</Label>
-            {siteMaterials.length === 0 ? (
-              <p className="text-muted-foreground text-xs">
-                No materials linked to this site.
-              </p>
-            ) : (
-              <>
-                <Input
-                  placeholder="Search materials…"
-                  value={materialSearch}
-                  onChange={(e) => setMaterialSearch(e.target.value)}
-                  className="mb-1"
-                />
-                <Select value={materialId} onValueChange={setMaterialId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select site material…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredMaterials.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.product.name}
-                        {m.product.sku && ` (${m.product.sku})`}
-                        {m.product.supplier && ` — ${m.product.supplier.name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
+            <Label htmlFor="ei-product">Product</Label>
+            <Input
+              id="ei-product"
+              placeholder="e.g. Plascon Velvaglo"
+              value={product}
+              onChange={(e) => setProduct(e.target.value)}
+            />
           </div>
 
-          {/* Auto-filled fields */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Product</Label>
-              <Input value={autoProduct} readOnly className="bg-muted" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Supplier</Label>
-              <Input value={autoSupplier} readOnly className="bg-muted" />
-            </div>
+          {/* Supplier — select from all suppliers */}
+          <div className="space-y-1.5">
+            <Label>Supplier</Label>
+            <Select value={supplierId || "__none__"} onValueChange={(v) => setSupplierId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select supplier…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— None —</SelectItem>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Colour code */}
@@ -240,12 +259,7 @@ export default function EditItemDialog({ item, siteMaterials }: Props) {
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={pending}
-            >
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>

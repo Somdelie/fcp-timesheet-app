@@ -185,8 +185,25 @@ export async function POST(req: Request) {
       isActive: true,
       firstName: true,
       lastName: true,
+      userId: true,
     },
   });
+
+  // Collect linked user IDs and pre-fetch foreman records in one query so we
+  // can reject any employee who is a foreman (foremen cannot be scanned).
+  const linkedUserIds = employees
+    .map((e) => e.userId)
+    .filter((id): id is string => id != null);
+  const foremanUserIds = new Set<string>();
+  if (linkedUserIds.length > 0) {
+    const foremanRows = await prisma.foreman.findMany({
+      where: { userId: { in: linkedUserIds } },
+      select: { userId: true },
+    });
+    for (const f of foremanRows) {
+      if (f.userId) foremanUserIds.add(f.userId);
+    }
+  }
 
   const byQr = new Map(employees.map((e) => [e.qrCodeValue, e]));
 
@@ -211,6 +228,15 @@ export async function POST(req: Request) {
         status: "INACTIVE",
         employeeName: fullName,
         error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+      });
+      continue;
+    }
+    // Foremen cannot be scanned as workers
+    if (emp.userId && foremanUserIds.has(emp.userId)) {
+      results.push({
+        qrCodeValue: qr as string,
+        status: "UNKNOWN",
+        error: "Cannot scan a foreman.",
       });
       continue;
     }

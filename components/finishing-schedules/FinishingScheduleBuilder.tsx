@@ -53,6 +53,8 @@ type SiteMaterialOption = {
   };
 };
 
+type SupplierOption = { id: string; name: string };
+
 type ScheduleItem = {
   id: string;
   zone: "INTERNAL" | "EXTERNAL";
@@ -60,6 +62,7 @@ type ScheduleItem = {
   product: string | null;
   colorCode: string | null;
   supplier: string | null;
+  supplierId: string | null;
   note: string | null;
   sortOrder: number;
   siteMaterialId: string | null;
@@ -79,6 +82,8 @@ type Schedule = {
   contractNo: string | null;
   contractManager: string | null;
   siteForeman: string | null;
+  fcpContractManager: string | null;
+  fcpSiteForeman: string | null;
   client: string | null;
   startDate: Date | string | null;
   completionDate: Date | string | null;
@@ -93,6 +98,7 @@ type Schedule = {
 interface Props {
   schedule: Schedule;
   siteMaterials: SiteMaterialOption[];
+  suppliers: SupplierOption[];
 }
 
 // ============================================================================
@@ -116,6 +122,7 @@ function fmt(d: Date | string | null | undefined) {
 export default function FinishingScheduleBuilder({
   schedule,
   siteMaterials,
+  suppliers,
 }: Props) {
   const router = useRouter();
 
@@ -207,8 +214,12 @@ export default function FinishingScheduleBuilder({
               <dd className="font-medium">{schedule.contactInfo || "—"}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">FCP QS</dt>
-              <dd className="font-medium">Janice Raath</dd>
+              <dt className="text-muted-foreground">FCP Contract Manager</dt>
+              <dd className="font-medium">{schedule.fcpContractManager || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">FCP Site Foreman</dt>
+              <dd className="font-medium">{schedule.fcpSiteForeman || "—"}</dd>
             </div>
           </dl>
         </CardContent>
@@ -246,6 +257,7 @@ export default function FinishingScheduleBuilder({
                   <CreateItemDialog
                     areaId={area.id}
                     siteMaterials={siteMaterials}
+                    suppliers={suppliers}
                   />
                   <EditAreaDialog area={area} />
                   <DeleteAreaButton areaId={area.id} areaName={area.name} />
@@ -299,6 +311,7 @@ export default function FinishingScheduleBuilder({
                                 areaId={area.id}
                                 allZoneItems={internalItems}
                                 siteMaterials={siteMaterials}
+                                suppliers={suppliers}
                                 onMove={handleMoveItem}
                               />
                             ))}
@@ -324,6 +337,7 @@ export default function FinishingScheduleBuilder({
                                 areaId={area.id}
                                 allZoneItems={externalItems}
                                 siteMaterials={siteMaterials}
+                                suppliers={suppliers}
                                 onMove={handleMoveItem}
                               />
                             ))}
@@ -353,6 +367,7 @@ function ItemRow({
   areaId,
   allZoneItems,
   siteMaterials,
+  suppliers,
   onMove,
 }: {
   item: ScheduleItem;
@@ -361,6 +376,7 @@ function ItemRow({
   areaId: string;
   allZoneItems: ScheduleItem[];
   siteMaterials: SiteMaterialOption[];
+  suppliers: SupplierOption[];
   onMove: (
     areaId: string,
     items: ScheduleItem[],
@@ -402,7 +418,7 @@ function ItemRow({
           >
             <ArrowDown className="h-3.5 w-3.5" />
           </Button>
-          <EditItemDialog item={item} siteMaterials={siteMaterials} />
+          <EditItemDialog item={item} siteMaterials={siteMaterials} suppliers={suppliers} />
           <DeleteItemButton itemId={item.id} />
         </div>
       </TableCell>

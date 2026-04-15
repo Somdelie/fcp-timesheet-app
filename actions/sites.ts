@@ -57,6 +57,7 @@ function serializeSite(s: any) {
     code: s.code,
     client: s.client ?? null,
     location: s.location,
+    amountClaimed: Number(s.amountClaimed ?? 0),
     siteClaimDate:
       s.siteClaimDate instanceof Date
         ? s.siteClaimDate.toISOString()
@@ -142,6 +143,7 @@ export async function listSites(input?: {
       code: true,
       client: true,
       location: true,
+      amountClaimed: true,
       siteClaimDate: true,
       address: true,
       latitude: true,
@@ -285,6 +287,7 @@ export async function updateSiteLocation(input: {
   location?: string | null;
   address?: string | null;
   siteClaimDate?: string | null;
+  amountClaimed?: number | string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
 }) {
@@ -308,6 +311,10 @@ export async function updateSiteLocation(input: {
       : input.siteClaimDate
         ? new Date(input.siteClaimDate + "T00:00:00.000Z")
         : null;
+  const amountClaimed =
+    input.amountClaimed === undefined
+      ? undefined
+      : cleanNumber(input.amountClaimed) ?? 0;
   const latitude =
     input.latitude === undefined ? undefined : cleanNumber(input.latitude);
   const longitude =
@@ -355,6 +362,7 @@ export async function updateSiteLocation(input: {
         ...(location !== undefined ? { location } : {}),
         ...(address !== undefined ? { address } : {}),
         ...(siteClaimDate !== undefined ? { siteClaimDate } : {}),
+        ...(amountClaimed !== undefined ? { amountClaimed } : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -364,6 +372,7 @@ export async function updateSiteLocation(input: {
         code: true,
         client: true,
         location: true,
+        amountClaimed: true,
         siteClaimDate: true,
         address: true,
         latitude: true,

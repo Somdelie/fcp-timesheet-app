@@ -16,6 +16,8 @@ export default async function AdminForemenPage() {
           defaultDayRate: foreman.foreman.defaultDayRate?.toString() ?? null,
           defaultTeam: foreman.foreman.defaultTeam ?? "PAINTERS",
           createdAt: new Date(foreman.foreman.createdAt).toLocaleDateString(),
+          supervisorId: foreman.foreman.supervisorLinks[0]?.supervisor.id ?? null,
+          supervisorName: foreman.foreman.supervisorLinks[0]?.supervisor.user.name ?? null,
         }
       : null,
     isAssistant: (foreman.employee?.assistantLinks?.length ?? 0) > 0,

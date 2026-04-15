@@ -405,6 +405,8 @@ export async function addFinishingItem(input: {
   zone: FinishingZone;
   position: string;
   siteMaterialId?: string | null;
+  product?: string | null;
+  supplierId?: string | null;
   colorCode?: string | null;
   note?: string | null;
   sortOrder?: number;
@@ -426,34 +428,27 @@ export async function addFinishingItem(input: {
   });
   if (!area) return { ok: false as const, error: "Area not found." };
 
-  // Auto-fill from site material if provided
-  let productSnapshot: string | null = null;
-  let supplierSnapshot: string | null = null;
-  let procProductId: string | null = null;
-  let suppId: string | null = null;
-
   const smId = input.siteMaterialId ? clean(input.siteMaterialId) : null;
+  let procProductId: string | null = null;
+
+  // Auto-fill procurementProductId from site material linkage
   if (smId) {
     const sm = await prisma.siteMaterial.findUnique({
       where: { id: smId },
-      select: {
-        product: {
-          select: {
-            id: true,
-            name: true,
-            supplier: { select: { id: true, name: true } },
-          },
-        },
-      },
+      select: { product: { select: { id: true } } },
     });
-    if (sm) {
-      procProductId = sm.product.id;
-      productSnapshot = sm.product.name;
-      if (sm.product.supplier) {
-        suppId = sm.product.supplier.id;
-        supplierSnapshot = sm.product.supplier.name;
-      }
-    }
+    if (sm) procProductId = sm.product.id;
+  }
+
+  // Resolve supplier name snapshot from explicit supplierId
+  const suppId = input.supplierId ? clean(input.supplierId) : null;
+  let supplierSnapshot: string | null = null;
+  if (suppId) {
+    const sup = await prisma.supplier.findUnique({
+      where: { id: suppId },
+      select: { name: true },
+    });
+    if (sup) supplierSnapshot = sup.name;
   }
 
   const item = await prisma.siteFinishingScheduleItem.create({
@@ -462,7 +457,7 @@ export async function addFinishingItem(input: {
       zone: input.zone,
       position,
       siteMaterialId: smId ?? undefined,
-      product: productSnapshot,
+      product: input.product ? clean(input.product) : null,
       colorCode: input.colorCode ? clean(input.colorCode) : null,
       supplier: supplierSnapshot,
       procurementProductId: procProductId ?? undefined,
@@ -483,6 +478,8 @@ export async function updateFinishingItem(input: {
   zone?: FinishingZone;
   position?: string;
   siteMaterialId?: string | null;
+  product?: string | null;
+  supplierId?: string | null;
   colorCode?: string | null;
   note?: string | null;
   sortOrder?: number;
@@ -511,39 +508,37 @@ export async function updateFinishingItem(input: {
   if (input.note !== undefined)
     data.note = input.note ? clean(input.note) : null;
 
-  // Auto-fill from site material if changed
+  // Manual product text
+  if (input.product !== undefined)
+    data.product = input.product ? clean(input.product) : null;
+
+  // Site material linkage (procurement only — no longer drives product/supplier display)
   if (input.siteMaterialId !== undefined) {
     const smId = input.siteMaterialId ? clean(input.siteMaterialId) : null;
     data.siteMaterialId = smId;
     if (smId) {
       const sm = await prisma.siteMaterial.findUnique({
         where: { id: smId },
-        select: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              supplier: { select: { id: true, name: true } },
-            },
-          },
-        },
+        select: { product: { select: { id: true } } },
       });
-      if (sm) {
-        data.procurementProductId = sm.product.id;
-        data.product = sm.product.name;
-        if (sm.product.supplier) {
-          data.supplierId = sm.product.supplier.id;
-          data.supplier = sm.product.supplier.name;
-        } else {
-          data.supplierId = null;
-          data.supplier = null;
-        }
-      }
+      data.procurementProductId = sm?.product.id ?? null;
     } else {
-      data.product = null;
-      data.supplier = null;
       data.procurementProductId = null;
-      data.supplierId = null;
+    }
+  }
+
+  // Explicit supplier selection
+  if (input.supplierId !== undefined) {
+    const suppId = input.supplierId ? clean(input.supplierId) : null;
+    data.supplierId = suppId;
+    if (suppId) {
+      const sup = await prisma.supplier.findUnique({
+        where: { id: suppId },
+        select: { name: true },
+      });
+      data.supplier = sup?.name ?? null;
+    } else {
+      data.supplier = null;
     }
   }
 
@@ -684,6 +679,20 @@ export async function reorderFinishingItems(input: {
   revalidatePath(`/finishing-schedules`);
   revalidatePath(`/sites/${area.schedule.siteId}`);
   return { ok: true as const };
+}
+
+// ========================
+// LIST SUPPLIERS FOR SCHEDULE BUILDER
+// ========================
+
+export async function listSuppliersForSchedule() {
+  await requireServerAuth();
+  const suppliers = await prisma.supplier.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+  return { ok: true as const, suppliers };
 }
 
 // ========================

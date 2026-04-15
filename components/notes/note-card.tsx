@@ -222,7 +222,7 @@ export function NoteCard({
             )}
             {note.content && note.content !== "<p></p>" ? (
               <div
-                className="tiptap flex-1 text-sm leading-relaxed text-muted-foreground line-clamp-6"
+                className="note-content tiptap prose prose-sm max-w-none dark:prose-invert flex-1 leading-relaxed line-clamp-6"
                 dangerouslySetInnerHTML={{ __html: note.content }}
                 onClick={handleContentClick}
               />

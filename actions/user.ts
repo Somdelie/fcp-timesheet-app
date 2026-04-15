@@ -222,6 +222,7 @@ export async function getAllSupervisors() {
 
 // get all foremen
 export async function getAllForemen() {
+  const now = new Date();
   const foremen = await prisma.user.findMany({
     where: {
       role: "FOREMAN",
@@ -239,6 +240,23 @@ export async function getAllForemen() {
           defaultDayRate: true,
           defaultTeam: true,
           createdAt: true,
+          // Current active supervisor link
+          supervisorLinks: {
+            where: {
+              startsOn: { lte: now },
+              OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+            },
+            orderBy: { startsOn: "desc" },
+            take: 1,
+            select: {
+              supervisor: {
+                select: {
+                  id: true,
+                  user: { select: { id: true, name: true } },
+                },
+              },
+            },
+          },
         },
       },
       // Check if this user was promoted from an employee who is an assistant

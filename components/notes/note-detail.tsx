@@ -19,6 +19,7 @@ import {
   Crown,
   Eye,
   Edit3,
+  Image,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,40 @@ const colorMeta: Record<NoteColor, { class: string; tint: string }> = {
   PINK: { class: "bg-pink-400", tint: "bg-pink-50 dark:bg-pink-950/20" },
 };
 
+const IMAGE_BG_KEY = "note-bg";
+const IMAGE_BG_STYLE: React.CSSProperties = {
+  backgroundImage: "url('/note-bg.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+};
+
+function BackgroundPicker({
+  current,
+  onChange,
+}: {
+  current: string;
+  onChange: (bg: string) => void;
+}) {
+  const isActive = current === IMAGE_BG_KEY;
+  return (
+    <button
+      onClick={() => onChange(isActive ? "" : IMAGE_BG_KEY)}
+      className={cn(
+        "flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
+      title={isActive ? "Remove background" : "Set background image"}
+    >
+      <Image size={14} />
+      <span className="hidden sm:inline">
+        {isActive ? "Remove BG" : "Background"}
+      </span>
+    </button>
+  );
+}
+
 interface NoteDetailProps {
   note: NoteItem;
   onUpdate: (
@@ -101,6 +136,7 @@ interface NoteDetailProps {
       isPinned?: boolean;
       color?: NoteColor;
       isRoomNote?: boolean;
+      background?: string;
     },
   ) => void | Promise<void>;
   onDelete: (id: string) => void | Promise<void>;
@@ -214,6 +250,10 @@ export function NoteDetail({
     }
   };
 
+  const activeBg = note.background === IMAGE_BG_KEY
+    ? { key: IMAGE_BG_KEY, style: IMAGE_BG_STYLE }
+    : null;
+
   return (
     <>
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background">
@@ -311,6 +351,12 @@ export function NoteDetail({
                 <>
                   {note.canEdit && (
                     <>
+                      <BackgroundPicker
+                        current={note.background}
+                        onChange={(background) =>
+                          void onUpdate(note.id, { background })
+                        }
+                      />
                       <ColorPicker
                         current={note.color}
                         onChange={(color) => void onUpdate(note.id, { color })}
@@ -449,8 +495,14 @@ export function NoteDetail({
         </div>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <div className="custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <div className="flex-1 p-8 pb-12">
+          <div
+            className="custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto"
+            style={activeBg?.style ?? {}}
+          >
+            <div className={cn("flex-1 p-8 pb-12", activeBg?.key && "flex items-start justify-center")}>
+              <div className={cn(
+                activeBg?.key && "w-full max-w-2xl rounded bg-white/90 p-8 shadow-2xl backdrop-blur-md dark:bg-black/75"
+              )}>
               {editing ? (
                 <RichTextEditor
                   content={content}
@@ -473,18 +525,24 @@ export function NoteDetail({
                   }}
                 />
               )}
+              </div>
             </div>
           </div>
 
           <div
             className={cn(
-              "flex h-full min-h-0 shrink-0 flex-col border-l border-border/40 bg-card/30 transition-all duration-300",
+              "flex h-full min-h-0 shrink-0 flex-col border-l border-border/40 transition-all duration-300",
+              activeBg?.key ? "bg-transparent" : "bg-card/30",
               commentsOpen ? "w-80" : "w-12",
             )}
+            style={activeBg?.style ?? {}}
           >
             <button
               onClick={() => setCommentsOpen(!commentsOpen)}
-              className="flex w-full shrink-0 items-center gap-2 border-b border-border/40 px-4 py-4 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={cn(
+                "flex w-full shrink-0 items-center gap-2 border-b border-border/40 px-4 py-4 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                activeBg?.key && "bg-white/70 backdrop-blur-sm dark:bg-black/50",
+              )}
             >
               <ChevronRight
                 size={14}
@@ -506,7 +564,10 @@ export function NoteDetail({
 
             {commentsOpen && (
               <>
-                <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
+                <div className={cn(
+                  "custom-scrollbar min-h-0 flex-1 overflow-y-auto",
+                  activeBg?.key && "bg-white/70 backdrop-blur-sm dark:bg-black/50",
+                )}>
                   {note.comments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                       <div className="flex size-10 items-center justify-center rounded-full bg-secondary/50">
@@ -532,7 +593,10 @@ export function NoteDetail({
                   )}
                 </div>
 
-                <div className="shrink-0 border-t border-border/40 p-4">
+                <div className={cn(
+                  "shrink-0 border-t border-border/40 p-4",
+                  activeBg?.key && "bg-white/70 backdrop-blur-sm dark:bg-black/50",
+                )}>
                   <div className="flex items-center gap-2">
                     <input
                       ref={commentInputRef}

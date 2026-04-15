@@ -208,6 +208,7 @@ export function NotesBoard() {
       isPinned?: boolean;
       color?: NoteColor;
       isRoomNote?: boolean;
+      background?: string;
     },
   ) => {
     startTransition(async () => {

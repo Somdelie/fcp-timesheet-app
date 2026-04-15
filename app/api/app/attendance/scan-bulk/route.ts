@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
+import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { z } from "zod";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 
@@ -189,16 +190,31 @@ export async function POST(req: Request) {
       id: true,
       qrCodeValue: true,
       isActive: true,
-      defaultDayRate: true,
       firstName: true,
       lastName: true,
+      userId: true,
     },
   });
+
+  // Pre-fetch foreman records for all linked user IDs so we can reject foremen
+  const linkedUserIds = employees
+    .map((e) => e.userId)
+    .filter((id): id is string => id != null);
+  const foremanUserIds = new Set<string>();
+  if (linkedUserIds.length > 0) {
+    const foremanRows = await prisma.foreman.findMany({
+      where: { userId: { in: linkedUserIds } },
+      select: { userId: true },
+    });
+    for (const f of foremanRows) {
+      if (f.userId) foremanUserIds.add(f.userId);
+    }
+  }
 
   const byCode = new Map<string, (typeof employees)[number]>();
   for (const e of employees) byCode.set(String(e.qrCodeValue).toUpperCase(), e);
 
-  // Determine rejected (not found / inactive)
+  // Determine rejected (not found / inactive / foreman)
   const rejectedCodes: string[] = [];
   const deactivatedEmployees: Array<{
     code: string;
@@ -208,7 +224,6 @@ export async function POST(req: Request) {
   const candidateEmployees: Array<{
     code: string;
     empId: string;
-    dayRate: any;
   }> = [];
 
   for (const code of validUniqueCodes) {
@@ -226,10 +241,14 @@ export async function POST(req: Request) {
       });
       continue;
     }
+    // Foremen cannot be scanned as workers
+    if (emp.userId && foremanUserIds.has(emp.userId)) {
+      rejectedCodes.push(code);
+      continue;
+    }
     candidateEmployees.push({
       code,
       empId: emp.id,
-      dayRate: emp.defaultDayRate,
     });
   }
 
@@ -274,12 +293,27 @@ export async function POST(req: Request) {
     });
   }
 
+  // Resolve effective day rates for all employees in parallel using the full
+  // priority chain (includes team-based rates like Cape Town).
+  const rateResults = await Promise.all(
+    toCreate.map((item) =>
+      computeDayRateAtScan({
+        employeeId: item.empId,
+        foremanId: assigned.foremanId,
+        siteId,
+        workDate,
+      }),
+    ),
+  );
+
   // Create scans in a transaction
   let saved = 0;
 
   try {
     await prisma.$transaction(async (tx) => {
-      for (const item of toCreate) {
+      for (let i = 0; i < toCreate.length; i++) {
+        const item = toCreate[i];
+        const rateResult = rateResults[i];
         try {
           await tx.attendanceScan.create({
             data: {
@@ -287,7 +321,8 @@ export async function POST(req: Request) {
               employee: { connect: { id: item.empId } },
               workDate,
               site: { connect: { id: siteId } },
-              dayRateAtScan: item.dayRate,
+              dayRateAtScan: rateResult.dayRate,
+              team: rateResult.team,
               qrPayload: item.code,
               latitude: body.data.latitude ?? null,
               longitude: body.data.longitude ?? null,

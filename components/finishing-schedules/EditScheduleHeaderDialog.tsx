@@ -26,6 +26,8 @@ interface Props {
     contractNo: string | null;
     contractManager: string | null;
     siteForeman: string | null;
+    fcpContractManager: string | null;
+    fcpSiteForeman: string | null;
     client: string | null;
     startDate: Date | string | null;
     completionDate: Date | string | null;
@@ -51,6 +53,8 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
     schedule.contractManager ?? "",
   );
   const [siteForeman, setSiteForeman] = useState(schedule.siteForeman ?? "");
+  const [fcpContractManager, setFcpContractManager] = useState(schedule.fcpContractManager ?? "");
+  const [fcpSiteForeman, setFcpSiteForeman] = useState(schedule.fcpSiteForeman ?? "");
   const [client, setClient] = useState(schedule.client ?? "");
   const [startDate, setStartDate] = useState(toDateStr(schedule.startDate));
   const [completionDate, setCompletionDate] = useState(
@@ -69,6 +73,8 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
         contractNo: contractNo || null,
         contractManager: contractManager || null,
         siteForeman: siteForeman || null,
+        fcpContractManager: fcpContractManager || null,
+        fcpSiteForeman: fcpSiteForeman || null,
         client: client || null,
         startDate: startDate || null,
         completionDate: completionDate || null,
@@ -131,6 +137,24 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
                 id="eh-siteForeman"
                 value={siteForeman}
                 onChange={(e) => setSiteForeman(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="eh-fcpContractManager">FCP Contract Manager</Label>
+              <Input
+                id="eh-fcpContractManager"
+                value={fcpContractManager}
+                onChange={(e) => setFcpContractManager(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eh-fcpSiteForeman">FCP Site Foreman</Label>
+              <Input
+                id="eh-fcpSiteForeman"
+                value={fcpSiteForeman}
+                onChange={(e) => setFcpSiteForeman(e.target.value)}
               />
             </div>
           </div>

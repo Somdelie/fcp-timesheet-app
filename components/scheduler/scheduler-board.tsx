@@ -172,8 +172,15 @@ export function SchedulerBoard() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-6">
+      <div
+        className="flex flex-col h-full rounded overflow-hidden"
+        style={{
+          backgroundImage: "url('/note-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="flex items-center justify-between mb-6 px-6 pt-6 bg-white/70 backdrop-blur-sm dark:bg-black/50">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Schedule</h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -183,7 +190,7 @@ export function SchedulerBoard() {
           <AddTaskDialog onAddTask={handleAddTask} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 px-6 pb-6 overflow-auto bg-white/50 backdrop-blur-sm dark:bg-black/30">
           {columns.map((column) => (
             <TaskColumn
               key={column.id}

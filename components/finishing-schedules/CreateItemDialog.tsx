@@ -42,16 +42,19 @@ type SiteMaterialOption = {
   };
 };
 
+type SupplierOption = { id: string; name: string };
+
 interface Props {
   areaId: string;
   siteMaterials: SiteMaterialOption[];
+  suppliers: SupplierOption[];
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export default function CreateItemDialog({ areaId, siteMaterials }: Props) {
+export default function CreateItemDialog({ areaId, siteMaterials, suppliers }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -61,16 +64,10 @@ export default function CreateItemDialog({ areaId, siteMaterials }: Props) {
   const [position, setPosition] = useState("");
   const [materialId, setMaterialId] = useState("");
   const [materialSearch, setMaterialSearch] = useState("");
+  const [product, setProduct] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [colorCode, setColorCode] = useState("");
   const [note, setNote] = useState("");
-
-  // Derived auto-fill
-  const selectedMaterial = useMemo(
-    () => siteMaterials.find((m) => m.id === materialId),
-    [siteMaterials, materialId],
-  );
-  const autoProduct = selectedMaterial?.product.name ?? "";
-  const autoSupplier = selectedMaterial?.product.supplier?.name ?? "";
 
   // Filtered materials for search
   const filteredMaterials = useMemo(() => {
@@ -83,11 +80,22 @@ export default function CreateItemDialog({ areaId, siteMaterials }: Props) {
     );
   }, [siteMaterials, materialSearch]);
 
+  function handleMaterialChange(id: string) {
+    setMaterialId(id);
+    if (!id) return;
+    const m = siteMaterials.find((s) => s.id === id);
+    if (!m) return;
+    setProduct(m.product.name);
+    if (m.product.supplier) setSupplierId(m.product.supplier.id);
+  }
+
   function reset() {
     setZone("INTERNAL");
     setPosition("");
     setMaterialId("");
     setMaterialSearch("");
+    setProduct("");
+    setSupplierId("");
     setColorCode("");
     setNote("");
   }
@@ -105,6 +113,8 @@ export default function CreateItemDialog({ areaId, siteMaterials }: Props) {
         zone,
         position: position.trim(),
         siteMaterialId: materialId || null,
+        product: product.trim() || null,
+        supplierId: supplierId || null,
         colorCode: colorCode.trim() || null,
         note: note.trim() || null,
       });
@@ -165,57 +175,72 @@ export default function CreateItemDialog({ areaId, siteMaterials }: Props) {
             />
           </div>
 
-          {/* Site Material */}
-          <div className="space-y-1.5">
-            <Label>Site Material (Product)</Label>
-            {siteMaterials.length === 0 ? (
-              <p className="text-muted-foreground text-xs">
-                No materials linked to this site yet.
-              </p>
-            ) : (
-              <>
-                <Input
-                  placeholder="Search materials…"
-                  value={materialSearch}
-                  onChange={(e) => setMaterialSearch(e.target.value)}
-                  className="mb-1"
-                />
-                <Select value={materialId} onValueChange={setMaterialId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select site material…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredMaterials.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.product.name}
-                        {m.product.sku && ` (${m.product.sku})`}
-                        {m.product.supplier && ` — ${m.product.supplier.name}`}
-                      </SelectItem>
-                    ))}
-                    {filteredMaterials.length === 0 && (
-                      <p className="text-muted-foreground px-2 py-1.5 text-xs">
-                        No matching materials found.
-                      </p>
-                    )}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-          </div>
-
-          {/* Auto-filled product + supplier */}
-          {materialId && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Product (auto-filled)</Label>
-                <Input value={autoProduct} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Supplier (auto-filled)</Label>
-                <Input value={autoSupplier} readOnly className="bg-muted" />
-              </div>
+          {/* Site Material (optional — auto-fills product/supplier) */}
+          {siteMaterials.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>
+                Site Material{" "}
+                <span className="text-xs text-muted-foreground font-normal">
+                  (auto-fills product &amp; supplier)
+                </span>
+              </Label>
+              <Input
+                placeholder="Search materials…"
+                value={materialSearch}
+                onChange={(e) => setMaterialSearch(e.target.value)}
+                className="mb-1"
+              />
+              <Select value={materialId || "__none__"} onValueChange={(v) => handleMaterialChange(v === "__none__" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select site material…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {filteredMaterials.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.product.name}
+                      {m.product.sku && ` (${m.product.sku})`}
+                      {m.product.supplier && ` — ${m.product.supplier.name}`}
+                    </SelectItem>
+                  ))}
+                  {filteredMaterials.length === 0 && (
+                    <p className="text-muted-foreground px-2 py-1.5 text-xs">
+                      No matching materials found.
+                    </p>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           )}
+
+          {/* Product — editable text */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ci-product">Product</Label>
+            <Input
+              id="ci-product"
+              placeholder="e.g. Plascon Velvaglo"
+              value={product}
+              onChange={(e) => setProduct(e.target.value)}
+            />
+          </div>
+
+          {/* Supplier — select from all suppliers */}
+          <div className="space-y-1.5">
+            <Label>Supplier</Label>
+            <Select value={supplierId || "__none__"} onValueChange={(v) => setSupplierId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select supplier…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— None —</SelectItem>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Colour code */}
           <div className="space-y-1.5">

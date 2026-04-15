@@ -127,20 +127,21 @@ export async function computeDayRateAtScan(opts: {
         },
       }) as Promise<{ startsOn: Date; dayRate: unknown }[]>,
 
-      // 3) Foreman data (defaultDayRate + defaultTeam)
+      // 3) Foreman data (defaultDayRate + defaultTeam + userId)
       (prisma as any).foreman.findUnique({
         where: { id: foremanId },
-        select: { defaultDayRate: true, defaultTeam: true },
+        select: { defaultDayRate: true, defaultTeam: true, userId: true },
       }) as Promise<{
         defaultDayRate: unknown;
         defaultTeam: TeamType;
+        userId: string | null;
       } | null>,
 
-      // 4) Employee defaultDayRate
+      // 4) Employee defaultDayRate + userId
       (prisma as any).employee.findUnique({
         where: { id: employeeId },
-        select: { defaultDayRate: true },
-      }) as Promise<{ defaultDayRate: unknown } | null>,
+        select: { defaultDayRate: true, userId: true },
+      }) as Promise<{ defaultDayRate: unknown; userId: string | null } | null>,
 
       // 5) CompanySettings singleton
       (prisma as any).companySettings.findUnique({
@@ -156,6 +157,16 @@ export async function computeDayRateAtScan(opts: {
     ]);
 
   const team: TeamType | null = foreman?.defaultTeam ?? null;
+
+  // Detect self-scan: the employee being scanned IS the foreman.
+  // In this case skip the team default rate (Priority 3) — the foreman should
+  // receive their personal Foreman.defaultDayRate (Priority 5), not the team
+  // rate that applies to their workers.
+  const isForemansOwnScan = !!(
+    employee?.userId &&
+    foreman?.userId &&
+    employee.userId === foreman.userId
+  );
 
   // --- Priority 1: EmployeeDayRateOverride ---
   if (employeeOverrides.length > 0) {
@@ -184,7 +195,9 @@ export async function computeDayRateAtScan(opts: {
   }
 
   // --- Priority 3: Team default from CompanySettings ---
-  if (team && settings) {
+  // Skipped when the scanned employee is the foreman themselves — they get
+  // their personal rate (Priority 4/5), not the team rate for their workers.
+  if (team && settings && !isForemansOwnScan) {
     const teamRate = getTeamDefaultRate(team, settings);
     if (teamRate > 0) return { dayRate: teamRate, team };
   }

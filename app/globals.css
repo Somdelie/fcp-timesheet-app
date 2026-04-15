@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -783,6 +784,65 @@
 
 .rich-text-readonly .tiptap {
   padding: 0;
+}
+
+/* ── Rich text read-only rendering ──────────────────────────────────────
+   Applied to both note-card preview (.tiptap) and note-detail read mode
+   (.note-content). Ensures Tiptap HTML renders with bullets, bold, etc.
+   even after Tailwind's preflight resets list styles.
+   ───────────────────────────────────────────────────────────────────── */
+.note-content ul,
+.note-content ol {
+  padding-left: 1.5rem;
+  margin: 0.25rem 0;
+}
+.note-content ul {
+  list-style-type: disc;
+}
+.note-content ol {
+  list-style-type: decimal;
+}
+.note-content ul ul {
+  list-style-type: circle;
+}
+.note-content ul ul ul {
+  list-style-type: square;
+}
+.note-content li {
+  margin: 0.1rem 0;
+}
+.note-content li p {
+  margin: 0;
+}
+.note-content strong {
+  font-weight: 700;
+}
+.note-content em {
+  font-style: italic;
+}
+.note-content h1 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin: 0.5em 0 0.25em;
+}
+.note-content h2 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.4em 0 0.2em;
+}
+.note-content h3 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.3em 0 0.15em;
+}
+.note-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: var(--muted-foreground);
+}
+.note-content p {
+  margin: 0.2em 0;
 }
 
 .tiptap img {

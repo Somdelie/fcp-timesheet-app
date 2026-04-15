@@ -93,6 +93,8 @@ interface Foreman {
     defaultDayRate: string | null;
     defaultTeam: string;
     createdAt: string;
+    supervisorId: string | null;
+    supervisorName: string | null;
   } | null;
   isAssistant: boolean;
 }

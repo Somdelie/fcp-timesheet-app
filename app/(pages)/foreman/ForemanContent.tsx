@@ -93,11 +93,24 @@ interface Foreman {
     defaultDayRate: string | null;
     defaultTeam: string;
     createdAt: string;
+    supervisorId: string | null;
+    supervisorName: string | null;
   } | null;
   isAssistant: boolean;
 }
 
-export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
+interface SupervisorOption {
+  id: string;
+  name: string;
+}
+
+export function ForemanContent({
+  foremen,
+  supervisors = [],
+}: {
+  foremen: Foreman[];
+  supervisors?: SupervisorOption[];
+}) {
   const { setBreadcrumbs } = useBreadcrumbs();
   const router = useRouter();
   const [selectedForeman, setSelectedForeman] = useState<Foreman | null>(null);
@@ -125,6 +138,10 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
     assistantEmail: string;
     assistantPassword: string;
   } | null>(null);
+
+  // Filter state
+  const [selectedTeam, setSelectedTeam] = useState<string>("");
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
 
   // Team switch dialog state
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
@@ -268,30 +285,39 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
     }
   };
 
-  const filtered = query.trim()
-    ? foremen.filter(
-        (f) =>
-          f.name.toLowerCase().includes(query.toLowerCase()) ||
-          f.email.toLowerCase().includes(query.toLowerCase()),
-      )
-    : foremen;
+  const filtered = foremen.filter((f) => {
+    if (
+      query.trim() &&
+      !f.name.toLowerCase().includes(query.toLowerCase()) &&
+      !f.email.toLowerCase().includes(query.toLowerCase())
+    )
+      return false;
+    if (selectedTeam && f.foreman?.defaultTeam !== selectedTeam) return false;
+    if (
+      selectedSupervisorId &&
+      f.foreman?.supervisorId !== selectedSupervisorId
+    )
+      return false;
+    return true;
+  });
 
   return (
     <>
       <div className="mx-auto max-w-7xl space-y-4">
         {/* Header */}
 
-        {/* Search */}
+        {/* Search + Filters */}
         <div className="mb-3 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm px-5 py-3 shadow-sm transition-all hover:shadow-md dark:border-zinc-700/50 dark:bg-card/40">
-          <div className="flex flex-col gap-4 sm:flex-row items-end sm:justify-between">
-            <div className="flex-1 w-full">
-              <label
-                htmlFor="search"
-                className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2"
-              >
-                Search Foremen, Manage all foremen in the system.
-              </label>
-              <div className="relative">
+          <div className="flex flex-col gap-3">
+            <label
+              htmlFor="search"
+              className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+            >
+              Search Foremen, Manage all foremen in the system.
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {/* Search input */}
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
                 <Input
                   id="search"
@@ -301,13 +327,72 @@ export function ForemanContent({ foremen }: { foremen: Foreman[] }) {
                   className="h-10 pl-9 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
                 />
               </div>
+
+              {/* Team filter */}
+              <Select
+                value={selectedTeam || "__all__"}
+                onValueChange={(v) =>
+                  setSelectedTeam(v === "__all__" ? "" : v)
+                }
+              >
+                <SelectTrigger className="h-10 w-full sm:w-44">
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Teams</SelectItem>
+                  {TEAM_OPTIONS.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Supervisor filter */}
+              {supervisors.length > 0 && (
+                <Select
+                  value={selectedSupervisorId || "__all__"}
+                  onValueChange={(v) =>
+                    setSelectedSupervisorId(v === "__all__" ? "" : v)
+                  }
+                >
+                  <SelectTrigger className="h-10 w-full sm:w-48">
+                    <SelectValue placeholder="All Supervisors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Supervisors</SelectItem>
+                    {supervisors.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Clear filters */}
+              {(selectedTeam || selectedSupervisorId) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 gap-1 text-muted-foreground"
+                  onClick={() => {
+                    setSelectedTeam("");
+                    setSelectedSupervisorId("");
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              )}
+
+              <Button asChild className="gap-2 shrink-0" size="lg">
+                <Link href="/users/new">
+                  <Plus className="h-4 w-4" />
+                  Create Foreman
+                </Link>
+              </Button>
             </div>
-            <Button asChild className="gap-2" size="lg">
-              <Link href="/users/new">
-                <Plus className="h-4 w-4" />
-                Create Foreman
-              </Link>
-            </Button>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   Card,
@@ -122,11 +122,19 @@ export default function AdminAttendanceScansPage() {
   const [foremanOpen, setForemanOpen] = useState(false);
   const [supervisorOpen, setSupervisorOpen] = useState(false);
 
+  // Abort controller ref — cancels any in-flight request when a new one starts
+  const abortRef = useRef<AbortController | null>(null);
+
   const loadScans = async (
     siteId?: string,
     foremanId?: string,
     supervisorId?: string,
   ) => {
+    // Cancel previous in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -134,19 +142,18 @@ export default function AdminAttendanceScansPage() {
       if (foremanId) params.set("foremanId", foremanId);
       if (supervisorId) params.set("supervisorId", supervisorId);
       const url = `/api/admin/attendance-scans${params.toString() ? `?${params}` : ""}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) {
         throw new Error("Failed to load scans");
       }
       const data = await res.json();
       setScans(data.scans || []);
-      // Only update filter options on initial load (no filters)
-      if (!siteId && !foremanId && !supervisorId) {
-        setSites(data.sites || []);
-        setForemen(data.foremen || []);
-        setSupervisors(data.supervisors || []);
-      }
+      // Always refresh dropdown options so they reflect the current filter context
+      setSites(data.sites || []);
+      setForemen(data.foremen || []);
+      setSupervisors(data.supervisors || []);
     } catch (err: any) {
+      if (err.name === "AbortError") return; // stale request — ignore
       toast.error(err.message || "Failed to load scans");
     } finally {
       setLoading(false);

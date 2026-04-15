@@ -38,6 +38,7 @@ const schema = z.object({
   location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
   siteClaimDate: z.string().max(10).optional(),
+  amountClaimed: z.number({ error: "Must be a number." }).min(0, "Cannot be negative.").optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -60,6 +61,7 @@ export default function EditSiteLocationDialog(props: {
   initialLatitude?: number | null;
   initialLongitude?: number | null;
   initialSiteClaimDate?: string | null;
+  initialAmountClaimed?: number | null;
   canEditCoreDetails?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -75,6 +77,7 @@ export default function EditSiteLocationDialog(props: {
     initialLatitude,
     initialLongitude,
     initialSiteClaimDate,
+    initialAmountClaimed,
     canEditCoreDetails = false,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
@@ -103,6 +106,7 @@ export default function EditSiteLocationDialog(props: {
       location: initialLocation ?? "",
       address: initialAddress ?? "",
       siteClaimDate: initialSiteClaimDate?.slice(0, 10) ?? "",
+      amountClaimed: typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -123,6 +127,7 @@ export default function EditSiteLocationDialog(props: {
       location: initialLocation ?? "",
       address: initialAddress ?? "",
       siteClaimDate: normalizeDateInput(initialSiteClaimDate),
+      amountClaimed: typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -143,6 +148,7 @@ export default function EditSiteLocationDialog(props: {
     initialLatitude,
     initialLongitude,
     initialSiteClaimDate,
+    initialAmountClaimed,
   ]);
 
   function onSubmit(values: z.infer<typeof schema>) {
@@ -159,6 +165,7 @@ export default function EditSiteLocationDialog(props: {
         location: values.location || null,
         address: values.address || null,
         siteClaimDate: values.siteClaimDate || null,
+        amountClaimed: values.amountClaimed ?? 0,
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
       });
@@ -343,6 +350,40 @@ export default function EditSiteLocationDialog(props: {
                       Clear
                     </Button>
                   </div>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="amountClaimed"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Amount Claimed{" "}
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                      (R)
+                    </span>
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    value={field.value === 0 ? "" : (field.value ?? "")}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const num = parseFloat(raw);
+                      field.onChange(raw === "" || isNaN(num) ? 0 : num);
+                    }}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    disabled={pending}
+                    className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
+                  />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

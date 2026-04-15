@@ -269,6 +269,8 @@ model Site {
 
   isActive Boolean @default(true)
 
+  amountClaimed Decimal @default(0) @db.Decimal(14, 2)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   siteClaimDate DateTime?
@@ -1884,6 +1886,7 @@ model UserNote {
 
   // NEW
   isRoomNote Boolean @default(false)
+  background String  @default("note-bg")
 
   attachments NoteAttachment[]
   comments    NoteComment[]    @relation("NoteComments")

@@ -68,7 +68,7 @@ export function TaskColumn({
       ref={setNodeRef}
       className={cn(
         "flex flex-col min-h-60 max-h-[calc(100vh-220px)] rounded border border-border/40",
-        "bg-linear-to-b from-secondary/40 to-secondary/20 backdrop-blur-sm",
+        "bg-white/80 backdrop-blur-md dark:bg-black/60",
         "transition-all duration-200",
         isOver && `ring-1 ${config.dropGlow}`,
       )}

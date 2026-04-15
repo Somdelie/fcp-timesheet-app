@@ -1,4 +1,4 @@
-import { getAllForemen } from "@/actions/user";
+import { getAllForemen, getAllSupervisors } from "@/actions/user";
 import { requireServerAuth } from "@/lib/auth-server";
 import { ForemanContent } from "./ForemanContent";
 
@@ -7,12 +7,10 @@ export const revalidate = 300;
 export default async function ForemanPage() {
   const auth = await requireServerAuth();
 
-  // Optionally: restrict access to only admins or supervisors
-  // if (!["ADMIN", "SUPERVISOR"].includes(auth.user.role)) {
-  //   return <div className="p-6 text-red-600">Access denied</div>;
-  // }
-
-  const foremen = await getAllForemen();
+  const [foremen, supervisors] = await Promise.all([
+    getAllForemen(),
+    getAllSupervisors(),
+  ]);
 
   // Format dates on server to avoid hydration errors
   const formattedForemen = foremen.map((foreman) => ({
@@ -25,11 +23,24 @@ export default async function ForemanPage() {
           defaultDayRate: foreman.foreman.defaultDayRate?.toString() ?? null,
           defaultTeam: foreman.foreman.defaultTeam ?? "PAINTERS",
           createdAt: new Date(foreman.foreman.createdAt).toLocaleDateString(),
+          supervisorId:
+            foreman.foreman.supervisorLinks[0]?.supervisor.id ?? null,
+          supervisorName:
+            foreman.foreman.supervisorLinks[0]?.supervisor.user.name ?? null,
         }
       : null,
-    // Check if this foreman is actually an assistant (promoted employee with assistantLinks)
     isAssistant: (foreman.employee?.assistantLinks?.length ?? 0) > 0,
   }));
 
-  return <ForemanContent foremen={formattedForemen} />;
+  const formattedSupervisors = supervisors.map((s) => ({
+    id: s.supervisor?.id ?? s.id,
+    name: s.name ?? s.email,
+  }));
+
+  return (
+    <ForemanContent
+      foremen={formattedForemen}
+      supervisors={formattedSupervisors}
+    />
+  );
 }
