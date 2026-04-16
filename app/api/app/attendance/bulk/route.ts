@@ -171,7 +171,12 @@ export async function POST(req: Request) {
   }
 
   const qrValues = scans
-    .map((s) => String(s.qrCodeValue ?? "").trim())
+    .map((s) =>
+      String(s.qrCodeValue ?? "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, ""),
+    )
     .filter(Boolean);
 
   // optional local dedupe to reduce DB churn
