@@ -196,25 +196,10 @@ export async function POST(req: Request) {
     },
   });
 
-  // Pre-fetch foreman records for all linked user IDs so we can reject foremen
-  const linkedUserIds = employees
-    .map((e) => e.userId)
-    .filter((id): id is string => id != null);
-  const foremanUserIds = new Set<string>();
-  if (linkedUserIds.length > 0) {
-    const foremanRows = await prisma.foreman.findMany({
-      where: { userId: { in: linkedUserIds } },
-      select: { userId: true },
-    });
-    for (const f of foremanRows) {
-      if (f.userId) foremanUserIds.add(f.userId);
-    }
-  }
-
   const byCode = new Map<string, (typeof employees)[number]>();
   for (const e of employees) byCode.set(String(e.qrCodeValue).toUpperCase(), e);
 
-  // Determine rejected (not found / inactive / foreman)
+  // Determine rejected (not found / inactive)
   const rejectedCodes: string[] = [];
   const deactivatedEmployees: Array<{
     code: string;
@@ -239,11 +224,6 @@ export async function POST(req: Request) {
         name: fullName,
         error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
       });
-      continue;
-    }
-    // Foremen cannot be scanned as workers
-    if (emp.userId && foremanUserIds.has(emp.userId)) {
-      rejectedCodes.push(code);
       continue;
     }
     candidateEmployees.push({

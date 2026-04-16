@@ -175,20 +175,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Check if the employee is a foreman - foremen cannot be scanned
-  if (employee.userId) {
-    const isForeman = await prisma.foreman.findUnique({
-      where: { userId: employee.userId },
-      select: { id: true },
-    });
-    if (isForeman) {
-      return NextResponse.json(
-        { error: "Cannot scan a foreman." },
-        { status: 409 },
-      );
-    }
-  }
-
   const rateResult = await computeDayRateAtScan({
     employeeId: employee.id,
     foremanId: assigned.foremanId,
