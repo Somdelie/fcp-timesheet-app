@@ -182,6 +182,9 @@ export async function POST(req: Request) {
   // optional local dedupe to reduce DB churn
   const uniqueQrValues = Array.from(new Set(qrValues));
 
+  console.log("[bulk-scan] raw scans received:", scans.length);
+  console.log("[bulk-scan] uniqueQrValues:", uniqueQrValues);
+
   const employees = await prisma.employee.findMany({
     where: { qrCodeValue: { in: uniqueQrValues as string[] } },
     select: {
@@ -193,6 +196,11 @@ export async function POST(req: Request) {
       userId: true,
     },
   });
+
+  console.log(
+    "[bulk-scan] employees found in DB:",
+    employees.map((e) => ({ qr: e.qrCodeValue, name: `${e.firstName} ${e.lastName}`, active: e.isActive })),
+  );
 
   const byQr = new Map(employees.map((e) => [e.qrCodeValue, e]));
 
@@ -207,9 +215,11 @@ export async function POST(req: Request) {
     const emp = byQr.get(qr as string);
 
     if (!emp) {
+      console.log("[bulk-scan] UNKNOWN qr:", qr, "— not found in employee table");
       results.push({ qrCodeValue: qr as string, status: "UNKNOWN" });
       continue;
     }
+    console.log("[bulk-scan] found employee:", emp.firstName, emp.lastName, "userId:", emp.userId, "active:", emp.isActive);
     if (!emp.isActive) {
       const fullName = `${emp.firstName} ${emp.lastName}`.trim();
       results.push({
