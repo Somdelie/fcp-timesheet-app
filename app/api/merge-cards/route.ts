@@ -1,15 +1,32 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { verifyApiToken } from "@/lib/jwt";
 import { mergeCardsForPrinting } from "@/lib/merge-cards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function getBearer(req: Request) {
+  const h = req.headers.get("authorization") ?? "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] ?? null;
+}
+
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const role = (session?.user as any)?.role as string | undefined;
+    let role: string | null = null;
+
+    const token = getBearer(req);
+    if (token) {
+      const payload = await verifyApiToken(token);
+      if (!payload)
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      role = payload.role;
+    } else {
+      const session = await getServerSession(authOptions);
+      role = (session?.user as any)?.role ?? null;
+    }
 
     if (!role || role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
