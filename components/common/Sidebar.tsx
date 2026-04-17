@@ -28,6 +28,7 @@ import {
   CalendarDays,
   StickyNote,
   CloudSun,
+  Printer,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -176,6 +177,12 @@ const menuGroups: {
         href: "/admin/manual-scan",
         label: "Manual Scan",
         icon: UserPlus,
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/print-cards",
+        label: "Print Cards",
+        icon: Printer,
         roles: ["ADMIN"],
       },
       {
