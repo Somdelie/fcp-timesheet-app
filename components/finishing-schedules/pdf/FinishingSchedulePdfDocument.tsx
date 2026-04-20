@@ -256,7 +256,6 @@ export function FinishingSchedulePdfDocument({
                 FIRST CLASS PROJECTS
               </Text>
             )}
-            <Text style={styles.brandSub}>Finishing schedule document</Text>
           </View>
           <View style={styles.titleBox}>
             <Text style={styles.title}>{data.title}</Text>
@@ -336,6 +335,7 @@ export function FinishingSchedulePdfDocument({
                           paddingVertical: 4,
                           paddingHorizontal: 5,
                           borderRight: BORDER,
+                          backgroundColor: "#F0F0F0",
                         }}
                       >
                         {isFirstItemInArea ? area.name : ""}
@@ -348,6 +348,7 @@ export function FinishingSchedulePdfDocument({
                           paddingVertical: 4,
                           paddingHorizontal: 5,
                           borderRight: BORDER,
+                          backgroundColor: "#F5F5F5",
                         }}
                       >
                         {isFirstItemInZone ? zone.zone : ""}
