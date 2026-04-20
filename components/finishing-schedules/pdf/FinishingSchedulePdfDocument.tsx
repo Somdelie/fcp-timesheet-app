@@ -11,11 +11,6 @@ import type { FinishingSchedulePdfDto } from "@/lib/finishing-schedules/mapFinis
 import fs from "fs";
 import path from "path";
 
-/**
- * Read the logo once at module load.
- * Works both locally (cwd = project root) and on Netlify
- * (cwd = .netlify/functions-internal, but __dirname crawls up to public).
- */
 function resolveLogoDataUri(): string {
   const candidates = [
     path.join(process.cwd(), "public", "logo.png"),
@@ -30,11 +25,15 @@ function resolveLogoDataUri(): string {
       /* try next */
     }
   }
-  // Fallback: return empty string (Image will be skipped)
   return "";
 }
 
 const LOGO_DATA_URI = resolveLogoDataUri();
+
+/* ------------------------------------------------------------------
+ *  Single border colour used everywhere
+ * ------------------------------------------------------------------ */
+const BORDER = "1 solid #666666";
 
 /* ------------------------------------------------------------------
  *  Styles
@@ -74,14 +73,14 @@ const styles = StyleSheet.create({
 
   /* ---- Metadata ---- */
   metaRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
-  metaPanel: { flex: 1, border: "1 solid #666666", padding: 8, minHeight: 92 },
+  metaPanel: { flex: 1, border: BORDER, padding: 8, minHeight: 92 },
   metaLine: { flexDirection: "row", marginBottom: 4 },
   metaLabel: { width: "38%", fontSize: 8.5, fontWeight: 700 },
   metaValue: { width: "62%", fontSize: 8.5 },
 
   /* ---- Contact bar ---- */
   contactBar: {
-    border: "1 solid #666666",
+    border: BORDER,
     borderBottom: 0,
     paddingVertical: 5,
     paddingHorizontal: 8,
@@ -90,42 +89,18 @@ const styles = StyleSheet.create({
   contactText: { fontSize: 8.5, fontWeight: 700 },
 
   /* ---- Table ---- */
-  table: { border: "1 solid #666666", marginBottom: 10 },
+  table: { border: BORDER, marginBottom: 10 },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#EDEDED",
-    borderBottom: "1 solid #666666",
+    borderBottom: BORDER,
   },
   th: {
     fontSize: 8,
     fontWeight: 700,
     paddingVertical: 6,
     paddingHorizontal: 5,
-    borderRight: "1 solid #666666",
   },
-  thLast: { borderRight: 0 },
-
-  row: {
-    flexDirection: "row",
-    borderBottom: "1 solid #CCCCCC",
-    minHeight: 18,
-  },
-  rowLast: { borderBottom: 0 },
-  cell: {
-    fontSize: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 5,
-    borderRight: "1 solid #DDDDDD",
-  },
-  cellLast: { borderRight: 0 },
-
-  /* Column widths */
-  colArea: { width: "18%" },
-  colZone: { width: "13%" },
-  colPosition: { width: "16%" },
-  colProduct: { width: "19%" },
-  colColor: { width: "22%" },
-  colSupplier: { width: "12%" },
 
   /* ---- Empty state ---- */
   emptyStateWrap: {
@@ -137,7 +112,7 @@ const styles = StyleSheet.create({
   emptyStateText: { fontSize: 10, color: "#555555" },
 
   /* ---- Notes ---- */
-  noteBlock: { border: "1 solid #666666", padding: 8 },
+  noteBlock: { border: BORDER, padding: 8 },
   noteTitle: { fontSize: 9, fontWeight: 700, marginBottom: 5 },
   noteItem: { fontSize: 8, marginBottom: 3 },
 
@@ -152,10 +127,33 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: "#666666",
   },
+
+  /* ---- 1-px column divider (stretches to full row height in flex) ---- */
+  vDivider: { width: 1, backgroundColor: "#666666" },
 });
 
 /* ------------------------------------------------------------------
- *  Group data by area → zone for nested "rowSpan" rendering
+ *  Column widths
+ *
+ *  Flat: Area 18 | [divider 0] | Zone 13 | [divider 0] | Pos 16 | Prod 19 | Clr 22 | Sup 12 = 100
+ *
+ *  We insert 1 px View dividers between columns instead of borderRight
+ *  so they always extend to the full row height.  The zones / items
+ *  containers use flex:1 to absorb the tiny width difference.
+ * ------------------------------------------------------------------ */
+const COL_AREA = "18%";
+
+// Within the zones container (82% minus 1px divider ≈ flex:1)
+const COL_ZONE_IN_CTR = `${((13 / 82) * 100).toFixed(2)}%`;
+
+// Within the items container (69% of zones container)
+const COL_POS  = `${((16 / 69) * 100).toFixed(2)}%`;
+const COL_PROD = `${((19 / 69) * 100).toFixed(2)}%`;
+const COL_CLR  = `${((22 / 69) * 100).toFixed(2)}%`;
+// Supplier is the last column — no divider after it, uses flex:1
+
+/* ------------------------------------------------------------------
+ *  Group data by area → zone
  * ------------------------------------------------------------------ */
 
 type ZoneGroupRow = {
@@ -199,40 +197,36 @@ function groupByArea(data: FinishingSchedulePdfDto): AreaGroup[] {
     });
 }
 
-/*
- * Column widths recalculated for nested containers.
- * Flat proportions: Area 18 | Zone 13 | Position 16 | Product 19 | Color 22 | Supplier 12  (=100)
- */
-const COL_AREA = "18%";
-const COL_ZONES_CTR = "82%";
-const COL_ZONE_IN_CTR = `${((13 / 82) * 100).toFixed(2)}%`;
-const COL_ITEMS_CTR = `${((69 / 82) * 100).toFixed(2)}%`;
-const COL_POS = `${((16 / 69) * 100).toFixed(2)}%`;
-const COL_PROD = `${((19 / 69) * 100).toFixed(2)}%`;
-const COL_CLR = `${((22 / 69) * 100).toFixed(2)}%`;
-const COL_SUP = `${((12 / 69) * 100).toFixed(2)}%`;
-
 /* ------------------------------------------------------------------
- *  Fixed table header (repeats on each page)
+ *  Table header (repeats on each page)
  * ------------------------------------------------------------------ */
 
 function TableHeader() {
   return (
     <View style={styles.tableHeader} fixed>
-      <Text style={[styles.th, styles.colArea]}>AREA</Text>
-      <Text style={[styles.th, styles.colZone]}>INT / EXT</Text>
-      <Text style={[styles.th, styles.colPosition]}>POSITION</Text>
-      <Text style={[styles.th, styles.colProduct]}>PRODUCT</Text>
-      <Text style={[styles.th, styles.colColor]}>COLOUR & CODE</Text>
-      <Text style={[styles.th, styles.colSupplier, styles.thLast]}>
-        SUPPLIER
-      </Text>
+      {/* AREA */}
+      <Text style={[styles.th, { width: COL_AREA }]}>AREA</Text>
+      <View style={styles.vDivider} />
+      {/* INT / EXT */}
+      <Text style={[styles.th, { width: COL_ZONE_IN_CTR }]}>INT / EXT</Text>
+      <View style={styles.vDivider} />
+      {/* POSITION */}
+      <Text style={[styles.th, { width: COL_POS }]}>POSITION</Text>
+      <View style={styles.vDivider} />
+      {/* PRODUCT */}
+      <Text style={[styles.th, { width: COL_PROD }]}>PRODUCT</Text>
+      <View style={styles.vDivider} />
+      {/* COLOUR */}
+      <Text style={[styles.th, { width: COL_CLR }]}>COLOUR & CODE</Text>
+      <View style={styles.vDivider} />
+      {/* SUPPLIER */}
+      <Text style={[styles.th, { flex: 1 }]}>SUPPLIER</Text>
     </View>
   );
 }
 
 /* ------------------------------------------------------------------
- *  Metadata panel helper
+ *  Metadata helper
  * ------------------------------------------------------------------ */
 
 function MetaField({ label, value }: { label: string; value: string }) {
@@ -258,15 +252,13 @@ export function FinishingSchedulePdfDocument({
   return (
     <Document title={`${data.siteName} Finishing Schedule`}>
       <Page size="A4" orientation="landscape" style={styles.page} wrap>
-        {/* ---- Top row: brand / title / page no ---- */}
+        {/* ---- Top row ---- */}
         <View style={styles.topRow} fixed>
           <View style={styles.brandBox}>
             {LOGO_DATA_URI ? (
               <Image src={LOGO_DATA_URI} style={styles.brandLogo} />
             ) : (
-              <Text
-                style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.4 }}
-              >
+              <Text style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.4 }}>
                 FIRST CLASS PROJECTS
               </Text>
             )}
@@ -327,15 +319,14 @@ export function FinishingSchedulePdfDocument({
                 style={{
                   flexDirection: "row",
                   borderBottom:
-                    ai < areaGroups.length - 1 ? "1 solid #666666" : undefined,
+                    ai < areaGroups.length - 1 ? BORDER : undefined,
                 }}
                 wrap={false}
               >
-                {/* AREA – simulated rowSpan (vertically centred) */}
+                {/* AREA cell — no borderRight; height is guaranteed by flex stretch */}
                 <View
                   style={{
                     width: COL_AREA,
-                    borderRight: "1 solid #666666",
                     justifyContent: "center",
                     paddingHorizontal: 5,
                     paddingVertical: 4,
@@ -346,24 +337,24 @@ export function FinishingSchedulePdfDocument({
                   </Text>
                 </View>
 
-                {/* Zone groups */}
-                <View style={{ width: COL_ZONES_CTR }}>
+                {/* Full-height divider between AREA and zones */}
+                <View style={styles.vDivider} />
+
+                {/* Zone groups container */}
+                <View style={{ flex: 1 }}>
                   {area.zones.map((zone, zi) => (
                     <View
                       key={`zone-${zi}`}
                       style={{
                         flexDirection: "row",
                         borderBottom:
-                          zi < area.zones.length - 1
-                            ? "1 solid #CCCCCC"
-                            : undefined,
+                          zi < area.zones.length - 1 ? BORDER : undefined,
                       }}
                     >
-                      {/* INT / EXT – simulated rowSpan */}
+                      {/* INT / EXT cell */}
                       <View
                         style={{
                           width: COL_ZONE_IN_CTR,
-                          borderRight: "1 solid #666666",
                           justifyContent: "center",
                           paddingHorizontal: 5,
                           paddingVertical: 4,
@@ -372,17 +363,18 @@ export function FinishingSchedulePdfDocument({
                         <Text style={{ fontSize: 8 }}>{zone.zone}</Text>
                       </View>
 
-                      {/* Detail rows */}
-                      <View style={{ width: COL_ITEMS_CTR }}>
+                      {/* Full-height divider between zone and items */}
+                      <View style={styles.vDivider} />
+
+                      {/* Item rows */}
+                      <View style={{ flex: 1 }}>
                         {zone.items.map((item, ii) => (
                           <View
                             key={`item-${ii}`}
                             style={{
                               flexDirection: "row",
                               borderBottom:
-                                ii < zone.items.length - 1
-                                  ? "1 solid #DDDDDD"
-                                  : undefined,
+                                ii < zone.items.length - 1 ? BORDER : undefined,
                               minHeight: 18,
                             }}
                           >
@@ -392,36 +384,36 @@ export function FinishingSchedulePdfDocument({
                                 fontSize: 8,
                                 paddingVertical: 4,
                                 paddingHorizontal: 5,
-                                borderRight: "1 solid #DDDDDD",
                               }}
                             >
                               {item.position}
                             </Text>
+                            <View style={styles.vDivider} />
                             <Text
                               style={{
                                 width: COL_PROD,
                                 fontSize: 8,
                                 paddingVertical: 4,
                                 paddingHorizontal: 5,
-                                borderRight: "1 solid #DDDDDD",
                               }}
                             >
                               {item.product}
                             </Text>
+                            <View style={styles.vDivider} />
                             <Text
                               style={{
                                 width: COL_CLR,
                                 fontSize: 8,
                                 paddingVertical: 4,
                                 paddingHorizontal: 5,
-                                borderRight: "1 solid #DDDDDD",
                               }}
                             >
                               {item.colorCode}
                             </Text>
+                            <View style={styles.vDivider} />
                             <Text
                               style={{
-                                width: COL_SUP,
+                                flex: 1,
                                 fontSize: 8,
                                 paddingVertical: 4,
                                 paddingHorizontal: 5,
