@@ -128,26 +128,38 @@ export async function POST(
         },
       });
 
-      // Send push notification to foreman
+      // Persist in-app notification + send push to foreman
       try {
         const foremanUserId = siteDay.foreman.user.id;
+        const siteLabel = siteDay.site.code
+          ? `${siteDay.site.code} • ${siteDay.site.name}`
+          : siteDay.site.name;
+        const workDateStr = siteDay.workDate.toISOString().split("T")[0];
+        const notifMessage = `${siteLabel} · ${workDateStr}${notes ? ` — ${notes}` : ""}`;
+
+        // Persist notification in DB (drives the in-app bell counter)
+        await prisma.notification.create({
+          data: {
+            userId: foremanUserId,
+            type: "PHOTO_REJECTED",
+            title: "Photo Rejected — Retake Required",
+            message: notifMessage,
+            siteId: siteDay.site.id,
+          },
+        });
+
+        // Send Expo push to mobile
         const pushTokens = await prisma.pushToken.findMany({
           where: { userId: foremanUserId },
           select: { token: true },
         });
 
         if (pushTokens.length > 0) {
-          const siteLabel = siteDay.site.code
-            ? `${siteDay.site.code} • ${siteDay.site.name}`
-            : siteDay.site.name;
-
-          const workDateStr = siteDay.workDate.toISOString().split("T")[0];
-
           await sendExpoPush(
             pushTokens.map((t) => t.token),
             {
-              title: "Photo Rejected - Retake Required",
-              body: `Site: ${siteLabel} • Date: ${workDateStr}${notes ? ` • ${notes}` : ""}`,
+              title: "Photo Rejected — Retake Required",
+              body: notifMessage,
               data: {
                 type: "PHOTO_REJECTED",
                 siteId: siteDay.site.id,
@@ -158,7 +170,7 @@ export async function POST(
           );
         }
       } catch (e) {
-        console.error("Failed to send rejection push notification:", e);
+        console.error("Failed to send rejection notification:", e);
       }
     }
 
