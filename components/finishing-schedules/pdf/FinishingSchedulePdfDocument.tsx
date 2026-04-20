@@ -66,7 +66,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 2,
   },
-  title: { fontSize: 16, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" },
+  title: {
+    fontSize: 16,
+    fontWeight: 700,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
 
   pageNoBox: { width: "28%", alignItems: "flex-end", paddingTop: 2 },
   pageNo: { fontSize: 8, color: "#444444" },
@@ -74,8 +79,17 @@ const styles = StyleSheet.create({
   /* ---- Metadata ---- */
   metaRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
   metaPanel: { flex: 1, border: BORDER, padding: 8, minHeight: 92 },
-  metaLine: { flexDirection: "row", marginBottom: 4 },
-  metaLabel: { width: "38%", fontSize: 8.5, fontWeight: 700 },
+  metaLine: {
+    flexDirection: "row",
+    marginBottom: 4,
+    textTransform: "capitalize",
+  },
+  metaLabel: {
+    width: "38%",
+    fontSize: 8.5,
+    fontWeight: 700,
+    textTransform: "capitalize",
+  },
   metaValue: { width: "62%", fontSize: 8.5, textTransform: "capitalize" },
 
   /* ---- Contact bar ---- */
@@ -84,7 +98,7 @@ const styles = StyleSheet.create({
     borderBottom: 0,
     paddingVertical: 5,
     paddingHorizontal: 8,
-    backgroundColor: "#F2F2F2",
+    backgroundColor: "white",
   },
   contactText: { fontSize: 8.5, fontWeight: 700 },
 
@@ -160,9 +174,9 @@ const COL_AREA = "15%";
 const COL_ZONE_IN_CTR = `${((10 / 85) * 100).toFixed(2)}%`;
 
 // Inside items container (75% of full)
-const COL_POS_IN_CTR  = `${((15 / 75) * 100).toFixed(2)}%`;
+const COL_POS_IN_CTR = `${((15 / 75) * 100).toFixed(2)}%`;
 const COL_PROD_IN_CTR = `${((20 / 75) * 100).toFixed(2)}%`;
-const COL_CLR_IN_CTR  = `${((25 / 75) * 100).toFixed(2)}%`;
+const COL_CLR_IN_CTR = `${((25 / 75) * 100).toFixed(2)}%`;
 // Supplier uses flex:1 for the remainder
 
 /* ------------------------------------------------------------------
@@ -229,7 +243,9 @@ function TableHeader() {
           <View style={styles.vDivider} />
           <Text style={[styles.th, { width: COL_PROD_IN_CTR }]}>PRODUCT</Text>
           <View style={styles.vDivider} />
-          <Text style={[styles.th, { width: COL_CLR_IN_CTR }]}>COLOUR & CODE</Text>
+          <Text style={[styles.th, { width: COL_CLR_IN_CTR }]}>
+            COLOUR & CODE
+          </Text>
           <View style={styles.vDivider} />
           <Text style={[styles.th, { flex: 1 }]}>SUPPLIER</Text>
         </View>
@@ -345,7 +361,15 @@ export function FinishingSchedulePdfDocument({
                     backgroundColor: "#F0F0F0",
                   }}
                 >
-                  <Text style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase" }}>{area.name}</Text>
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {area.name}
+                  </Text>
                 </View>
                 <View style={styles.vDivider} />
 
@@ -356,7 +380,8 @@ export function FinishingSchedulePdfDocument({
                       key={`zone-${zi}`}
                       style={{
                         flexDirection: "row",
-                        borderBottom: zi < area.zones.length - 1 ? BORDER : undefined,
+                        borderBottom:
+                          zi < area.zones.length - 1 ? BORDER : undefined,
                       }}
                     >
                       {/* INT/EXT cell — vertically centered, spans all zone items */}
@@ -380,24 +405,53 @@ export function FinishingSchedulePdfDocument({
                             key={`item-${ii}`}
                             style={{
                               flexDirection: "row",
-                              borderBottom: ii < zone.items.length - 1 ? BORDER : undefined,
+                              borderBottom:
+                                ii < zone.items.length - 1 ? BORDER : undefined,
                               minHeight: 18,
                             }}
                             wrap={false}
                           >
-                            <Text style={{ width: COL_POS_IN_CTR, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                            <Text
+                              style={{
+                                width: COL_POS_IN_CTR,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                              }}
+                            >
                               {item.position}
                             </Text>
                             <View style={styles.vDivider} />
-                            <Text style={{ width: COL_PROD_IN_CTR, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                            <Text
+                              style={{
+                                width: COL_PROD_IN_CTR,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                              }}
+                            >
                               {item.product}
                             </Text>
                             <View style={styles.vDivider} />
-                            <Text style={{ width: COL_CLR_IN_CTR, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                            <Text
+                              style={{
+                                width: COL_CLR_IN_CTR,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                              }}
+                            >
                               {item.colorCode}
                             </Text>
                             <View style={styles.vDivider} />
-                            <Text style={{ flex: 1, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                            <Text
+                              style={{
+                                flex: 1,
+                                fontSize: 8,
+                                paddingVertical: 4,
+                                paddingHorizontal: 5,
+                              }}
+                            >
                               {item.supplier}
                             </Text>
                           </View>
