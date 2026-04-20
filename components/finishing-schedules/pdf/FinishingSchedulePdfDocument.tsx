@@ -345,7 +345,7 @@ export function FinishingSchedulePdfDocument({
                     backgroundColor: "#F0F0F0",
                   }}
                 >
-                  <Text style={{ fontSize: 8, fontWeight: 700 }}>{area.name}</Text>
+                  <Text style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase" }}>{area.name}</Text>
                 </View>
                 <View style={styles.vDivider} />
 
