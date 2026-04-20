@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   metaPanel: { flex: 1, border: BORDER, padding: 8, minHeight: 92 },
   metaLine: { flexDirection: "row", marginBottom: 4 },
   metaLabel: { width: "38%", fontSize: 8.5, fontWeight: 700 },
-  metaValue: { width: "62%", fontSize: 8.5 },
+  metaValue: { width: "62%", fontSize: 8.5, textTransform: "uppercase" },
 
   /* ---- Contact bar ---- */
   contactBar: {
