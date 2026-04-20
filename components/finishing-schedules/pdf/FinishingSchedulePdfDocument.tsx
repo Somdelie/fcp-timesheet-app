@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
 
   /* ---- Metadata ---- */
   metaRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
-  metaPanel: { flex: 1, border: BORDER, borderRadius: 6, padding: 8, minHeight: 92 },
+  metaPanel: { flex: 1, border: BORDER, padding: 8, minHeight: 92 },
   metaLine: { flexDirection: "row", marginBottom: 4 },
   metaLabel: { width: "38%", fontSize: 8.5, fontWeight: 700 },
   metaValue: { width: "62%", fontSize: 8.5 },
@@ -82,8 +82,6 @@ const styles = StyleSheet.create({
   contactBar: {
     border: BORDER,
     borderBottom: 0,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
     paddingVertical: 5,
     paddingHorizontal: 8,
     backgroundColor: "#F2F2F2",
@@ -94,13 +92,12 @@ const styles = StyleSheet.create({
   table: {
     border: BORDER,
     borderTop: 0,
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
     marginBottom: 10,
   },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#EDEDED",
+    borderTop: BORDER,
     borderBottom: BORDER,
   },
   th: {
@@ -120,7 +117,7 @@ const styles = StyleSheet.create({
   emptyStateText: { fontSize: 10, color: "#555555" },
 
   /* ---- Notes ---- */
-  noteBlock: { border: BORDER, borderRadius: 6, padding: 8 },
+  noteBlock: { border: BORDER, padding: 8 },
   noteTitle: { fontSize: 9, fontWeight: 700, marginBottom: 5 },
   noteItem: { fontSize: 8, marginBottom: 3 },
 
