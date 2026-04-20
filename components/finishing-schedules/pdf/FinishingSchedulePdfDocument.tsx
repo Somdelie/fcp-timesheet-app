@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 2,
   },
-  title: { fontSize: 16, fontWeight: 700, letterSpacing: 0.8 },
+  title: { fontSize: 16, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" },
 
   pageNoBox: { width: "28%", alignItems: "flex-end", paddingTop: 2 },
   pageNo: { fontSize: 8, color: "#444444" },
