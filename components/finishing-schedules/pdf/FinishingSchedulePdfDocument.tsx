@@ -116,6 +116,9 @@ const styles = StyleSheet.create({
   },
   emptyStateText: { fontSize: 10, color: "#555555" },
 
+  /* ---- 1-px vertical column divider ---- */
+  vDivider: { width: 1, backgroundColor: "#666666", alignSelf: "stretch" },
+
   /* ---- Notes ---- */
   noteBlock: { border: BORDER, padding: 8 },
   noteTitle: { fontSize: 9, fontWeight: 700, marginBottom: 5 },
@@ -135,15 +138,32 @@ const styles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------
- *  Column widths - simplified percentage-based layout for proper alignment
- *  Total: 100% distributed across columns
+ *  Column widths
+ *
+ *  Target visual widths (% of full row):
+ *    AREA 15 | ZONE 10 | POS 15 | PROD 20 | CLR 25 | SUP 15
+ *
+ *  The nested flex structure means inner containers have smaller
+ *  reference widths, so we compute relative percentages:
+ *
+ *  zones container  = 100% - 15% AREA       = 85% of full
+ *  COL_ZONE_IN_CTR  = 10 / 85 * 100         ≈ 11.76% of zones
+ *  items container  = 85% - 11.76%          ≈ 75% of full
+ *  COL_POS_IN_CTR   = 15 / 75 * 100         = 20%   of items
+ *  COL_PROD_IN_CTR  = 20 / 75 * 100         ≈ 26.67% of items
+ *  COL_CLR_IN_CTR   = 25 / 75 * 100         ≈ 33.33% of items
+ *  COL_SUP_IN_CTR   = 15 / 75 * 100         = 20%   of items
  * ------------------------------------------------------------------ */
 const COL_AREA = "15%";
-const COL_ZONE = "10%";
-const COL_POS = "15%";
-const COL_PROD = "20%";
-const COL_CLR = "25%";
-const COL_SUP = "15%";
+
+// Inside zones container (85% of full)
+const COL_ZONE_IN_CTR = `${((10 / 85) * 100).toFixed(2)}%`;
+
+// Inside items container (75% of full)
+const COL_POS_IN_CTR  = `${((15 / 75) * 100).toFixed(2)}%`;
+const COL_PROD_IN_CTR = `${((20 / 75) * 100).toFixed(2)}%`;
+const COL_CLR_IN_CTR  = `${((25 / 75) * 100).toFixed(2)}%`;
+// Supplier uses flex:1 for the remainder
 
 /* ------------------------------------------------------------------
  *  Group data by area → zone
@@ -197,22 +217,23 @@ function groupByArea(data: FinishingSchedulePdfDto): AreaGroup[] {
 function TableHeader() {
   return (
     <View style={styles.tableHeader} fixed>
-      <Text style={[styles.th, { width: COL_AREA, borderRight: BORDER }]}>
-        AREA
-      </Text>
-      <Text style={[styles.th, { width: COL_ZONE, borderRight: BORDER }]}>
-        INT / EXT
-      </Text>
-      <Text style={[styles.th, { width: COL_POS, borderRight: BORDER }]}>
-        POSITION
-      </Text>
-      <Text style={[styles.th, { width: COL_PROD, borderRight: BORDER }]}>
-        PRODUCT
-      </Text>
-      <Text style={[styles.th, { width: COL_CLR, borderRight: BORDER }]}>
-        COLOUR & CODE
-      </Text>
-      <Text style={[styles.th, { width: COL_SUP }]}>SUPPLIER</Text>
+      <Text style={[styles.th, { width: COL_AREA }]}>AREA</Text>
+      <View style={styles.vDivider} />
+      {/* zones container mirrors body layout */}
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        <Text style={[styles.th, { width: COL_ZONE_IN_CTR }]}>INT / EXT</Text>
+        <View style={styles.vDivider} />
+        {/* items container mirrors body layout */}
+        <View style={{ flex: 1, flexDirection: "row" }}>
+          <Text style={[styles.th, { width: COL_POS_IN_CTR }]}>POSITION</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: COL_PROD_IN_CTR }]}>PRODUCT</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: COL_CLR_IN_CTR }]}>COLOUR & CODE</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { flex: 1 }]}>SUPPLIER</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -306,107 +327,92 @@ export function FinishingSchedulePdfDocument({
               </Text>
             </View>
           ) : (
-            areaGroups.map((area, ai) =>
-              area.zones.map((zone, zi) =>
-                zone.items.map((item, ii) => {
-                  const isFirstItemInArea = zi === 0 && ii === 0;
-                  const isFirstItemInZone = ii === 0;
-                  const isLastRow =
-                    ai === areaGroups.length - 1 &&
-                    zi === area.zones.length - 1 &&
-                    ii === zone.items.length - 1;
+            areaGroups.map((area, ai) => (
+              <View
+                key={`area-${ai}`}
+                style={{
+                  flexDirection: "row",
+                  borderBottom: ai < areaGroups.length - 1 ? BORDER : undefined,
+                }}
+              >
+                {/* AREA cell — vertically centered, spans all child rows */}
+                <View
+                  style={{
+                    width: COL_AREA,
+                    justifyContent: "center",
+                    paddingHorizontal: 5,
+                    paddingVertical: 4,
+                    backgroundColor: "#F0F0F0",
+                  }}
+                >
+                  <Text style={{ fontSize: 8, fontWeight: 700 }}>{area.name}</Text>
+                </View>
+                <View style={styles.vDivider} />
 
-                  return (
+                {/* Zones container */}
+                <View style={{ flex: 1 }}>
+                  {area.zones.map((zone, zi) => (
                     <View
-                      key={`${ai}-${zi}-${ii}`}
+                      key={`zone-${zi}`}
                       style={{
                         flexDirection: "row",
-                        borderBottom: isLastRow ? undefined : BORDER,
-                        minHeight: 18,
+                        borderBottom: zi < area.zones.length - 1 ? BORDER : undefined,
                       }}
-                      wrap={false}
                     >
-                      {/* AREA - only show on first item of area */}
-                      <Text
+                      {/* INT/EXT cell — vertically centered, spans all zone items */}
+                      <View
                         style={{
-                          width: COL_AREA,
-                          fontSize: 8,
-                          fontWeight: 700,
-                          paddingVertical: 4,
+                          width: COL_ZONE_IN_CTR,
+                          justifyContent: "center",
                           paddingHorizontal: 5,
-                          borderRight: BORDER,
-                          backgroundColor: "#F0F0F0",
-                        }}
-                      >
-                        {isFirstItemInArea ? area.name : ""}
-                      </Text>
-                      {/* INT / EXT - only show on first item of zone */}
-                      <Text
-                        style={{
-                          width: COL_ZONE,
-                          fontSize: 8,
                           paddingVertical: 4,
-                          paddingHorizontal: 5,
-                          borderRight: BORDER,
                           backgroundColor: "#F5F5F5",
                         }}
                       >
-                        {isFirstItemInZone ? zone.zone : ""}
-                      </Text>
-                      {/* POSITION */}
-                      <Text
-                        style={{
-                          width: COL_POS,
-                          fontSize: 8,
-                          paddingVertical: 4,
-                          paddingHorizontal: 5,
-                          borderRight: BORDER,
-                        }}
-                      >
-                        {item.position}
-                      </Text>
-                      {/* PRODUCT */}
-                      <Text
-                        style={{
-                          width: COL_PROD,
-                          fontSize: 8,
-                          paddingVertical: 4,
-                          paddingHorizontal: 5,
-                          borderRight: BORDER,
-                        }}
-                      >
-                        {item.product}
-                      </Text>
-                      {/* COLOUR & CODE */}
-                      <Text
-                        style={{
-                          width: COL_CLR,
-                          fontSize: 8,
-                          paddingVertical: 4,
-                          paddingHorizontal: 5,
-                          borderRight: BORDER,
-                        }}
-                      >
-                        {item.colorCode}
-                      </Text>
-                      {/* SUPPLIER */}
-                      <Text
-                        style={{
-                          width: COL_SUP,
-                          fontSize: 8,
-                          paddingVertical: 4,
-                          paddingHorizontal: 5,
-                        }}
-                      >
-                        {item.supplier}
-                      </Text>
+                        <Text style={{ fontSize: 8 }}>{zone.zone}</Text>
+                      </View>
+                      <View style={styles.vDivider} />
+
+                      {/* Item rows */}
+                      <View style={{ flex: 1 }}>
+                        {zone.items.map((item, ii) => (
+                          <View
+                            key={`item-${ii}`}
+                            style={{
+                              flexDirection: "row",
+                              borderBottom: ii < zone.items.length - 1 ? BORDER : undefined,
+                              minHeight: 18,
+                            }}
+                            wrap={false}
+                          >
+                            <Text style={{ width: COL_POS_IN_CTR, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                              {item.position}
+                            </Text>
+                            <View style={styles.vDivider} />
+                            <Text style={{ width: COL_PROD_IN_CTR, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                              {item.product}
+                            </Text>
+                            <View style={styles.vDivider} />
+                            <Text style={{ width: COL_CLR_IN_CTR, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                              {item.colorCode}
+                            </Text>
+                            <View style={styles.vDivider} />
+                            <Text style={{ flex: 1, fontSize: 8, paddingVertical: 4, paddingHorizontal: 5 }}>
+                              {item.supplier}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                  );
-                }),
-              ),
-            )
+                  ))}
+                </View>
+              </View>
+            ))
           )}
         </View>
+
+        {/* Spacer pushes notes to bottom */}
+        <View style={{ flex: 1 }} />
 
         {/* ---- Notes ---- */}
         <View style={styles.noteBlock} wrap={false}>
