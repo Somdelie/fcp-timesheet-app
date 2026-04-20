@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
 
   /* ---- Metadata ---- */
   metaRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
-  metaPanel: { flex: 1, border: BORDER, padding: 8, minHeight: 92 },
+  metaPanel: { flex: 1, border: BORDER, borderRadius: 6, padding: 8, minHeight: 92 },
   metaLine: { flexDirection: "row", marginBottom: 4 },
   metaLabel: { width: "38%", fontSize: 8.5, fontWeight: 700 },
   metaValue: { width: "62%", fontSize: 8.5 },
@@ -82,6 +82,8 @@ const styles = StyleSheet.create({
   contactBar: {
     border: BORDER,
     borderBottom: 0,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
     paddingVertical: 5,
     paddingHorizontal: 8,
     backgroundColor: "#F2F2F2",
@@ -89,7 +91,13 @@ const styles = StyleSheet.create({
   contactText: { fontSize: 8.5, fontWeight: 700 },
 
   /* ---- Table ---- */
-  table: { border: BORDER, marginBottom: 10 },
+  table: {
+    border: BORDER,
+    borderTop: 0,
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+    marginBottom: 10,
+  },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#EDEDED",
@@ -112,7 +120,7 @@ const styles = StyleSheet.create({
   emptyStateText: { fontSize: 10, color: "#555555" },
 
   /* ---- Notes ---- */
-  noteBlock: { border: BORDER, padding: 8 },
+  noteBlock: { border: BORDER, borderRadius: 6, padding: 8 },
   noteTitle: { fontSize: 9, fontWeight: 700, marginBottom: 5 },
   noteItem: { fontSize: 8, marginBottom: 3 },
 
@@ -127,30 +135,18 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: "#666666",
   },
-
-  /* ---- 1-px column divider (stretches to full row height in flex) ---- */
-  vDivider: { width: 1, backgroundColor: "#666666" },
 });
 
 /* ------------------------------------------------------------------
- *  Column widths
- *
- *  Flat: Area 18 | [divider 0] | Zone 13 | [divider 0] | Pos 16 | Prod 19 | Clr 22 | Sup 12 = 100
- *
- *  We insert 1 px View dividers between columns instead of borderRight
- *  so they always extend to the full row height.  The zones / items
- *  containers use flex:1 to absorb the tiny width difference.
+ *  Column widths - simplified percentage-based layout for proper alignment
+ *  Total: 100% distributed across columns
  * ------------------------------------------------------------------ */
-const COL_AREA = "18%";
-
-// Within the zones container (82% minus 1px divider ≈ flex:1)
-const COL_ZONE_IN_CTR = `${((13 / 82) * 100).toFixed(2)}%`;
-
-// Within the items container (69% of zones container)
-const COL_POS  = `${((16 / 69) * 100).toFixed(2)}%`;
-const COL_PROD = `${((19 / 69) * 100).toFixed(2)}%`;
-const COL_CLR  = `${((22 / 69) * 100).toFixed(2)}%`;
-// Supplier is the last column — no divider after it, uses flex:1
+const COL_AREA = "15%";
+const COL_ZONE = "10%";
+const COL_POS = "15%";
+const COL_PROD = "20%";
+const COL_CLR = "25%";
+const COL_SUP = "15%";
 
 /* ------------------------------------------------------------------
  *  Group data by area → zone
@@ -204,23 +200,22 @@ function groupByArea(data: FinishingSchedulePdfDto): AreaGroup[] {
 function TableHeader() {
   return (
     <View style={styles.tableHeader} fixed>
-      {/* AREA */}
-      <Text style={[styles.th, { width: COL_AREA }]}>AREA</Text>
-      <View style={styles.vDivider} />
-      {/* INT / EXT */}
-      <Text style={[styles.th, { width: COL_ZONE_IN_CTR }]}>INT / EXT</Text>
-      <View style={styles.vDivider} />
-      {/* POSITION */}
-      <Text style={[styles.th, { width: COL_POS }]}>POSITION</Text>
-      <View style={styles.vDivider} />
-      {/* PRODUCT */}
-      <Text style={[styles.th, { width: COL_PROD }]}>PRODUCT</Text>
-      <View style={styles.vDivider} />
-      {/* COLOUR */}
-      <Text style={[styles.th, { width: COL_CLR }]}>COLOUR & CODE</Text>
-      <View style={styles.vDivider} />
-      {/* SUPPLIER */}
-      <Text style={[styles.th, { flex: 1 }]}>SUPPLIER</Text>
+      <Text style={[styles.th, { width: COL_AREA, borderRight: BORDER }]}>
+        AREA
+      </Text>
+      <Text style={[styles.th, { width: COL_ZONE, borderRight: BORDER }]}>
+        INT / EXT
+      </Text>
+      <Text style={[styles.th, { width: COL_POS, borderRight: BORDER }]}>
+        POSITION
+      </Text>
+      <Text style={[styles.th, { width: COL_PROD, borderRight: BORDER }]}>
+        PRODUCT
+      </Text>
+      <Text style={[styles.th, { width: COL_CLR, borderRight: BORDER }]}>
+        COLOUR & CODE
+      </Text>
+      <Text style={[styles.th, { width: COL_SUP }]}>SUPPLIER</Text>
     </View>
   );
 }
@@ -258,7 +253,9 @@ export function FinishingSchedulePdfDocument({
             {LOGO_DATA_URI ? (
               <Image src={LOGO_DATA_URI} style={styles.brandLogo} />
             ) : (
-              <Text style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.4 }}>
+              <Text
+                style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.4 }}
+              >
                 FIRST CLASS PROJECTS
               </Text>
             )}
@@ -313,122 +310,103 @@ export function FinishingSchedulePdfDocument({
               </Text>
             </View>
           ) : (
-            areaGroups.map((area, ai) => (
-              <View
-                key={`area-${ai}`}
-                style={{
-                  flexDirection: "row",
-                  borderBottom:
-                    ai < areaGroups.length - 1 ? BORDER : undefined,
-                }}
-                wrap={false}
-              >
-                {/* AREA cell — no borderRight; height is guaranteed by flex stretch */}
-                <View
-                  style={{
-                    width: COL_AREA,
-                    justifyContent: "center",
-                    paddingHorizontal: 5,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <Text style={{ fontSize: 8, fontWeight: 700 }}>
-                    {area.name}
-                  </Text>
-                </View>
+            areaGroups.map((area, ai) =>
+              area.zones.map((zone, zi) =>
+                zone.items.map((item, ii) => {
+                  const isFirstItemInArea = zi === 0 && ii === 0;
+                  const isFirstItemInZone = ii === 0;
+                  const isLastRow =
+                    ai === areaGroups.length - 1 &&
+                    zi === area.zones.length - 1 &&
+                    ii === zone.items.length - 1;
 
-                {/* Full-height divider between AREA and zones */}
-                <View style={styles.vDivider} />
-
-                {/* Zone groups container */}
-                <View style={{ flex: 1 }}>
-                  {area.zones.map((zone, zi) => (
+                  return (
                     <View
-                      key={`zone-${zi}`}
+                      key={`${ai}-${zi}-${ii}`}
                       style={{
                         flexDirection: "row",
-                        borderBottom:
-                          zi < area.zones.length - 1 ? BORDER : undefined,
+                        borderBottom: isLastRow ? undefined : BORDER,
+                        minHeight: 18,
                       }}
+                      wrap={false}
                     >
-                      {/* INT / EXT cell */}
-                      <View
+                      {/* AREA - only show on first item of area */}
+                      <Text
                         style={{
-                          width: COL_ZONE_IN_CTR,
-                          justifyContent: "center",
-                          paddingHorizontal: 5,
+                          width: COL_AREA,
+                          fontSize: 8,
+                          fontWeight: 700,
                           paddingVertical: 4,
+                          paddingHorizontal: 5,
+                          borderRight: BORDER,
                         }}
                       >
-                        <Text style={{ fontSize: 8 }}>{zone.zone}</Text>
-                      </View>
-
-                      {/* Full-height divider between zone and items */}
-                      <View style={styles.vDivider} />
-
-                      {/* Item rows */}
-                      <View style={{ flex: 1 }}>
-                        {zone.items.map((item, ii) => (
-                          <View
-                            key={`item-${ii}`}
-                            style={{
-                              flexDirection: "row",
-                              borderBottom:
-                                ii < zone.items.length - 1 ? BORDER : undefined,
-                              minHeight: 18,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                width: COL_POS,
-                                fontSize: 8,
-                                paddingVertical: 4,
-                                paddingHorizontal: 5,
-                              }}
-                            >
-                              {item.position}
-                            </Text>
-                            <View style={styles.vDivider} />
-                            <Text
-                              style={{
-                                width: COL_PROD,
-                                fontSize: 8,
-                                paddingVertical: 4,
-                                paddingHorizontal: 5,
-                              }}
-                            >
-                              {item.product}
-                            </Text>
-                            <View style={styles.vDivider} />
-                            <Text
-                              style={{
-                                width: COL_CLR,
-                                fontSize: 8,
-                                paddingVertical: 4,
-                                paddingHorizontal: 5,
-                              }}
-                            >
-                              {item.colorCode}
-                            </Text>
-                            <View style={styles.vDivider} />
-                            <Text
-                              style={{
-                                flex: 1,
-                                fontSize: 8,
-                                paddingVertical: 4,
-                                paddingHorizontal: 5,
-                              }}
-                            >
-                              {item.supplier}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
+                        {isFirstItemInArea ? area.name : ""}
+                      </Text>
+                      {/* INT / EXT - only show on first item of zone */}
+                      <Text
+                        style={{
+                          width: COL_ZONE,
+                          fontSize: 8,
+                          paddingVertical: 4,
+                          paddingHorizontal: 5,
+                          borderRight: BORDER,
+                        }}
+                      >
+                        {isFirstItemInZone ? zone.zone : ""}
+                      </Text>
+                      {/* POSITION */}
+                      <Text
+                        style={{
+                          width: COL_POS,
+                          fontSize: 8,
+                          paddingVertical: 4,
+                          paddingHorizontal: 5,
+                          borderRight: BORDER,
+                        }}
+                      >
+                        {item.position}
+                      </Text>
+                      {/* PRODUCT */}
+                      <Text
+                        style={{
+                          width: COL_PROD,
+                          fontSize: 8,
+                          paddingVertical: 4,
+                          paddingHorizontal: 5,
+                          borderRight: BORDER,
+                        }}
+                      >
+                        {item.product}
+                      </Text>
+                      {/* COLOUR & CODE */}
+                      <Text
+                        style={{
+                          width: COL_CLR,
+                          fontSize: 8,
+                          paddingVertical: 4,
+                          paddingHorizontal: 5,
+                          borderRight: BORDER,
+                        }}
+                      >
+                        {item.colorCode}
+                      </Text>
+                      {/* SUPPLIER */}
+                      <Text
+                        style={{
+                          width: COL_SUP,
+                          fontSize: 8,
+                          paddingVertical: 4,
+                          paddingHorizontal: 5,
+                        }}
+                      >
+                        {item.supplier}
+                      </Text>
                     </View>
-                  ))}
-                </View>
-              </View>
-            ))
+                  );
+                }),
+              ),
+            )
           )}
         </View>
 
