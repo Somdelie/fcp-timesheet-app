@@ -174,6 +174,7 @@ export async function createFinishingSchedule(input: CreateScheduleInput) {
 
 export async function updateFinishingSchedule(input: {
   id: string;
+  siteAddress?: string | null;
   contractNo?: string | null;
   contractManager?: string | null;
   siteForeman?: string | null;
@@ -202,6 +203,10 @@ export async function updateFinishingSchedule(input: {
   await prisma.siteFinishingSchedule.update({
     where: { id },
     data: {
+      ...(input.siteAddress !== undefined
+        ? { siteAddress: input.siteAddress ? clean(input.siteAddress) : null }
+        : {}),
+
       ...(input.contractNo !== undefined
         ? { contractNo: input.contractNo ? clean(input.contractNo) : null }
         : {}),

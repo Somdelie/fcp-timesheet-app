@@ -111,7 +111,7 @@ export function mapFinishingScheduleToPdfDto(
     title: "FINISHING SCHEDULE",
     siteName: show(schedule.site?.name),
     siteCode: show(schedule.site?.code),
-    siteAddress: show(schedule.site?.address || schedule.site?.location),
+    siteAddress: show(schedule.siteAddress || schedule.site?.address || schedule.site?.location),
     contractNo: show(schedule.contractNo || schedule.site?.code),
     contractManager: show(schedule.contractManager),
     siteForeman: show(schedule.siteForeman),

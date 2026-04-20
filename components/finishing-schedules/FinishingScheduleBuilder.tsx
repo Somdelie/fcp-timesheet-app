@@ -79,6 +79,7 @@ type ScheduleArea = {
 type Schedule = {
   id: string;
   siteId: string;
+  siteAddress: string | null;
   contractNo: string | null;
   contractManager: string | null;
   siteForeman: string | null;
@@ -181,6 +182,10 @@ export default function FinishingScheduleBuilder({
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+            <div className="col-span-2 sm:col-span-4">
+              <dt className="text-muted-foreground">Site Address</dt>
+              <dd className="font-medium">{schedule.siteAddress || "—"}</dd>
+            </div>
             <div>
               <dt className="text-muted-foreground">Contract No</dt>
               <dd className="font-medium">{schedule.contractNo || "—"}</dd>

@@ -23,6 +23,7 @@ import { updateFinishingSchedule } from "@/actions/site-finishing-schedule";
 interface Props {
   schedule: {
     id: string;
+    siteAddress: string | null;
     contractNo: string | null;
     contractManager: string | null;
     siteForeman: string | null;
@@ -48,6 +49,7 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  const [siteAddress, setSiteAddress] = useState(schedule.siteAddress ?? "");
   const [contractNo, setContractNo] = useState(schedule.contractNo ?? "");
   const [contractManager, setContractManager] = useState(
     schedule.contractManager ?? "",
@@ -70,6 +72,7 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
     startTransition(async () => {
       const res = await updateFinishingSchedule({
         id: schedule.id,
+        siteAddress: siteAddress || null,
         contractNo: contractNo || null,
         contractManager: contractManager || null,
         siteForeman: siteForeman || null,
@@ -104,6 +107,15 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
           <DialogTitle>Edit Schedule Header</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="eh-siteAddress">Site Address</Label>
+            <Input
+              id="eh-siteAddress"
+              value={siteAddress}
+              onChange={(e) => setSiteAddress(e.target.value)}
+              placeholder="Enter site address"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="eh-contractNo">Contract No</Label>

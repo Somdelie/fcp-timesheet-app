@@ -1492,6 +1492,7 @@ model SiteFinishingSchedule {
   site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   // Header info from the finishing schedule document
+  siteAddress        String?
   contractNo         String?
   contractManager    String?
   siteForeman        String?
