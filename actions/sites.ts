@@ -68,6 +68,7 @@ function serializeSite(s: any) {
     latitude: typeof s.latitude === "number" ? s.latitude : null,
     longitude: typeof s.longitude === "number" ? s.longitude : null,
     isActive: s.isActive,
+    jobStatus: (s.jobStatus ?? "NOT_STARTED") as "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD",
     createdAt:
       s.createdAt instanceof Date
         ? s.createdAt.toISOString()
@@ -149,6 +150,7 @@ export async function listSites(input?: {
       latitude: true,
       longitude: true,
       isActive: true,
+      jobStatus: true,
       createdAt: true,
       supervisorAssignments: {
         select: {
@@ -288,6 +290,7 @@ export async function updateSiteLocation(input: {
   address?: string | null;
   siteClaimDate?: string | null;
   amountClaimed?: number | string | null;
+  jobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
   latitude?: number | string | null;
   longitude?: number | string | null;
 }) {
@@ -363,6 +366,7 @@ export async function updateSiteLocation(input: {
         ...(address !== undefined ? { address } : {}),
         ...(siteClaimDate !== undefined ? { siteClaimDate } : {}),
         ...(amountClaimed !== undefined ? { amountClaimed } : {}),
+        ...(input.jobStatus !== undefined ? { jobStatus: input.jobStatus } : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -378,6 +382,7 @@ export async function updateSiteLocation(input: {
         latitude: true,
         longitude: true,
         isActive: true,
+        jobStatus: true,
         createdAt: true,
       },
     });

@@ -9,12 +9,14 @@ import {
   X,
   Package,
   Trash2,
-  ChevronDown,
   ChevronRight,
   RotateCw,
   ShoppingCart,
   ClipboardList,
   Search,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -282,6 +284,12 @@ export default function SiteMaterialOrdersPanel({
   );
   const [tab, setTab] = useState<"orders" | "summary">("summary");
 
+  // Pagination
+  const ORDERS_PAGE_SIZE = 10;
+  const SUMMARY_PAGE_SIZE = 10;
+  const [ordersPage, setOrdersPage] = useState(0);
+  const [summaryPage, setSummaryPage] = useState(0);
+
   // Date range filter
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -366,6 +374,8 @@ export default function SiteMaterialOrdersPanel({
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error ?? "Failed to load");
         setOrders(json.data);
+        setOrdersPage(0);
+        setSummaryPage(0);
       } catch (e: any) {
         toast.error(e?.message || "Failed to load orders");
       } finally {
@@ -574,6 +584,16 @@ export default function SiteMaterialOrdersPanel({
   }
 
   const aggregated = aggregateProducts(orders);
+  const totalSummaryPages = Math.ceil(aggregated.length / SUMMARY_PAGE_SIZE);
+  const paginatedAggregated = aggregated.slice(
+    summaryPage * SUMMARY_PAGE_SIZE,
+    (summaryPage + 1) * SUMMARY_PAGE_SIZE,
+  );
+  const totalOrdersPages = Math.ceil(orders.length / ORDERS_PAGE_SIZE);
+  const paginatedOrders = orders.slice(
+    ordersPage * ORDERS_PAGE_SIZE,
+    (ordersPage + 1) * ORDERS_PAGE_SIZE,
+  );
   const grandTotal = orders.reduce(
     (sum, order) =>
       sum +
@@ -724,7 +744,7 @@ export default function SiteMaterialOrdersPanel({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {aggregated.map((a, i) => (
+                    {paginatedAggregated.map((a, i) => (
                       <tr
                         key={`${a.productId}-${i}`}
                         className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors divide-x divide-slate-200 dark:divide-slate-700/60"
@@ -777,6 +797,29 @@ export default function SiteMaterialOrdersPanel({
                 </table>
               </div>
             )}
+            {/* Summary pagination */}
+            {aggregated.length > SUMMARY_PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-3 px-1">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {summaryPage * SUMMARY_PAGE_SIZE + 1}–{Math.min((summaryPage + 1) * SUMMARY_PAGE_SIZE, aggregated.length)} of {aggregated.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setSummaryPage(0)} disabled={summaryPage === 0} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <ChevronsLeft className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => setSummaryPage((p) => p - 1)} disabled={summaryPage === 0} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 px-2">{summaryPage + 1} / {totalSummaryPages}</span>
+                  <button onClick={() => setSummaryPage((p) => p + 1)} disabled={summaryPage >= totalSummaryPages - 1} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => setSummaryPage(totalSummaryPages - 1)} disabled={summaryPage >= totalSummaryPages - 1} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <ChevronsRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -798,244 +841,215 @@ export default function SiteMaterialOrdersPanel({
                 </p>
               </div>
             ) : (
-              <div className="space-y-1.5">
-                {orders.map((order) => {
-                  const isExpanded = expandedOrderId === order.id;
-                  const rowTotal = order.items.reduce(
-                    (sum, item) => sum + item.quantity * item.unitPriceAtOrder,
-                    0,
-                  );
-                  return (
-                    <div
-                      key={order.id}
-                      className="rounded border border-slate-200 dark:border-slate-700/60 overflow-hidden transition-shadow hover:shadow-sm"
-                    >
-                      {/* Order row */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                        onClick={() =>
-                          setExpandedOrderId(isExpanded ? null : order.id)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setExpandedOrderId(isExpanded ? null : order.id);
-                          }
-                        }}
-                      >
-                        <div
-                          className={`shrink-0 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`}
-                        >
-                          <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                        </div>
-
-                        {/* Left: name + meta */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[13px] font-semibold text-slate-900 dark:text-white">
-                              {order.reference
-                                ? `#${order.reference}`
-                                : "Unnamed Order"}
-                            </span>
-                            {order.supplier && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                                {order.supplier.name}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-                            <span>{fmtDate(order.createdAt)}</span>
-                            {order.createdByUser && (
-                              <>
-                                <span>·</span>
-                                <span>{order.createdByUser.name}</span>
-                              </>
-                            )}
-                            <span>·</span>
-                            <span>
-                              {order.items.length} item
-                              {order.items.length !== 1 ? "s" : ""}
-                            </span>
-                          </div>
-                          {!isExpanded && order.items.length > 0 && (
-                            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-                              {order.items
-                                .slice(0, 3)
-                                .map(itemDisplay)
-                                .join(" · ")}
-                              {order.items.length > 3 &&
-                                ` +${order.items.length - 3} more`}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Right: cost + actions */}
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-[13px] font-semibold text-slate-900 dark:text-white tabular-nums">
-                            {fmtCurrency(rowTotal)}
-                          </span>
-                          <div className="flex items-center gap-0.5">
-                            <button
-                              className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setAddItemOrderId(order.id);
-                                setItemForm({
-                                  productId: "",
-                                  quantity: "1",
-                                  unitPrice: "",
-                                  note: "",
-                                });
-                                setAddItemOpen(true);
-                              }}
-                              title="Add item"
+              <>
+                <div className="flex justify-end mb-3">
+                  <button
+                    onClick={openPos}
+                    className="h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-[13px] font-medium transition-colors shadow-sm flex items-center gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> New Order
+                  </button>
+                </div>
+                <div className="rounded border border-slate-200 dark:border-slate-700/60 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50 dark:bg-slate-800/50">
+                        <TableHead className="w-8" />
+                        <TableHead>Reference</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead className="text-center">Items</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="w-20" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedOrders.map((order) => {
+                        const isExpanded = expandedOrderId === order.id;
+                        const rowTotal = order.items.reduce(
+                          (sum, item) => sum + item.quantity * item.unitPriceAtOrder,
+                          0,
+                        );
+                        return (
+                          <React.Fragment key={order.id}>
+                            <TableRow
+                              className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                              onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
                             >
-                              <Plus className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteOrderTarget(order);
-                              }}
-                              title="Delete order"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Expanded items */}
-                      {isExpanded && (
-                        <div className="border-t border-slate-100 dark:border-slate-800">
-                          {order.note && (
-                            <div className="px-4 py-2.5 text-[12px] text-slate-500 dark:text-slate-400 bg-amber-50/60 dark:bg-amber-950/20 border-b border-slate-100 dark:border-slate-800 flex items-start gap-1.5">
-                              <span className="font-medium text-amber-700 dark:text-amber-400 shrink-0">
-                                Note:
-                              </span>
-                              <span>{order.note}</span>
-                            </div>
-                          )}
-                          {order.items.length === 0 ? (
-                            <div className="px-4 py-5 text-center text-[13px] text-slate-400">
-                              No items.{" "}
-                              <button
-                                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                onClick={() => {
-                                  setAddItemOrderId(order.id);
-                                  setItemForm({
-                                    productId: "",
-                                    quantity: "1",
-                                    unitPrice: "",
-                                    note: "",
-                                  });
-                                  setAddItemOpen(true);
-                                }}
-                              >
-                                Add one
-                              </button>
-                            </div>
-                          ) : (
-                            <table className="w-full text-[13px]">
-                              <thead>
-                                <tr className="bg-slate-50/80 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 divide-x divide-slate-200 dark:divide-slate-700/60">
-                                  <th className="text-left px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                    Product
-                                  </th>
-                                  <th className="text-center px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                    Qty
-                                  </th>
-                                  <th className="text-right px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                    Unit Price
-                                  </th>
-                                  <th className="text-right px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                    Line Total
-                                  </th>
-                                  <th className="w-8 px-2 py-2" />
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {order.items.map((item) => (
-                                  <tr
-                                    key={item.id}
-                                    className="hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors group divide-x divide-slate-200 dark:divide-slate-700/60"
+                              <TableCell className="w-8 pr-0">
+                                <ChevronRight className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`} />
+                              </TableCell>
+                              <TableCell className="font-medium text-[13px]">
+                                {order.reference
+                                  ? `#${order.reference}`
+                                  : <span className="text-slate-400 italic text-[12px]">Unnamed</span>}
+                                {order.note && (
+                                  <div className="text-[11px] text-slate-400 mt-0.5 max-w-[200px] truncate">{order.note}</div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {order.supplier ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700/60 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                    {order.supplier.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-[12px]">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-[12px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {fmtDate(order.createdAt)}
+                              </TableCell>
+                              <TableCell className="text-[12px] text-slate-500 dark:text-slate-400">
+                                {order.createdByUser?.name ?? "—"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                  {order.items.length}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold text-[13px] tabular-nums">
+                                {fmtCurrency(rowTotal)}
+                              </TableCell>
+                              <TableCell>
+                                <div
+                                  className="flex items-center gap-0.5"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                                    onClick={() => {
+                                      setAddItemOrderId(order.id);
+                                      setItemForm({ productId: "", quantity: "1", unitPrice: "", note: "" });
+                                      setAddItemOpen(true);
+                                    }}
+                                    title="Add item"
                                   >
-                                    <td className="px-4 py-2.5">
-                                      <div className="font-medium text-slate-900 dark:text-white">
-                                        {item.product.name}
-                                      </div>
-                                      {(item.unitSizeAtOrder ??
-                                        item.product.unitSize ??
-                                        item.uomAtOrder ??
-                                        item.product.uom) && (
-                                        <div className="text-[11px] text-slate-400 mt-0.5">
-                                          {fmtSize(
-                                            item.unitSizeAtOrder ??
-                                              item.product.unitSize,
-                                            item.uomAtOrder ?? item.product.uom,
-                                          )}
-                                        </div>
-                                      )}
-                                      {item.note && (
-                                        <div className="text-[11px] text-slate-400 italic mt-0.5">
-                                          {item.note}
-                                        </div>
-                                      )}
-                                    </td>
-                                    <td className="text-center px-3 py-2.5">
-                                      <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded bg-slate-100 dark:bg-slate-700 text-[12px] font-bold text-slate-700 dark:text-slate-200">
-                                        {item.quantity}
-                                      </span>
-                                    </td>
-                                    <td className="text-right px-3 py-2.5 text-slate-600 dark:text-slate-300 tabular-nums">
-                                      {fmtCurrency(item.unitPriceAtOrder)}
-                                    </td>
-                                    <td className="text-right px-4 py-2.5 font-semibold text-slate-900 dark:text-white tabular-nums">
-                                      {fmtCurrency(
-                                        item.quantity * item.unitPriceAtOrder,
-                                      )}
-                                    </td>
-                                    <td className="px-2 py-2.5">
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    className="h-7 w-7 flex items-center justify-center rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                                    onClick={() => setDeleteOrderTarget(order)}
+                                    title="Delete order"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                            {isExpanded && (
+                              <TableRow>
+                                <TableCell colSpan={8} className="p-0 bg-slate-50/60 dark:bg-slate-800/20">
+                                  {order.note && (
+                                    <div className="px-4 py-2 text-[12px] text-slate-500 dark:text-slate-400 bg-amber-50/60 dark:bg-amber-950/20 border-b border-slate-100 dark:border-slate-800 flex items-start gap-1.5">
+                                      <span className="font-medium text-amber-700 dark:text-amber-400 shrink-0">Note:</span>
+                                      <span>{order.note}</span>
+                                    </div>
+                                  )}
+                                  {order.items.length === 0 ? (
+                                    <div className="px-4 py-5 text-center text-[13px] text-slate-400">
+                                      No items.{" "}
                                       <button
-                                        className="h-6 w-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
-                                        onClick={() =>
-                                          handleDeleteItem(order.id, item.id)
-                                        }
+                                        className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                        onClick={() => {
+                                          setAddItemOrderId(order.id);
+                                          setItemForm({ productId: "", quantity: "1", unitPrice: "", note: "" });
+                                          setAddItemOpen(true);
+                                        }}
                                       >
-                                        <Trash2 className="h-3 w-3" />
+                                        Add one
                                       </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                          <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <button
-                              className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              onClick={() => {
-                                setAddItemOrderId(order.id);
-                                setItemForm({
-                                  productId: "",
-                                  quantity: "1",
-                                  unitPrice: "",
-                                  note: "",
-                                });
-                                setAddItemOpen(true);
-                              }}
-                            >
-                              <Plus className="h-3.5 w-3.5" /> Add Item
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                                    </div>
+                                  ) : (
+                                    <table className="w-full text-[13px]">
+                                      <thead>
+                                        <tr className="bg-slate-100/60 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 divide-x divide-slate-200 dark:divide-slate-700/60">
+                                          <th className="text-left px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Product</th>
+                                          <th className="text-center px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Qty</th>
+                                          <th className="text-right px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Unit Price</th>
+                                          <th className="text-right px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Line Total</th>
+                                          <th className="w-8 px-2 py-2" />
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {order.items.map((item) => (
+                                          <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors group divide-x divide-slate-200 dark:divide-slate-700/60">
+                                            <td className="px-4 py-2.5">
+                                              <div className="font-medium text-slate-900 dark:text-white">{item.product.name}</div>
+                                              {(item.unitSizeAtOrder ?? item.product.unitSize ?? item.uomAtOrder ?? item.product.uom) && (
+                                                <div className="text-[11px] text-slate-400 mt-0.5">
+                                                  {fmtSize(item.unitSizeAtOrder ?? item.product.unitSize, item.uomAtOrder ?? item.product.uom)}
+                                                </div>
+                                              )}
+                                              {item.note && <div className="text-[11px] text-slate-400 italic mt-0.5">{item.note}</div>}
+                                            </td>
+                                            <td className="text-center px-3 py-2.5">
+                                              <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded bg-slate-100 dark:bg-slate-700 text-[12px] font-bold text-slate-700 dark:text-slate-200">
+                                                {item.quantity}
+                                              </span>
+                                            </td>
+                                            <td className="text-right px-3 py-2.5 text-slate-600 dark:text-slate-300 tabular-nums">{fmtCurrency(item.unitPriceAtOrder)}</td>
+                                            <td className="text-right px-4 py-2.5 font-semibold text-slate-900 dark:text-white tabular-nums">
+                                              {fmtCurrency(item.quantity * item.unitPriceAtOrder)}
+                                            </td>
+                                            <td className="px-2 py-2.5">
+                                              <button
+                                                className="h-6 w-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                                                onClick={() => handleDeleteItem(order.id, item.id)}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                  <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800">
+                                    <button
+                                      className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                      onClick={() => {
+                                        setAddItemOrderId(order.id);
+                                        setItemForm({ productId: "", quantity: "1", unitPrice: "", note: "" });
+                                        setAddItemOpen(true);
+                                      }}
+                                    >
+                                      <Plus className="h-3.5 w-3.5" /> Add Item
+                                    </button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Orders pagination */}
+                {orders.length > ORDERS_PAGE_SIZE && (
+                  <div className="flex items-center justify-between mt-3 px-1">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {ordersPage * ORDERS_PAGE_SIZE + 1}–{Math.min((ordersPage + 1) * ORDERS_PAGE_SIZE, orders.length)} of {orders.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setOrdersPage(0)} disabled={ordersPage === 0} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <ChevronsLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => setOrdersPage((p) => p - 1)} disabled={ordersPage === 0} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 px-2">{ordersPage + 1} / {totalOrdersPages}</span>
+                      <button onClick={() => setOrdersPage((p) => p + 1)} disabled={ordersPage >= totalOrdersPages - 1} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => setOrdersPage(totalOrdersPages - 1)} disabled={ordersPage >= totalOrdersPages - 1} className="h-7 w-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <ChevronsRight className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

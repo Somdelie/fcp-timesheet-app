@@ -25,8 +25,22 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SiteLocationPicker from "@/components/sites/SiteLocationPicker";
 import { updateSiteLocation } from "@/actions/sites";
+
+const JOB_STATUS_OPTIONS = [
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "ONGOING", label: "Ongoing" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "ON_HOLD", label: "On Hold" },
+] as const;
 
 const schema = z.object({
   name: z
@@ -39,6 +53,7 @@ const schema = z.object({
   address: z.string().max(200, "Max 200 characters.").optional(),
   siteClaimDate: z.string().max(10).optional(),
   amountClaimed: z.number({ error: "Must be a number." }).min(0, "Cannot be negative.").optional(),
+  jobStatus: z.enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"]).optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -62,6 +77,7 @@ export default function EditSiteLocationDialog(props: {
   initialLongitude?: number | null;
   initialSiteClaimDate?: string | null;
   initialAmountClaimed?: number | null;
+  initialJobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD" | null;
   canEditCoreDetails?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -78,6 +94,7 @@ export default function EditSiteLocationDialog(props: {
     initialLongitude,
     initialSiteClaimDate,
     initialAmountClaimed,
+    initialJobStatus,
     canEditCoreDetails = false,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
@@ -107,6 +124,7 @@ export default function EditSiteLocationDialog(props: {
       address: initialAddress ?? "",
       siteClaimDate: initialSiteClaimDate?.slice(0, 10) ?? "",
       amountClaimed: typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
+      jobStatus: initialJobStatus ?? "NOT_STARTED",
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -128,6 +146,7 @@ export default function EditSiteLocationDialog(props: {
       address: initialAddress ?? "",
       siteClaimDate: normalizeDateInput(initialSiteClaimDate),
       amountClaimed: typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
+      jobStatus: initialJobStatus ?? "NOT_STARTED",
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -166,6 +185,7 @@ export default function EditSiteLocationDialog(props: {
         address: values.address || null,
         siteClaimDate: values.siteClaimDate || null,
         amountClaimed: values.amountClaimed ?? 0,
+        jobStatus: values.jobStatus,
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
       });
@@ -387,6 +407,34 @@ export default function EditSiteLocationDialog(props: {
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="jobStatus"
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Job Status
+                  </FieldLabel>
+                  <Select
+                    value={field.value ?? "NOT_STARTED"}
+                    onValueChange={field.onChange}
+                    disabled={pending}
+                  >
+                    <SelectTrigger className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JOB_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
               )}
             />

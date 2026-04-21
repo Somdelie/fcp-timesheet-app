@@ -103,6 +103,9 @@ export default function SitesList({ initialSites }: SitesListProps) {
   const [claimFilter, setClaimFilter] = React.useState<
     "all" | "has" | "missing"
   >("all");
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD"
+  >("ONGOING");
   const [supervisorFilter, setSupervisorFilter] =
     React.useState(ALL_SUPERVISORS);
   const [columnVisibility, setColumnVisibility] =
@@ -210,13 +213,19 @@ export default function SitesList({ initialSites }: SitesListProps) {
   }, [searchFiltered, supervisorFilter]);
 
   // Then apply claim-date filter (running vs not-running)
-  const filtered = React.useMemo(() => {
+  const claimFiltered = React.useMemo(() => {
     if (claimFilter === "all") return supervisorFiltered;
     return supervisorFiltered.filter((s) => {
       const hasClaim = !!s.siteClaimDate;
       return claimFilter === "has" ? hasClaim : !hasClaim;
     });
   }, [supervisorFiltered, claimFilter]);
+
+  // Then apply job status filter
+  const filtered = React.useMemo(() => {
+    if (statusFilter === "all") return claimFiltered;
+    return claimFiltered.filter((s) => s.jobStatus === statusFilter);
+  }, [claimFiltered, statusFilter]);
 
   async function handleSubmitPhotoRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -444,64 +453,25 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span className="hidden md:inline">Export</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setExportColumns((prev) => ({
-                      ...prev,
-                      wages: !prev.wages,
-                    }));
-                  }}
-                >
-                  {exportColumns.wages ? "✓ " : ""}Wages
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setExportColumns((prev) => ({
-                      ...prev,
-                      material: !prev.material,
-                    }));
-                  }}
-                >
-                  {exportColumns.material ? "✓ " : ""}Material
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setExportColumns((prev) => ({
-                      ...prev,
-                      total: !prev.total,
-                    }));
-                  }}
-                >
-                  {exportColumns.total ? "✓ " : ""}Total Cost
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setExportColumns((prev) => ({
-                      ...prev,
-                      created: !prev.created,
-                    }));
-                  }}
-                >
-                  {exportColumns.created ? "✓ " : ""}Created Date
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                setStatusFilter(
+                  v as "all" | "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD",
+                )
+              }
+            >
+              <SelectTrigger className="h-8 w-36 text-xs md:text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white">
+                <SelectValue placeholder="Job status" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="NOT_STARTED">Not Started</SelectItem>
+                <SelectItem value="ONGOING">Ongoing</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+                <SelectItem value="ON_HOLD">On Hold</SelectItem>
+              </SelectContent>
+            </Select>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="h-8 gap-1.5 px-3">

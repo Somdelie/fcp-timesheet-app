@@ -13,6 +13,10 @@ import {
   X,
   Check,
   Tag,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -69,11 +73,16 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
   const [materials, setMaterials] = useState<SiteMaterialRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 10;
 
   const load = useCallback(async () => {
     setLoading(true);
     const res = await listSiteMaterials(siteId);
-    if (res.ok) setMaterials(res.materials);
+    if (res.ok) {
+      setMaterials(res.materials);
+      setPage(0);
+    }
     setLoading(false);
   }, [siteId]);
 
@@ -134,6 +143,9 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
     setEditingId(null);
   }
 
+  const totalPages = Math.ceil(materials.length / PAGE_SIZE);
+  const paginated = materials.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   return (
     <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm p-6 shadow-sm transition-all hover:shadow-md">
       <div className="mb-6 flex items-center justify-between">
@@ -176,7 +188,7 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {materials.map((m) => (
+              {paginated.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
@@ -284,6 +296,32 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {materials.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-4 px-1">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, materials.length)} of {materials.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(0)} disabled={page === 0}>
+              <ChevronsLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
+              {page + 1} / {totalPages}
+            </span>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+              <ChevronsRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       )}
 

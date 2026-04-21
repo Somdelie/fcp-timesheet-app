@@ -267,7 +267,8 @@ model Site {
   latitude  Float?
   longitude Float?
 
-  isActive Boolean @default(true)
+  isActive  Boolean   @default(true)
+  jobStatus JobStatus @default(NOT_STARTED)
 
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 
@@ -928,6 +929,13 @@ enum UserRole {
   OFFICE
   SUPERVISOR
   FOREMAN
+}
+
+enum JobStatus {
+  NOT_STARTED
+  ONGOING
+  COMPLETED
+  ON_HOLD
 }
 
 enum TimesheetStatus {

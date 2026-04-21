@@ -104,6 +104,7 @@ export type SiteRow = {
   supervisorName: string | null;
   totalWages: number;
   totalMaterialCost: number;
+  jobStatus: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
 };
 
 export const SITE_TABLE_COLUMN_OPTIONS = [
@@ -111,6 +112,7 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "code", label: "Job Number" },
   { id: "name", label: "Name" },
   { id: "client", label: "Client" },
+  { id: "jobStatus", label: "Job Status" },
   { id: "siteClaimDate", label: "Claim Date" },
   { id: "supervisorName", label: "Supervisor" },
   { id: "totalWages", label: "Total Wages" },
@@ -123,6 +125,22 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
 
 function classNames(...xs: Array<string | false | undefined | null>) {
   return xs.filter(Boolean).join(" ");
+}
+
+const JOB_STATUS_CONFIG = {
+  NOT_STARTED: { label: "Not Started", className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400" },
+  ONGOING: { label: "Ongoing", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" },
+  COMPLETED: { label: "Completed", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" },
+  ON_HOLD: { label: "On Hold", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
+} as const;
+
+function JobStatusBadge({ status }: { status: string }) {
+  const cfg = JOB_STATUS_CONFIG[status as keyof typeof JOB_STATUS_CONFIG] ?? { label: status, className: "" };
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
 }
 
 function StatusPill({ active }: { active: boolean }) {
@@ -338,6 +356,7 @@ function SiteRowActions({
         initialLongitude={site.longitude}
         initialSiteClaimDate={site.siteClaimDate}
         initialAmountClaimed={site.amountClaimed}
+        initialJobStatus={site.jobStatus}
         canEditCoreDetails={role === "ADMIN"}
       />
 
@@ -601,6 +620,18 @@ export default function SitesTable({
         cell: ({ row }) => (
           <span className="text-sm">{row.original.client ?? "—"}</span>
         ),
+      },
+      {
+        id: "jobStatus",
+        accessorKey: "jobStatus",
+        size: 120,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-blue-600" />
+            Job Status
+          </div>
+        ),
+        cell: ({ row }) => <JobStatusBadge status={row.original.jobStatus} />,
       },
       {
         id: "siteClaimDate",
