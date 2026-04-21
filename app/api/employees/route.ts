@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
     const searchFilter = q
       ? {
           OR: [
-            { firstName: { contains: q, mode: "insensitive" } },
-            { lastName: { contains: q, mode: "insensitive" } },
-            { qrCodeValue: { contains: q, mode: "insensitive" } },
+            { firstName: { contains: q, mode: "insensitive" as const } },
+            { lastName: { contains: q, mode: "insensitive" as const } },
+            { qrCodeValue: { contains: q, mode: "insensitive" as const } },
           ],
         }
       : {};
