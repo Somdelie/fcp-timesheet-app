@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
       },
     },
     orderBy: { scannedAt: "desc" },
-    take: 500, // Limit for performance
+    take: 1500,
   });
 
   // Map to response format with supervisor info

@@ -63,42 +63,67 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get("q")?.trim() ?? "";
     const show = searchParams.get("show") ?? "active";
 
-    const employees = await prisma.employee.findMany({
-      where: {
-        ...whereScope,
-        ...(show !== "all" ? { isActive: true } : {}),
-        ...(q
-          ? {
-              OR: [
-                { firstName: { contains: q, mode: "insensitive" } },
-                { lastName: { contains: q, mode: "insensitive" } },
-                { qrCodeValue: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: 500,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        qrCodeValue: true,
-        defaultDayRate: true,
-        faceImageUrl: true,
-        isActive: true,
-        createdAt: true,
-        phone: true,
-        userId: true,
-        user: {
-          select: {
-            role: true,
-            phone: true,
-            foreman: { select: { id: true } },
-          },
+    const activeFilter = show !== "all" ? { isActive: true } : {};
+    const searchFilter = q
+      ? {
+          OR: [
+            { firstName: { contains: q, mode: "insensitive" } },
+            { lastName: { contains: q, mode: "insensitive" } },
+            { qrCodeValue: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+    const sharedSelect = {
+      id: true,
+      firstName: true,
+      lastName: true,
+      qrCodeValue: true,
+      defaultDayRate: true,
+      faceImageUrl: true,
+      isActive: true,
+      createdAt: true,
+      phone: true,
+      userId: true,
+      user: {
+        select: {
+          role: true,
+          phone: true,
+          foreman: { select: { id: true } },
         },
       },
-    });
+    } as const;
+
+    // Always fetch ALL foremen employees — older foremen fall off the 500-item page otherwise.
+    const [foremenEmployees, regularEmployees] = await Promise.all([
+      prisma.employee.findMany({
+        where: {
+          ...whereScope,
+          ...activeFilter,
+          ...searchFilter,
+          user: { role: "FOREMAN", foreman: { isNot: null } },
+        },
+        orderBy: { firstName: "asc" },
+        select: sharedSelect,
+      }),
+      prisma.employee.findMany({
+        where: {
+          ...whereScope,
+          ...activeFilter,
+          ...searchFilter,
+          NOT: { user: { role: "FOREMAN" } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1500,
+        select: sharedSelect,
+      }),
+    ]);
+
+    const foremanIds = new Set(foremenEmployees.map((e) => e.id));
+    const employees = [
+      ...foremenEmployees,
+      ...regularEmployees.filter((e) => !foremanIds.has(e.id)),
+    ];
 
     return NextResponse.json(
       {

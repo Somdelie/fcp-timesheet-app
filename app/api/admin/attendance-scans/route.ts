@@ -132,7 +132,7 @@ export async function GET(req: Request) {
       },
     },
     orderBy: { scannedAt: "desc" },
-    take: 500,
+    take: 1500,
   });
 
   // ── Map to response format ──────────────────────────────────────────

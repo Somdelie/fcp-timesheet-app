@@ -84,7 +84,7 @@ export default function AdminManualScanPage() {
     async function loadOptions() {
       try {
         const [sitesRes, employeesRes] = await Promise.all([
-          fetch("/api/app/admin/sites?take=500"),
+          fetch("/api/app/admin/sites?take=1500"),
           fetch("/api/employees?show=active"),
         ]);
 

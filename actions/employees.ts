@@ -93,68 +93,95 @@ export async function listEmployees(input?: {
 
   const q = (input?.q ?? "").trim();
   const onlyActive = (input?.show ?? "active") !== "all";
-  const take = Math.min(Math.max(input?.take ?? 500, 1), 1000);
+  const take = Math.min(Math.max(input?.take ?? 1500, 1), 2000);
   const createdByUserId = input?.createdByUserId || undefined;
 
-  const employees = await prisma.employee.findMany({
-    where: {
-      ...whereScope,
-      ...(onlyActive ? { isActive: true } : {}),
-      ...(createdByUserId ? { createdByUserId } : {}),
-      ...(q
-        ? {
-            OR: [
-              { firstName: { contains: q, mode: "insensitive" as const } },
-              { lastName: { contains: q, mode: "insensitive" as const } },
-              { qrCodeValue: { contains: q, mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take,
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      qrCodeValue: true,
-      defaultDayRate: true,
-      faceImageUrl: true,
-      isActive: true,
-      createdAt: true,
-      phone: true,
-      userId: true,
-      user: {
-        select: {
-          role: true,
-          phone: true,
-          isSheRep: true,
-          foreman: { select: { id: true } },
-        },
-      },
-      createdByUserId: true,
-      createdByUser: {
-        select: {
-          id: true,
-          name: true,
-          role: true,
-        },
-      },
-      assistantLinks: {
-        where: {
-          endsOn: null, // Only active assistant links
-        },
-        select: {
-          foremanId: true,
-        },
-        take: 1,
+  const sharedSelect = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    qrCodeValue: true,
+    defaultDayRate: true,
+    faceImageUrl: true,
+    isActive: true,
+    createdAt: true,
+    phone: true,
+    userId: true,
+    user: {
+      select: {
+        role: true,
+        phone: true,
+        isSheRep: true,
+        foreman: { select: { id: true } },
       },
     },
-  });
+    createdByUserId: true,
+    createdByUser: {
+      select: {
+        id: true,
+        name: true,
+        role: true,
+      },
+    },
+    assistantLinks: {
+      where: { endsOn: null },
+      select: { foremanId: true },
+      take: 1,
+    },
+  } as const;
+
+  const activeFilter = onlyActive ? { isActive: true } : {};
+  const creatorFilter = createdByUserId ? { createdByUserId } : {};
+  const searchFilter = q
+    ? {
+        OR: [
+          { firstName: { contains: q, mode: "insensitive" as const } },
+          { lastName: { contains: q, mode: "insensitive" as const } },
+          { qrCodeValue: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  // Always fetch ALL foremen employees regardless of the take limit — foremen
+  // added earlier would otherwise fall off the newest-first page.
+  const [foremenEmployees, regularEmployees] = await Promise.all([
+    prisma.employee.findMany({
+      where: {
+        ...whereScope,
+        ...activeFilter,
+        ...creatorFilter,
+        ...searchFilter,
+        user: { role: "FOREMAN", foreman: { isNot: null } },
+      },
+      orderBy: { createdAt: "desc" },
+      select: sharedSelect,
+    }),
+    prisma.employee.findMany({
+      where: {
+        ...whereScope,
+        ...activeFilter,
+        ...creatorFilter,
+        ...searchFilter,
+        NOT: { user: { role: "FOREMAN" } },
+      },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: sharedSelect,
+    }),
+  ]);
+
+  // Merge: foremen first (sorted by name), then regular employees
+  const foremanIds = new Set(foremenEmployees.map((e) => e.id));
+  const merged = [
+    ...foremenEmployees.sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+    ),
+    ...regularEmployees.filter((e) => !foremanIds.has(e.id)),
+  ];
 
   return {
     ok: true as const,
-    employees: employees.map(serializeEmployee),
+    employees: merged.map(serializeEmployee),
   };
 }
 
