@@ -7,6 +7,7 @@ import Sidebar from "@/components/common/Sidebar";
 import { BreadcrumbProvider } from "@/lib/breadcrumb-context";
 import type { UserRole } from "@/lib/roles";
 import { UserRoleProvider } from "@/lib/user-role-context";
+import { SchedulerAlertProvider } from "@/components/scheduler/SchedulerAlertProvider";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -35,6 +36,7 @@ export function AppShell({ children, role, userName }: AppShellProps) {
   return (
     <BreadcrumbProvider>
       <UserRoleProvider role={role}>
+        <SchedulerAlertProvider />
         <div className="flex h-full bg-background text-foreground">
           <Sidebar isOpen={isSidebarOpen} role={role} userName={userName} />
           <div className="flex flex-1 flex-col min-w-0 overflow-hidden">

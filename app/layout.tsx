@@ -22,7 +22,10 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "First Class Projects",
+  title: {
+    default: "First Class Projects",
+    template: "First Class Projects | %s",
+  },
   description: "Manage your projects efficiently with First Class Projects.",
 };
 
