@@ -267,8 +267,9 @@ model Site {
   latitude  Float?
   longitude Float?
 
-  isActive  Boolean   @default(true)
-  jobStatus JobStatus @default(NOT_STARTED)
+  isActive   Boolean   @default(true)
+  jobStatus  JobStatus @default(NOT_STARTED)
+  stageIndex Int       @default(0)
 
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 

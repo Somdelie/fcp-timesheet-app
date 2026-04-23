@@ -1,6 +1,5 @@
 import { listOngoingSites } from "@/actions/sites";
 import JobProgressBoard from "@/components/sites/JobProgressBoard";
-import { RotateCw } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,35 +11,50 @@ export default async function JobProgressPage() {
   const { sites } = await listOngoingSites();
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="flex h-full flex-col">
       {/* Page header */}
-      <div className="border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div className="shrink-0 border-b border-border bg-card pb-3">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600/20 border border-blue-600/30">
-              <span className="text-blue-400 text-base font-bold">{sites.length}</span>
+            <div className="flex size-8 items-center justify-center rounded border border-primary/30 bg-primary/10">
+              <span className="text-sm font-black tabular-nums text-primary">
+                {sites.length}
+              </span>
             </div>
             <div>
-              <h1 className="font-black text-sm sm:text-base tracking-tight text-white leading-none">
+              <h1 className="text-sm font-bold tracking-tight text-foreground sm:text-base">
                 Job Progress
               </h1>
-              <p className="text-zinc-500 text-[10px] font-medium tracking-wider uppercase leading-none mt-0.5">
-                Active ongoing sites
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Ongoing sites only
               </p>
             </div>
           </div>
 
           <a
             href="/admin/job-progress"
-            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-lg px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border/80 hover:text-foreground"
           >
-            <RotateCw className="w-3.5 h-3.5" />
+            <svg
+              className="size-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
             Refresh
           </a>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      {/* Board — takes all remaining height (mirrors Notes layout) */}
+      <div className="min-h-0 flex-1">
         <JobProgressBoard initialSites={sites} />
       </div>
     </div>

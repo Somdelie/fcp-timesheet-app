@@ -69,6 +69,7 @@ function serializeSite(s: any) {
     longitude: typeof s.longitude === "number" ? s.longitude : null,
     isActive: s.isActive,
     jobStatus: (s.jobStatus ?? "NOT_STARTED") as "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD",
+    stageIndex: typeof s.stageIndex === "number" ? s.stageIndex : 0,
     createdAt:
       s.createdAt instanceof Date
         ? s.createdAt.toISOString()
@@ -151,6 +152,7 @@ export async function listSites(input?: {
       longitude: true,
       isActive: true,
       jobStatus: true,
+      stageIndex: true,
       createdAt: true,
       supervisorAssignments: {
         select: {
@@ -418,6 +420,7 @@ export async function listOngoingSites() {
       siteClaimDate: true,
       isActive: true,
       jobStatus: true,
+      stageIndex: true,
       createdAt: true,
       supervisorAssignments: {
         select: {
@@ -461,6 +464,33 @@ export async function updateSiteJobStatus(input: {
     return { ok: true as const };
   } catch {
     return { ok: false as const, error: "Failed to update job status." };
+  }
+}
+
+/**
+ * Update the current painting stage index for a site.
+ */
+export async function updateSiteStageIndex(input: {
+  siteId: string;
+  stageIndex: number;
+}) {
+  const auth = await requireServerAuth();
+  const siteId = clean(input.siteId);
+  if (!siteId) return { ok: false as const, error: "Site is required." };
+  await requireCanManageSite(auth, siteId);
+
+  const idx = Math.max(0, Math.floor(input.stageIndex));
+
+  try {
+    await prisma.site.update({
+      where: { id: siteId },
+      data: { stageIndex: idx },
+    });
+    revalidatePath("/admin/job-progress");
+    revalidatePath(`/sites/${siteId}`);
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, error: "Failed to update stage." };
   }
 }
 
