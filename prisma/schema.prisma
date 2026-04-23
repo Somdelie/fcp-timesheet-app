@@ -71,6 +71,8 @@ model User {
   // owner-created notes
   userNotes UserNote[]
 
+  progressNotes SiteProgressNote[] @relation("SiteProgressNoteAuthor")
+
   // comments
   noteComments NoteComment[] @relation("UserNoteComments")
 
@@ -270,6 +272,7 @@ model Site {
   isActive   Boolean   @default(true)
   jobStatus  JobStatus @default(NOT_STARTED)
   stageIndex Int       @default(0)
+  stagePct   Json      @default("{}")
 
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 
@@ -302,8 +305,9 @@ model Site {
   costCodes SiteCostCode[]
   claims    SiteClaim[]
 
-  paintPlans    SitePaintPlan[]
-  notifications Notification[]
+  paintPlans     SitePaintPlan[]
+  notifications  Notification[]
+  progressNotes  SiteProgressNote[]
 
   @@index([isActive])
   @@index([name])
@@ -1991,4 +1995,17 @@ model NoteComment {
 
   @@index([noteId])
   @@index([userId])
+}
+
+model SiteProgressNote {
+  id        String   @id @default(cuid())
+  siteId    String
+  content   String
+  authorId  String?
+  createdAt DateTime @default(now())
+
+  site   Site  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  author User? @relation("SiteProgressNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([siteId, createdAt])
 }

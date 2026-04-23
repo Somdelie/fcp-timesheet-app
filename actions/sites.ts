@@ -70,6 +70,32 @@ function serializeSite(s: any) {
     isActive: s.isActive,
     jobStatus: (s.jobStatus ?? "NOT_STARTED") as "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD",
     stageIndex: typeof s.stageIndex === "number" ? s.stageIndex : 0,
+    stagePct: (() => {
+      const raw = s.stagePct;
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        return raw as Record<string, number>;
+      }
+      return {} as Record<string, number>;
+    })(),
+    materials: Object.values(
+      (s.siteProductOrders ?? []).reduce(
+        (
+          acc: Record<string, { name: string; quantity: number; unitPrice: number; total: number }>,
+          order: any,
+        ) => {
+          for (const item of order.items ?? []) {
+            const name: string = item.product?.name ?? "Unknown";
+            if (!acc[name]) acc[name] = { name, quantity: 0, unitPrice: 0, total: 0 };
+            acc[name].quantity += Number(item.quantity) || 0;
+            acc[name].unitPrice = Number(item.unitPriceAtOrder) || acc[name].unitPrice;
+            acc[name].total +=
+              (Number(item.unitPriceAtOrder) || 0) * (Number(item.quantity) || 0);
+          }
+          return acc;
+        },
+        {},
+      ),
+    ).sort((a: any, b: any) => b.total - a.total) as { name: string; quantity: number; unitPrice: number; total: number }[],
     createdAt:
       s.createdAt instanceof Date
         ? s.createdAt.toISOString()
@@ -153,6 +179,7 @@ export async function listSites(input?: {
       isActive: true,
       jobStatus: true,
       stageIndex: true,
+      stagePct: true,
       createdAt: true,
       supervisorAssignments: {
         select: {
@@ -180,6 +207,7 @@ export async function listSites(input?: {
             select: {
               quantity: true,
               unitPriceAtOrder: true,
+              product: { select: { name: true } },
             },
           },
         },
@@ -421,6 +449,7 @@ export async function listOngoingSites() {
       isActive: true,
       jobStatus: true,
       stageIndex: true,
+      stagePct: true,
       createdAt: true,
       supervisorAssignments: {
         select: {
@@ -432,7 +461,13 @@ export async function listOngoingSites() {
       attendanceScans: { select: { dayRateAtScan: true } },
       siteProductOrders: {
         select: {
-          items: { select: { quantity: true, unitPriceAtOrder: true } },
+          items: {
+            select: {
+              quantity: true,
+              unitPriceAtOrder: true,
+              product: { select: { name: true } },
+            },
+          },
         },
       },
     },
@@ -464,6 +499,93 @@ export async function updateSiteJobStatus(input: {
     return { ok: true as const };
   } catch {
     return { ok: false as const, error: "Failed to update job status." };
+  }
+}
+
+/**
+ * List progress notes for a site (newest first).
+ */
+export async function listSiteProgressNotes(siteId: string) {
+  await requireServerAuth();
+  const notes = await prisma.siteProgressNote.findMany({
+    where: { siteId: clean(siteId) },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      author: { select: { name: true } },
+    },
+  });
+  return {
+    ok: true as const,
+    notes: notes.map((n) => ({
+      id: n.id,
+      content: n.content,
+      authorName: n.author?.name ?? "Unknown",
+      createdAt: n.createdAt.toISOString(),
+    })),
+  };
+}
+
+/**
+ * Add a progress note to a site.
+ */
+export async function addSiteProgressNote(input: {
+  siteId: string;
+  content: string;
+}) {
+  const auth = await requireServerAuth();
+  const content = input.content.trim();
+  if (!content) return { ok: false as const, error: "Note cannot be empty." };
+
+  const note = await prisma.siteProgressNote.create({
+    data: {
+      siteId: input.siteId,
+      content,
+      authorId: auth.userId,
+    },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      author: { select: { name: true } },
+    },
+  });
+
+  revalidatePath("/admin/job-progress");
+  return {
+    ok: true as const,
+    note: {
+      id: note.id,
+      content: note.content,
+      authorName: note.author?.name ?? "Unknown",
+      createdAt: note.createdAt.toISOString(),
+    },
+  };
+}
+
+/**
+ * Update per-stage completion percentages for a site.
+ */
+export async function updateSiteStagePercent(input: {
+  siteId: string;
+  stagePct: Record<string, number>;
+}) {
+  const auth = await requireServerAuth();
+  const siteId = clean(input.siteId);
+  if (!siteId) return { ok: false as const, error: "Site is required." };
+  await requireCanManageSite(auth, siteId);
+
+  try {
+    await prisma.site.update({
+      where: { id: siteId },
+      data: { stagePct: input.stagePct },
+    });
+    revalidatePath("/admin/job-progress");
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, error: "Failed to update stage percentages." };
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition, useEffect } from "react";
+import { useState, useMemo, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-toastify";
@@ -13,13 +13,28 @@ import {
   ArrowRight,
   RotateCw,
   ChevronDown,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { updateSiteJobStatus, updateSiteStageIndex } from "@/actions/sites";
+import {
+  updateSiteJobStatus,
+  updateSiteStageIndex,
+  updateSiteStagePercent,
+  listSiteProgressNotes,
+  addSiteProgressNote,
+} from "@/actions/sites";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { SiteRow } from "@/actions/sites";
+
+type ProgressNote = {
+  id: string;
+  content: string;
+  authorName: string;
+  createdAt: string;
+};
 
 /* ------------------------------------------------------------------ */
 /*  Types & constants                                                   */
@@ -395,6 +410,194 @@ function StatChip({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Per-stage percentage bars                                           */
+/* ------------------------------------------------------------------ */
+
+const STAGE_KEYS = ["primer", "firstCoat", "finalCoat", "snags", "finish"] as const;
+type StageKey = (typeof STAGE_KEYS)[number];
+const STAGE_LABELS: Record<StageKey, string> = {
+  primer:    "Primer",
+  firstCoat: "First Coat",
+  finalCoat: "Final Coat",
+  snags:     "Snags",
+  finish:    "Finish",
+};
+
+function StagePctBars({
+  siteId,
+  initialPct,
+  accent,
+}: {
+  siteId: string;
+  initialPct: Record<string, number>;
+  accent: Accent;
+}) {
+  const [pct, setPct] = useState<Record<StageKey, number>>(() => {
+    const base: Record<StageKey, number> = { primer: 0, firstCoat: 0, finalCoat: 0, snags: 0, finish: 0 };
+    for (const k of STAGE_KEYS) base[k] = Math.min(100, Math.max(0, Number(initialPct[k] ?? 0)));
+    return base;
+  });
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  function handleChange(key: StageKey, val: number) {
+    setPct((prev) => ({ ...prev, [key]: val }));
+    setDirty(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    await updateSiteStagePercent({ siteId, stagePct: pct });
+    setSaving(false);
+    setDirty(false);
+  }
+
+  const overall = Math.round(STAGE_KEYS.reduce((s, k) => s + pct[k], 0) / STAGE_KEYS.length);
+
+  return (
+    <div className="space-y-3">
+      {/* Overall */}
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+          Overall
+        </span>
+        <span className={cn("text-sm font-black tabular-nums", accent.text)}>{overall}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-border">
+        <div
+          className={cn("h-full rounded-full transition-all duration-500", accent.track)}
+          style={{ width: `${overall}%` }}
+        />
+      </div>
+
+      {/* Per-stage rows */}
+      <div className="mt-4 space-y-3">
+        {STAGE_KEYS.map((key) => (
+          <div key={key} className="flex items-center gap-3">
+            <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">
+              {STAGE_LABELS[key]}
+            </span>
+            <div className="relative flex-1">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={pct[key]}
+                onChange={(e) => handleChange(key, Number(e.target.value))}
+                className="slider-thumb w-full cursor-pointer accent-current"
+                style={{ accentColor: "var(--primary)" }}
+              />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
+                <div
+                  className={cn("h-1.5 rounded-full transition-all duration-300", accent.track)}
+                  style={{ width: `${pct[key]}%` }}
+                />
+              </div>
+            </div>
+            <span className="w-9 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
+              {pct[key]}%
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {dirty && (
+        <div className="flex justify-end pt-1">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={cn(
+              "rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-opacity disabled:opacity-50",
+              accent.active,
+            )}
+          >
+            {saving ? "Saving…" : "Save percentages"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Materials card                                                      */
+/* ------------------------------------------------------------------ */
+
+function MaterialsCard({
+  materials,
+}: {
+  materials: { name: string; quantity: number; unitPrice: number; total: number }[];
+}) {
+  if (materials.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-8 text-center">
+        <svg className="size-7 text-muted-foreground/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        </svg>
+        <p className="text-xs text-muted-foreground/40">No materials ordered yet</p>
+      </div>
+    );
+  }
+
+  const grandTotal = materials.reduce((s, m) => s + m.total, 0);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border">
+      {/* Table */}
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-border bg-muted/50">
+            <th className="px-4 py-2.5 text-left font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Material
+            </th>
+            <th className="px-3 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Qty
+            </th>
+            <th className="px-3 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Unit Cost
+            </th>
+            <th className="px-4 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Total
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {materials.map((m, i) => (
+            <tr
+              key={m.name}
+              className={cn(
+                "border-b border-border transition-colors hover:bg-secondary/30",
+                i % 2 === 0 ? "bg-card" : "bg-muted/20",
+              )}
+            >
+              <td className="px-4 py-2.5 font-medium text-foreground">{m.name}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{m.quantity}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+                {formatCurrency(m.unitPrice)}
+              </td>
+              <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
+                {formatCurrency(m.total)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-border bg-muted/40">
+            <td colSpan={3} className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Total
+            </td>
+            <td className="px-4 py-2.5 text-right text-sm font-black tabular-nums text-foreground">
+              {formatCurrency(grandTotal)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Detail panel                                                        */
 /* ------------------------------------------------------------------ */
 
@@ -416,6 +619,30 @@ function JobDetailPanel({
   const total  = site.totalWages + site.totalMaterialCost;
 
   const [pendingStage, setPendingStage] = useState<number | null>(null);
+  const [notes, setNotes] = useState<ProgressNote[]>([]);
+  const [noteText, setNoteText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  /* Fetch notes whenever the selected site changes (panel remounts via key) */
+  useEffect(() => {
+    listSiteProgressNotes(site.id).then((res) => {
+      if (res.ok) setNotes(res.notes);
+    });
+  }, [site.id]);
+
+  async function handleAddNote() {
+    const content = noteText.trim();
+    if (!content) return;
+    setIsSubmitting(true);
+    const res = await addSiteProgressNote({ siteId: site.id, content });
+    setIsSubmitting(false);
+    if (res.ok) {
+      setNotes((prev) => [res.note, ...prev]);
+      setNoteText("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+    }
+  }
 
   const nextStageIdx = site.stageIndex < PAINTING_STAGES.length ? site.stageIndex : null;
   const nextStageLabel = nextStageIdx !== null ? PAINTING_STAGES[nextStageIdx]?.label : null;
@@ -494,11 +721,11 @@ function JobDetailPanel({
 
       {/* ── Body ── */}
       <div className="flex-1 space-y-6 p-6">
-        {/* Stage progress */}
+        {/* Stage tracker */}
         <section>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Painting Stages
+              Stage Tracker
             </p>
             {nextStageLabel && (
               <button
@@ -517,10 +744,23 @@ function JobDetailPanel({
               </button>
             )}
           </div>
+          {/* Clickable stage nodes */}
           <StageProgressBar
             stageIndex={site.stageIndex}
             accent={accent}
             onStageClick={handleStageClick}
+          />
+        </section>
+
+        {/* Per-stage percentages */}
+        <section>
+          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+            Stage Completion
+          </p>
+          <StagePctBars
+            siteId={site.id}
+            initialPct={site.stagePct}
+            accent={accent}
           />
         </section>
 
@@ -530,21 +770,18 @@ function JobDetailPanel({
             Financials
           </p>
           <div className="flex gap-3">
-            <StatChip
-              label="Wages"
-              value={formatCurrency(site.totalWages)}
-            />
-            <StatChip
-              label="Materials"
-              value={formatCurrency(site.totalMaterialCost)}
-            />
-            <StatChip
-              label="Total"
-              value={formatCurrency(total)}
-              accent={accent}
-              highlighted
-            />
+            <StatChip label="Wages" value={formatCurrency(site.totalWages)} />
+            <StatChip label="Materials" value={formatCurrency(site.totalMaterialCost)} />
+            <StatChip label="Total" value={formatCurrency(total)} accent={accent} highlighted />
           </div>
+        </section>
+
+        {/* Materials ordered */}
+        <section>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+            Materials Ordered
+          </p>
+          <MaterialsCard materials={site.materials} />
         </section>
 
         {/* Quick actions */}
@@ -600,6 +837,101 @@ function JobDetailPanel({
               </Link>
             </Button>
           </div>
+        </section>
+
+        {/* ── Progress Notes ── */}
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+              Progress Notes
+            </p>
+            <span className="rounded-full bg-muted px-1.5 py-px text-[9px] font-bold tabular-nums text-muted-foreground/60">
+              {notes.length}
+            </span>
+          </div>
+
+          {/* Add note */}
+          <div className="mb-4 rounded-xl border border-border bg-card">
+            <textarea
+              ref={textareaRef}
+              value={noteText}
+              onChange={(e) => {
+                setNoteText(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddNote();
+              }}
+              placeholder="Add a progress note… (Ctrl+Enter to submit)"
+              rows={3}
+              className="w-full resize-none rounded-t-xl bg-transparent px-4 pt-3 pb-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+            />
+            <div className="flex items-center justify-between border-t border-border px-3 py-2">
+              <span className="text-[10px] text-muted-foreground/40">Ctrl+Enter to submit</span>
+              <button
+                onClick={handleAddNote}
+                disabled={isSubmitting || !noteText.trim()}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40",
+                )}
+              >
+                <Send className="size-3" />
+                {isSubmitting ? "Posting…" : "Post"}
+              </button>
+            </div>
+          </div>
+
+          {/* Notes thread */}
+          {notes.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <MessageSquare className="size-7 text-muted-foreground/20" />
+              <p className="text-xs text-muted-foreground/40">No notes yet — add the first one</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notes.map((note) => {
+                const initials = note.authorName
+                  .split(" ")
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
+                const ts = new Date(note.createdAt);
+                const now = new Date();
+                const diffMs = now.getTime() - ts.getTime();
+                const diffMins = Math.floor(diffMs / 60000);
+                const timeLabel =
+                  diffMins < 1
+                    ? "just now"
+                    : diffMins < 60
+                    ? `${diffMins}m ago`
+                    : diffMins < 1440
+                    ? `${Math.floor(diffMins / 60)}h ago`
+                    : ts.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+
+                return (
+                  <div key={note.id} className="flex gap-3">
+                    {/* Avatar */}
+                    <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white", accent.active)}>
+                      {initials}
+                    </div>
+                    {/* Bubble */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-semibold text-foreground">{note.authorName}</span>
+                        <span className="text-[10px] text-muted-foreground/50">{timeLabel}</span>
+                      </div>
+                      <div className="mt-1 whitespace-pre-wrap rounded-xl rounded-tl-none border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground">
+                        {note.content}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
     </div>
