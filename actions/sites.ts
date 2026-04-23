@@ -398,6 +398,73 @@ export async function updateSiteLocation(input: {
 }
 
 /**
+ * Fetch only ONGOING sites — used by the Job Progress board.
+ * Avoids loading completed/not-started sites entirely.
+ */
+export async function listOngoingSites() {
+  const auth = await requireServerAuth();
+  const scope = siteWhereFor(auth);
+
+  const sites = await prisma.site.findMany({
+    where: { ...scope, isActive: true, jobStatus: "ONGOING" },
+    orderBy: [{ siteClaimDate: "asc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      client: true,
+      location: true,
+      amountClaimed: true,
+      siteClaimDate: true,
+      isActive: true,
+      jobStatus: true,
+      createdAt: true,
+      supervisorAssignments: {
+        select: {
+          supervisor: { select: { user: { select: { name: true } } } },
+        },
+        orderBy: { startsOn: "desc" },
+        take: 1,
+      },
+      attendanceScans: { select: { dayRateAtScan: true } },
+      siteProductOrders: {
+        select: {
+          items: { select: { quantity: true, unitPriceAtOrder: true } },
+        },
+      },
+    },
+  });
+
+  return { ok: true as const, sites: sites.map(serializeSite) };
+}
+
+/**
+ * Quickly update only the jobStatus of a site.
+ */
+export async function updateSiteJobStatus(input: {
+  siteId: string;
+  jobStatus: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
+}) {
+  const auth = await requireServerAuth();
+  const siteId = clean(input.siteId);
+  if (!siteId) return { ok: false as const, error: "Site is required." };
+  await requireCanManageSite(auth, siteId);
+
+  try {
+    await prisma.site.update({
+      where: { id: siteId },
+      data: { jobStatus: input.jobStatus },
+    });
+    revalidatePath("/admin/job-progress");
+    revalidatePath("/sites");
+    revalidatePath(`/sites/${siteId}`);
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, error: "Failed to update job status." };
+  }
+}
+
+/**
  * Assign supervisor to a site (ADMIN only)
  */
 export async function assignSupervisorToSite(input: {

@@ -29,6 +29,7 @@ import {
   StickyNote,
   CloudSun,
   Printer,
+  TrendingUp,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -154,6 +155,12 @@ const menuGroups: {
         label: "Sites",
         icon: Building2,
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
+      },
+      {
+        href: "/admin/job-progress",
+        label: "Job Progress",
+        icon: TrendingUp,
+        roles: ["ADMIN", "OFFICE", "SUPERVISOR"],
       },
       {
         href: "/sites/map",
