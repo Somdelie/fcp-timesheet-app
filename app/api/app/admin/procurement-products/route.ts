@@ -41,6 +41,11 @@ function serialise(p: any) {
   return {
     ...p,
     unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
+    supplierPrices: p.supplierPrices?.map((sp: any) => ({
+      ...sp,
+      price: decimalToNumber(sp.price),
+      unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
+    })),
   };
 }
 
@@ -99,6 +104,17 @@ export async function GET(req: Request) {
         include: {
           category: { select: { id: true, name: true } },
           supplier: { select: { id: true, name: true } },
+          supplierPrices: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              price: true,
+              uom: true,
+              unitSize: true,
+              supplierId: true,
+              supplier: { select: { id: true, name: true } },
+            },
+          },
           _count: { select: { orderItems: true, supplierPrices: true } },
         },
       }),

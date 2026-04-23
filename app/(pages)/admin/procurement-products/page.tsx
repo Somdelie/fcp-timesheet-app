@@ -59,6 +59,15 @@ import {
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
+type SupplierPriceEntry = {
+  id: string;
+  price: number;
+  uom: string | null;
+  unitSize: number | null;
+  supplierId: string;
+  supplier: { id: string; name: string };
+};
+
 type ProcurementProduct = {
   id: string;
   name: string;
@@ -68,6 +77,7 @@ type ProcurementProduct = {
   isActive: boolean;
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
+  supplierPrices: SupplierPriceEntry[];
   _count: { orderItems: number; supplierPrices: number };
 };
 
@@ -424,6 +434,36 @@ export default function ProcurementProductsPage() {
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
+      enableSorting: false,
+    },
+    {
+      id: "price",
+      header: () => <span>Price</span>,
+      cell: ({ row }) => {
+        const prices = row.original.supplierPrices;
+        if (!prices || prices.length === 0)
+          return <span className="text-muted-foreground">—</span>;
+        const defaultSupplierId = row.original.supplier?.id;
+        const preferred = defaultSupplierId
+          ? prices.find((sp) => sp.supplierId === defaultSupplierId)
+          : null;
+        const entry = preferred ?? prices[0];
+        const label = `R ${entry.price.toFixed(2)}`;
+        const uom = entry.uom ? ` / ${entry.uom}` : "";
+        return (
+          <div className="text-sm">
+            <span className="font-medium">{label}</span>
+            {uom && (
+              <span className="text-muted-foreground text-xs">{uom}</span>
+            )}
+            {prices.length > 1 && (
+              <span className="ml-1 text-xs text-muted-foreground">
+                (+{prices.length - 1})
+              </span>
+            )}
+          </div>
+        );
+      },
       enableSorting: false,
     },
     {

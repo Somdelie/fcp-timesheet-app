@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { DownloadFinishingSchedulePdfButton } from "@/components/finishing-schedules/pdf/DownloadFinishingSchedulePdfButton";
+import { DownloadFinishingScheduleExcelButton } from "@/components/finishing-schedules/pdf/DownloadFinishingScheduleExcelButton";
 import EditScheduleHeaderDialog from "@/components/finishing-schedules/EditScheduleHeaderDialog";
 import CreateAreaDialog from "@/components/finishing-schedules/CreateAreaDialog";
 import EditAreaDialog from "@/components/finishing-schedules/EditAreaDialog";
@@ -170,6 +171,7 @@ export default function FinishingScheduleBuilder({
         </div>
         <div className="flex items-center gap-2">
           <CreateAreaDialog scheduleId={schedule.id} />
+          <DownloadFinishingScheduleExcelButton scheduleId={schedule.id} />
           <DownloadFinishingSchedulePdfButton scheduleId={schedule.id} />
         </div>
       </div>
