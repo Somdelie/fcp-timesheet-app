@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
-import type { ProductUom } from "@/generated/prisma/client";
+import type { ProductUom, ProductType } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +66,7 @@ export async function GET(req: Request) {
     const q = (url.searchParams.get("q") ?? "").trim();
     const categoryId = url.searchParams.get("categoryId");
     const supplierId = url.searchParams.get("supplierId");
+    const productType = url.searchParams.get("productType") as ProductType | null;
     const includeInactive = url.searchParams.get("includeInactive") === "true";
 
     const rawLimit = url.searchParams.get("limit");
@@ -93,6 +94,7 @@ export async function GET(req: Request) {
     }
     if (categoryId) where.categoryId = categoryId;
     if (supplierId) where.supplierId = supplierId;
+    if (productType) where.productType = productType;
 
     const [total, products] = await Promise.all([
       prisma.procurementProduct.count({ where }),
@@ -165,6 +167,9 @@ export async function POST(req: Request) {
       description,
       supplierId,
       thumbnailUrl,
+      productType,
+      isReturnable,
+      colors,
     } = body as {
       name: string;
       sku?: string;
@@ -174,6 +179,9 @@ export async function POST(req: Request) {
       description?: string;
       supplierId?: string;
       thumbnailUrl?: string;
+      productType?: ProductType;
+      isReturnable?: boolean;
+      colors?: string[];
     };
 
     if (!name?.trim())
@@ -192,6 +200,9 @@ export async function POST(req: Request) {
         description: description?.trim() || null,
         supplier: supplierId ? { connect: { id: supplierId } } : undefined,
         thumbnailUrl: thumbnailUrl?.trim() || null,
+        productType: productType ?? "MATERIAL",
+        isReturnable: isReturnable ?? false,
+        colors: colors ?? [],
       },
       include: {
         category: { select: { id: true, name: true } },

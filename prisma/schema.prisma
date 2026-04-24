@@ -73,6 +73,9 @@ model User {
 
   progressNotes SiteProgressNote[] @relation("SiteProgressNoteAuthor")
 
+  plantAssignments SitePlantAssignment[] @relation("PlantAssignedByUser")
+  ppeOrdersCreated ForemanPpeOrder[]     @relation("PpeOrderCreatedByUser")
+
   // comments
   noteComments NoteComment[] @relation("UserNoteComments")
 
@@ -207,6 +210,8 @@ model Foreman {
 
   // Overtime entries linked to this foreman
   overtimeEntries OvertimeEntry[]
+
+  ppeOrders ForemanPpeOrder[]
 }
 
 // A link between a foreman and an employee who is acting as assistant for that foreman.
@@ -308,6 +313,9 @@ model Site {
   paintPlans     SitePaintPlan[]
   notifications  Notification[]
   progressNotes  SiteProgressNote[]
+
+  plantAssignments SitePlantAssignment[]
+  ppeOrders        ForemanPpeOrder[]
 
   @@index([isActive])
   @@index([name])
@@ -1020,6 +1028,30 @@ enum TeamType {
 // PROCUREMENT / SITE PRODUCT ORDERS (NEW)
 // ============================
 
+enum ProductType {
+  MATERIAL    // paints, plaster, cement, chemicals
+  PPE         // overalls, hard hats, safety boots, gloves
+  PLANT       // step ladders, compressors, generators, extension cables, lifelines
+  CONSUMABLE  // plastics, tapes, rags, adhesives
+  OTHER
+}
+
+enum PlantStatus {
+  AVAILABLE
+  DEPLOYED
+  RETURNED
+  DAMAGED
+  LOST
+}
+
+enum PpeOrderStatus {
+  PENDING
+  APPROVED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  CANCELLED
+}
+
 // Units / variants you mentioned
 enum ProductUom {
   // Length
@@ -1114,7 +1146,7 @@ model Supplier {
   @@index([supplierType])
 }
 
-// A product in the procurement catalog (paints, cement, etc.)
+// A product in the procurement catalog (paints, cement, PPE, plant, etc.)
 model ProcurementProduct {
   id           String           @id @default(cuid())
   name         String
@@ -1122,6 +1154,13 @@ model ProcurementProduct {
   thumbnailUrl String?
   categoryId   String?
   category     ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Product classification
+  productType  ProductType @default(MATERIAL)
+  isReturnable Boolean     @default(false)
+
+  // Color variants (e.g. for paints: ["White", "Sandstone", "Light Grey"])
+  colors String[]
 
   // Legacy base unit info (sizes now live on SupplierProductPrice)
   uom         ProductUom?
@@ -1152,11 +1191,19 @@ model ProcurementProduct {
   coverageProfiles ProcurementProductCoverage[]
   paintPlans       SitePaintPlan[]
 
+  // Plant assignments to sites
+  plantAssignments SitePlantAssignment[]
+
+  // PPE order items
+  ppeOrderItems ForemanPpeOrderItem[]
+
   @@unique([sku])
   @@index([isActive])
   @@index([categoryId])
   @@index([name])
   @@index([normalizedName])
+  @@index([productType])
+  @@index([isReturnable])
 }
 
 // Price list per supplier per product (optionally time-bounded)
@@ -2008,4 +2055,83 @@ model SiteProgressNote {
   author User? @relation("SiteProgressNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([siteId, createdAt])
+}
+
+// ============================
+// PLANT ASSIGNMENTS
+// ============================
+// Tracks returnable plant/equipment deployed to a site (no purchase price needed).
+
+model SitePlantAssignment {
+  id        String      @id @default(cuid())
+  siteId    String
+  productId String
+  quantity  Int         @default(1)
+  status    PlantStatus @default(DEPLOYED)
+
+  deployedOn DateTime  @default(now())
+  returnedOn DateTime?
+
+  note String?
+
+  assignedByUserId String?
+
+  site           Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  product        ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  assignedByUser User?              @relation("PlantAssignedByUser", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([productId])
+  @@index([status])
+  @@index([assignedByUserId])
+}
+
+// ============================
+// FOREMAN PPE ORDERS
+// ============================
+// Foreman requests PPE items for workers on a site.
+
+model ForemanPpeOrder {
+  id        String         @id @default(cuid())
+  foremanId String
+  siteId    String?
+  status    PpeOrderStatus @default(PENDING)
+  note      String?
+
+  createdByUserId String?
+
+  foreman       Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  site          Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  createdByUser User?    @relation("PpeOrderCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  items ForemanPpeOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([foremanId])
+  @@index([siteId])
+  @@index([status])
+}
+
+model ForemanPpeOrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+
+  quantity Int
+  size     String? // "S", "M", "L", "XL", "Size 8", etc.
+  color    String? // selected color if product has colors
+  note     String?
+
+  order   ForemanPpeOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
 }

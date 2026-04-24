@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
-import type { ProductUom } from "@/generated/prisma/client";
+import type { ProductUom, ProductType } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -121,6 +121,9 @@ export async function PATCH(
       supplierId,
       isActive,
       thumbnailUrl,
+      productType,
+      isReturnable,
+      colors,
     } = body as {
       name?: string;
       sku?: string | null;
@@ -131,6 +134,9 @@ export async function PATCH(
       supplierId?: string | null;
       isActive?: boolean;
       thumbnailUrl?: string | null;
+      productType?: ProductType;
+      isReturnable?: boolean;
+      colors?: string[];
     };
 
     const data: Record<string, unknown> = {};
@@ -152,6 +158,9 @@ export async function PATCH(
     if (isActive !== undefined) data.isActive = isActive;
     if (thumbnailUrl !== undefined)
       data.thumbnailUrl = thumbnailUrl?.trim() || null;
+    if (productType !== undefined) data.productType = productType;
+    if (isReturnable !== undefined) data.isReturnable = isReturnable;
+    if (colors !== undefined) data.colors = colors;
 
     const updated = await prisma.procurementProduct.update({
       where: { id },
