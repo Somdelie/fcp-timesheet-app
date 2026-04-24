@@ -10,7 +10,11 @@ import {
   X,
   Pencil,
   ArrowRightLeft,
+  Undo2,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +34,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Table,
   TableBody,
@@ -66,6 +83,10 @@ type Site = { id: string; name: string; code: string | null };
 const STATUS_OPTIONS = ["ALL", "DEPLOYED", "RETURNED", "DAMAGED", "LOST"];
 const EDIT_STATUSES = ["DEPLOYED", "RETURNED", "DAMAGED", "LOST"];
 
+function siteLabel(s: Site) {
+  return s.code ? `${s.code} - ${s.name}` : s.name;
+}
+
 function statusClass(status: string) {
   switch (status) {
     case "DEPLOYED":
@@ -97,6 +118,7 @@ export default function PlantAssignmentsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterSupervisor, setFilterSupervisor] = useState("ALL");
+  const [returningId, setReturningId] = useState<string | null>(null);
 
   // Edit state
   const [editOpen, setEditOpen] = useState(false);
@@ -110,6 +132,7 @@ export default function PlantAssignmentsPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<Assignment | null>(null);
   const [transferSiteId, setTransferSiteId] = useState("");
+  const [transferSiteOpen, setTransferSiteOpen] = useState(false);
   const [transferQty, setTransferQty] = useState(1);
   const [transferNote, setTransferNote] = useState("");
   const [transferSaving, setTransferSaving] = useState(false);
@@ -165,6 +188,7 @@ export default function PlantAssignmentsPage() {
     );
   });
 
+  // ── Edit ──────────────────────────────────────────────────────────────────
   function openEdit(a: Assignment) {
     setEditTarget(a);
     setEditStatus(a.status);
@@ -202,6 +226,28 @@ export default function PlantAssignmentsPage() {
     }
   }
 
+  // ── Return to Office ──────────────────────────────────────────────────────
+  async function handleReturnToOffice(a: Assignment) {
+    setReturningId(a.id);
+    try {
+      const res = await fetch(`/api/app/admin/plant-assignments/${a.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "RETURNED" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to return");
+      toast.success(`${a.product.name} returned to office`);
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to return");
+    } finally {
+      setReturningId(null);
+    }
+  }
+
+  // ── Transfer ──────────────────────────────────────────────────────────────
   function openTransfer(a: Assignment) {
     setTransferTarget(a);
     setTransferSiteId("");
@@ -238,6 +284,11 @@ export default function PlantAssignmentsPage() {
       setTransferSaving(false);
     }
   }
+
+  const selectedTransferSite = sites.find((s) => s.id === transferSiteId);
+  const transferableSites = sites.filter(
+    (s) => s.id !== transferTarget?.site.id,
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
@@ -309,7 +360,7 @@ export default function PlantAssignmentsPage() {
               <TableHead className="w-28 text-center">Status</TableHead>
               <TableHead className="w-32">Deployed On</TableHead>
               <TableHead className="w-36">Transferred From</TableHead>
-              <TableHead className="w-20">Actions</TableHead>
+              <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -367,7 +418,7 @@ export default function PlantAssignmentsPage() {
                       : "Office"}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -378,15 +429,27 @@ export default function PlantAssignmentsPage() {
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       {a.status === "DEPLOYED" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          title="Transfer to another site"
-                          onClick={() => openTransfer(a)}
-                        >
-                          <ArrowRightLeft className="h-3.5 w-3.5" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="Transfer to another site"
+                            onClick={() => openTransfer(a)}
+                          >
+                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Return to office"
+                            disabled={returningId === a.id}
+                            onClick={() => handleReturnToOffice(a)}
+                          >
+                            <Undo2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>
@@ -472,27 +535,66 @@ export default function PlantAssignmentsPage() {
                 {transferTarget?.product.name}
               </p>
               <p className="text-xs text-muted-foreground">
-                From: {transferTarget?.site.name} — {transferTarget?.quantity}{" "}
-                unit(s) available
+                From:{" "}
+                {transferTarget?.site.code
+                  ? `${transferTarget.site.code} - ${transferTarget.site.name}`
+                  : transferTarget?.site.name}{" "}
+                — {transferTarget?.quantity} unit(s) available
               </p>
             </div>
             <div className="space-y-1.5">
               <Label>To Site</Label>
-              <Select value={transferSiteId} onValueChange={setTransferSiteId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select destination site…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites
-                    .filter((s) => s.id !== transferTarget?.site.id)
-                    .map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                        {s.code ? ` (${s.code})` : ""}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <Popover
+                open={transferSiteOpen}
+                onOpenChange={setTransferSiteOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={transferSiteOpen}
+                    className="w-full justify-between h-10 text-sm font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedTransferSite
+                        ? siteLabel(selectedTransferSite)
+                        : "Select destination site…"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search site…" className="text-sm" />
+                    <CommandList>
+                      <CommandEmpty>No site found.</CommandEmpty>
+                      <CommandGroup>
+                        {transferableSites.map((s) => (
+                          <CommandItem
+                            key={s.id}
+                            value={siteLabel(s)}
+                            onSelect={() => {
+                              setTransferSiteId(s.id);
+                              setTransferSiteOpen(false);
+                            }}
+                            className="text-sm"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                transferSiteId === s.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {siteLabel(s)}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1.5">
               <Label>Quantity (max {transferTarget?.quantity})</Label>
