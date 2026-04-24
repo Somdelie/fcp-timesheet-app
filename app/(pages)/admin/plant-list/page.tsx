@@ -587,16 +587,9 @@ export default function PlantListPage() {
   /* ================================================================== */
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      {/* ---- Header ---- */}
+      {/* ---- Header + Toolbar ---- */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-xl font-semibold">Plant List</h1>
-        <Button onClick={() => setSheetOpen(true)} size="sm">
-          <Truck className="mr-1 h-4 w-4" /> Deploy Plant
-        </Button>
-      </div>
-
-      {/* ---- Catalogue toolbar ---- */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -634,10 +627,13 @@ export default function PlantListPage() {
           <Button variant="ghost" size="icon" onClick={load}>
             <RotateCw className="h-4 w-4" />
           </Button>
+          <Button onClick={openCreate} size="sm" variant="outline">
+            <Plus className="mr-1 h-4 w-4" /> Add Plant Item
+          </Button>
+          <Button onClick={() => setSheetOpen(true)} size="sm">
+            <Truck className="mr-1 h-4 w-4" /> Deploy Plant
+          </Button>
         </div>
-        <Button onClick={openCreate} size="sm" variant="outline">
-          <Plus className="mr-1 h-4 w-4" /> Add Plant Item
-        </Button>
       </div>
 
       {/* ---- Catalogue table ---- */}
