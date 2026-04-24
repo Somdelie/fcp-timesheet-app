@@ -159,14 +159,13 @@ export default function PlantAssignmentsPage() {
               <TableHead className="text-center">Status</TableHead>
               <TableHead>Deployed On</TableHead>
               <TableHead>Transferred From</TableHead>
-              <TableHead>Note</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
                   Loading…
@@ -175,7 +174,7 @@ export default function PlantAssignmentsPage() {
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
                   <Wrench className="mx-auto h-6 w-6 mb-1 opacity-30" />
@@ -212,10 +211,7 @@ export default function PlantAssignmentsPage() {
                   <TableCell className="text-sm text-muted-foreground">
                     {a.transfersIn.length > 0
                       ? a.transfersIn[0].fromSite.name
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                    {a.note || "—"}
+                      : "Office"}
                   </TableCell>
                 </TableRow>
               ))
