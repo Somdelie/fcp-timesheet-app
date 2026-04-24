@@ -333,14 +333,17 @@ export default function ProcurementProductsPage() {
   // Tab counts
   const counts = useMemo(() => {
     const c: Record<string, number> = { ALL: products.length };
-    for (const p of products) c[p.productType] = (c[p.productType] ?? 0) + 1;
+    for (const p of products) {
+      const t = p.productType ?? "MATERIAL";
+      c[t] = (c[t] ?? 0) + 1;
+    }
     return c;
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
-      if (activeTab !== "ALL" && p.productType !== activeTab) return false;
+      if (activeTab !== "ALL" && (p.productType ?? "MATERIAL") !== activeTab) return false;
       if (!term) return true;
       return (
         p.name.toLowerCase().includes(term) ||
@@ -389,7 +392,7 @@ export default function ProcurementProductsPage() {
       size: 110,
       header: () => <span>Type</span>,
       cell: ({ row }) => {
-        const t = typeStyle(row.original.productType);
+        const t = typeStyle(row.original.productType ?? "MATERIAL");
         return (
           <div className="flex flex-col gap-1">
             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${t.color}`}>
@@ -424,16 +427,16 @@ export default function ProcurementProductsPage() {
           {row.original.description && (
             <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{row.original.description}</div>
           )}
-          {row.original.colors.length > 0 && (
+          {(row.original.colors ?? []).length > 0 && (
             <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {row.original.colors.slice(0, 6).map((c) => (
+              {(row.original.colors ?? []).slice(0, 6).map((c) => (
                 <div key={c} className="flex items-center gap-0.5">
                   <ColorDot color={c} />
                   <span className="text-[10px] text-muted-foreground">{c}</span>
                 </div>
               ))}
-              {row.original.colors.length > 6 && (
-                <span className="text-[10px] text-muted-foreground">+{row.original.colors.length - 6}</span>
+              {(row.original.colors ?? []).length > 6 && (
+                <span className="text-[10px] text-muted-foreground">+{(row.original.colors ?? []).length - 6}</span>
               )}
             </div>
           )}
@@ -462,7 +465,7 @@ export default function ProcurementProductsPage() {
       id: "price",
       header: () => <span>Price</span>,
       cell: ({ row }) => {
-        if (row.original.productType === "PLANT")
+        if ((row.original.productType ?? "MATERIAL") === "PLANT")
           return <span className="text-xs text-muted-foreground italic">No price</span>;
         const prices = row.original.supplierPrices;
         if (!prices?.length) return <span className="text-muted-foreground">—</span>;
