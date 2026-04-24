@@ -170,6 +170,7 @@ export async function POST(req: Request) {
       productType,
       isReturnable,
       colors,
+      stockQty,
     } = body as {
       name: string;
       sku?: string;
@@ -183,6 +184,7 @@ export async function POST(req: Request) {
       isReturnable?: boolean;
       colors?: string[];
       sizes?: string[];
+      stockQty?: number;
     };
 
     if (!name?.trim())
@@ -205,6 +207,7 @@ export async function POST(req: Request) {
         isReturnable: isReturnable ?? false,
         colors: colors ?? [],
         sizes: (body as any).sizes ?? [],
+        stockQty: stockQty != null ? Number(stockQty) : 0,
       },
       include: {
         category: { select: { id: true, name: true } },

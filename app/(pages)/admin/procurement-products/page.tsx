@@ -104,6 +104,7 @@ type ProcurementProduct = {
   productType: ProductType;
   isReturnable: boolean;
   colors: string[];
+  stockQty: number;
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
   supplierPrices: SupplierPriceEntry[];
@@ -156,7 +157,8 @@ export default function ProcurementProductsPage() {
     thumbnailUrl: "",
     productType: "MATERIAL" as ProductType,
     isReturnable: false,
-    colorsRaw: "", // comma-separated input
+    colorsRaw: "",
+    stockQty: 0,
   });
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -213,7 +215,7 @@ export default function ProcurementProductsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", sku: "", description: "", categoryId: "", supplierId: "", thumbnailUrl: "", productType: "MATERIAL", isReturnable: false, colorsRaw: "" });
+    setForm({ name: "", sku: "", description: "", categoryId: "", supplierId: "", thumbnailUrl: "", productType: "MATERIAL", isReturnable: false, colorsRaw: "", stockQty: 0 });
     setDialogOpen(true);
   }
 
@@ -229,6 +231,7 @@ export default function ProcurementProductsPage() {
       productType: p.productType,
       isReturnable: p.isReturnable,
       colorsRaw: p.colors.join(", "),
+      stockQty: p.stockQty ?? 0,
     });
     setDialogOpen(true);
   }
@@ -300,6 +303,7 @@ export default function ProcurementProductsPage() {
           productType: form.productType,
           isReturnable: form.isReturnable,
           colors,
+          stockQty: form.stockQty,
         }),
       });
       const json = await res.json();
@@ -459,6 +463,14 @@ export default function ProcurementProductsPage() {
         row.original.supplier ? (
           <span className="text-sm">{row.original.supplier.name}</span>
         ) : <span className="text-muted-foreground">—</span>,
+      enableSorting: false,
+    },
+    {
+      id: "stockQty",
+      header: () => <span>In Stock</span>,
+      cell: ({ row }) => (
+        <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>
+      ),
       enableSorting: false,
     },
     {
@@ -832,6 +844,18 @@ export default function ProcurementProductsPage() {
             <div className="space-y-1">
               <label className="text-sm font-medium">Description</label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional description" />
+            </div>
+
+            {/* Stock Quantity */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Stock Quantity</label>
+              <Input
+                type="number"
+                min={0}
+                value={form.stockQty}
+                onChange={(e) => setForm({ ...form, stockQty: Math.max(0, Number(e.target.value)) })}
+                placeholder="0"
+              />
             </div>
           </div>
           <DialogFooter>

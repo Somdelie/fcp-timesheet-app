@@ -1169,6 +1169,9 @@ model ProcurementProduct {
   // Size variants (e.g. for PPE: ["S","M","L","XL"] or plant: ["3m","5m"])
   sizes String[]
 
+  // Inventory count
+  stockQty Int @default(0)
+
   // Legacy base unit info (sizes now live on SupplierProductPrice)
   uom         ProductUom?
   unitSize    Decimal?    @db.Decimal(12, 3)

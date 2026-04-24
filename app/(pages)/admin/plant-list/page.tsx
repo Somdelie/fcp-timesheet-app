@@ -20,7 +20,6 @@ import {
   ChevronRight,
   ChevronsRight,
   Truck,
-  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +83,7 @@ type PlantItem = {
   isReturnable: boolean;
   colors: string[];
   sizes: string[];
+  stockQty: number;
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
   _count: { orderItems: number; plantAssignments: number };
@@ -91,17 +91,6 @@ type PlantItem = {
 
 type Category = { id: string; name: string };
 type Supplier = { id: string; name: string };
-
-type Assignment = {
-  id: string;
-  quantity: number;
-  status: string;
-  deployedOn: string;
-  note: string | null;
-  product: { id: string; name: string; thumbnailUrl: string | null };
-  site: { id: string; name: string; code: string | null };
-  assignedByUser: { id: string; name: string | null } | null;
-};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                           */
@@ -119,10 +108,6 @@ export default function PlantListPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [supervisors, setSupervisors] = useState<PlantSupervisorDto[]>([]);
 
-  // Assignments list
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentsLoading, setAssignmentsLoading] = useState(false);
-
   // Create/Edit Dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PlantItem | null>(null);
@@ -136,6 +121,7 @@ export default function PlantListPage() {
     isReturnable: true,
     sizesRaw: "",
     colorsRaw: "",
+    stockQty: 0,
   });
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -206,27 +192,6 @@ export default function PlantListPage() {
     load();
   }, [load]);
 
-  /* -------- load assignments -------- */
-  const loadAssignments = useCallback(async () => {
-    setAssignmentsLoading(true);
-    try {
-      const res = await fetch("/api/app/admin/plant-assignments", {
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to load assignments");
-      setAssignments(json.data ?? []);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to load assignments");
-    } finally {
-      setAssignmentsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadAssignments();
-  }, [loadAssignments]);
-
   /* -------- CRUD helpers -------- */
   function openCreate() {
     setEditing(null);
@@ -240,6 +205,7 @@ export default function PlantListPage() {
       isReturnable: true,
       sizesRaw: "",
       colorsRaw: "",
+      stockQty: 0,
     });
     setDialogOpen(true);
   }
@@ -256,6 +222,7 @@ export default function PlantListPage() {
       isReturnable: p.isReturnable,
       sizesRaw: (p.sizes ?? []).join(", "),
       colorsRaw: (p.colors ?? []).join(", "),
+      stockQty: p.stockQty ?? 0,
     });
     setDialogOpen(true);
   }
@@ -330,6 +297,7 @@ export default function PlantListPage() {
           isReturnable: form.isReturnable,
           sizes: parseTags(form.sizesRaw),
           colors: parseTags(form.colorsRaw),
+          stockQty: form.stockQty,
         }),
       });
       const json = await res.json();
@@ -413,19 +381,7 @@ export default function PlantListPage() {
         );
       },
       cell: ({ row }) => (
-        <div>
-          <div className="font-medium">{row.original.name}</div>
-          {row.original.sku && (
-            <div className="text-xs text-muted-foreground">
-              SKU: {row.original.sku}
-            </div>
-          )}
-          {row.original.description && (
-            <div className="text-xs text-muted-foreground line-clamp-1">
-              {row.original.description}
-            </div>
-          )}
-        </div>
+        <div className="font-medium">{row.original.name}</div>
       ),
     },
     {
@@ -499,16 +455,24 @@ export default function PlantListPage() {
       enableSorting: false,
     },
     {
+      id: "stockQty",
+      header: () => <span>In Stock</span>,
+      cell: ({ row }) => (
+        <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>
+      ),
+      enableSorting: false,
+    },
+    {
       id: "deployed",
       header: () => <span>In Use</span>,
       cell: ({ row }) => {
         const count = row.original._count?.plantAssignments ?? 0;
         return count > 0 ? (
-          <Badge variant="secondary">
+          <Badge variant="outline">
             {count} site{count !== 1 ? "s" : ""}
           </Badge>
         ) : (
-          <span className="text-xs text-muted-foreground">Idle</span>
+          <span className="text-xs text-muted-foreground">—</span>
         );
       },
       enableSorting: false,
@@ -569,30 +533,6 @@ export default function PlantListPage() {
     [items],
   );
 
-  /* -------- assignment status colour -------- */
-  function statusClass(status: string) {
-    switch (status) {
-      case "DEPLOYED":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300";
-      case "RETURNED":
-        return "bg-muted text-muted-foreground";
-      case "DAMAGED":
-        return "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300";
-      case "LOST":
-        return "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  }
-
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  }
-
   /* ================================================================== */
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -647,7 +587,7 @@ export default function PlantListPage() {
 
       {/* ---- Catalogue table ---- */}
       {!loading && filtered.length === 0 ? (
-        <div className="border border-dashed border-border bg-card/30 p-12 text-center rounded-lg">
+        <div className="border border-dashed border-border bg-card/30 p-12 text-center rounded">
           <Wrench className="mx-auto h-8 w-8 mb-2 opacity-40" />
           <h3 className="text-lg font-semibold">No plant items found</h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -656,16 +596,16 @@ export default function PlantListPage() {
           </p>
         </div>
       ) : (
-        <div className="border bg-card rounded-lg overflow-hidden">
+        <div className="rounded border">
           <div className="overflow-x-auto">
-            <Table className="border-collapse">
+            <Table>
               <TableHeader className="bg-muted/60">
                 {table.getHeaderGroups().map((hg) => (
                   <TableRow key={hg.id} className="hover:bg-transparent">
                     {hg.headers.map((h) => (
                       <TableHead
                         key={h.id}
-                        className="border border-border px-3 py-2 text-xs font-semibold uppercase tracking-wide"
+                        className="text-xs font-semibold uppercase tracking-wide"
                       >
                         {h.isPlaceholder
                           ? null
@@ -697,7 +637,7 @@ export default function PlantListPage() {
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
-                          className="border border-border px-3 py-2"
+                          className="py-2"
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
@@ -800,88 +740,6 @@ export default function PlantListPage() {
         </div>
       )}
 
-      {/* ---- Assignments list ---- */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Active Deployments</h2>
-          <Button variant="ghost" size="icon" onClick={loadAssignments}>
-            <RotateCw className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="border bg-card rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> Site
-                  </span>
-                </TableHead>
-                <TableHead className="text-center">Qty</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead>Deployed On</TableHead>
-                <TableHead>Note</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assignmentsLoading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    Loading…
-                  </TableCell>
-                </TableRow>
-              ) : assignments.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    <Wrench className="mx-auto h-6 w-6 mb-1 opacity-30" />
-                    No deployments yet
-                  </TableCell>
-                </TableRow>
-              ) : (
-                assignments.map((a) => (
-                  <TableRow key={a.id} className="hover:bg-muted/30">
-                    <TableCell className="font-medium">
-                      {a.product.name}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      <div>{a.site.name}</div>
-                      {a.site.code && (
-                        <div className="text-xs text-muted-foreground">
-                          {a.site.code}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">{a.quantity}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span
-                        className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusClass(a.status)}`}
-                      >
-                        {a.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(a.deployedOn)}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                      {a.note || "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
       {/* ---- Deploy Sheet ---- */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
@@ -896,7 +754,6 @@ export default function PlantListPage() {
             items={plantItemDtos}
             onDeployed={() => {
               setSheetOpen(false);
-              loadAssignments();
               load();
             }}
           />
@@ -1111,6 +968,18 @@ export default function PlantListPage() {
             </div>
 
             {/* Description */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Stock Quantity</label>
+              <Input
+                type="number"
+                min={0}
+                value={form.stockQty}
+                onChange={(e) =>
+                  setForm({ ...form, stockQty: Math.max(0, Number(e.target.value)) })
+                }
+                placeholder="0"
+              />
+            </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Notes / Description</label>
               <Input

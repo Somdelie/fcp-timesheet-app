@@ -246,6 +246,12 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE"],
       },
       {
+        href: "/admin/plant-assignments",
+        label: "Plant Assignments",
+        icon: Wrench,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
         href: "/admin/supplier-prices",
         label: "Supplier Prices",
         icon: DollarSign,
