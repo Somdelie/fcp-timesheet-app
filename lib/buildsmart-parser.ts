@@ -222,7 +222,13 @@ export function extractItems(
 export async function parsePdfBuffer(
   buffer: Buffer,
 ): Promise<ParsedOrder | null> {
-  const data = await pdf(buffer);
+  if (!buffer || buffer.length === 0) return null;
+  let data: { text: string };
+  try {
+    data = await pdf(buffer);
+  } catch {
+    return null;
+  }
   const text = cleanText(data.text);
 
   const orderNumber = extractOrderNumber(text);

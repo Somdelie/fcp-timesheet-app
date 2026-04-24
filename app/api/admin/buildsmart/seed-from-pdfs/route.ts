@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await entry.arrayBuffer();
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) continue;
     const buffer = Buffer.from(arrayBuffer);
 
     const parsed = await parsePdfBuffer(buffer);
