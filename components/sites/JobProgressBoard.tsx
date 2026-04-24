@@ -13,9 +13,20 @@ import {
   ArrowRight,
   RotateCw,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   MessageSquare,
   Send,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -524,14 +535,13 @@ function StagePctBars({
 /*  Materials card                                                      */
 /* ------------------------------------------------------------------ */
 
-const MATERIALS_PAGE_SIZE = 8;
-
 function MaterialsCard({
   materials,
 }: {
   materials: { name: string; quantity: number; unitPrice: number; total: number }[];
 }) {
-  const [page, setPage] = useState(0);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(8);
 
   if (materials.length === 0) {
     return (
@@ -544,9 +554,13 @@ function MaterialsCard({
     );
   }
 
-  const totalPages = Math.ceil(materials.length / MATERIALS_PAGE_SIZE);
-  const pageItems  = materials.slice(page * MATERIALS_PAGE_SIZE, (page + 1) * MATERIALS_PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(materials.length / pageSize));
+  const safeIndex = Math.min(pageIndex, pageCount - 1);
+  const pageItems = materials.slice(safeIndex * pageSize, (safeIndex + 1) * pageSize);
   const grandTotal = materials.reduce((s, m) => s + m.total, 0);
+
+  const canPrev = safeIndex > 0;
+  const canNext = safeIndex < pageCount - 1;
 
   return (
     <div className="overflow-hidden rounded border border-border">
@@ -603,44 +617,82 @@ function MaterialsCard({
         </tfoot>
       </table>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2">
-          <span className="text-[10px] text-muted-foreground">
-            {page * MATERIALS_PAGE_SIZE + 1}–{Math.min((page + 1) * MATERIALS_PAGE_SIZE, materials.length)} of {materials.length}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="rounded border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+      {/* Pagination — matches /sites pattern */}
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/60">
+        <div className="text-muted-foreground hidden text-sm lg:flex">
+          Showing {safeIndex * pageSize + 1} to{" "}
+          {Math.min((safeIndex + 1) * pageSize, materials.length)} of{" "}
+          {materials.length} materials
+        </div>
+        <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+          <div className="hidden items-center gap-2 lg:flex">
+            <span className="text-sm font-medium">Rows per page</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => {
+                setPageSize(Number(v));
+                setPageIndex(0);
+              }}
             >
-              Prev
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i)}
-                className={cn(
-                  "size-6 rounded border text-[10px] font-bold transition-colors",
-                  i === page
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-muted-foreground hover:bg-secondary",
-                )}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page === totalPages - 1}
-              className="rounded border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+              <SelectTrigger className="h-8 w-20">
+                <SelectValue placeholder={pageSize} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[5, 8, 10, 25].map((s) => (
+                  <SelectItem key={s} value={String(s)}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-fit items-center justify-center text-sm font-medium">
+            Page {safeIndex + 1} of {pageCount}
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="hidden h-8 w-8 lg:flex"
+              onClick={() => setPageIndex(0)}
+              disabled={!canPrev}
             >
-              Next
-            </button>
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPageIndex((p) => p - 1)}
+              disabled={!canPrev}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPageIndex((p) => p + 1)}
+              disabled={!canNext}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="hidden h-8 w-8 lg:flex"
+              onClick={() => setPageIndex(pageCount - 1)}
+              disabled={!canNext}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
