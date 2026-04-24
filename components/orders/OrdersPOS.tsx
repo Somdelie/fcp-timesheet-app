@@ -16,13 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -189,20 +182,20 @@ export default function OrdersPOS({
   );
 
   return (
-    <div className="h-full bg-[#F5F4F0] dark:bg-[#111110] font-mono">
+    <div className="h-full bg-background">
       {/* Top header bar */}
-      <div className="border-b-2 border-black dark:border-zinc-700 bg-black text-white px-6 py-3 flex items-center justify-between">
+      <div className="border-b border-border bg-primary text-primary-foreground px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-400">
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary-foreground/60">
             Admin
           </span>
-          <span className="text-zinc-600">/</span>
+          <span className="text-primary-foreground/40">/</span>
           <span className="text-sm font-bold tracking-wide uppercase">
             Product Order Entry
           </span>
         </div>
         {cart.length > 0 && (
-          <span className="text-[10px] tracking-widest text-zinc-400 uppercase">
+          <span className="text-[10px] tracking-widest text-primary-foreground/70 uppercase">
             {cart.length} item{cart.length !== 1 ? "s" : ""} in order
           </span>
         )}
@@ -210,22 +203,22 @@ export default function OrdersPOS({
 
       <div className="max-w-350 mx-auto p-6">
         {/* Page title block */}
-        <div className="border-b-2 border-black dark:border-zinc-700 pb-4 mb-6">
-          <p className="text-[11px] tracking-[0.15em] text-zinc-500 dark:text-zinc-500 uppercase mb-1">
+        <div className="border-b border-border pb-4 mb-6">
+          <p className="text-[11px] tracking-[0.15em] text-muted-foreground uppercase mb-1">
             Record products taken by foreman — applied as deductions on worker
             timesheets
           </p>
         </div>
 
         {/* Main grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border-2 border-black dark:border-zinc-700">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border border-border rounded-md overflow-hidden">
           {/* LEFT PANEL */}
-          <div className="border-r-2 border-black dark:border-zinc-700">
+          <div className="border-r border-border">
             {/* Foreman selector */}
-            <div className="border-b-2 border-black dark:border-zinc-700 p-5 bg-white dark:bg-[#1A1A18]">
+            <div className="border-b border-border p-5 bg-card">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-1.5 h-1.5 bg-black dark:bg-zinc-400" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
                   Assign Foreman
                 </span>
               </div>
@@ -235,7 +228,7 @@ export default function OrdersPOS({
                     variant="outline"
                     role="combobox"
                     aria-expanded={foremanOpen}
-                    className="w-full justify-between rounded border-2 border-black dark:border-zinc-600 h-10 text-sm font-medium focus:ring-0 focus:ring-offset-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                    className="w-full justify-between h-10 text-sm font-medium"
                   >
                     <span className="truncate">
                       {selectedForemanId
@@ -249,8 +242,8 @@ export default function OrdersPOS({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded border-2 border-black dark:border-zinc-600 dark:bg-[#1A1A18]">
-                  <Command className="font-mono">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
                     <CommandInput
                       placeholder="Search foreman..."
                       className="text-sm"
@@ -266,7 +259,7 @@ export default function OrdersPOS({
                               setSelectedForemanId(f.id);
                               setForemanOpen(false);
                             }}
-                            className="rounded font-mono text-sm dark:text-zinc-100"
+                            className="text-sm"
                           >
                             <Check
                               className={cn(
@@ -286,10 +279,10 @@ export default function OrdersPOS({
               </Popover>
               {selectedForeman && (
                 <div className="mt-2.5 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500" />
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tracking-wide">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <p className="text-[11px] text-muted-foreground tracking-wide">
                     Order assigned to{" "}
-                    <span className="font-bold text-black dark:text-zinc-100">
+                    <span className="font-bold text-foreground">
                       {selectedForeman.name || selectedForeman.email}
                     </span>
                   </p>
@@ -298,54 +291,54 @@ export default function OrdersPOS({
             </div>
 
             {/* Order items section header */}
-            <div className="border-b border-zinc-200 dark:border-zinc-700 px-5 py-3 bg-[#F5F4F0] dark:bg-[#161614] flex items-center justify-between">
+            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-black dark:bg-zinc-400" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
                   Order Items
                 </span>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
+                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
                   Total
                 </span>
-                <span className="text-base font-bold tabular-nums text-black dark:text-zinc-100">
+                <span className="text-base font-bold tabular-nums text-foreground">
                   {formatCurrency(cartTotal)}
                 </span>
               </div>
             </div>
 
             {/* Cart table */}
-            <div className="bg-white dark:bg-[#1A1A18] overflow-x-auto">
+            <div className="bg-card overflow-x-auto">
               {cart.length === 0 ? (
                 <div className="py-16 flex flex-col items-center gap-2 text-center">
-                  <div className="w-8 h-8 border-2 border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-300 dark:text-zinc-600 text-lg">
+                  <div className="w-8 h-8 border border-border rounded flex items-center justify-center text-muted-foreground/40 text-lg">
                     ∅
                   </div>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
+                  <p className="text-xs text-muted-foreground tracking-widest uppercase">
                     No items added yet
                   </p>
-                  <p className="text-[11px] text-zinc-300 dark:text-zinc-600">
+                  <p className="text-[11px] text-muted-foreground/60">
                     Click "Add" on a product from the right panel
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b-2 border-black dark:border-zinc-600 hover:bg-transparent dark:hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 pl-5">
+                    <TableRow className="border-b border-border hover:bg-transparent">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
                         Product
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-20 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20 text-right">
                         Qty
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-24 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-right">
                         Unit
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-24 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-right">
                         Total
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-36">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-36">
                         Note
                       </TableHead>
                       <TableHead className="w-10" />
@@ -355,13 +348,11 @@ export default function OrdersPOS({
                     {cart.map((item, idx) => (
                       <TableRow
                         key={item.productId}
-                        className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${
-                          idx % 2 === 0
-                            ? "bg-white dark:bg-[#1A1A18]"
-                            : "bg-[#FAFAF8] dark:bg-[#161614]"
+                        className={`border-b border-border transition-colors ${
+                          idx % 2 === 0 ? "" : "bg-muted/20"
                         }`}
                       >
-                        <TableCell className="py-2.5 pl-5 text-sm font-medium text-black dark:text-zinc-100">
+                        <TableCell className="py-2.5 pl-5 text-sm font-medium text-foreground">
                           {item.productName}
                         </TableCell>
                         <TableCell className="py-2 pr-2">
@@ -377,13 +368,13 @@ export default function OrdersPOS({
                                 Math.max(1, Math.floor(n)),
                               );
                             }}
-                            className="h-7 w-16 rounded border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-sm text-right tabular-nums px-2 bg-white dark:bg-[#111110] dark:text-zinc-100"
+                            className="h-7 w-16 text-sm text-right tabular-nums px-2"
                           />
                         </TableCell>
-                        <TableCell className="py-2.5 text-sm tabular-nums text-zinc-500 dark:text-zinc-400 text-right pr-3">
+                        <TableCell className="py-2.5 text-sm tabular-nums text-muted-foreground text-right pr-3">
                           {formatCurrency(item.unitPrice)}
                         </TableCell>
-                        <TableCell className="py-2.5 text-sm font-semibold tabular-nums text-black dark:text-zinc-100 text-right pr-3">
+                        <TableCell className="py-2.5 text-sm font-semibold tabular-nums text-foreground text-right pr-3">
                           {formatCurrency(item.unitPrice * item.quantity)}
                         </TableCell>
                         <TableCell className="py-2">
@@ -393,13 +384,13 @@ export default function OrdersPOS({
                               updateNote(item.productId, e.target.value)
                             }
                             placeholder="Note…"
-                            className="h-7 rounded border border-zinc-300 dark:border-zinc-600 focus:border-black dark:focus:border-zinc-400 focus:ring-0 text-xs px-2 bg-white dark:bg-[#111110] dark:text-zinc-100 dark:placeholder:text-zinc-600"
+                            className="h-7 text-xs px-2"
                           />
                         </TableCell>
                         <TableCell className="py-2 pr-3 text-center">
                           <button
                             onClick={() => removeFromCart(item.productId)}
-                            className="text-zinc-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 transition-colors text-lg leading-none font-light"
+                            className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
                             aria-label="Remove item"
                           >
                             ×
@@ -413,11 +404,11 @@ export default function OrdersPOS({
             </div>
 
             {/* Submit bar */}
-            <div className="border-t-2 border-black dark:border-zinc-700 p-4 bg-black dark:bg-[#0A0A09] flex items-center justify-between gap-4">
-              <div className="text-white">
+            <div className="border-t border-border p-4 bg-primary flex items-center justify-between gap-4">
+              <div className="text-primary-foreground">
                 {cart.length > 0 ? (
                   <div>
-                    <div className="text-[10px] tracking-widest text-zinc-500 uppercase">
+                    <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
                       Order Total
                     </div>
                     <div className="text-xl font-bold tabular-nums">
@@ -425,7 +416,7 @@ export default function OrdersPOS({
                     </div>
                   </div>
                 ) : (
-                  <span className="text-[11px] text-zinc-600 tracking-wide">
+                  <span className="text-[11px] text-primary-foreground/50 tracking-wide">
                     No items in order
                   </span>
                 )}
@@ -434,11 +425,11 @@ export default function OrdersPOS({
                 onClick={handleCreateOrder}
                 disabled={submitting || !selectedForemanId || cart.length === 0}
                 className={`
-                  px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase transition-all
+                  px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
                   ${
                     submitting || !selectedForemanId || cart.length === 0
-                      ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-                      : "bg-white text-black hover:bg-yellow-400 hover:text-black active:scale-95"
+                      ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
+                      : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
                   }
                 `}
               >
@@ -450,13 +441,13 @@ export default function OrdersPOS({
           {/* RIGHT PANEL — Product Picker */}
           <div className="flex flex-col min-h-0">
             {/* Product picker header */}
-            <div className="border-b-2 border-black dark:border-zinc-700 p-5 bg-[#F5F4F0] dark:bg-[#161614] flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="border-b border-border p-5 bg-muted/40 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-2 shrink-0">
-                <div className="w-1.5 h-1.5 bg-black dark:bg-zinc-400" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 dark:text-zinc-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
                   Product Catalogue
                 </span>
-                <span className="text-[10px] tabular-nums text-zinc-400 dark:text-zinc-500">
+                <span className="text-[10px] tabular-nums text-muted-foreground/60">
                   ({filteredProducts.length})
                 </span>
               </div>
@@ -465,33 +456,33 @@ export default function OrdersPOS({
                   placeholder="Search products…"
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="rounded border-2 border-black dark:border-zinc-600 focus:ring-0 focus:border-black dark:focus:border-zinc-400 bg-white dark:bg-[#111110] dark:text-zinc-100 text-sm h-9 w-full sm:max-w-72 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                  className="text-sm h-9 w-full sm:max-w-72"
                 />
               </div>
             </div>
 
             {/* Product table */}
             <div
-              className="overflow-auto flex-1 bg-white dark:bg-[#1A1A18]"
+              className="overflow-auto flex-1 bg-card"
               style={{ maxHeight: "520px" }}
             >
               {filteredProducts.length === 0 ? (
                 <div className="py-16 flex flex-col items-center gap-2">
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
+                  <p className="text-xs text-muted-foreground tracking-widest uppercase">
                     No products found
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader className="sticky top-0 z-10">
-                    <TableRow className="border-b-2 border-black dark:border-zinc-600 bg-[#F5F4F0] dark:bg-[#161614] hover:bg-[#F5F4F0] dark:hover:bg-[#161614]">
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 pl-5">
+                    <TableRow className="border-b border-border bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
                         Product Name
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 w-28 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
                         Unit Price
                       </TableHead>
-                      <TableHead className="w-24 text-[10px] font-bold tracking-[0.15em] uppercase text-zinc-500 dark:text-zinc-400 py-2.5 text-right pr-5">
+                      <TableHead className="w-24 text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 text-right pr-5">
                         Action
                       </TableHead>
                     </TableRow>
@@ -502,42 +493,42 @@ export default function OrdersPOS({
                       return (
                         <TableRow
                           key={p.id}
-                          className={`border-b border-zinc-100 dark:border-zinc-800 transition-colors group cursor-default
+                          className={`border-b border-border transition-colors group cursor-default
                             ${
                               inCart
-                                ? "bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                ? "bg-primary/5 hover:bg-primary/10"
                                 : idx % 2 === 0
-                                  ? "bg-white dark:bg-[#1A1A18] hover:bg-yellow-50 dark:hover:bg-zinc-800/40"
-                                  : "bg-[#FAFAF8] dark:bg-[#161614] hover:bg-yellow-50 dark:hover:bg-zinc-800/40"
+                                  ? "hover:bg-muted/30"
+                                  : "bg-muted/20 hover:bg-muted/30"
                             }`}
                         >
                           <TableCell className="py-3 pl-5">
                             <div className="flex items-center gap-2">
                               {inCart && (
-                                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 shrink-0" />
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                               )}
-                              <span className="text-sm font-medium text-black dark:text-zinc-100">
+                              <span className="text-sm font-medium text-foreground">
                                 {p.name}
                               </span>
                             </div>
                             {inCart && (
-                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 tracking-wider mt-0.5 ml-3.5 block">
+                              <span className="text-[10px] text-primary tracking-wider mt-0.5 ml-3.5 block">
                                 ×{inCart.quantity} in order
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="py-3 text-sm tabular-nums font-semibold text-zinc-700 dark:text-zinc-300 text-right pr-4">
+                          <TableCell className="py-3 text-sm tabular-nums font-semibold text-muted-foreground text-right pr-4">
                             {formatCurrency(Number(p.price))}
                           </TableCell>
                           <TableCell className="py-3 text-right pr-5">
                             <button
                               onClick={() => addToCart(p)}
                               className={`
-                                text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border transition-all active:scale-95
+                                text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95
                                 ${
                                   inCart
-                                    ? "border-emerald-400 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500"
-                                    : "border-black dark:border-zinc-500 text-black dark:text-zinc-200 hover:bg-black hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black"
+                                    ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                    : "border-border text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary"
                                 }
                               `}
                             >
@@ -553,16 +544,16 @@ export default function OrdersPOS({
             </div>
 
             {/* Bottom legend */}
-            <div className="border-t border-zinc-200 dark:border-zinc-700 px-5 py-3 bg-[#F5F4F0] dark:bg-[#161614] flex items-center gap-4">
+            <div className="border-t border-border px-5 py-3 bg-muted/40 flex items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <span className="inline-block w-1.5 h-1.5 bg-emerald-500" />
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">
                   Already in order
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 border border-zinc-400 dark:border-zinc-600" />
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
+                <span className="inline-block w-2 h-2 border border-border rounded-sm" />
+                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">
                   Available
                 </span>
               </div>
