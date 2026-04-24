@@ -2,7 +2,15 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "react-toastify";
-import { Plus, RotateCw, FolderTree, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  X,
+  RotateCw,
+  FolderTree,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,31 +33,22 @@ import {
 } from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
 type Category = {
   id: string;
   name: string;
   _count: { procurementProducts: number };
 };
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
-
 export default function ProductCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Delete
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const load = useCallback(async () => {
@@ -71,6 +70,12 @@ export default function ProductCategoriesPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const filtered = search.trim()
+    ? categories.filter((c) =>
+        c.name.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : categories;
 
   function openCreate() {
     setEditing(null);
@@ -136,14 +141,33 @@ export default function ProductCategoriesPage() {
     <div className="mx-auto w-full max-w-7xl space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Product Categories</h1>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="icon" onClick={load}>
-            <RotateCw className="h-4 w-4" />
-          </Button>
-          <Button onClick={openCreate} size="sm">
-            <Plus className="mr-1 h-4 w-4" /> Add Category
-          </Button>
+        <Button onClick={openCreate} size="sm">
+          <Plus className="mr-1 h-4 w-4" /> Add Category
+        </Button>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search categories..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+        <Button variant="ghost" size="icon" onClick={load}>
+          <RotateCw className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Table */}
@@ -166,18 +190,18 @@ export default function ProductCategoriesPage() {
                   Loading...
                 </TableCell>
               </TableRow>
-            ) : categories.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={3}
                   className="text-center py-8 text-muted-foreground"
                 >
                   <FolderTree className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                  No categories yet
+                  {search ? "No categories match your search" : "No categories yet"}
                 </TableCell>
               </TableRow>
             ) : (
-              categories.map((c) => (
+              filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-center">
