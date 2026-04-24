@@ -66,7 +66,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import PlantDeployPOS, {
-  type PlantSiteDto,
+  type PlantSupervisorDto,
   type PlantItemDto,
 } from "@/components/orders/PlantDeployPOS";
 
@@ -117,7 +117,7 @@ export default function PlantListPage() {
 
   // Deploy sheet
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sites, setSites] = useState<PlantSiteDto[]>([]);
+  const [supervisors, setSupervisors] = useState<PlantSupervisorDto[]>([]);
 
   // Assignments list
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -151,23 +151,32 @@ export default function PlantListPage() {
   useEffect(() => {
     async function loadLookups() {
       try {
-        const [catRes, supRes, siteRes] = await Promise.all([
+        const [catRes, supRes, svRes] = await Promise.all([
           fetch("/api/app/admin/product-categories", { credentials: "include" }),
           fetch("/api/app/admin/suppliers?includeInactive=false", { credentials: "include" }),
-          fetch("/api/app/admin/sites", { credentials: "include" }),
+          fetch("/api/app/admin/supervisors", { credentials: "include" }),
         ]);
-        const [catJson, supJson, siteJson] = await Promise.all([
+        const [catJson, supJson, svJson] = await Promise.all([
           catRes.json(),
           supRes.json(),
-          siteRes.json(),
+          svRes.json(),
         ]);
         if (catRes.ok) setCategories(catJson.data ?? []);
         if (supRes.ok) setSuppliers(supJson.data ?? []);
-        if (siteRes.ok) {
-          const siteData: PlantSiteDto[] = (siteJson.data ?? []).map(
-            (s: any) => ({ id: s.id, name: s.name, code: s.code ?? null }),
+        if (svRes.ok) {
+          const svData: PlantSupervisorDto[] = (svJson.supervisors ?? []).map(
+            (s: any) => ({
+              id: s.id,
+              name: s.name ?? null,
+              email: s.email,
+              sites: (s.sites ?? []).map((site: any) => ({
+                id: site.id,
+                name: site.name,
+                code: site.code ?? null,
+              })),
+            }),
           );
-          setSites(siteData);
+          setSupervisors(svData);
         }
       } catch {}
     }
@@ -883,7 +892,7 @@ export default function PlantListPage() {
             <SheetTitle>Deploy Plant to Site</SheetTitle>
           </SheetHeader>
           <PlantDeployPOS
-            sites={sites}
+            supervisors={supervisors}
             items={plantItemDtos}
             onDeployed={() => {
               setSheetOpen(false);

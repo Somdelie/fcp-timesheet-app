@@ -36,6 +36,13 @@ export interface PlantSiteDto {
   code?: string | null;
 }
 
+export interface PlantSupervisorDto {
+  id: string;
+  name: string | null;
+  email: string;
+  sites: PlantSiteDto[];
+}
+
 export interface PlantItemDto {
   id: string;
   name: string;
@@ -45,7 +52,7 @@ export interface PlantItemDto {
 }
 
 interface PlantDeployPOSProps {
-  sites: PlantSiteDto[];
+  supervisors: PlantSupervisorDto[];
   items: PlantItemDto[];
   onDeployed?: () => void;
 }
@@ -58,17 +65,38 @@ type CartItem = {
 };
 
 export default function PlantDeployPOS({
-  sites,
+  supervisors,
   items,
   onDeployed,
 }: PlantDeployPOSProps) {
-  const [selectedSiteId, setSelectedSiteId] = React.useState<string>(
-    sites[0]?.id ?? "",
-  );
+  const [selectedSupervisorId, setSelectedSupervisorId] =
+    React.useState<string>("");
+  const [supervisorOpen, setSupervisorOpen] = React.useState(false);
+
+  const [selectedSiteId, setSelectedSiteId] = React.useState<string>("");
   const [siteOpen, setSiteOpen] = React.useState(false);
+
   const [productSearch, setProductSearch] = React.useState("");
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+
+  const selectedSupervisor = React.useMemo(
+    () => supervisors.find((s) => s.id === selectedSupervisorId) ?? null,
+    [supervisors, selectedSupervisorId],
+  );
+
+  const availableSites: PlantSiteDto[] = selectedSupervisor?.sites ?? [];
+
+  const selectedSite = React.useMemo(
+    () => availableSites.find((s) => s.id === selectedSiteId) ?? null,
+    [availableSites, selectedSiteId],
+  );
+
+  function handleSelectSupervisor(id: string) {
+    setSelectedSupervisorId(id);
+    setSelectedSiteId("");
+    setSupervisorOpen(false);
+  }
 
   const filteredItems = React.useMemo(() => {
     const q = productSearch.trim().toLowerCase();
@@ -91,12 +119,7 @@ export default function PlantDeployPOS({
       }
       return [
         ...prev,
-        {
-          productId: item.id,
-          productName: item.name,
-          quantity: 1,
-          note: "",
-        },
+        { productId: item.id, productName: item.name, quantity: 1, note: "" },
       ];
     });
   }
@@ -123,12 +146,11 @@ export default function PlantDeployPOS({
     setCart((prev) => prev.filter((item) => item.productId !== productId));
   }
 
-  const selectedSite = React.useMemo(
-    () => sites.find((s) => s.id === selectedSiteId) ?? null,
-    [sites, selectedSiteId],
-  );
-
   async function handleDeploy() {
+    if (!selectedSupervisorId) {
+      toast.error("Please select a supervisor");
+      return;
+    }
     if (!selectedSiteId) {
       toast.error("Please select a site");
       return;
@@ -188,6 +210,9 @@ export default function PlantDeployPOS({
     }
   }
 
+  const totalUnits = cart.reduce((s, i) => s + i.quantity, 0);
+  const canDeploy = !!selectedSupervisorId && !!selectedSiteId && cart.length > 0;
+
   return (
     <div className="h-full bg-background">
       {/* Top header bar */}
@@ -221,27 +246,28 @@ export default function PlantDeployPOS({
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border border-border rounded-md overflow-hidden">
           {/* LEFT PANEL */}
           <div className="border-r border-border">
-            {/* Site selector */}
+            {/* Step 1 — Supervisor selector */}
             <div className="border-b border-border p-5 bg-card">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                  1
+                </span>
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  Assign Site
+                  Select Supervisor
                 </span>
               </div>
-              <Popover open={siteOpen} onOpenChange={setSiteOpen}>
+              <Popover open={supervisorOpen} onOpenChange={setSupervisorOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
-                    aria-expanded={siteOpen}
+                    aria-expanded={supervisorOpen}
                     className="w-full justify-between h-10 text-sm font-medium"
                   >
                     <span className="truncate">
-                      {selectedSiteId
-                        ? (sites.find((s) => s.id === selectedSiteId)?.name ??
-                          "Select site")
-                        : "Select site"}
+                      {selectedSupervisor
+                        ? (selectedSupervisor.name ?? selectedSupervisor.email)
+                        : "Select supervisor…"}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -249,13 +275,100 @@ export default function PlantDeployPOS({
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
                     <CommandInput
-                      placeholder="Search site..."
+                      placeholder="Search supervisor…"
+                      className="text-sm"
+                    />
+                    <CommandList>
+                      <CommandEmpty>No supervisor found.</CommandEmpty>
+                      <CommandGroup>
+                        {supervisors.map((sv) => (
+                          <CommandItem
+                            key={sv.id}
+                            value={sv.name ?? sv.email}
+                            onSelect={() => handleSelectSupervisor(sv.id)}
+                            className="text-sm"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedSupervisorId === sv.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            <span className="flex-1">
+                              {sv.name ?? sv.email}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {sv.sites.length} site
+                              {sv.sites.length !== 1 ? "s" : ""}
+                            </span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Step 2 — Site selector */}
+            <div className="border-b border-border p-5 bg-card">
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
+                    selectedSupervisorId
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  2
+                </span>
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                  Select Site
+                </span>
+              </div>
+              <Popover
+                open={siteOpen}
+                onOpenChange={(o) => {
+                  if (!selectedSupervisorId) {
+                    toast.info("Select a supervisor first");
+                    return;
+                  }
+                  setSiteOpen(o);
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={siteOpen}
+                    disabled={!selectedSupervisorId}
+                    className="w-full justify-between h-10 text-sm font-medium"
+                  >
+                    <span className="truncate">
+                      {selectedSite
+                        ? selectedSite.name
+                        : selectedSupervisorId
+                          ? availableSites.length === 0
+                            ? "No sites assigned to this supervisor"
+                            : "Select site…"
+                          : "Select a supervisor first"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search site…"
                       className="text-sm"
                     />
                     <CommandList>
                       <CommandEmpty>No site found.</CommandEmpty>
                       <CommandGroup>
-                        {sites.map((s) => (
+                        {availableSites.map((s) => (
                           <CommandItem
                             key={s.id}
                             value={s.name}
@@ -286,6 +399,7 @@ export default function PlantDeployPOS({
                   </Command>
                 </PopoverContent>
               </Popover>
+
               {selectedSite && (
                 <div className="mt-2.5 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary" />
@@ -315,10 +429,10 @@ export default function PlantDeployPOS({
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
-                  Items
+                  Units
                 </span>
                 <span className="text-base font-bold tabular-nums text-foreground">
-                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                  {totalUnits}
                 </span>
               </div>
             </div>
@@ -415,10 +529,7 @@ export default function PlantDeployPOS({
                       Deploying
                     </div>
                     <div className="text-xl font-bold tabular-nums">
-                      {cart.reduce((s, i) => s + i.quantity, 0)} unit
-                      {cart.reduce((s, i) => s + i.quantity, 0) !== 1
-                        ? "s"
-                        : ""}
+                      {totalUnits} unit{totalUnits !== 1 ? "s" : ""}
                     </div>
                   </div>
                 ) : (
@@ -429,11 +540,11 @@ export default function PlantDeployPOS({
               </div>
               <button
                 onClick={handleDeploy}
-                disabled={submitting || !selectedSiteId || cart.length === 0}
+                disabled={submitting || !canDeploy}
                 className={`
                   px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
                   ${
-                    submitting || !selectedSiteId || cart.length === 0
+                    submitting || !canDeploy
                       ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
                       : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
                   }
