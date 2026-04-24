@@ -137,6 +137,7 @@ export async function PATCH(
       productType?: ProductType;
       isReturnable?: boolean;
       colors?: string[];
+      sizes?: string[];
     };
 
     const data: Record<string, unknown> = {};
@@ -161,6 +162,7 @@ export async function PATCH(
     if (productType !== undefined) data.productType = productType;
     if (isReturnable !== undefined) data.isReturnable = isReturnable;
     if (colors !== undefined) data.colors = colors;
+    if ((body as any).sizes !== undefined) data.sizes = (body as any).sizes;
 
     const updated = await prisma.procurementProduct.update({
       where: { id },

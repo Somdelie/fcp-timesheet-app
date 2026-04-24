@@ -30,6 +30,7 @@ import {
   CloudSun,
   Printer,
   TrendingUp,
+  Wrench,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -234,8 +235,14 @@ const menuGroups: {
       },
       {
         href: "/admin/procurement-products",
-        label: "Materials",
+        label: "Materials & PPE",
         icon: Package,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
+        href: "/admin/plant-list",
+        label: "Plant List",
+        icon: Wrench,
         roles: ["ADMIN", "OFFICE"],
       },
       {
