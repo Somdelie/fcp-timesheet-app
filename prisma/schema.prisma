@@ -75,6 +75,7 @@ model User {
 
   plantAssignments SitePlantAssignment[] @relation("PlantAssignedByUser")
   ppeOrdersCreated ForemanPpeOrder[]     @relation("PpeOrderCreatedByUser")
+  plantTransfers   PlantTransfer[]       @relation("PlantTransferredByUser")
 
   // comments
   noteComments NoteComment[] @relation("UserNoteComments")
@@ -316,6 +317,9 @@ model Site {
 
   plantAssignments SitePlantAssignment[]
   ppeOrders        ForemanPpeOrder[]
+
+  plantTransfersFrom PlantTransfer[] @relation("PlantTransferFromSite")
+  plantTransfersTo   PlantTransfer[] @relation("PlantTransferToSite")
 
   @@index([isActive])
   @@index([name])
@@ -1197,6 +1201,9 @@ model ProcurementProduct {
   // PPE order items
   ppeOrderItems ForemanPpeOrderItem[]
 
+  // Plant transfer audit trail
+  plantTransfers PlantTransfer[]
+
   @@unique([sku])
   @@index([isActive])
   @@index([categoryId])
@@ -2076,9 +2083,17 @@ model SitePlantAssignment {
 
   assignedByUserId String?
 
+  // Transfer provenance — set when this assignment was created via a transfer
+  transferredFromSiteId       String?
+  transferredFromAssignmentId String?
+
   site           Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   product        ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
   assignedByUser User?              @relation("PlantAssignedByUser", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  // Transfer history
+  transfersOut PlantTransfer[] @relation("PlantTransferFromAssignment")
+  transfersIn  PlantTransfer[] @relation("PlantTransferToAssignment")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2087,6 +2102,46 @@ model SitePlantAssignment {
   @@index([productId])
   @@index([status])
   @@index([assignedByUserId])
+}
+
+// ============================
+// PLANT TRANSFERS
+// ============================
+// Full audit trail every time plant moves between sites or supervisors.
+
+model PlantTransfer {
+  id        String @id @default(cuid())
+  productId String
+  quantity  Int    @default(1)
+
+  // Null = office/storage
+  fromSiteId String?
+  toSiteId   String?
+
+  // Links to the affected assignments (source is reduced/closed; dest is created)
+  fromAssignmentId String?
+  toAssignmentId   String?
+
+  note String?
+
+  transferredByUserId String?
+
+  transferredOn DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  product          ProcurementProduct  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  fromSite         Site?               @relation("PlantTransferFromSite", fields: [fromSiteId], references: [id], onDelete: SetNull)
+  toSite           Site?               @relation("PlantTransferToSite", fields: [toSiteId], references: [id], onDelete: SetNull)
+  fromAssignment   SitePlantAssignment? @relation("PlantTransferFromAssignment", fields: [fromAssignmentId], references: [id], onDelete: SetNull)
+  toAssignment     SitePlantAssignment? @relation("PlantTransferToAssignment", fields: [toAssignmentId], references: [id], onDelete: SetNull)
+  transferredByUser User?               @relation("PlantTransferredByUser", fields: [transferredByUserId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([fromSiteId])
+  @@index([toSiteId])
+  @@index([fromAssignmentId])
+  @@index([toAssignmentId])
+  @@index([transferredOn])
 }
 
 // ============================

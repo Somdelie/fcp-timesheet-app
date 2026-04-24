@@ -36,6 +36,21 @@ export async function GET(req: Request) {
         product: { select: { id: true, name: true, thumbnailUrl: true } },
         site: { select: { id: true, name: true, code: true } },
         assignedByUser: { select: { id: true, name: true } },
+        transfersIn: {
+          include: {
+            fromSite: { select: { id: true, name: true, code: true } },
+            transferredByUser: { select: { id: true, name: true } },
+          },
+          orderBy: { transferredOn: "desc" },
+          take: 1,
+        },
+        transfersOut: {
+          include: {
+            toSite: { select: { id: true, name: true, code: true } },
+            transferredByUser: { select: { id: true, name: true } },
+          },
+          orderBy: { transferredOn: "desc" },
+        },
       },
     });
 
