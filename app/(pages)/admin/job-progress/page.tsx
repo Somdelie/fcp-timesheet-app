@@ -13,7 +13,7 @@ export default async function JobProgressPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Page header */}
-      <div className="shrink-0 border-b border-border bg-card pb-3">
+      <div className="shrink-0 border-b border-border pb-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex size-8 items-center justify-center rounded border border-primary/30 bg-primary/10">
