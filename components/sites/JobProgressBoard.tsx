@@ -261,7 +261,7 @@ function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-2xl">
         <h3 className="text-sm font-bold text-foreground">{title}</h3>
         <p className="mt-1.5 text-sm text-muted-foreground">{message}</p>
         <div className="mt-5 flex justify-end gap-2">
@@ -390,7 +390,7 @@ function StatChip({
   return (
     <div
       className={cn(
-        "flex-1 rounded-xl border border-border bg-secondary/40 px-4 py-3",
+        "flex-1 rounded-lg border border-border bg-secondary/40 px-4 py-3",
         highlighted && "border-border",
       )}
     >
@@ -524,11 +524,15 @@ function StagePctBars({
 /*  Materials card                                                      */
 /* ------------------------------------------------------------------ */
 
+const MATERIALS_PAGE_SIZE = 8;
+
 function MaterialsCard({
   materials,
 }: {
   materials: { name: string; quantity: number; unitPrice: number; total: number }[];
 }) {
+  const [page, setPage] = useState(0);
+
   if (materials.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -540,52 +544,57 @@ function MaterialsCard({
     );
   }
 
+  const totalPages = Math.ceil(materials.length / MATERIALS_PAGE_SIZE);
+  const pageItems  = materials.slice(page * MATERIALS_PAGE_SIZE, (page + 1) * MATERIALS_PAGE_SIZE);
   const grandTotal = materials.reduce((s, m) => s + m.total, 0);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      {/* Table */}
-      <table className="w-full text-xs">
+    <div className="overflow-hidden rounded border border-border">
+      <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="border-b border-border bg-muted/50">
-            <th className="px-4 py-2.5 text-left font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <tr className="bg-muted/60">
+            <th className="border-b border-r border-border px-4 py-2.5 text-left font-semibold uppercase tracking-wider text-muted-foreground/70">
               Material
             </th>
-            <th className="px-3 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <th className="border-b border-r border-border px-3 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/70">
               Qty
             </th>
-            <th className="px-3 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <th className="border-b border-r border-border px-3 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/70">
               Unit Cost
             </th>
-            <th className="px-4 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <th className="border-b border-border px-4 py-2.5 text-right font-semibold uppercase tracking-wider text-muted-foreground/70">
               Total
             </th>
           </tr>
         </thead>
         <tbody>
-          {materials.map((m, i) => (
+          {pageItems.map((m, i) => (
             <tr
               key={m.name}
               className={cn(
-                "border-b border-border transition-colors hover:bg-secondary/30",
+                "transition-colors hover:bg-secondary/40",
                 i % 2 === 0 ? "bg-card" : "bg-muted/20",
               )}
             >
-              <td className="px-4 py-2.5 font-medium text-foreground">{m.name}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{m.quantity}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+              <td className="border-b border-r border-border px-4 py-2.5 font-medium text-foreground">
+                {m.name}
+              </td>
+              <td className="border-b border-r border-border px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+                {m.quantity}
+              </td>
+              <td className="border-b border-r border-border px-3 py-2.5 text-right tabular-nums text-muted-foreground">
                 {formatCurrency(m.unitPrice)}
               </td>
-              <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
+              <td className="border-b border-border px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
                 {formatCurrency(m.total)}
               </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-border bg-muted/40">
-            <td colSpan={3} className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Total
+          <tr className="bg-muted/50">
+            <td colSpan={3} className="border-r border-border px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Grand Total
             </td>
             <td className="px-4 py-2.5 text-right text-sm font-black tabular-nums text-foreground">
               {formatCurrency(grandTotal)}
@@ -593,6 +602,45 @@ function MaterialsCard({
           </tr>
         </tfoot>
       </table>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2">
+          <span className="text-[10px] text-muted-foreground">
+            {page * MATERIALS_PAGE_SIZE + 1}–{Math.min((page + 1) * MATERIALS_PAGE_SIZE, materials.length)} of {materials.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="rounded border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+            >
+              Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                className={cn(
+                  "size-6 rounded border text-[10px] font-bold transition-colors",
+                  i === page
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:bg-secondary",
+                )}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              className="rounded border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -851,7 +899,7 @@ function JobDetailPanel({
           </div>
 
           {/* Add note */}
-          <div className="mb-4 rounded-xl border border-border bg-card">
+          <div className="mb-4 rounded-lg border border-border bg-card">
             <textarea
               ref={textareaRef}
               value={noteText}
@@ -923,7 +971,7 @@ function JobDetailPanel({
                         <span className="text-xs font-semibold text-foreground">{note.authorName}</span>
                         <span className="text-[10px] text-muted-foreground/50">{timeLabel}</span>
                       </div>
-                      <div className="mt-1 whitespace-pre-wrap rounded-xl rounded-tl-none border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground">
+                      <div className="mt-1 whitespace-pre-wrap rounded-lg rounded-tl-none border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground">
                         {note.content}
                       </div>
                     </div>
@@ -946,7 +994,7 @@ function JobDetailPanel({
 function EmptyDetail() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center px-8">
-      <div className="flex size-14 items-center justify-center rounded-xl bg-secondary/60">
+      <div className="flex size-14 items-center justify-center rounded-lg bg-secondary/60">
         <Building2 className="size-6 text-muted-foreground/30" />
       </div>
       <p className="text-sm font-medium text-muted-foreground">
