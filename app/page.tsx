@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "FirstClass Projects – Site & Workforce Management",
@@ -74,7 +77,10 @@ const ROLES = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await getServerSession(authOptions);
+  if (session?.user) redirect("/dashboard");
+
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-white font-sans">
       {/* ── Nav ───────────────────────────────────────────────── */}

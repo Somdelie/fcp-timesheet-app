@@ -72,7 +72,7 @@ const menuGroups: {
     group: "Overview",
     items: [
       {
-        href: "/",
+        href: "/dashboard",
         label: "Dashboard",
         icon: LayoutDashboard,
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
