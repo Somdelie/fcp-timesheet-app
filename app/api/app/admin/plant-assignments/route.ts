@@ -2,12 +2,30 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { verifyApiToken } from "@/lib/jwt";
 import type { PlantStatus } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
 async function getAuth(req: Request) {
+  const h = req.headers.get("authorization") ?? "";
+  const token = h.startsWith("Bearer ") ? h.slice(7).trim() : null;
+  if (token) {
+    const p = await verifyApiToken(token);
+    if (p && (p.role === "ADMIN" || p.role === "OFFICE"))
+      return { id: p.sub, role: p.role as string };
+  }
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
   if (session?.user && (role === "ADMIN" || role === "OFFICE"))
@@ -54,7 +72,7 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json({ ok: true, data: rows });
+    return NextResponse.json({ ok: true, data: rows }, { headers: CORS });
   } catch (e: any) {
     console.error("GET plant-assignments error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

@@ -75,7 +75,7 @@ export async function GET(
     return NextResponse.json(
       {
         ok: true,
-        assignments: assignments.map((a) => ({
+        supervisors: assignments.map((a) => ({
           id: a.id,
           supervisorId: a.supervisorId,
           userId: a.supervisor.userId,

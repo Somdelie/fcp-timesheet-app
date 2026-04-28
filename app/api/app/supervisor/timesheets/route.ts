@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
-import { makeSupervisorTimesheetId } from "@/lib/timesheetId";
 import { verifyApiToken } from "@/lib/jwt";
 
 export const runtime = "nodejs";
@@ -310,11 +309,37 @@ export async function GET(req: Request) {
       },
     });
 
+    // Find which timesheets have been accepted TODAY so we can reset ACCEPTED→SUBMITTED
+    // for timesheets where the supervisor hasn't done today's daily acceptance yet.
+    const todayUTC = startOfDayUTCFromISO(new Date().toISOString().slice(0, 10));
+    const acceptedTodayIds = new Set(
+      timesheetRows.length > 0
+        ? (
+            await prisma.timesheetDayAcceptance.findMany({
+              where: {
+                timesheetId: { in: timesheetRows.map((t) => t.id) },
+                workDate: todayUTC,
+                status: "ACCEPTED",
+              },
+              select: { timesheetId: true },
+            })
+          ).map((a) => a.timesheetId)
+        : [],
+    );
+
     // Map by foreman+site key since each foreman can have multiple sites
     const statusByForemanSite = new Map(
       timesheetRows.map((t) => [
         `${t.foremanId}__${t.siteId ?? ""}`,
-        { id: t.id, status: t.status },
+        {
+          id: t.id,
+          // If accepted on a previous day but not yet today, treat as SUBMITTED
+          // so the supervisor sees it needs their daily check again.
+          status:
+            t.status === "ACCEPTED" && !acceptedTodayIds.has(t.id)
+              ? "SUBMITTED"
+              : t.status,
+        },
       ]),
     );
 
@@ -361,7 +386,7 @@ export async function GET(req: Request) {
         // Get timesheet status for this specific foreman+site combination
         const timesheet = statusByForemanSite.get(key);
 
-        const id = makeSupervisorTimesheetId(startISO, endISO, foremanId);
+        const id = `${startISO}_${endISO}_${foremanId}_${site.id}`;
 
         result.push({
           id,

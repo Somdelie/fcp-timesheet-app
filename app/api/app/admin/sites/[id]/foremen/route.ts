@@ -71,12 +71,12 @@ export async function GET(
     return NextResponse.json(
       {
         ok: true,
-        assignments: assignments.map((a) => ({
+        foremen: assignments.map((a) => ({
           id: a.id,
           foremanId: a.foremanId,
           name: a.foreman.user.name,
-          startsOn: a.startsOn.toISOString(),
-          endsOn: a.endsOn?.toISOString() ?? null,
+          startDate: a.startsOn.toISOString(),
+          endDate: a.endsOn?.toISOString() ?? null,
         })),
       },
       { headers: CORS_HEADERS },

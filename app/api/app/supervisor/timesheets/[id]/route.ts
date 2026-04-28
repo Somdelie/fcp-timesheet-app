@@ -100,7 +100,8 @@ export async function GET(
     const endExclusive = addDaysUTC(endDate, 1);
 
     const url = new URL(req.url);
-    const siteIdFilter = url.searchParams.get("siteId");
+    const siteIdFilter =
+      url.searchParams.get("siteId") ?? parsed.siteId ?? null;
 
     // Find or create the period
     const period = await prisma.timesheetPeriod.upsert({
