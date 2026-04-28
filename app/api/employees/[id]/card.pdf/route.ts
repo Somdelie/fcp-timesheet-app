@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { employeeWhereFor } from "@/lib/employee-scope";
 import { authOptions } from "@/lib/auth";
+import { verifyApiToken } from "@/lib/jwt";
 
 import QRCode from "qrcode";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
@@ -84,16 +85,26 @@ async function embedEmployeePhoto(pdf: PDFDocument, url: string) {
   }
 }
 
-export async function GET(_req: Request, ctx: RouteContext) {
+export async function GET(req: Request, ctx: RouteContext) {
   const { id } = await ctx.params;
 
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string | undefined;
-  const role = (session?.user as any)?.role as
-    | "ADMIN"
-    | "SUPERVISOR"
-    | "FOREMAN"
-    | undefined;
+  // Accept JWT from query param (mobile) or NextAuth session (web)
+  let userId: string | undefined;
+  let role: "ADMIN" | "SUPERVISOR" | "FOREMAN" | undefined;
+
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get("token");
+  if (queryToken) {
+    const payload = await verifyApiToken(queryToken);
+    if (payload) {
+      userId = payload.sub;
+      role = payload.role as typeof role;
+    }
+  } else {
+    const session = await getServerSession(authOptions);
+    userId = (session?.user as any)?.id as string | undefined;
+    role = (session?.user as any)?.role as typeof role;
+  }
 
   if (!userId || !role) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
