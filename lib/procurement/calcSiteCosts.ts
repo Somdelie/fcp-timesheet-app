@@ -4,10 +4,13 @@ import { Decimal } from "@prisma/client/runtime/client";
 export interface SiteCostRow {
   siteId: string;
   siteName: string;
+  siteCode: string | null;
+  siteLocation: string | null;
   materialCost: number;
   wagesCost: number;
   overtimeCost: number;
   projectCost: number;
+  scanCount: number;
   // Revenue / profit – placeholders for now
   revenueClaimed: number;
   revenueReceived: number;
@@ -88,12 +91,11 @@ export async function calcSiteCosts(
   });
 
   const wagesMap = new Map<string, Decimal>();
+  const scanCountMap = new Map<string, number>();
   for (const scan of wageRows) {
     const siteId = scan.siteId;
-    wagesMap.set(
-      siteId,
-      (wagesMap.get(siteId) ?? new Decimal(0)).add(scan.dayRateAtScan),
-    );
+    wagesMap.set(siteId, (wagesMap.get(siteId) ?? new Decimal(0)).add(scan.dayRateAtScan));
+    scanCountMap.set(siteId, (scanCountMap.get(siteId) ?? 0) + 1);
   }
 
   // ── Overtime costs (via OvertimeEntry.totalCost) ──
@@ -131,12 +133,12 @@ export async function calcSiteCosts(
     for (const id of siteIds) allSiteIds.add(id);
   }
 
-  // Fetch site names
+  // Fetch site info
   const sites = await prisma.site.findMany({
     where: { id: { in: [...allSiteIds] } },
-    select: { id: true, name: true },
+    select: { id: true, name: true, code: true, location: true },
   });
-  const nameMap = new Map(sites.map((s) => [s.id, s.name]));
+  const siteInfoMap = new Map(sites.map((s) => [s.id, s]));
 
   // ── Build rows ──
   const rows: SiteCostRow[] = [];
@@ -157,14 +159,18 @@ export async function calcSiteCosts(
     totalProjectCost = totalProjectCost.add(project);
 
     const projectNum = project.toNumber();
+    const info = siteInfoMap.get(siteId);
 
     rows.push({
       siteId,
-      siteName: nameMap.get(siteId) ?? "Unknown",
+      siteName: info?.name ?? "Unknown",
+      siteCode: info?.code ?? null,
+      siteLocation: info?.location ?? null,
       materialCost: material.toNumber(),
       wagesCost: wages.toNumber(),
       overtimeCost: overtime.toNumber(),
       projectCost: projectNum,
+      scanCount: scanCountMap.get(siteId) ?? 0,
       // Revenue & profit — not implemented yet
       revenueClaimed: 0,
       revenueReceived: 0,
