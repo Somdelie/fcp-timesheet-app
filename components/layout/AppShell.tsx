@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/common/Navbar";
 import Sidebar from "@/components/common/Sidebar";
@@ -15,15 +15,41 @@ type AppShellProps = {
   userName: string;
 };
 
+function getBreakpoint() {
+  if (typeof window === "undefined") return "desktop";
+  if (window.innerWidth < 768) return "mobile";
+  if (window.innerWidth < 1024) return "tablet";
+  return "desktop";
+}
+
 export function AppShell({ children, role, userName }: AppShellProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [breakpoint, setBreakpoint] = useState<"mobile" | "tablet" | "desktop">("desktop");
   const pathname = usePathname();
   const hasLoggedOpen = useRef(false);
+
+  // Set initial state and listen for resize
+  useEffect(() => {
+    const update = () => {
+      const bp = getBreakpoint();
+      setBreakpoint(bp);
+      // Desktop defaults open, tablet/mobile default closed
+      if (bp === "desktop") setIsSidebarOpen(true);
+      else setIsSidebarOpen(false);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  // Close sidebar on navigation on mobile/tablet
+  useEffect(() => {
+    if (breakpoint !== "desktop") setIsSidebarOpen(false);
+  }, [pathname, breakpoint]);
 
   // Log once when an admin opens the app (visits the home/dashboard page)
   useEffect(() => {
     if (role !== "ADMIN" || hasLoggedOpen.current) return;
-    // Only fire on the root dashboard page
     if (pathname !== "/") return;
     hasLoggedOpen.current = true;
     fetch("/api/admin/page-visit", {
@@ -33,12 +59,28 @@ export function AppShell({ children, role, userName }: AppShellProps) {
     }).catch(() => {});
   }, [pathname, role]);
 
+  const isOverlay = breakpoint !== "desktop";
+
   return (
     <BreadcrumbProvider>
       <UserRoleProvider role={role}>
         <SchedulerAlertProvider />
         <div className="flex h-full bg-background text-foreground">
-          <Sidebar isOpen={isSidebarOpen} role={role} userName={userName} />
+          {/* Backdrop for mobile/tablet overlay */}
+          {isOverlay && isSidebarOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+
+          <Sidebar
+            isOpen={isSidebarOpen}
+            isOverlay={isOverlay}
+            role={role}
+            userName={userName}
+          />
+
           <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
             <Navbar
               isSidebarOpen={isSidebarOpen}

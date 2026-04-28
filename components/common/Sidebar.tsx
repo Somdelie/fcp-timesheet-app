@@ -37,6 +37,7 @@ type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
 
 type SidebarProps = {
   isOpen: boolean;
+  isOverlay?: boolean;
   role: Role;
   userName: string;
 };
@@ -297,7 +298,7 @@ const roleBadgeConfig: Record<Role, { label: string; color: string }> = {
   FOREMAN: { label: "Foreman", color: "#2ae87a" },
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, isOverlay = false, role, userName }) => {
   const pathname = usePathname();
   const badge = roleBadgeConfig[role];
 
@@ -533,11 +534,30 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, role, userName }) => {
           width: 0;
           overflow: hidden;
         }
+
+        /* Overlay mode (mobile/tablet) */
+        .sidebar-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100%;
+          z-index: 50;
+          box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+          transform: translateX(0);
+          transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                      transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                      box-shadow 300ms ease;
+        }
+
+        .sidebar-overlay.sidebar-collapsed {
+          transform: translateX(-100%);
+          box-shadow: none;
+        }
       `}</style>
 
       <aside
-        className={`sidebar-root ${!isOpen ? "sidebar-collapsed" : ""}`}
-        style={{ width: isOpen ? 240 : 64 }}
+        className={`sidebar-root ${isOverlay ? "sidebar-overlay" : ""} ${!isOpen ? "sidebar-collapsed" : ""}`}
+        style={{ width: isOverlay ? 240 : isOpen ? 240 : 64 }}
       >
         {/* Header */}
         <div className="sidebar-header">
