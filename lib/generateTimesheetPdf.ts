@@ -2110,3 +2110,356 @@ export function printForemanSummary(
     }, 400);
   }
 }
+
+// ============ SUPERVISOR SUMMARIES (all foremen grouped by supervisor) ============
+
+export interface SupervisorSummaryForeman {
+  foremanId: string;
+  foremanName: string;
+  sites: Array<{
+    siteName: string;
+    siteCode?: string | null;
+    foremanDays: number;
+    foremanWages: number;
+    teamDays: number;
+    teamWages: number;
+    totalWages: number;
+  }>;
+  foremanDays: number;
+  foremanWages: number;
+  teamDays: number;
+  teamWages: number;
+  grandTotal: number;
+}
+
+export interface SupervisorSummaryGroup {
+  supervisorId: string | null;
+  supervisorName: string;
+  foremen: SupervisorSummaryForeman[];
+  totalForemanDays: number;
+  totalForemanWages: number;
+  totalTeamDays: number;
+  totalTeamWages: number;
+  grandTotal: number;
+}
+
+function generateSupervisorSummariesHTML(
+  groups: SupervisorSummaryGroup[],
+  startISO: string,
+  endISO: string,
+): string {
+  const period = `${startISO} to ${endISO}`;
+
+  const supervisorBlocks = groups
+    .map((group, gi) => {
+      const foremanRows = group.foremen
+        .map((fm) => {
+          const siteRows = fm.sites
+            .map(
+              (site, si) => `
+            <tr class="${si % 2 === 0 ? "even" : "odd"}">
+              <td class="indent">${escapeHTML(site.siteCode ? `${site.siteCode} · ${site.siteName}` : site.siteName)}</td>
+              <td class="num">${site.foremanDays}</td>
+              <td class="num">${formatCurrencySummary(site.foremanWages)}</td>
+              <td class="num">${site.teamDays}</td>
+              <td class="num">${formatCurrencySummary(site.teamWages)}</td>
+              <td class="num total-col">${formatCurrencySummary(site.totalWages)}</td>
+            </tr>
+          `,
+            )
+            .join("");
+
+          return `
+          <tr class="foreman-header-row">
+            <td colspan="6" class="foreman-name">
+              <span class="fm-badge">Foreman</span>
+              ${escapeHTML(fm.foremanName)}
+            </td>
+          </tr>
+          ${siteRows}
+          <tr class="foreman-total-row">
+            <td><strong>Subtotal — ${escapeHTML(fm.foremanName)}</strong></td>
+            <td class="num"><strong>${fm.foremanDays}</strong></td>
+            <td class="num"><strong>${formatCurrencySummary(fm.foremanWages)}</strong></td>
+            <td class="num"><strong>${fm.teamDays}</strong></td>
+            <td class="num"><strong>${formatCurrencySummary(fm.teamWages)}</strong></td>
+            <td class="num total-col"><strong>${formatCurrencySummary(fm.grandTotal)}</strong></td>
+          </tr>
+        `;
+        })
+        .join("");
+
+      const isLastGroup = gi === groups.length - 1;
+
+      return `
+      <div class="supervisor-page${isLastGroup ? " last-page" : ""}">
+        <div class="sup-header">
+          <div class="sup-title-block">
+            <div class="sup-label">Supervisor</div>
+            <div class="sup-name">${escapeHTML(group.supervisorName)}</div>
+          </div>
+          <div class="sup-meta-block">
+            <div class="sup-meta-item">
+              <span class="meta-label">Period</span>
+              <span class="meta-value">${escapeHTML(period)}</span>
+            </div>
+            <div class="sup-meta-item">
+              <span class="meta-label">Foremen</span>
+              <span class="meta-value">${group.foremen.length}</span>
+            </div>
+            <div class="sup-meta-item grand-meta">
+              <span class="meta-label">Grand Total</span>
+              <span class="meta-value grand-total">${formatCurrencySummary(group.grandTotal)}</span>
+            </div>
+          </div>
+        </div>
+
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th class="num">F/man Days</th>
+              <th class="num">F/man Amount</th>
+              <th class="num">Team Days</th>
+              <th class="num">Team Amount</th>
+              <th class="num">Site Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${foremanRows}
+          </tbody>
+          <tfoot>
+            <tr class="grand-total-row">
+              <td><strong>GRAND TOTAL</strong></td>
+              <td class="num"><strong>${group.totalForemanDays}</strong></td>
+              <td class="num"><strong>${formatCurrencySummary(group.totalForemanWages)}</strong></td>
+              <td class="num"><strong>${group.totalTeamDays}</strong></td>
+              <td class="num"><strong>${formatCurrencySummary(group.totalTeamWages)}</strong></td>
+              <td class="num total-col"><strong>${formatCurrencySummary(group.grandTotal)}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+    })
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Foreman Summaries — ${escapeHTML(period)}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
+          color: #27272a;
+          background: #fafafa;
+        }
+
+        .no-print {
+          position: fixed;
+          top: 12px;
+          right: 16px;
+          z-index: 1000;
+          display: flex;
+          gap: 8px;
+        }
+        .no-print button {
+          padding: 8px 16px;
+          cursor: pointer;
+          border-radius: 4px;
+          border: 1px solid #d4d4d8;
+          background: white;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .no-print button:hover { background: #f4f4f5; }
+        .no-print .btn-print {
+          background: #16a34a;
+          border-color: #16a34a;
+          color: white;
+        }
+        .no-print .btn-print:hover { background: #15803d; }
+
+        .supervisor-page {
+          padding: 28px 32px;
+          max-width: 960px;
+          margin: 0 auto 40px;
+          background: white;
+          border: 1px solid #e4e4e7;
+          border-radius: 6px;
+        }
+
+        /* Supervisor header */
+        .sup-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #3f3f46;
+        }
+        .sup-label {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #71717a;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+        .sup-name {
+          font-size: 20px;
+          font-weight: 700;
+          color: #18181b;
+        }
+        .sup-meta-block {
+          display: flex;
+          gap: 24px;
+          align-items: flex-end;
+        }
+        .sup-meta-item {
+          text-align: right;
+        }
+        .meta-label {
+          font-size: 10px;
+          text-transform: uppercase;
+          color: #71717a;
+          font-weight: 600;
+          display: block;
+          margin-bottom: 2px;
+        }
+        .meta-value {
+          font-size: 14px;
+          font-weight: 600;
+          color: #18181b;
+        }
+        .grand-meta .meta-value.grand-total {
+          font-size: 18px;
+          color: #059669;
+        }
+
+        /* Table */
+        .summary-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+        .summary-table th,
+        .summary-table td {
+          padding: 8px 10px;
+          border: 1px solid #d4d4d8;
+          text-align: left;
+        }
+        .summary-table th {
+          background: #3f3f46;
+          color: white;
+          font-weight: 600;
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+        .summary-table th.num,
+        .summary-table td.num {
+          text-align: right;
+        }
+
+        /* Foreman header row */
+        .foreman-header-row td {
+          background: #e4e4e7;
+          padding: 6px 10px;
+          font-weight: 700;
+          font-size: 12px;
+          border-color: #a1a1aa;
+        }
+        .fm-badge {
+          display: inline-block;
+          background: #52525b;
+          color: white;
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          padding: 1px 5px;
+          border-radius: 2px;
+          margin-right: 6px;
+        }
+
+        /* Site rows */
+        .indent { padding-left: 24px !important; }
+        .even { background: #fafafa; }
+        .odd { background: white; }
+
+        /* Foreman subtotal */
+        .foreman-total-row td {
+          background: #f4f4f5;
+          border-top: 1px solid #a1a1aa;
+          border-bottom: 2px solid #a1a1aa;
+          font-size: 11px;
+        }
+
+        /* Grand total */
+        .grand-total-row td {
+          background: #3f3f46;
+          color: white;
+          font-size: 12px;
+        }
+        .grand-total-row .total-col {
+          color: #6ee7b7;
+        }
+
+        .total-col { color: #059669; font-weight: 700; }
+
+        @media print {
+          body { background: white; }
+          .no-print { display: none !important; }
+          .supervisor-page {
+            border: none;
+            border-radius: 0;
+            margin: 0;
+            padding: 20px 24px;
+            page-break-after: always;
+          }
+          .supervisor-page.last-page { page-break-after: avoid; }
+          .summary-table th,
+          .summary-table td {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="no-print">
+        <button id="close-btn">Close</button>
+        <button class="btn-print" id="print-btn">🖨️ Print</button>
+      </div>
+      ${supervisorBlocks}
+      <script>
+        document.getElementById('close-btn').addEventListener('click', function() { window.close(); });
+        document.getElementById('print-btn').addEventListener('click', function() { window.print(); });
+      </script>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Open print preview for all supervisor summaries (summary-only, no timesheet grids).
+ * One page per supervisor showing all their foremen's site breakdowns.
+ */
+export function printAllSupervisorSummaries(
+  groups: SupervisorSummaryGroup[],
+  startISO: string,
+  endISO: string,
+): void {
+  const html = generateSupervisorSummariesHTML(groups, startISO, endISO);
+  const printWindow = window.open("", "_blank", "width=1100,height=800");
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+  }
+}

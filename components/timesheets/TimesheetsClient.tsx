@@ -65,8 +65,10 @@ import {
   generateTimesheetPdf,
   downloadTimesheetPdf,
   printForemanSummary,
+  printAllSupervisorSummaries,
   type ForemanSummaryData,
   type ForemanTimesheetData,
+  type SupervisorSummaryGroup,
 } from "@/lib/generateTimesheetPdf";
 
 type RoleMode = "ADMIN" | "SUPERVISOR";
@@ -409,6 +411,9 @@ export default function TimesheetsListClient({ mode }: Props) {
     string | null
   >(null);
 
+  // Print-all-summaries state
+  const [printingAllSummaries, setPrintingAllSummaries] = useState(false);
+
   const currentPeriod = useMemo(
     () => periods.find((p) => p.id === periodId) ?? null,
     [periods, periodId],
@@ -668,6 +673,150 @@ export default function TimesheetsListClient({ mode }: Props) {
     },
     [periodId, rowsAdmin],
   );
+
+  // Handler for printing all supervisor summaries (summary-only, no grids)
+  const handlePrintAllSummaries = useCallback(() => {
+    if (!currentPeriod) {
+      toast.error("No period selected");
+      return;
+    }
+
+    setPrintingAllSummaries(true);
+
+    try {
+      // Group rowsAdmin by supervisor → foreman → sites
+      const supervisorMap = new Map<
+        string,
+        {
+          supervisorId: string | null;
+          supervisorName: string;
+          foremanMap: Map<
+            string,
+            {
+              foremanId: string;
+              foremanName: string;
+              sites: Array<{
+                siteName: string;
+                siteCode?: string | null;
+                foremanDays: number;
+                foremanWages: number;
+                teamDays: number;
+                teamWages: number;
+                totalWages: number;
+              }>;
+            }
+          >;
+        }
+      >();
+
+      for (const row of rowsAdmin) {
+        const supId = row.supervisor?.id ?? "__none__";
+        const supName = row.supervisor?.name ?? "No Supervisor";
+        const fmId = row.foreman?.id ?? "__unknown__";
+        const fmName = row.foreman?.name ?? "Unknown";
+
+        if (!supervisorMap.has(supId)) {
+          supervisorMap.set(supId, {
+            supervisorId: row.supervisor?.id ?? null,
+            supervisorName: supName,
+            foremanMap: new Map(),
+          });
+        }
+        const supEntry = supervisorMap.get(supId)!;
+
+        if (!supEntry.foremanMap.has(fmId)) {
+          supEntry.foremanMap.set(fmId, {
+            foremanId: fmId,
+            foremanName: fmName,
+            sites: [],
+          });
+        }
+        const fmEntry = supEntry.foremanMap.get(fmId)!;
+
+        // Each row has one site in its sites array
+        for (const site of row.sites ?? []) {
+          fmEntry.sites.push({
+            siteName: site.name,
+            siteCode: site.code ?? null,
+            foremanDays: Number(row.foremanDays ?? 0),
+            foremanWages: Number(row.foremanWages ?? 0),
+            teamDays: Number(row.teamDays ?? 0),
+            teamWages: Number(row.teamWages ?? 0),
+            totalWages: Number(row.totalWorkerWages ?? 0),
+          });
+        }
+      }
+
+      const groups: SupervisorSummaryGroup[] = Array.from(
+        supervisorMap.values(),
+      )
+        .map((supEntry) => {
+          const foremen = Array.from(supEntry.foremanMap.values())
+            .map((fm) => {
+              const foremanDays = fm.sites.reduce(
+                (s, r) => s + r.foremanDays,
+                0,
+              );
+              const foremanWages = fm.sites.reduce(
+                (s, r) => s + r.foremanWages,
+                0,
+              );
+              const teamDays = fm.sites.reduce((s, r) => s + r.teamDays, 0);
+              const teamWages = fm.sites.reduce((s, r) => s + r.teamWages, 0);
+              return {
+                foremanId: fm.foremanId,
+                foremanName: fm.foremanName,
+                sites: fm.sites,
+                foremanDays,
+                foremanWages,
+                teamDays,
+                teamWages,
+                grandTotal: foremanWages + teamWages,
+              };
+            })
+            .sort((a, b) => a.foremanName.localeCompare(b.foremanName));
+
+          const totalForemanDays = foremen.reduce(
+            (s, f) => s + f.foremanDays,
+            0,
+          );
+          const totalForemanWages = foremen.reduce(
+            (s, f) => s + f.foremanWages,
+            0,
+          );
+          const totalTeamDays = foremen.reduce((s, f) => s + f.teamDays, 0);
+          const totalTeamWages = foremen.reduce((s, f) => s + f.teamWages, 0);
+
+          return {
+            supervisorId: supEntry.supervisorId,
+            supervisorName: supEntry.supervisorName,
+            foremen,
+            totalForemanDays,
+            totalForemanWages,
+            totalTeamDays,
+            totalTeamWages,
+            grandTotal: totalForemanWages + totalTeamWages,
+          };
+        })
+        .sort((a, b) => a.supervisorName.localeCompare(b.supervisorName));
+
+      if (groups.length === 0) {
+        toast.info("No foreman data to print");
+        return;
+      }
+
+      printAllSupervisorSummaries(
+        groups,
+        currentPeriod.startISO,
+        currentPeriod.endISO,
+      );
+    } catch (err: any) {
+      console.error("Print all summaries error:", err);
+      toast.error(err?.message ?? "Failed to generate summaries");
+    } finally {
+      setPrintingAllSummaries(false);
+    }
+  }, [rowsAdmin, currentPeriod]);
 
   // ✅ normalized grid model (same for admin + supervisor)
   const gridModel = useMemo(() => {
@@ -2082,11 +2231,31 @@ export default function TimesheetsListClient({ mode }: Props) {
                 </>
               )}
             </div>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
-                foremanTotalsExpanded ? "rotate-180" : ""
-              }`}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                disabled={printingAllSummaries}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrintAllSummaries();
+                }}
+                title="Print all foreman summaries grouped by supervisor"
+              >
+                {printingAllSummaries ? (
+                  <Spinner className="h-3.5 w-3.5" />
+                ) : (
+                  <Printer className="h-3.5 w-3.5" />
+                )}
+                Print All Summaries
+              </Button>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
+                  foremanTotalsExpanded ? "rotate-180" : ""
+                }`}
+              />
+            </div>
           </button>
           <div
             className="grid transition-all duration-300 ease-in-out"
