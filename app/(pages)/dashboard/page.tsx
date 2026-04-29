@@ -39,6 +39,9 @@ import {
   Loader,
   Upload,
   Package,
+  NotebookIcon,
+  DollarSign,
+  TriangleAlert,
 } from "lucide-react";
 import { useUserRole } from "@/lib/user-role-context";
 import type { UserRole } from "@/lib/roles";
@@ -190,11 +193,17 @@ export default function HomePage() {
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
+  const [supervisorCounts, setSupervisorCounts] = useState({
+    submitted: 0,
+    accepted: 0,
+    approved: 0,
+    paid: 0,
+  });
   const [loading, setLoading] = useState(true);
   const role = useUserRole();
 
   const ADMIN_CACHE_KEY = "dashboard-admin-v2";
-  const SUP_CACHE_KEY = "dashboard-supervisor-v2";
+  const SUP_CACHE_KEY = "dashboard-supervisor-v3";
 
   useEffect(() => {
     const loadData = async () => {
@@ -281,12 +290,7 @@ export default function HomePage() {
                 payload: any;
               } | null;
               if (cached && now - cached.ts < 1 * 60_000) {
-                const json = cached.payload ?? {};
-                setWeeklyData(json.weeklyAttendance ?? null);
-                setTopWagesData(json.topSiteWages ?? null);
-                setSiteData(json.siteActivity ?? null);
-                setPhotoData(json.photoVerification ?? null);
-                setRecentActivity([]);
+                setSupervisorCounts(cached.payload ?? { submitted: 0, accepted: 0, approved: 0, paid: 0 });
                 return;
               }
             }
@@ -294,35 +298,34 @@ export default function HomePage() {
             // ignore localStorage errors
           }
 
-          const res = await fetch("/api/dashboard?type=all", {
+          const res = await fetch("/api/app/supervisor/timesheets?status=ALL", {
             cache: "no-store",
             credentials: "include",
             headers: { accept: "application/json" },
           });
 
           if (!res.ok) {
-            throw new Error(`Dashboard data failed (${res.status})`);
+            throw new Error(`Supervisor timesheets failed (${res.status})`);
           }
 
           const json = (await res.json().catch(() => null)) as {
-            metrics?: any;
-            weeklyAttendance?: any;
-            topSiteWages?: any;
-            siteActivity?: any;
-            photoVerification?: any;
+            timesheets?: { status: string }[];
           } | null;
 
-          setWeeklyData(json?.weeklyAttendance ?? null);
-          setTopWagesData(json?.topSiteWages ?? null);
-          setSiteData(json?.siteActivity ?? null);
-          setPhotoData(json?.photoVerification ?? null);
-          setRecentActivity([]);
+          const timesheets = json?.timesheets ?? [];
+          const counts = {
+            submitted: timesheets.filter((t) => t.status === "SUBMITTED").length,
+            accepted: timesheets.filter((t) => t.status === "ACCEPTED").length,
+            approved: timesheets.filter((t) => t.status === "APPROVED").length,
+            paid: timesheets.filter((t) => t.status === "PAID").length,
+          };
+          setSupervisorCounts(counts);
 
           try {
             if (typeof window !== "undefined") {
               window.localStorage.setItem(
                 SUP_CACHE_KEY,
-                JSON.stringify({ ts: now, payload: json ?? {} }),
+                JSON.stringify({ ts: now, payload: counts }),
               );
             }
           } catch {
@@ -358,266 +361,143 @@ export default function HomePage() {
   const photoVerificationData = photoData || [];
 
   if (role === "SUPERVISOR") {
+    const today = new Date().toLocaleDateString("en-ZA", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const statCards = [
+      {
+        label: "Pending Review",
+        value: supervisorCounts.submitted,
+        icon: ClipboardCheck,
+        accent: "#ef4444",
+        bg: "bg-red-50 dark:bg-red-950/30",
+        iconBg: "bg-red-100 dark:bg-red-900/40",
+        iconColor: "text-red-600 dark:text-red-400",
+        href: "/supervisor/timesheets?status=SUBMITTED",
+      },
+      {
+        label: "Accepted Today",
+        value: supervisorCounts.accepted,
+        icon: CheckCircle,
+        accent: "#06b6d4",
+        bg: "bg-cyan-50 dark:bg-cyan-950/30",
+        iconBg: "bg-cyan-100 dark:bg-cyan-900/40",
+        iconColor: "text-cyan-600 dark:text-cyan-400",
+        href: "/supervisor/timesheets?status=ACCEPTED",
+      },
+      {
+        label: "Approved",
+        value: supervisorCounts.approved,
+        icon: CheckCircle,
+        accent: "#22c55e",
+        bg: "bg-emerald-50 dark:bg-emerald-950/30",
+        iconBg: "bg-emerald-100 dark:bg-emerald-900/40",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+        href: "/supervisor/timesheets?status=APPROVED",
+      },
+      {
+        label: "Paid Out",
+        value: supervisorCounts.paid,
+        icon: DollarSign,
+        accent: "#3b82f6",
+        bg: "bg-blue-50 dark:bg-blue-950/30",
+        iconBg: "bg-blue-100 dark:bg-blue-900/40",
+        iconColor: "text-blue-600 dark:text-blue-400",
+        href: "/supervisor/timesheets?status=PAID",
+      },
+    ];
+
+    const quickActions = [
+      {
+        label: "Manage Timesheets",
+        icon: NotebookIcon,
+        href: "/supervisor/timesheets",
+        badge: supervisorCounts.submitted > 0 ? supervisorCounts.submitted : null,
+      },
+      { label: "Foremen", icon: Users, href: "/supervisor/foremen", badge: null },
+      { label: "Photo Verification", icon: Camera, href: "/supervisor/photos", badge: null },
+      { label: "Job Progress", icon: TrendingUp, href: "/supervisor/job-progress", badge: null },
+      { label: "Employees", icon: Users, href: "/employees", badge: null },
+      { label: "Sites", icon: Building2, href: "/sites", badge: null },
+    ];
+
     return (
-      <div className="flex flex-col h-full bg-muted/30">
-        <div className="flex-1 p-6 space-y-6 overflow-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Supervisor Dashboard
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Overview of your sites, attendance and timesheets.
+      <div className="flex flex-col h-full overflow-auto">
+        <div className="flex-1 space-y-5 pb-6">
+          {/* Header */}
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Supervisor Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{today}</p>
+          </div>
+
+          {/* Pending alert */}
+          {supervisorCounts.submitted > 0 && (
+            <div className="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 px-4 py-3">
+              <TriangleAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                {supervisorCounts.submitted} timesheet{supervisorCounts.submitted === 1 ? "" : "s"} pending your review
               </p>
+              <Link
+                href="/supervisor/timesheets"
+                className="ml-auto text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline shrink-0"
+              >
+                Review now
+              </Link>
             </div>
+          )}
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {statCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <Link
+                  key={card.label}
+                  href={card.href}
+                  className={`flex flex-col gap-3 rounded-xl border p-4 transition-all hover:shadow-md ${card.bg}`}
+                  style={{ borderColor: `${card.accent}30` }}
+                >
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                    <Icon className={`w-4.5 h-4.5 ${card.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{card.value}</p>
+                    <p className="text-xs font-medium text-muted-foreground mt-0.5">{card.label}</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Charts Row: attendance + timesheets */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Weekly Attendance (My Sites)</CardTitle>
-                <CardDescription>
-                  Attendance scans and active sites over the week.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {weeklyAttendanceData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-10">
-                    No attendance data yet for your sites.
-                  </p>
-                ) : (
-                  <ChartContainer
-                    config={lineChartConfig}
-                    className="h-full w-full"
-                  >
-                    <LineChart data={weeklyAttendanceData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="day" tickLine={false} axisLine={false} />
-                      <YAxis tickLine={false} axisLine={false} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line
-                        type="monotone"
-                        dataKey="scans"
-                        stroke="var(--color-scans)"
-                        strokeWidth={3}
-                        dot={{ fill: "var(--color-scans)", r: 4 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="sites"
-                        stroke="var(--color-sites)"
-                        strokeWidth={3}
-                        dot={{ fill: "var(--color-sites)", r: 4 }}
-                      />
-                    </LineChart>
-                  </ChartContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top 5 Site Wages (My Sites)</CardTitle>
-                <CardDescription>
-                  Total wages across your sites.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {topSiteWagesData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">
-                    No wage data yet for your sites.
-                  </p>
-                ) : (
-                  <TopSiteWagesChart data={topSiteWagesData} />
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sites + activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Sites by Activity</CardTitle>
-                <CardDescription>
-                  Worker scans this fortnight across your sites.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {siteActivityData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-10">
-                    No site activity data yet for your sites.
-                  </p>
-                ) : (
-                  <ChartContainer
-                    config={siteChartConfig}
-                    className="h-full w-full"
-                  >
-                    <BarChart data={siteActivityData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="site" tickLine={false} axisLine={false} />
-                      <YAxis tickLine={false} axisLine={false} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar
-                        dataKey="workers"
-                        fill="var(--color-workers)"
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="photos"
-                        fill="var(--color-photos)"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ChartContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Links</CardTitle>
-                <CardDescription>
-                  Jump straight to key supervisor actions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+          {/* Quick actions */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Quick Actions</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
                   <Link
-                    href="/supervisor/timesheets"
-                    className="block w-full rounded border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+                    key={action.label}
+                    href={action.href}
+                    className="relative flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center transition-all hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm"
                   >
-                    Review supervisor timesheets
+                    {action.badge !== null && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                        {action.badge}
+                      </span>
+                    )}
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <span className="text-xs font-medium text-foreground leading-tight">{action.label}</span>
                   </Link>
-                  <Link
-                    href="/sites"
-                    className="block w-full rounded border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
-                  >
-                    View my sites
-                  </Link>
-                  <Link
-                    href="/employees"
-                    className="block w-full rounded border border-border px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
-                  >
-                    View site employees
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Recent Activity (My Sites)</CardTitle>
-                <CardDescription>
-                  Latest events across the sites you supervise.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    {
-                      icon: CheckCircle,
-                      color: "text-emerald-600",
-                      bg: "bg-emerald-100",
-                      title: "Timesheet approved",
-                      description: "Downtown Office - John Smith",
-                      time: "2 hours ago",
-                    },
-                    {
-                      icon: ClipboardCheck,
-                      color: "text-blue-600",
-                      bg: "bg-blue-100",
-                      title: "Timesheet submitted",
-                      description: "Harbor Complex - Jane Doe",
-                      time: "4 hours ago",
-                    },
-                    {
-                      icon: Camera,
-                      color: "text-green-600",
-                      bg: "bg-green-100",
-                      title: "Photo verification completed",
-                      description: "Riverside Project - 12 photos verified",
-                      time: "Yesterday",
-                    },
-                  ].map((activity, index) => {
-                    const Icon = activity.icon;
-                    return (
-                      <div
-                        key={index}
-                        className="flex items-start gap-4 pb-4 border-b last:border-b-0"
-                      >
-                        <div
-                          className={`w-10 h-10 ${activity.bg} rounded flex items-center justify-center shrink-0`}
-                        >
-                          <Icon className={`w-5 h-5 ${activity.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground">
-                            {activity.title}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {activity.description}
-                          </p>
-                        </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {activity.time}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Supervisor Shortcuts</CardTitle>
-                <CardDescription>
-                  Common tasks you perform frequently.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    {
-                      label: "Approve pending timesheets",
-                      icon: ClipboardCheck,
-                      href: "/supervisor/timesheets",
-                    },
-                    {
-                      label: "Review photo flags",
-                      icon: AlertCircle,
-                      href: "/sites",
-                    },
-                    {
-                      label: "Check attendance anomalies",
-                      icon: TrendingUp,
-                      href: "/supervisor/timesheets",
-                    },
-                  ].map((action, index) => {
-                    const Icon = action.icon;
-                    return (
-                      <Link
-                        key={index}
-                        href={action.href}
-                        className="w-full flex items-center gap-3 p-3 rounded border border-border hover:bg-muted transition-colors text-left"
-                      >
-                        <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="font-medium text-foreground text-sm">
-                          {action.label}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
