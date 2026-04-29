@@ -386,7 +386,9 @@ export async function GET(req: Request) {
         // Get timesheet status for this specific foreman+site combination
         const timesheet = statusByForemanSite.get(key);
 
-        const id = `${startISO}_${endISO}_${foremanId}_${site.id}`;
+        // Use double-underscore format so parseSupervisorTimesheetId picks it up cleanly.
+        // siteId is passed separately as a route/query param — no need to embed it in the id.
+        const id = `${startISO}_${endISO}__${foremanId}`;
 
         result.push({
           id,
