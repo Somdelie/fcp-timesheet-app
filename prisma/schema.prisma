@@ -1044,6 +1044,7 @@ enum PlantStatus {
   AVAILABLE
   DEPLOYED
   RETURNED
+  REPAIR
   DAMAGED
   LOST
 }
@@ -2195,4 +2196,35 @@ model ForemanPpeOrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+// ============================
+// EQUIPMENT INVENTORY
+// ============================
+// Physical inventory tracking — who holds what equipment in the field.
+
+model EquipmentHolder {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  items     EquipmentItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model EquipmentItem {
+  id         String           @id @default(cuid())
+  holderId   String?
+  holder     EquipmentHolder? @relation(fields: [holderId], references: [id], onDelete: SetNull)
+  category   String           // e.g. "6ft Ladders", "Safety Belts"
+  item       String           // specific item name
+  quantity   Int
+  condition  String           // "Good" | "Beyond Repair" | "Needs Service" | "Stolen"
+  notes      String?
+  location   String?          // "Office", "Cape Town", site name, etc.
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([holderId])
+  @@index([category])
+  @@index([condition])
 }

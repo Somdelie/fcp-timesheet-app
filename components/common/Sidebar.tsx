@@ -266,7 +266,7 @@ const menuGroups: {
       },
       {
         href: "/admin/plant-assignments",
-        label: "Plant Assignments",
+        label: "Plant & Equipment",
         icon: Wrench,
         roles: ["ADMIN", "OFFICE"],
       },

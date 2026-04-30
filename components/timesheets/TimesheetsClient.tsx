@@ -818,6 +818,149 @@ export default function TimesheetsListClient({ mode }: Props) {
     }
   }, [rowsAdmin, currentPeriod]);
 
+  const handleExportAllForemenExcel = useCallback(async () => {
+    if (!currentPeriod) { toast.error("No period selected"); return; }
+    if (foremanTotals.length === 0) { toast.info("No foreman data to export"); return; }
+
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "FCP Timesheet App";
+    wb.created = new Date();
+
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-ZA", { day: "2-digit", month: "long", year: "numeric" });
+    const periodLabel = `${fmt(currentPeriod.startISO)} – ${fmt(currentPeriod.endISO)}`;
+
+    const ws = wb.addWorksheet("Foreman Payments", { views: [{ state: "frozen", ySplit: 3 }] });
+    ws.columns = [
+      { key: "no",           width: 5  },
+      { key: "foreman",      width: 28 },
+      { key: "supervisor",   width: 22 },
+      { key: "sites",        width: 8  },
+      { key: "foremanDays",  width: 14 },
+      { key: "foremanWages", width: 18 },
+      { key: "teamDays",     width: 12 },
+      { key: "teamWages",    width: 18 },
+      { key: "netPay",       width: 20 },
+    ];
+
+    // ── Row 1: Title ──────────────────────────────────────────────────────────
+    ws.mergeCells("A1:I1");
+    ws.getRow(1).height = 36;
+    const titleCell = ws.getCell("A1");
+    titleCell.value = `Foreman Payment Summary  —  ${periodLabel}`;
+    titleCell.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+    // ── Row 2: blank spacer ───────────────────────────────────────────────────
+    ws.getRow(2).height = 6;
+
+    // ── Row 3: Column headers ─────────────────────────────────────────────────
+    const hdr = ws.getRow(3);
+    hdr.values = ["#", "Foreman", "Supervisor", "Sites", "Foreman Days", "Foreman Amount", "Team Days", "Team Amount", "Net Pay"];
+    hdr.height = 32;
+    hdr.eachCell((cell) => {
+      cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = { bottom: { style: "medium", color: { argb: "FF475569" } } };
+    });
+    ws.getCell("B3").alignment = { horizontal: "left", vertical: "middle" };
+    ws.getCell("C3").alignment = { horizontal: "left", vertical: "middle" };
+
+    // ── Build supervisor lookup ───────────────────────────────────────────────
+    const fmToSup = new Map<string, string>();
+    for (const row of rowsAdmin) {
+      const fmId = row.foreman?.id ?? "unknown";
+      if (!fmToSup.has(fmId)) fmToSup.set(fmId, row.supervisor?.name ?? "—");
+    }
+
+    // Alphabetical order
+    const sorted = [...foremanTotals].sort((a, b) => a.foremanName.localeCompare(b.foremanName));
+
+    let grandForemanDays = 0, grandForemanWages = 0, grandTeamDays = 0, grandTeamWages = 0, grandNet = 0;
+    const moneyFmt = '"R" #,##0.00';
+
+    sorted.forEach((ft, i) => {
+      const dataRow = ws.addRow({
+        no:           i + 1,
+        foreman:      ft.foremanName,
+        supervisor:   fmToSup.get(ft.foremanId) ?? "—",
+        sites:        ft.sitesCount,
+        foremanDays:  ft.foremanDays,
+        foremanWages: ft.foremanWages,
+        teamDays:     ft.teamDays,
+        teamWages:    ft.teamWages,
+        netPay:       ft.grandTotal,
+      });
+      dataRow.height = 30;
+
+      const bg = i % 2 === 0 ? "FFFFFFFF" : "FFF8FAFC";
+      dataRow.eachCell((cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+        cell.font = { size: 11 };
+        cell.border = {
+          bottom: { style: "hair", color: { argb: "FFE2E8F0" } },
+          right:  { style: "hair", color: { argb: "FFE2E8F0" } },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+      });
+
+      dataRow.getCell("B").alignment = { vertical: "middle", horizontal: "left" };
+      dataRow.getCell("C").alignment = { vertical: "middle", horizontal: "left" };
+
+      for (const key of ["foremanWages", "teamWages"] as const) {
+        const cell = dataRow.getCell(ws.columns.findIndex((c) => c.key === key) + 1);
+        cell.numFmt = moneyFmt;
+        cell.alignment = { horizontal: "right", vertical: "middle" };
+      }
+
+      // Net Pay — bold, slightly larger, right-aligned
+      const npCell = dataRow.getCell("I");
+      npCell.numFmt = moneyFmt;
+      npCell.font = { bold: true, size: 11 };
+      npCell.alignment = { horizontal: "right", vertical: "middle" };
+
+      grandForemanDays  += ft.foremanDays;
+      grandForemanWages += ft.foremanWages;
+      grandTeamDays     += ft.teamDays;
+      grandTeamWages    += ft.teamWages;
+      grandNet          += ft.grandTotal;
+    });
+
+    // ── Totals row ────────────────────────────────────────────────────────────
+    const totRow = ws.addRow({
+      no: "", foreman: "TOTAL", supervisor: "", sites: "",
+      foremanDays: grandForemanDays, foremanWages: grandForemanWages,
+      teamDays: grandTeamDays, teamWages: grandTeamWages, netPay: grandNet,
+    });
+    totRow.height = 34;
+    totRow.eachCell((cell) => {
+      cell.font = { bold: true, size: 11 };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+      cell.border = { top: { style: "medium", color: { argb: "FF94A3B8" } } };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+    });
+    totRow.getCell("B").alignment = { vertical: "middle", horizontal: "left" };
+    for (const key of ["foremanWages", "teamWages", "netPay"] as const) {
+      const cell = totRow.getCell(ws.columns.findIndex((c) => c.key === key) + 1);
+      cell.numFmt = moneyFmt;
+      cell.alignment = { horizontal: "right", vertical: "middle" };
+    }
+    totRow.getCell("I").font = { bold: true, size: 12 };
+
+    // ── Download ──────────────────────────────────────────────────────────────
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `foreman-payments-${currentPeriod.startISO}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Excel exported");
+  }, [foremanTotals, rowsAdmin, currentPeriod]);
+
   // ✅ normalized grid model (same for admin + supervisor)
   const gridModel = useMemo(() => {
     if (!detail) return null;
@@ -2189,10 +2332,12 @@ export default function TimesheetsListClient({ mode }: Props) {
       {/* Foreman Totals Summary - quick view of what to pay each foreman */}
       {mode === "ADMIN" && foremanTotals.length > 0 && !loading && (
         <div className="rounded border bg-card overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+          <div
+            role="button"
+            tabIndex={0}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer"
             onClick={() => setForemanTotalsExpanded(!foremanTotalsExpanded)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setForemanTotalsExpanded((v) => !v); }}
           >
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium">Foreman Totals</span>
@@ -2236,6 +2381,16 @@ export default function TimesheetsListClient({ mode }: Props) {
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1.5 text-xs"
+                onClick={(e) => { e.stopPropagation(); handleExportAllForemenExcel(); }}
+                title="Export all foremen to Excel"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
                 disabled={printingAllSummaries}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -2256,7 +2411,7 @@ export default function TimesheetsListClient({ mode }: Props) {
                 }`}
               />
             </div>
-          </button>
+          </div>
           <div
             className="grid transition-all duration-300 ease-in-out"
             style={{
