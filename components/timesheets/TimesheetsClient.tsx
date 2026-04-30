@@ -85,7 +85,7 @@ type AdminRow = {
   startISO: string;
   endISO: string;
   status: string;
-  foreman?: { id: string; name: string };
+  foreman?: { id: string; name: string; bankName?: string | null };
   supervisor?: { id: string; name: string } | null;
   totalWorkerDays?: number | null;
   totalWorkerWages?: number | null;
@@ -493,6 +493,7 @@ export default function TimesheetsListClient({ mode }: Props) {
       {
         foremanId: string;
         foremanName: string;
+        bankName: string | null;
         sitesCount: number;
         siteIds: string[];
         foremanDays: number;
@@ -510,6 +511,7 @@ export default function TimesheetsListClient({ mode }: Props) {
       const existing = map.get(id) ?? {
         foremanId: id,
         foremanName: name,
+        bankName: row.foreman?.bankName ?? null,
         sitesCount: 0,
         siteIds: [],
         foremanDays: 0,
@@ -827,127 +829,118 @@ export default function TimesheetsListClient({ mode }: Props) {
     wb.creator = "FCP Timesheet App";
     wb.created = new Date();
 
-    const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-ZA", { day: "2-digit", month: "long", year: "numeric" });
-    const periodLabel = `${fmt(currentPeriod.startISO)} – ${fmt(currentPeriod.endISO)}`;
+    // SA number format: space thousands separator, comma decimal  e.g. 3100.00 → "3 100,00"
+    const saFmt = (n: number): string => {
+      const [intPart, decPart] = n.toFixed(2).split(".");
+      return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + decPart;
+    };
 
-    const ws = wb.addWorksheet("Foreman Payments", { views: [{ state: "frozen", ySplit: 3 }] });
+    const ws = wb.addWorksheet("Foreman Payments");
+
+    // 7 columns: Name | R | Bank Transfer | Bank | R | Value | Site
     ws.columns = [
-      { key: "no",           width: 5  },
-      { key: "foreman",      width: 28 },
-      { key: "supervisor",   width: 22 },
-      { key: "sites",        width: 8  },
-      { key: "foremanDays",  width: 14 },
-      { key: "foremanWages", width: 18 },
-      { key: "teamDays",     width: 12 },
-      { key: "teamWages",    width: 18 },
-      { key: "netPay",       width: 20 },
+      { width: 28 }, // A: Name
+      { width: 4  }, // B: R symbol
+      { width: 15 }, // C: Bank Transfer amount
+      { width: 20 }, // D: Bank
+      { width: 4  }, // E: R symbol
+      { width: 15 }, // F: Value per site
+      { width: 32 }, // G: Site
     ];
 
-    // ── Row 1: Title ──────────────────────────────────────────────────────────
-    ws.mergeCells("A1:I1");
-    ws.getRow(1).height = 36;
-    const titleCell = ws.getCell("A1");
-    titleCell.value = `Foreman Payment Summary  —  ${periodLabel}`;
-    titleCell.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
-    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
-    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    const thin = { style: "thin" as const, color: { argb: "FFB0B0B0" } };
+    const cellBorder = { top: thin, left: thin, bottom: thin, right: thin };
 
-    // ── Row 2: blank spacer ───────────────────────────────────────────────────
-    ws.getRow(2).height = 6;
+    // ── Row 1: Headers ────────────────────────────────────────────────────────
+    // A=Name, B:C merged=Bank Transfer, D=Bank, E:F merged=Value, G=Site
+    ws.mergeCells("B1:C1");
+    ws.mergeCells("E1:F1");
+    const hdrRow = ws.getRow(1);
+    hdrRow.height = 22;
 
-    // ── Row 3: Column headers ─────────────────────────────────────────────────
-    const hdr = ws.getRow(3);
-    hdr.values = ["#", "Foreman", "Supervisor", "Sites", "Foreman Days", "Foreman Amount", "Team Days", "Team Amount", "Net Pay"];
-    hdr.height = 32;
-    hdr.eachCell((cell) => {
-      cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } };
+    const hdrDefs: Array<[string, string]> = [
+      ["A1", "Name"],
+      ["B1", "Bank Transfer"],
+      ["D1", "Bank"],
+      ["E1", "Value"],
+      ["G1", "Site"],
+    ];
+    for (const [ref, label] of hdrDefs) {
+      const cell = ws.getCell(ref);
+      cell.value = label;
+      cell.font = { bold: true, underline: true, size: 11 };
       cell.alignment = { horizontal: "center", vertical: "middle" };
-      cell.border = { bottom: { style: "medium", color: { argb: "FF475569" } } };
-    });
-    ws.getCell("B3").alignment = { horizontal: "left", vertical: "middle" };
-    ws.getCell("C3").alignment = { horizontal: "left", vertical: "middle" };
+      cell.border = cellBorder;
+    }
+    // Fill borders on merged companions (C1, F1) so table looks complete
+    ws.getCell("C1").border = cellBorder;
+    ws.getCell("F1").border = cellBorder;
 
-    // ── Build supervisor lookup ───────────────────────────────────────────────
-    const fmToSup = new Map<string, string>();
+    // ── Build per-foreman site list from rowsAdmin ────────────────────────────
+    const sitesByForeman = new Map<string, Array<{ siteName: string; value: number }>>();
     for (const row of rowsAdmin) {
       const fmId = row.foreman?.id ?? "unknown";
-      if (!fmToSup.has(fmId)) fmToSup.set(fmId, row.supervisor?.name ?? "—");
+      if (!sitesByForeman.has(fmId)) sitesByForeman.set(fmId, []);
+      const site = row.sites?.[0];
+      const siteName = site
+        ? site.code ? `${site.code} — ${site.name}` : site.name
+        : "—";
+      const value =
+        Number(row.foremanWages ?? 0) +
+        Number(row.teamWages ?? 0) +
+        Number(row.totalOvertimeCost ?? 0);
+      sitesByForeman.get(fmId)!.push({ siteName, value });
     }
 
-    // Alphabetical order
-    const sorted = [...foremanTotals].sort((a, b) => a.foremanName.localeCompare(b.foremanName));
+    // foremanTotals is already sorted alphabetically
+    let grandTotal = 0;
+    let rowNum = 2;
 
-    let grandForemanDays = 0, grandForemanWages = 0, grandTeamDays = 0, grandTeamWages = 0, grandNet = 0;
-    const moneyFmt = '"R" #,##0.00';
+    for (const ft of foremanTotals) {
+      const sites = sitesByForeman.get(ft.foremanId) ?? [];
+      grandTotal += ft.grandTotal;
 
-    sorted.forEach((ft, i) => {
-      const dataRow = ws.addRow({
-        no:           i + 1,
-        foreman:      ft.foremanName,
-        supervisor:   fmToSup.get(ft.foremanId) ?? "—",
-        sites:        ft.sitesCount,
-        foremanDays:  ft.foremanDays,
-        foremanWages: ft.foremanWages,
-        teamDays:     ft.teamDays,
-        teamWages:    ft.teamWages,
-        netPay:       ft.grandTotal,
-      });
-      dataRow.height = 30;
+      // First row: name + bank transfer + bank + first site value
+      const r = ws.getRow(rowNum++);
+      r.height = 18;
+      r.getCell(1).value = ft.foremanName;
+      r.getCell(2).value = "R";
+      r.getCell(3).value = saFmt(ft.grandTotal);
+      r.getCell(4).value = ft.bankName ?? "";
+      r.getCell(5).value = sites[0] ? "R" : "";
+      r.getCell(6).value = sites[0] ? saFmt(sites[0].value) : "";
+      r.getCell(7).value = sites[0]?.siteName ?? "";
 
-      const bg = i % 2 === 0 ? "FFFFFFFF" : "FFF8FAFC";
-      dataRow.eachCell((cell) => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
-        cell.font = { size: 11 };
-        cell.border = {
-          bottom: { style: "hair", color: { argb: "FFE2E8F0" } },
-          right:  { style: "hair", color: { argb: "FFE2E8F0" } },
-        };
-        cell.alignment = { vertical: "middle", horizontal: "center" };
-      });
+      r.getCell(2).alignment = { horizontal: "right" };
+      r.getCell(3).alignment = { horizontal: "right" };
+      r.getCell(5).alignment = { horizontal: "right" };
+      r.getCell(6).alignment = { horizontal: "right" };
 
-      dataRow.getCell("B").alignment = { vertical: "middle", horizontal: "left" };
-      dataRow.getCell("C").alignment = { vertical: "middle", horizontal: "left" };
+      for (let col = 1; col <= 7; col++) r.getCell(col).border = cellBorder;
 
-      for (const key of ["foremanWages", "teamWages"] as const) {
-        const cell = dataRow.getCell(ws.columns.findIndex((c) => c.key === key) + 1);
-        cell.numFmt = moneyFmt;
-        cell.alignment = { horizontal: "right", vertical: "middle" };
+      // Additional site rows: only E-G filled, A-D blank
+      for (let i = 1; i < sites.length; i++) {
+        const sr = ws.getRow(rowNum++);
+        sr.height = 18;
+        sr.getCell(5).value = "R";
+        sr.getCell(6).value = saFmt(sites[i].value);
+        sr.getCell(7).value = sites[i].siteName;
+        sr.getCell(5).alignment = { horizontal: "right" };
+        sr.getCell(6).alignment = { horizontal: "right" };
+        for (let col = 1; col <= 7; col++) sr.getCell(col).border = cellBorder;
       }
-
-      // Net Pay — bold, slightly larger, right-aligned
-      const npCell = dataRow.getCell("I");
-      npCell.numFmt = moneyFmt;
-      npCell.font = { bold: true, size: 11 };
-      npCell.alignment = { horizontal: "right", vertical: "middle" };
-
-      grandForemanDays  += ft.foremanDays;
-      grandForemanWages += ft.foremanWages;
-      grandTeamDays     += ft.teamDays;
-      grandTeamWages    += ft.teamWages;
-      grandNet          += ft.grandTotal;
-    });
-
-    // ── Totals row ────────────────────────────────────────────────────────────
-    const totRow = ws.addRow({
-      no: "", foreman: "TOTAL", supervisor: "", sites: "",
-      foremanDays: grandForemanDays, foremanWages: grandForemanWages,
-      teamDays: grandTeamDays, teamWages: grandTeamWages, netPay: grandNet,
-    });
-    totRow.height = 34;
-    totRow.eachCell((cell) => {
-      cell.font = { bold: true, size: 11 };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
-      cell.border = { top: { style: "medium", color: { argb: "FF94A3B8" } } };
-      cell.alignment = { vertical: "middle", horizontal: "center" };
-    });
-    totRow.getCell("B").alignment = { vertical: "middle", horizontal: "left" };
-    for (const key of ["foremanWages", "teamWages", "netPay"] as const) {
-      const cell = totRow.getCell(ws.columns.findIndex((c) => c.key === key) + 1);
-      cell.numFmt = moneyFmt;
-      cell.alignment = { horizontal: "right", vertical: "middle" };
     }
-    totRow.getCell("I").font = { bold: true, size: 12 };
+
+    // ── Grand total row ───────────────────────────────────────────────────────
+    const totRow = ws.getRow(rowNum);
+    totRow.height = 20;
+    totRow.getCell(2).value = "R";
+    totRow.getCell(3).value = saFmt(grandTotal);
+    totRow.getCell(2).font = { bold: true, size: 11 };
+    totRow.getCell(3).font = { bold: true, size: 11 };
+    totRow.getCell(2).alignment = { horizontal: "right" };
+    totRow.getCell(3).alignment = { horizontal: "right" };
+    for (let col = 1; col <= 7; col++) totRow.getCell(col).border = cellBorder;
 
     // ── Download ──────────────────────────────────────────────────────────────
     const buffer = await wb.xlsx.writeBuffer();

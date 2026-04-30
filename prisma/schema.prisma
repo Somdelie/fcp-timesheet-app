@@ -176,6 +176,7 @@ model Foreman {
   userId String @unique
 
   defaultDayRate Decimal? @db.Decimal(12, 2)
+  bankName       String?
 
   // ✅ NEW: default team for this foreman (used to choose team default day rate)
   // Default ensures existing rows migrate safely without DB reset.

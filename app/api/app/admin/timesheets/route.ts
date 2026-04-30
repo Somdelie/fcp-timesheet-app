@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
       select: {
         foremanId: true,
         site: { select: { id: true, code: true, name: true } },
-        foreman: { select: { id: true, user: { select: { name: true } } } },
+        foreman: { select: { id: true, bankName: true, user: { select: { name: true } } } },
       },
     });
 
@@ -464,7 +464,7 @@ export async function GET(req: NextRequest) {
       startISO: string;
       endISO: string;
       status: string;
-      foreman: { id: string; name: string };
+      foreman: { id: string; name: string; bankName: string | null };
       supervisor: { id: string; name: string } | null;
       totalWorkerDays: number;
       totalWorkerWages: number;
@@ -481,6 +481,7 @@ export async function GET(req: NextRequest) {
       const siteDaysForForeman = siteDaysByForeman.get(foremanId) || [];
       const foremanName =
         siteDaysForForeman[0]?.foreman.user?.name ?? "Foreman";
+      const bankName = siteDaysForForeman[0]?.foreman.bankName ?? null;
 
       const siteMap = sitesByForeman.get(foremanId);
       const sites = siteMap ? Array.from(siteMap.values()) : [];
@@ -509,7 +510,7 @@ export async function GET(req: NextRequest) {
           startISO,
           endISO,
           status: timesheetStatus,
-          foreman: { id: foremanId, name: foremanName },
+          foreman: { id: foremanId, name: foremanName, bankName },
           supervisor,
           totalWorkerDays: totals.days,
           totalWorkerWages: totals.wages,
