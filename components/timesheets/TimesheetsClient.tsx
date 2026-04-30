@@ -798,142 +798,240 @@ export default function TimesheetsListClient({ mode }: Props) {
     }
   }, [rowsAdmin, currentPeriod]);
 
+  // ── FIXED: handleExportAllForemenExcel — matches source XLS exactly ──────────
   const handleExportAllForemenExcel = useCallback(async () => {
-    if (!currentPeriod) { toast.error("No period selected"); return; }
-    if (foremanTotals.length === 0) { toast.info("No foreman data to export"); return; }
+    if (!currentPeriod) {
+      toast.error("No period selected");
+      return;
+    }
+    if (foremanTotals.length === 0) {
+      toast.info("No foreman data to export");
+      return;
+    }
 
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     wb.creator = "FCP Timesheet App";
     wb.created = new Date();
 
-    // SA number format: space thousands, comma decimal  e.g. 3100 → "3 100,00"
-    const saFmt = (n: number) => {
-      const [int, dec] = n.toFixed(2).split(".");
-      return int.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + dec;
-    };
+    const ws = wb.addWorksheet("Sheet2");
 
-    // "Firstname Lastname" → "Lastname, Firstname" title-cased
-    const fmtName = (full: string) => {
-      const parts = full.trim().split(/\s+/);
-      if (parts.length < 2) return full;
-      const t = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-      return `${t(parts[parts.length - 1])}, ${parts.slice(0, -1).map(t).join(" ")}`;
-    };
-
-    const ws = wb.addWorksheet("Foreman Payments");
-
-    // 7 columns: Name | R | Bank Transfer | Bank | R | Value | Site
+    // Column widths (EXACT)
     ws.columns = [
-      { width: 28 }, // A: Name
-      { width: 4  }, // B: R symbol
-      { width: 14 }, // C: Bank Transfer amount
-      { width: 14 }, // D: Bank
-      { width: 4  }, // E: R symbol
-      { width: 13 }, // F: Value per site
-      { width: 30 }, // G: Site
+      { width: 10581 / 256 },
+      { width: 6769 / 256 },
+      { width: 5888 / 256 },
+      { width: 4608 / 256 },
+      { width: 10268 / 256 },
     ];
 
-    const med  = { style: "medium" as const, color: { argb: "FF000000" } };
-    const thin = { style: "thin"   as const, color: { argb: "FF000000" } };
-    const hdrB  = { left: med, right: med, top: med,  bottom: med  };
-    const dataB = { left: med, right: med, top: thin, bottom: thin };
-    const totB  = { left: med, right: med, top: thin, bottom: med  };
+    const THICK = { style: "medium" as const, color: { argb: "FF000000" } };
+    const THIN = { style: "thin" as const, color: { argb: "FF000000" } };
 
-    // ── Row 1: Headers — A=Name, B:C=Bank Transfer, D=Bank, E:F=Value, G=Site
-    ws.mergeCells("B1:C1");
-    ws.mergeCells("E1:F1");
-    const hdrRow = ws.getRow(1);
-    hdrRow.height = 40;
-    const hdrDefs: Array<[string, string, "left"|"center"]> = [
-      ["A1", "Name",          "left"  ],
-      ["B1", "Bank Transfer", "center"],
-      ["D1", "Bank",          "center"],
-      ["E1", "Value",         "center"],
-      ["G1", "Site",          "left"  ],
-    ];
-    for (const [ref, label, align] of hdrDefs) {
-      const cell = ws.getCell(ref);
-      cell.value = label;
-      cell.font = { bold: true, underline: true, size: 11 };
-      cell.alignment = { horizontal: align, vertical: "middle" };
-      cell.border = hdrB;
-    }
-    ws.getCell("C1").border = hdrB;
-    ws.getCell("F1").border = hdrB;
+    const B_HDR = { left: THICK, right: THICK, top: THICK, bottom: THICK };
+    const B_FIRST = { left: THICK, right: THICK, top: THIN, bottom: THIN };
+    const B_CONT = { left: THICK, right: THICK };
+    const B_TOTAL = { left: THICK, right: THICK, bottom: THICK };
 
-    // ── Build per-foreman site list
-    const sitesByForeman = new Map<string, Array<{ siteName: string; value: number }>>();
+    const mkFont = (
+      name: string,
+      size: number,
+      bold = false,
+      underline = false,
+    ) => ({
+      name,
+      size,
+      bold,
+      color: { argb: "FF000000" },
+      ...(underline ? { underline: true } : {}),
+    });
+
+    const FH_NAME = mkFont("Tahoma", 16, true, true);
+    const FH_BT = mkFont("Tahoma", 16, true, true);
+    const FH_BANK = mkFont("Arial", 16, true, true);
+    const FH_VAL = mkFont("Arial", 10, true, true);
+    const FH_SITE = mkFont("Arial", 10, true, true);
+
+    const FD_NAME = mkFont("Tahoma", 16);
+    const FD_BT = mkFont("Tahoma", 16);
+    const FD_BANK = mkFont("Arial", 16);
+    const FD_VAL = mkFont("Arial", 10);
+    const FD_SITE = mkFont("Arial", 10);
+    const FT_BT = mkFont("Tahoma", 16, true);
+
+    const ROW_HEIGHT = 30;
+
+    const applyCell = (
+      row: any,
+      col: number,
+      value: any,
+      font: any,
+      align: any,
+      border: any,
+    ) => {
+      const c = row.getCell(col);
+      if (value !== null && value !== undefined) c.value = value;
+      c.font = font;
+      c.alignment = { horizontal: align, vertical: "middle" };
+      c.border = border;
+    };
+
+    // Header
+    ws.getRow(1).height = ROW_HEIGHT;
+
+    const hdr = ws.getRow(2);
+    hdr.height = ROW_HEIGHT;
+    applyCell(hdr, 1, "Name", FH_NAME, "center", B_HDR);
+    applyCell(hdr, 2, "Bank Transfer", FH_BT, "center", B_HDR);
+    applyCell(hdr, 3, "Bank", FH_BANK, "center", B_HDR);
+    applyCell(hdr, 4, "Value", FH_VAL, "center", B_HDR);
+    applyCell(hdr, 5, "Site", FH_SITE, "center", B_HDR);
+
+    const spacer = ws.getRow(3);
+    spacer.height = ROW_HEIGHT;
+    for (let i = 1; i <= 5; i++) spacer.getCell(i).border = B_CONT;
+
+    // ✅ FIX: Name formatter
+    const fmtName = (fullName: string): string => {
+      const clean = fullName.trim();
+
+      // Case 1: already formatted like "Mpofu 2, Michael"
+      if (clean.includes(",")) {
+        const [surnamePart, firstPart] = clean.split(",");
+
+        const toTitle = (s: string) =>
+          s
+            .trim()
+            .split(" ")
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(" ");
+
+        return `${toTitle(surnamePart)} , ${toTitle(firstPart)}`.replace(
+          " ,",
+          ",",
+        );
+      }
+
+      // Case 2: normal "Michael Mpofu" OR "Michael Mpofu 2"
+      const parts = clean.split(/\s+/);
+
+      if (parts.length < 2) return clean;
+
+      const toTitle = (s: string) =>
+        s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+      // If last part is a number → attach it to surname
+      const last = parts[parts.length - 1];
+      const secondLast = parts[parts.length - 2];
+
+      if (/^\d+$/.test(last)) {
+        return `${toTitle(secondLast)} ${last}, ${parts
+          .slice(0, -2)
+          .map(toTitle)
+          .join(" ")}`;
+      }
+
+      return `${toTitle(last)}, ${parts.slice(0, -1).map(toTitle).join(" ")}`;
+    };
+
+    // ✅ FIX: Sort by surname
+    const sortedForemanTotals = [...foremanTotals].sort((a, b) => {
+      const getSurname = (name: string) => {
+        const clean = name.trim();
+
+        if (clean.includes(",")) {
+          return clean.split(",")[0].trim().toLowerCase();
+        }
+
+        const parts = clean.split(/\s+/);
+
+        if (parts.length >= 2 && /^\d+$/.test(parts[parts.length - 1])) {
+          return `${parts[parts.length - 2]} ${parts[parts.length - 1]}`.toLowerCase();
+        }
+
+        return parts[parts.length - 1].toLowerCase();
+      };
+      return getSurname(a.foremanName).localeCompare(getSurname(b.foremanName));
+    });
+
+    // Group sites
+    const sitesByForeman = new Map<string, { siteName: string; value: number }[]>();
     for (const row of rowsAdmin) {
       const fmId = row.foreman?.id ?? "unknown";
       if (!sitesByForeman.has(fmId)) sitesByForeman.set(fmId, []);
-      const value = Number(row.foremanWages ?? 0) + Number(row.teamWages ?? 0) + Number(row.totalOvertimeCost ?? 0);
-      sitesByForeman.get(fmId)!.push({ siteName: row.sites?.[0]?.name ?? "—", value });
+
+      const site = row.sites?.[0];
+      const value =
+        Number(row.foremanWages ?? 0) +
+        Number(row.teamWages ?? 0) +
+        Number(row.totalOvertimeCost ?? 0);
+
+      sitesByForeman.get(fmId)!.push({
+        siteName: site?.name ?? "—",
+        value,
+      });
     }
 
-    // Sort by formatted "Surname, Firstname" so Excel order is A-Z by surname
-    const sorted = [...foremanTotals].sort((a, b) =>
-      fmtName(a.foremanName).localeCompare(fmtName(b.foremanName))
-    );
+    for (const [, sites] of sitesByForeman) {
+      sites.sort((a, b) => a.siteName.localeCompare(b.siteName));
+    }
 
+    let rowNum = 4;
     let grandTotal = 0;
-    let rowNum = 2;
 
-    for (const ft of sorted) {
+    for (const ft of sortedForemanTotals) {
       const sites = sitesByForeman.get(ft.foremanId) ?? [];
       grandTotal += ft.grandTotal;
 
-      // First row: all 7 columns
-      const r = ws.getRow(rowNum++);
-      r.height = 30;
-      r.getCell(1).value = fmtName(ft.foremanName);
-      r.getCell(2).value = "R";
-      r.getCell(3).value = saFmt(ft.grandTotal);
-      r.getCell(4).value = ft.bankName ?? "";
-      r.getCell(5).value = sites[0] ? "R" : "";
-      r.getCell(6).value = sites[0] ? saFmt(sites[0].value) : "";
-      r.getCell(7).value = sites[0]?.siteName ?? "";
-      r.getCell(1).alignment = { horizontal: "left",   vertical: "middle" };
-      r.getCell(2).alignment = { horizontal: "right",  vertical: "middle" };
-      r.getCell(3).alignment = { horizontal: "right",  vertical: "middle" };
-      r.getCell(4).alignment = { horizontal: "center", vertical: "middle" };
-      r.getCell(5).alignment = { horizontal: "right",  vertical: "middle" };
-      r.getCell(6).alignment = { horizontal: "right",  vertical: "middle" };
-      r.getCell(7).alignment = { horizontal: "left",   vertical: "middle" };
-      for (let col = 1; col <= 7; col++) r.getCell(col).border = dataB;
+      for (let i = 0; i < Math.max(1, sites.length); i++) {
+        const isFirst = i === 0;
+        const border = isFirst ? B_FIRST : B_CONT;
 
-      // Additional site rows: E–G only
-      for (let i = 1; i < sites.length; i++) {
-        const sr = ws.getRow(rowNum++);
-        sr.height = 30;
-        sr.getCell(5).value = "R";
-        sr.getCell(6).value = saFmt(sites[i].value);
-        sr.getCell(7).value = sites[i].siteName;
-        sr.getCell(5).alignment = { horizontal: "right", vertical: "middle" };
-        sr.getCell(6).alignment = { horizontal: "right", vertical: "middle" };
-        sr.getCell(7).alignment = { horizontal: "left",  vertical: "middle" };
-        for (let col = 1; col <= 7; col++) sr.getCell(col).border = dataB;
+        const r = ws.getRow(rowNum++);
+        r.height = ROW_HEIGHT;
+
+        applyCell(
+          r,
+          1,
+          isFirst ? fmtName(ft.foremanName) : null,
+          FD_NAME,
+          "left",
+          border,
+        );
+        applyCell(r, 2, isFirst ? ft.grandTotal : null, FD_BT, "right", border);
+        applyCell(
+          r,
+          3,
+          isFirst ? (ft.bankName ?? "") : null,
+          FD_BANK,
+          "center",
+          border,
+        );
+        applyCell(r, 4, sites[i]?.value ?? null, FD_VAL, "general", border);
+        applyCell(r, 5, sites[i]?.siteName ?? null, FD_SITE, "general", border);
       }
     }
 
-    // ── Grand total row
-    const totRow = ws.getRow(rowNum);
-    totRow.height = 40;
-    ws.mergeCells(`B${rowNum}:C${rowNum}`);
-    totRow.getCell(2).value = `R  ${saFmt(grandTotal)}`;
-    totRow.getCell(2).font = { bold: true, size: 12 };
-    totRow.getCell(2).alignment = { horizontal: "center", vertical: "middle" };
-    for (let col = 1; col <= 7; col++) totRow.getCell(col).border = totB;
+    const spacer2 = ws.getRow(rowNum++);
+    spacer2.height = ROW_HEIGHT;
+    for (let i = 1; i <= 5; i++) spacer2.getCell(i).border = B_CONT;
 
-    // ── Download
+    const totalRow = ws.getRow(rowNum);
+    totalRow.height = ROW_HEIGHT;
+    applyCell(totalRow, 2, grandTotal, FT_BT, "right", B_TOTAL);
+
     const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `foreman-payments-${currentPeriod.startISO}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
+
     toast.success("Excel exported");
   }, [foremanTotals, rowsAdmin, currentPeriod]);
 

@@ -92,6 +92,7 @@ interface Foreman {
     id: string;
     defaultDayRate: string | null;
     defaultTeam: string;
+    bankName: string | null;
     createdAt: string;
     supervisorId: string | null;
     supervisorName: string | null;

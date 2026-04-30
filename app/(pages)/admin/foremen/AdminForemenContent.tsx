@@ -27,6 +27,7 @@ import {
   Users,
   Check,
   ChevronsUpDown,
+  Landmark,
 } from "lucide-react";
 import {
   Dialog,
@@ -56,6 +57,7 @@ import {
   actionAdminCreateAssistant,
 } from "@/actions/admin";
 import { switchForemanTeam } from "@/actions/foreman-team";
+import { updateForemanBankName } from "@/actions/foreman-bank";
 import type { AdminEmployee } from "@/lib/apiClient";
 
 const TEAM_OPTIONS = [
@@ -92,6 +94,7 @@ interface Foreman {
     id: string;
     defaultDayRate: string | null;
     defaultTeam: string;
+    bankName: string | null;
     createdAt: string;
     supervisorId: string | null;
     supervisorName: string | null;
@@ -136,6 +139,12 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
   const [teamDialogValue, setTeamDialogValue] = useState<string>("");
   const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
 
+  // Bank name edit dialog state
+  const [bankDialogOpen, setBankDialogOpen] = useState(false);
+  const [bankDialogForeman, setBankDialogForeman] = useState<Foreman | null>(null);
+  const [bankDialogValue, setBankDialogValue] = useState<string>("");
+  const [isUpdatingBank, setIsUpdatingBank] = useState(false);
+
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/" }, { label: "Foremen" }]);
   }, [setBreadcrumbs]);
@@ -175,6 +184,34 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
       toast.error(e?.message || "Failed to switch team.");
     } finally {
       setIsSwitchingTeam(false);
+    }
+  };
+
+  const handleOpenEditBank = (foreman: Foreman) => {
+    setBankDialogForeman(foreman);
+    setBankDialogValue(foreman.foreman?.bankName ?? "");
+    setBankDialogOpen(true);
+  };
+
+  const handleUpdateBank = async () => {
+    if (!bankDialogForeman?.foreman?.id) return;
+    setIsUpdatingBank(true);
+    try {
+      const res = await updateForemanBankName({
+        foremanId: bankDialogForeman.foreman.id,
+        bankName: (bankDialogValue || null) as any,
+      });
+      if (res.ok) {
+        toast.success(res.message || "Bank name updated successfully!");
+        setBankDialogOpen(false);
+        router.refresh();
+      } else {
+        toast.error(res.error || "Failed to update bank name.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update bank name.");
+    } finally {
+      setIsUpdatingBank(false);
     }
   };
 
@@ -330,6 +367,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
             onView={openDialog}
             onAddAssistant={handleOpenAddAssistant}
             onSwitchTeam={handleOpenSwitchTeam}
+            onEditBank={handleOpenEditBank}
           />
         )}
       </div>
@@ -433,6 +471,23 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
                           selectedForeman.foreman.defaultTeam}
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bank Name */}
+              {selectedForeman.foreman && (
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 p-2 bg-green-50 rounded">
+                    <Landmark size={18} className="text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider">
+                      BANK
+                    </p>
+                    <p className="mt-1.5 font-semibold text-foreground">
+                      {selectedForeman.foreman.bankName ?? "—"}
+                    </p>
                   </div>
                 </div>
               )}
@@ -752,6 +807,52 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Edit Bank Name Dialog */}
+      <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Bank Name</DialogTitle>
+            <DialogDescription>
+              Update the bank for <strong>{bankDialogForeman?.name}</strong>.
+              This is used for payment exports.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Bank</label>
+              <Select value={bankDialogValue} onValueChange={setBankDialogValue}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STD">STD</SelectItem>
+                  <SelectItem value="CAPITEC">CAPITEC</SelectItem>
+                  <SelectItem value="FNB">FNB</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setBankDialogOpen(false)}
+                disabled={isUpdatingBank}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateBank}
+                disabled={
+                  isUpdatingBank ||
+                  bankDialogValue === (bankDialogForeman?.foreman?.bankName ?? "")
+                }
+              >
+                {isUpdatingBank ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Switch Team Dialog */}
       <Dialog open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>

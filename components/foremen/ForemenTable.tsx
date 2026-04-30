@@ -27,6 +27,7 @@ import {
   Eye,
   UserPlus,
   Users,
+  Landmark,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ export type ForemanRow = {
     id: string;
     defaultDayRate: string | null;
     defaultTeam: string;
+    bankName: string | null;
     createdAt: string;
     supervisorId: string | null;
     supervisorName: string | null;
@@ -110,6 +112,7 @@ interface ForemenTableProps {
   onView: (foreman: ForemanRow) => void;
   onAddAssistant?: (foreman: ForemanRow) => void;
   onSwitchTeam?: (foreman: ForemanRow) => void;
+  onEditBank?: (foreman: ForemanRow) => void;
 }
 
 export default function ForemenTable({
@@ -117,6 +120,7 @@ export default function ForemenTable({
   onView,
   onAddAssistant,
   onSwitchTeam,
+  onEditBank,
 }: ForemenTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
@@ -318,6 +322,21 @@ export default function ForemenTable({
                     >
                       <Users className="h-4 w-4" />
                       Switch Team
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {!row.original.isAssistant && onEditBank && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex items-center gap-2"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        onEditBank(row.original);
+                      }}
+                    >
+                      <Landmark className="h-4 w-4" />
+                      Edit Bank Name
                     </DropdownMenuItem>
                   </>
                 )}

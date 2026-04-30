@@ -239,6 +239,7 @@ export async function getAllForemen() {
           id: true,
           defaultDayRate: true,
           defaultTeam: true,
+          bankName: true,
           createdAt: true,
           // Current active supervisor link
           supervisorLinks: {
