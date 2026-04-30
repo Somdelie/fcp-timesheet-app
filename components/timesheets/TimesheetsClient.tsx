@@ -871,10 +871,15 @@ export default function TimesheetsListClient({ mode }: Props) {
       sitesByForeman.get(fmId)!.push({ siteName: row.sites?.[0]?.name ?? "—", value });
     }
 
+    // Sort by formatted "Surname, Firstname" so Excel order is A-Z by surname
+    const sorted = [...foremanTotals].sort((a, b) =>
+      fmtName(a.foremanName).localeCompare(fmtName(b.foremanName))
+    );
+
     let grandTotal = 0;
     let rowNum = 2;
 
-    for (const ft of foremanTotals) {
+    for (const ft of sorted) {
       const sites = sitesByForeman.get(ft.foremanId) ?? [];
       grandTotal += ft.grandTotal;
 
