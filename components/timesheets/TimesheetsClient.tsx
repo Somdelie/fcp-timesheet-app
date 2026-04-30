@@ -835,46 +835,59 @@ export default function TimesheetsListClient({ mode }: Props) {
       return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + decPart;
     };
 
+    // "Firstname Lastname" → "Lastname, Firstname" with title case
+    const fmtName = (fullName: string): string => {
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length < 2) return fullName;
+      const toTitle = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      const surname = toTitle(parts[parts.length - 1]);
+      const first = parts.slice(0, -1).map(toTitle).join(" ");
+      return `${surname}, ${first}`;
+    };
+
     const ws = wb.addWorksheet("Foreman Payments");
 
     // 7 columns: Name | R | Bank Transfer | Bank | R | Value | Site
     ws.columns = [
       { width: 28 }, // A: Name
       { width: 4  }, // B: R symbol
-      { width: 15 }, // C: Bank Transfer amount
-      { width: 20 }, // D: Bank
+      { width: 14 }, // C: Bank Transfer amount
+      { width: 14 }, // D: Bank
       { width: 4  }, // E: R symbol
-      { width: 15 }, // F: Value per site
-      { width: 32 }, // G: Site
+      { width: 13 }, // F: Value per site
+      { width: 30 }, // G: Site
     ];
 
-    const thin = { style: "thin" as const, color: { argb: "FFB0B0B0" } };
-    const cellBorder = { top: thin, left: thin, bottom: thin, right: thin };
+    // Borders matching PDF: medium black vertical dividers, thin black row separators
+    const med  = { style: "medium" as const, color: { argb: "FF000000" } };
+    const thin = { style: "thin"   as const, color: { argb: "FF000000" } };
+    const hdrBorder  = { left: med, right: med, top: med,  bottom: med  };
+    const dataBorder = { left: med, right: med, top: thin, bottom: thin };
+    const totBorder  = { left: med, right: med, top: thin, bottom: med  };
 
     // ── Row 1: Headers ────────────────────────────────────────────────────────
     // A=Name, B:C merged=Bank Transfer, D=Bank, E:F merged=Value, G=Site
     ws.mergeCells("B1:C1");
     ws.mergeCells("E1:F1");
     const hdrRow = ws.getRow(1);
-    hdrRow.height = 22;
+    hdrRow.height = 28;
 
-    const hdrDefs: Array<[string, string]> = [
-      ["A1", "Name"],
-      ["B1", "Bank Transfer"],
-      ["D1", "Bank"],
-      ["E1", "Value"],
-      ["G1", "Site"],
+    const hdrDefs: Array<[string, string, "left" | "center"]> = [
+      ["A1", "Name",          "left"  ],
+      ["B1", "Bank Transfer", "center"],
+      ["D1", "Bank",          "center"],
+      ["E1", "Value",         "center"],
+      ["G1", "Site",          "left"  ],
     ];
-    for (const [ref, label] of hdrDefs) {
+    for (const [ref, label, align] of hdrDefs) {
       const cell = ws.getCell(ref);
       cell.value = label;
       cell.font = { bold: true, underline: true, size: 11 };
-      cell.alignment = { horizontal: "center", vertical: "middle" };
-      cell.border = cellBorder;
+      cell.alignment = { horizontal: align, vertical: "middle" };
+      cell.border = hdrBorder;
     }
-    // Fill borders on merged companions (C1, F1) so table looks complete
-    ws.getCell("C1").border = cellBorder;
-    ws.getCell("F1").border = cellBorder;
+    ws.getCell("C1").border = hdrBorder;
+    ws.getCell("F1").border = hdrBorder;
 
     // ── Build per-foreman site list from rowsAdmin ────────────────────────────
     const sitesByForeman = new Map<string, Array<{ siteName: string; value: number }>>();
@@ -882,28 +895,29 @@ export default function TimesheetsListClient({ mode }: Props) {
       const fmId = row.foreman?.id ?? "unknown";
       if (!sitesByForeman.has(fmId)) sitesByForeman.set(fmId, []);
       const site = row.sites?.[0];
-      const siteName = site
-        ? site.code ? `${site.code} — ${site.name}` : site.name
-        : "—";
       const value =
         Number(row.foremanWages ?? 0) +
         Number(row.teamWages ?? 0) +
         Number(row.totalOvertimeCost ?? 0);
-      sitesByForeman.get(fmId)!.push({ siteName, value });
+      sitesByForeman.get(fmId)!.push({ siteName: site?.name ?? "—", value });
     }
 
     // foremanTotals is already sorted alphabetically
     let grandTotal = 0;
     let rowNum = 2;
+    const lastDataIndex = rowNum + foremanTotals.reduce((acc, ft) => {
+      return acc + Math.max(1, (sitesByForeman.get(ft.foremanId) ?? []).length);
+    }, 0) - 1;
 
     for (const ft of foremanTotals) {
       const sites = sitesByForeman.get(ft.foremanId) ?? [];
       grandTotal += ft.grandTotal;
+      const isLastForeman = rowNum + Math.max(1, sites.length) - 1 >= lastDataIndex;
 
       // First row: name + bank transfer + bank + first site value
       const r = ws.getRow(rowNum++);
-      r.height = 18;
-      r.getCell(1).value = ft.foremanName;
+      r.height = 20;
+      r.getCell(1).value = fmtName(ft.foremanName);
       r.getCell(2).value = "R";
       r.getCell(3).value = saFmt(ft.grandTotal);
       r.getCell(4).value = ft.bankName ?? "";
@@ -911,36 +925,44 @@ export default function TimesheetsListClient({ mode }: Props) {
       r.getCell(6).value = sites[0] ? saFmt(sites[0].value) : "";
       r.getCell(7).value = sites[0]?.siteName ?? "";
 
-      r.getCell(2).alignment = { horizontal: "right" };
-      r.getCell(3).alignment = { horizontal: "right" };
-      r.getCell(5).alignment = { horizontal: "right" };
-      r.getCell(6).alignment = { horizontal: "right" };
+      r.getCell(1).alignment = { horizontal: "left",  vertical: "middle" };
+      r.getCell(2).alignment = { horizontal: "right", vertical: "middle" };
+      r.getCell(3).alignment = { horizontal: "right", vertical: "middle" };
+      r.getCell(4).alignment = { horizontal: "center", vertical: "middle" };
+      r.getCell(5).alignment = { horizontal: "right", vertical: "middle" };
+      r.getCell(6).alignment = { horizontal: "right", vertical: "middle" };
+      r.getCell(7).alignment = { horizontal: "left",  vertical: "middle" };
 
-      for (let col = 1; col <= 7; col++) r.getCell(col).border = cellBorder;
+      const firstRowBorder = (isLastForeman && sites.length <= 1) ? totBorder : dataBorder;
+      for (let col = 1; col <= 7; col++) r.getCell(col).border = firstRowBorder;
 
       // Additional site rows: only E-G filled, A-D blank
       for (let i = 1; i < sites.length; i++) {
         const sr = ws.getRow(rowNum++);
-        sr.height = 18;
+        sr.height = 20;
         sr.getCell(5).value = "R";
         sr.getCell(6).value = saFmt(sites[i].value);
         sr.getCell(7).value = sites[i].siteName;
-        sr.getCell(5).alignment = { horizontal: "right" };
-        sr.getCell(6).alignment = { horizontal: "right" };
-        for (let col = 1; col <= 7; col++) sr.getCell(col).border = cellBorder;
+        sr.getCell(5).alignment = { horizontal: "right", vertical: "middle" };
+        sr.getCell(6).alignment = { horizontal: "right", vertical: "middle" };
+        sr.getCell(7).alignment = { horizontal: "left",  vertical: "middle" };
+        const isLastSiteRow = isLastForeman && i === sites.length - 1;
+        for (let col = 1; col <= 7; col++) {
+          sr.getCell(col).border = isLastSiteRow ? totBorder : dataBorder;
+        }
       }
     }
 
     // ── Grand total row ───────────────────────────────────────────────────────
     const totRow = ws.getRow(rowNum);
-    totRow.height = 20;
-    totRow.getCell(2).value = "R";
-    totRow.getCell(3).value = saFmt(grandTotal);
-    totRow.getCell(2).font = { bold: true, size: 11 };
-    totRow.getCell(3).font = { bold: true, size: 11 };
-    totRow.getCell(2).alignment = { horizontal: "right" };
-    totRow.getCell(3).alignment = { horizontal: "right" };
-    for (let col = 1; col <= 7; col++) totRow.getCell(col).border = cellBorder;
+    totRow.height = 28;
+    ws.mergeCells(`B${rowNum}:C${rowNum}`);
+    totRow.getCell(2).value = `R  ${saFmt(grandTotal)}`;
+    totRow.getCell(2).font = { bold: true, size: 12 };
+    totRow.getCell(2).alignment = { horizontal: "center", vertical: "middle" };
+    for (let col = 1; col <= 7; col++) {
+      totRow.getCell(col).border = { left: med, right: med, top: thin, bottom: med };
+    }
 
     // ── Download ──────────────────────────────────────────────────────────────
     const buffer = await wb.xlsx.writeBuffer();
