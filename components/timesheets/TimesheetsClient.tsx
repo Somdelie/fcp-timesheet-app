@@ -1012,9 +1012,16 @@ export default function TimesheetsListClient({ mode }: Props) {
       }
     }
 
-    const spacer2 = ws.getRow(rowNum++);
-    spacer2.height = ROW_HEIGHT;
-    for (let i = 1; i <= 5; i++) spacer2.getCell(i).border = B_CONT;
+    // Close the bottom of the last data row (continuation rows have no bottom border)
+    const lastDataRow = ws.getRow(rowNum - 1);
+    for (let col = 1; col <= 5; col++) {
+      const cell = lastDataRow.getCell(col);
+      const cur = (cell.border || {}) as any;
+      cell.border = { ...cur, bottom: THICK };
+    }
+
+    // Clean blank spacer — no borders, just height
+    ws.getRow(rowNum++).height = ROW_HEIGHT;
 
     const totalRow = ws.getRow(rowNum);
     totalRow.height = ROW_HEIGHT;
