@@ -28,6 +28,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -586,56 +591,32 @@ export default function ProcurementProductsPage() {
           </button>
         );
       },
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium">{row.original.name}</div>
-          {row.original.sku && <div className="text-xs text-muted-foreground">SKU: {row.original.sku}</div>}
-          {row.original.description && (
-            <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{row.original.description}</div>
-          )}
-          {(row.original.colors ?? []).length > 0 && (
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {(row.original.colors ?? []).slice(0, 6).map((c) => (
-                <div key={c} className="flex items-center gap-0.5">
-                  <ColorDot color={c} />
-                  <span className="text-[10px] text-muted-foreground">{c}</span>
-                </div>
-              ))}
-              {(row.original.colors ?? []).length > 6 && (
-                <span className="text-[10px] text-muted-foreground">+{(row.original.colors ?? []).length - 6}</span>
-              )}
+      cell: ({ row }) => {
+        const p = row.original;
+        const colors = p.colors ?? [];
+        const sizes = p.sizes ?? [];
+        return (
+          <div className="min-w-[180px] max-w-[280px]">
+            <div className="font-medium leading-tight">{p.name}</div>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {p.sku && <span className="text-[10px] text-muted-foreground">SKU: {p.sku}</span>}
+              {p.category && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{p.category.name}</Badge>}
+              {p.supplier && <span className="text-[10px] text-muted-foreground">{p.supplier.name}</span>}
             </div>
-          )}
-          {(row.original.sizes ?? []).length > 0 && (
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {(row.original.sizes ?? []).slice(0, 8).map((s) => (
-                <span key={s} className="inline-flex items-center rounded border border-border bg-muted/50 px-1.5 py-0 text-[10px] font-medium text-muted-foreground">{s}</span>
-              ))}
-              {(row.original.sizes ?? []).length > 8 && (
-                <span className="text-[10px] text-muted-foreground">+{(row.original.sizes ?? []).length - 8}</span>
-              )}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "category",
-      header: () => <span>Category</span>,
-      cell: ({ row }) =>
-        row.original.category ? (
-          <Badge variant="outline">{row.original.category.name}</Badge>
-        ) : <span className="text-muted-foreground">—</span>,
-      enableSorting: false,
-    },
-    {
-      accessorKey: "supplier",
-      header: () => <span>Supplier</span>,
-      cell: ({ row }) =>
-        row.original.supplier ? (
-          <span className="text-sm">{row.original.supplier.name}</span>
-        ) : <span className="text-muted-foreground">—</span>,
-      enableSorting: false,
+            {(colors.length > 0 || sizes.length > 0) && (
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                {colors.slice(0, 5).map((c) => <ColorDot key={c} color={c} />)}
+                {colors.length > 5 && <span className="text-[10px] text-muted-foreground">+{colors.length - 5}</span>}
+                {colors.length > 0 && sizes.length > 0 && <span className="text-[10px] text-muted-foreground">·</span>}
+                {sizes.slice(0, 4).map((s) => (
+                  <span key={s} className="text-[10px] text-muted-foreground font-medium">{s}</span>
+                ))}
+                {sizes.length > 4 && <span className="text-[10px] text-muted-foreground">+{sizes.length - 4}</span>}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "stockQty",
@@ -646,26 +627,33 @@ export default function ProcurementProductsPage() {
           return <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>;
         }
         const total = variants.reduce((s, v) => s + v.qty, 0);
-        const shown = variants.slice(0, 8);
-        const extra = variants.length - 8;
         return (
-          <div className="space-y-1 min-w-[110px]">
-            <Badge variant="secondary">{total} total</Badge>
-            <div className="space-y-0.5">
-              {shown.map((v) => {
-                const label = [v.size, v.color].filter(Boolean).join(" / ") || "—";
-                return (
-                  <div key={v.id} className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{label}</span>
-                    <span className="text-[10px] font-medium tabular-nums shrink-0">{v.qty}</span>
-                  </div>
-                );
-              })}
-              {extra > 0 && (
-                <div className="text-[10px] text-muted-foreground">+{extra} more</div>
-              )}
-            </div>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex flex-col items-start gap-0.5 text-left">
+                <Badge variant="secondary" className="cursor-pointer">{total}</Badge>
+                <span className="text-[10px] text-muted-foreground">{variants.length} variants</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52 p-3" align="start">
+              <div className="text-xs font-semibold mb-2 text-foreground">Stock by variant</div>
+              <div className="space-y-1">
+                {variants.map((v) => {
+                  const label = [v.size, v.color].filter(Boolean).join(" / ") || "—";
+                  return (
+                    <div key={v.id} className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-muted-foreground">{label}</span>
+                      <span className="text-[11px] font-semibold tabular-nums">{v.qty}</span>
+                    </div>
+                  );
+                })}
+                <div className="border-t border-border mt-2 pt-2 flex items-center justify-between">
+                  <span className="text-[11px] font-medium">Total</span>
+                  <span className="text-[11px] font-bold tabular-nums">{total}</span>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         );
       },
       enableSorting: false,
