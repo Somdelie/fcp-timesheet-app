@@ -58,6 +58,7 @@ import {
 } from "@/actions/admin";
 import { switchForemanTeam } from "@/actions/foreman-team";
 import { updateForeman } from "@/actions/foreman-update";
+import { SA_BANKS } from "@/lib/sa-banks";
 import type { AdminEmployee } from "@/lib/apiClient";
 
 const TEAM_OPTIONS = [
@@ -676,9 +677,9 @@ export function ForemanContent({
                   <SelectValue placeholder="Select a bank" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="STD">STD</SelectItem>
-                  <SelectItem value="CAPITEC">CAPITEC</SelectItem>
-                  <SelectItem value="FNB">FNB</SelectItem>
+                  {SA_BANKS.map((bank) => (
+                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

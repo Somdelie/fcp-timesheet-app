@@ -4,13 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { writeAuditEvent } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
-
-const VALID_BANKS = ["STD", "CAPITEC", "FNB"] as const;
-type BankName = (typeof VALID_BANKS)[number];
+import { SA_BANKS, type SaBankName } from "@/lib/sa-banks";
 
 export async function updateForemanBankName(input: {
   foremanId: string;
-  bankName: BankName | null;
+  bankName: SaBankName | null;
 }) {
   const auth = await requireServerAuth();
 
@@ -24,8 +22,8 @@ export async function updateForemanBankName(input: {
   if (!foremanId) {
     return { ok: false as const, error: "foremanId is required." };
   }
-  if (bankName !== null && !VALID_BANKS.includes(bankName as BankName)) {
-    return { ok: false as const, error: `Invalid bank. Must be one of: ${VALID_BANKS.join(", ")}` };
+  if (bankName !== null && !(SA_BANKS as readonly string[]).includes(bankName)) {
+    return { ok: false as const, error: `Invalid bank name.` };
   }
 
   const foreman = await prisma.foreman.findUnique({

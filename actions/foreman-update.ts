@@ -4,14 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { writeAuditEvent } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
-
-const VALID_BANKS = ["STD", "CAPITEC", "FNB"] as const;
+import { SA_BANKS, type SaBankName } from "@/lib/sa-banks";
 
 export async function updateForeman(input: {
   foremanId: string;
   name: string;
   defaultDayRate: string | null;
-  bankName: "STD" | "CAPITEC" | "FNB" | null;
+  bankName: SaBankName | null;
 }) {
   const auth = await requireServerAuth();
 
@@ -25,7 +24,7 @@ export async function updateForeman(input: {
 
   if (!foremanId) return { ok: false as const, error: "foremanId is required." };
   if (!name || name.length < 2) return { ok: false as const, error: "Name must be at least 2 characters." };
-  if (bankName !== null && !VALID_BANKS.includes(bankName)) {
+  if (bankName !== null && !(SA_BANKS as readonly string[]).includes(bankName)) {
     return { ok: false as const, error: "Invalid bank name." };
   }
 
