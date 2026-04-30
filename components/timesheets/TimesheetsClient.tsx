@@ -870,7 +870,7 @@ export default function TimesheetsListClient({ mode }: Props) {
     ws.mergeCells("B1:C1");
     ws.mergeCells("E1:F1");
     const hdrRow = ws.getRow(1);
-    hdrRow.height = 28;
+    hdrRow.height = 40;
 
     const hdrDefs: Array<[string, string, "left" | "center"]> = [
       ["A1", "Name",          "left"  ],
@@ -916,7 +916,7 @@ export default function TimesheetsListClient({ mode }: Props) {
 
       // First row: name + bank transfer + bank + first site value
       const r = ws.getRow(rowNum++);
-      r.height = 20;
+      r.height = 30;
       r.getCell(1).value = fmtName(ft.foremanName);
       r.getCell(2).value = "R";
       r.getCell(3).value = saFmt(ft.grandTotal);
@@ -955,7 +955,7 @@ export default function TimesheetsListClient({ mode }: Props) {
 
     // ── Grand total row ───────────────────────────────────────────────────────
     const totRow = ws.getRow(rowNum);
-    totRow.height = 28;
+    totRow.height = 40;
     ws.mergeCells(`B${rowNum}:C${rowNum}`);
     totRow.getCell(2).value = `R  ${saFmt(grandTotal)}`;
     totRow.getCell(2).font = { bold: true, size: 12 };
