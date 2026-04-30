@@ -164,7 +164,6 @@ const MONTH_LABELS = [
 function ensureUniqueRowKeys<T extends { id: string; rowKey?: string }>(
   rows: T[],
 ): T[] {
-  // If API ever returns duplicate `id`s, React/TanStack need a unique per-row key.
   const counts = new Map<string, number>();
   for (const r of rows) counts.set(r.id, (counts.get(r.id) ?? 0) + 1);
 
@@ -308,9 +307,6 @@ async function getJson<T>(url: string): Promise<T> {
   return payload as T;
 }
 
-/**
- * ADMIN-only anchor helper (supervisor MUST NOT use this)
- */
 async function getYearAnchorISO(year: number): Promise<string | null> {
   try {
     const data = await getJson<{
@@ -375,10 +371,8 @@ export default function TimesheetsListClient({ mode }: Props) {
   const rows = mode === "ADMIN" ? rowsAdmin : rowsSup;
 
   const [loading, setLoading] = useState(false);
-
   const [err, setErr] = useState<string | null>(null);
 
-  // Table sorting and pagination state
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -392,10 +386,8 @@ export default function TimesheetsListClient({ mode }: Props) {
   const [detailErr, setDetailErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
 
-  // Foreman totals section collapsed/expanded
   const [foremanTotalsExpanded, setForemanTotalsExpanded] = useState(false);
 
-  // Overtime details (per foreman) in foreman totals (ADMIN only)
   const [overtimeExpandedForemanId, setOvertimeExpandedForemanId] = useState<
     string | null
   >(null);
@@ -406,12 +398,10 @@ export default function TimesheetsListClient({ mode }: Props) {
     string | null
   >(null);
 
-  // Foreman PDF generation state
   const [foremanPdfGenerating, setForemanPdfGenerating] = useState<
     string | null
   >(null);
 
-  // Print-all-summaries state
   const [printingAllSummaries, setPrintingAllSummaries] = useState(false);
 
   const currentPeriod = useMemo(
@@ -485,7 +475,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     [mode, currentPeriod, overtimeEntriesByForeman],
   );
 
-  // Foreman totals: group all sites by foreman and sum wages for quick overview (ADMIN only)
   const foremanTotals = useMemo(() => {
     if (mode !== "ADMIN") return [];
     const map = new Map<
@@ -522,7 +511,6 @@ export default function TimesheetsListClient({ mode }: Props) {
         totalOvertimeCost: 0,
         grandTotal: 0,
       };
-      // Collect site IDs
       if (row.sites) {
         for (const site of row.sites) {
           if (!existing.siteIds.includes(site.id)) {
@@ -536,7 +524,6 @@ export default function TimesheetsListClient({ mode }: Props) {
       existing.teamDays += Number(row.teamDays ?? 0);
       existing.teamWages += Number(row.teamWages ?? 0);
       existing.totalOvertimeCost += Number(row.totalOvertimeCost ?? 0);
-      // Deductions are per-foreman (same value on every site row), so take the max
       existing.totalDeductions = Math.max(
         existing.totalDeductions,
         Number(row.totalDeductions ?? 0),
@@ -553,7 +540,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     );
   }, [mode, rowsAdmin]);
 
-  // Handler for generating foreman summary PDF/Print
   const handleForemanPdfAction = useCallback(
     async (
       foremanData: (typeof foremanTotals)[0],
@@ -567,7 +553,6 @@ export default function TimesheetsListClient({ mode }: Props) {
       setForemanPdfGenerating(foremanData.foremanId);
 
       try {
-        // Fetch timesheet details for each site
         const timesheets: ForemanTimesheetData[] = [];
         const siteBreakdown: ForemanSummaryData["sites"] = [];
 
@@ -593,7 +578,6 @@ export default function TimesheetsListClient({ mode }: Props) {
 
           const gridData = normalizeTimesheetToGrid(tsDetail as any);
 
-          // Find site info from rowsAdmin
           const siteRow = rowsAdmin.find(
             (r) =>
               r.foreman?.id === foremanData.foremanId &&
@@ -609,7 +593,6 @@ export default function TimesheetsListClient({ mode }: Props) {
             supervisorName: siteRow?.supervisor?.name,
           });
 
-          // Add to site breakdown
           siteBreakdown.push({
             siteId,
             siteName: siteInfo?.name ?? "Site",
@@ -627,7 +610,6 @@ export default function TimesheetsListClient({ mode }: Props) {
           return;
         }
 
-        // Parse period dates
         const [startISO, endISO] = periodId.split("_");
 
         const summaryData: ForemanSummaryData = {
@@ -653,7 +635,6 @@ export default function TimesheetsListClient({ mode }: Props) {
           downloadTimesheetPdf(pdfBytes, filename);
           toast.success("PDF downloaded");
         } else {
-          // Print
           const printData = timesheets.map((ts) => ({
             gridModel: ts.gridModel,
             meta: {
@@ -676,7 +657,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     [periodId, rowsAdmin],
   );
 
-  // Handler for printing all supervisor summaries (summary-only, no grids)
   const handlePrintAllSummaries = useCallback(() => {
     if (!currentPeriod) {
       toast.error("No period selected");
@@ -686,7 +666,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     setPrintingAllSummaries(true);
 
     try {
-      // Group rowsAdmin by supervisor → foreman → sites
       const supervisorMap = new Map<
         string,
         {
@@ -735,7 +714,6 @@ export default function TimesheetsListClient({ mode }: Props) {
         }
         const fmEntry = supEntry.foremanMap.get(fmId)!;
 
-        // Each row has one site in its sites array
         for (const site of row.sites ?? []) {
           fmEntry.sites.push({
             siteName: site.name,
@@ -829,20 +807,18 @@ export default function TimesheetsListClient({ mode }: Props) {
     wb.creator = "FCP Timesheet App";
     wb.created = new Date();
 
-    // SA number format: space thousands separator, comma decimal  e.g. 3100.00 → "3 100,00"
-    const saFmt = (n: number): string => {
-      const [intPart, decPart] = n.toFixed(2).split(".");
-      return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + decPart;
+    // SA number format: space thousands, comma decimal  e.g. 3100 → "3 100,00"
+    const saFmt = (n: number) => {
+      const [int, dec] = n.toFixed(2).split(".");
+      return int.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + dec;
     };
 
-    // "Firstname Lastname" → "Lastname, Firstname" with title case
-    const fmtName = (fullName: string): string => {
-      const parts = fullName.trim().split(/\s+/);
-      if (parts.length < 2) return fullName;
-      const toTitle = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-      const surname = toTitle(parts[parts.length - 1]);
-      const first = parts.slice(0, -1).map(toTitle).join(" ");
-      return `${surname}, ${first}`;
+    // "Firstname Lastname" → "Lastname, Firstname" title-cased
+    const fmtName = (full: string) => {
+      const parts = full.trim().split(/\s+/);
+      if (parts.length < 2) return full;
+      const t = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      return `${t(parts[parts.length - 1])}, ${parts.slice(0, -1).map(t).join(" ")}`;
     };
 
     const ws = wb.addWorksheet("Foreman Payments");
@@ -858,21 +834,18 @@ export default function TimesheetsListClient({ mode }: Props) {
       { width: 30 }, // G: Site
     ];
 
-    // Borders matching PDF: medium black vertical dividers, thin black row separators
     const med  = { style: "medium" as const, color: { argb: "FF000000" } };
     const thin = { style: "thin"   as const, color: { argb: "FF000000" } };
-    const hdrBorder  = { left: med, right: med, top: med,  bottom: med  };
-    const dataBorder = { left: med, right: med, top: thin, bottom: thin };
-    const totBorder  = { left: med, right: med, top: thin, bottom: med  };
+    const hdrB  = { left: med, right: med, top: med,  bottom: med  };
+    const dataB = { left: med, right: med, top: thin, bottom: thin };
+    const totB  = { left: med, right: med, top: thin, bottom: med  };
 
-    // ── Row 1: Headers ────────────────────────────────────────────────────────
-    // A=Name, B:C merged=Bank Transfer, D=Bank, E:F merged=Value, G=Site
+    // ── Row 1: Headers — A=Name, B:C=Bank Transfer, D=Bank, E:F=Value, G=Site
     ws.mergeCells("B1:C1");
     ws.mergeCells("E1:F1");
     const hdrRow = ws.getRow(1);
     hdrRow.height = 40;
-
-    const hdrDefs: Array<[string, string, "left" | "center"]> = [
+    const hdrDefs: Array<[string, string, "left"|"center"]> = [
       ["A1", "Name",          "left"  ],
       ["B1", "Bank Transfer", "center"],
       ["D1", "Bank",          "center"],
@@ -884,37 +857,28 @@ export default function TimesheetsListClient({ mode }: Props) {
       cell.value = label;
       cell.font = { bold: true, underline: true, size: 11 };
       cell.alignment = { horizontal: align, vertical: "middle" };
-      cell.border = hdrBorder;
+      cell.border = hdrB;
     }
-    ws.getCell("C1").border = hdrBorder;
-    ws.getCell("F1").border = hdrBorder;
+    ws.getCell("C1").border = hdrB;
+    ws.getCell("F1").border = hdrB;
 
-    // ── Build per-foreman site list from rowsAdmin ────────────────────────────
+    // ── Build per-foreman site list
     const sitesByForeman = new Map<string, Array<{ siteName: string; value: number }>>();
     for (const row of rowsAdmin) {
       const fmId = row.foreman?.id ?? "unknown";
       if (!sitesByForeman.has(fmId)) sitesByForeman.set(fmId, []);
-      const site = row.sites?.[0];
-      const value =
-        Number(row.foremanWages ?? 0) +
-        Number(row.teamWages ?? 0) +
-        Number(row.totalOvertimeCost ?? 0);
-      sitesByForeman.get(fmId)!.push({ siteName: site?.name ?? "—", value });
+      const value = Number(row.foremanWages ?? 0) + Number(row.teamWages ?? 0) + Number(row.totalOvertimeCost ?? 0);
+      sitesByForeman.get(fmId)!.push({ siteName: row.sites?.[0]?.name ?? "—", value });
     }
 
-    // foremanTotals is already sorted alphabetically
     let grandTotal = 0;
     let rowNum = 2;
-    const lastDataIndex = rowNum + foremanTotals.reduce((acc, ft) => {
-      return acc + Math.max(1, (sitesByForeman.get(ft.foremanId) ?? []).length);
-    }, 0) - 1;
 
     for (const ft of foremanTotals) {
       const sites = sitesByForeman.get(ft.foremanId) ?? [];
       grandTotal += ft.grandTotal;
-      const isLastForeman = rowNum + Math.max(1, sites.length) - 1 >= lastDataIndex;
 
-      // First row: name + bank transfer + bank + first site value
+      // First row: all 7 columns
       const r = ws.getRow(rowNum++);
       r.height = 30;
       r.getCell(1).value = fmtName(ft.foremanName);
@@ -924,47 +888,39 @@ export default function TimesheetsListClient({ mode }: Props) {
       r.getCell(5).value = sites[0] ? "R" : "";
       r.getCell(6).value = sites[0] ? saFmt(sites[0].value) : "";
       r.getCell(7).value = sites[0]?.siteName ?? "";
-
-      r.getCell(1).alignment = { horizontal: "left",  vertical: "middle" };
-      r.getCell(2).alignment = { horizontal: "right", vertical: "middle" };
-      r.getCell(3).alignment = { horizontal: "right", vertical: "middle" };
+      r.getCell(1).alignment = { horizontal: "left",   vertical: "middle" };
+      r.getCell(2).alignment = { horizontal: "right",  vertical: "middle" };
+      r.getCell(3).alignment = { horizontal: "right",  vertical: "middle" };
       r.getCell(4).alignment = { horizontal: "center", vertical: "middle" };
-      r.getCell(5).alignment = { horizontal: "right", vertical: "middle" };
-      r.getCell(6).alignment = { horizontal: "right", vertical: "middle" };
-      r.getCell(7).alignment = { horizontal: "left",  vertical: "middle" };
+      r.getCell(5).alignment = { horizontal: "right",  vertical: "middle" };
+      r.getCell(6).alignment = { horizontal: "right",  vertical: "middle" };
+      r.getCell(7).alignment = { horizontal: "left",   vertical: "middle" };
+      for (let col = 1; col <= 7; col++) r.getCell(col).border = dataB;
 
-      const firstRowBorder = (isLastForeman && sites.length <= 1) ? totBorder : dataBorder;
-      for (let col = 1; col <= 7; col++) r.getCell(col).border = firstRowBorder;
-
-      // Additional site rows: only E-G filled, A-D blank
+      // Additional site rows: E–G only
       for (let i = 1; i < sites.length; i++) {
         const sr = ws.getRow(rowNum++);
-        sr.height = 20;
+        sr.height = 30;
         sr.getCell(5).value = "R";
         sr.getCell(6).value = saFmt(sites[i].value);
         sr.getCell(7).value = sites[i].siteName;
         sr.getCell(5).alignment = { horizontal: "right", vertical: "middle" };
         sr.getCell(6).alignment = { horizontal: "right", vertical: "middle" };
         sr.getCell(7).alignment = { horizontal: "left",  vertical: "middle" };
-        const isLastSiteRow = isLastForeman && i === sites.length - 1;
-        for (let col = 1; col <= 7; col++) {
-          sr.getCell(col).border = isLastSiteRow ? totBorder : dataBorder;
-        }
+        for (let col = 1; col <= 7; col++) sr.getCell(col).border = dataB;
       }
     }
 
-    // ── Grand total row ───────────────────────────────────────────────────────
+    // ── Grand total row
     const totRow = ws.getRow(rowNum);
     totRow.height = 40;
     ws.mergeCells(`B${rowNum}:C${rowNum}`);
     totRow.getCell(2).value = `R  ${saFmt(grandTotal)}`;
     totRow.getCell(2).font = { bold: true, size: 12 };
     totRow.getCell(2).alignment = { horizontal: "center", vertical: "middle" };
-    for (let col = 1; col <= 7; col++) {
-      totRow.getCell(col).border = { left: med, right: med, top: thin, bottom: med };
-    }
+    for (let col = 1; col <= 7; col++) totRow.getCell(col).border = totB;
 
-    // ── Download ──────────────────────────────────────────────────────────────
+    // ── Download
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
@@ -976,7 +932,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     toast.success("Excel exported");
   }, [foremanTotals, rowsAdmin, currentPeriod]);
 
-  // ✅ normalized grid model (same for admin + supervisor)
   const gridModel = useMemo(() => {
     if (!detail) return null;
     const dto = (detail?.timesheet ?? detail) as
@@ -990,7 +945,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     return <TimesheetGrid model={gridModel as any} />;
   }, [gridModel]);
 
-  // Column definitions for Admin table
   const adminColumns = useMemo<ColumnDef<AdminRow>[]>(
     () => [
       {
@@ -1147,7 +1101,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     [],
   );
 
-  // Column definitions for Supervisor table
   const supColumns = useMemo<ColumnDef<SupervisorRow>[]>(
     () => [
       {
@@ -1302,14 +1255,10 @@ export default function TimesheetsListClient({ mode }: Props) {
     [],
   );
 
-  // Admin table instance
   const adminTable = useReactTable({
     data: rowsAdmin,
     columns: adminColumns,
-    state: {
-      sorting,
-      pagination,
-    },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
@@ -1318,14 +1267,10 @@ export default function TimesheetsListClient({ mode }: Props) {
     getRowId: (row, index) => row.rowKey ?? `${row.id}__${index}`,
   });
 
-  // Supervisor table instance
   const supTable = useReactTable({
     data: rowsSup,
     columns: supColumns,
-    state: {
-      sorting,
-      pagination,
-    },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
@@ -1336,7 +1281,6 @@ export default function TimesheetsListClient({ mode }: Props) {
 
   const table = mode === "ADMIN" ? adminTable : supTable;
 
-  // supervisors list (admin only)
   const [dbSupervisors, setDbSupervisors] = useState<
     Array<{ id: string; name: string | null; email: string }>
   >([]);
@@ -1349,7 +1293,6 @@ export default function TimesheetsListClient({ mode }: Props) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [mode, dbSupervisors]);
 
-  // debounce search
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(q.trim()), 250);
     return () => clearTimeout(t);
@@ -1371,7 +1314,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     );
   }, [mode, periodsSorted]);
 
-  // load supervisors (admin only)
   useEffect(() => {
     if (mode !== "ADMIN") {
       setDbSupervisors([]);
@@ -1421,7 +1363,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     };
   }, [mode]);
 
-  // ✅ periods loader (ADMIN vs SUPERVISOR)
   useEffect(() => {
     let alive = true;
 
@@ -1448,7 +1389,6 @@ export default function TimesheetsListClient({ mode }: Props) {
           return;
         }
 
-        // ADMIN (year-based DB periods)
         const data = await getJson<{ ok: boolean; periods: PeriodOption[] }>(
           `/api/app/timesheets/periods?year=${year}`,
         );
@@ -1487,11 +1427,9 @@ export default function TimesheetsListClient({ mode }: Props) {
     };
   }, [mode, year]);
 
-  // Abort controller for list
   const listAbortRef = useRef<AbortController | null>(null);
 
   const loadList = useCallback(async () => {
-    // ✅ If no period yet, don't fetch and don't pretend we're loading.
     if (!periodId) {
       setLoading(false);
       setErr(null);
@@ -1551,7 +1489,6 @@ export default function TimesheetsListClient({ mode }: Props) {
           if (!valid) setSupervisorId("ALL");
         }
       } else {
-        // supervisor list: server filters by period => no client-side filtering needed
         setRowsSup(ensureUniqueRowKeys(list as SupervisorRow[]));
       }
     } catch (e: any) {
@@ -1564,7 +1501,6 @@ export default function TimesheetsListClient({ mode }: Props) {
     }
   }, [mode, periodId, qDebounced, status, supervisorId]);
 
-  // ✅ Only load list when periodId exists
   useEffect(() => {
     if (!periodId) return;
     loadList();
@@ -2058,14 +1994,12 @@ export default function TimesheetsListClient({ mode }: Props) {
   const actions = useMemo((): TimesheetAction[] => {
     const base = mode === "ADMIN" ? "/api/app/admin" : "/api/app/supervisor";
 
-    // Get the fortnight dates from the detail or activeId
     let endISO: string | null = null;
     let startISO: string | null = null;
     if (detail) {
       endISO = detail?.endISO ?? null;
       startISO = detail?.startISO ?? null;
     } else if (activeId) {
-      // Parse from activeId: YYYY-MM-DD_YYYY-MM-DD_FOREMANID_SITEID
       const parts = activeId.split("_");
       if (parts.length >= 2) {
         startISO = parts[0];
@@ -2075,14 +2009,12 @@ export default function TimesheetsListClient({ mode }: Props) {
 
     const result: TimesheetAction[] = [];
 
-    // Supervisor-only actions (accept day, approve, reject)
     if (mode === "SUPERVISOR") {
       const today = new Date().toISOString().slice(0, 10);
       const isLastDayOrLater = endISO ? today >= endISO : false;
       const isWithinPeriod =
         startISO && endISO ? today >= startISO && today <= endISO : false;
 
-      // Accept Day - only during the ongoing fortnight period (before last day)
       if (isWithinPeriod && !isLastDayOrLater) {
         result.push({
           id: "accept-day",
@@ -2115,7 +2047,6 @@ export default function TimesheetsListClient({ mode }: Props) {
         });
       }
 
-      // Final Approve - only on or after the last day of the fortnight
       if (isLastDayOrLater) {
         result.push({
           id: "approve",
@@ -2146,9 +2077,8 @@ export default function TimesheetsListClient({ mode }: Props) {
           },
         });
       }
-    } // end supervisor-only actions
+    }
 
-    // Mark Paid - available for both ADMIN and SUPERVISOR
     result.push({
       id: "paid",
       label: "Mark Paid",
@@ -2157,7 +2087,6 @@ export default function TimesheetsListClient({ mode }: Props) {
       handler: async () => {
         if (!activeId) return;
 
-        // Generate and download PDF archive before marking as paid
         if (gridModel) {
           try {
             const dto = (detail as any)?.timesheet ?? detail;
@@ -2193,7 +2122,7 @@ export default function TimesheetsListClient({ mode }: Props) {
     });
 
     return result;
-  }, [mode, activeId, detail, gridModel, loadList, refreshDetail]);
+  }, [mode, activeId, detail, gridModel, refreshDetail]);
 
   const reset = () => {
     setQ("");
@@ -2344,7 +2273,6 @@ export default function TimesheetsListClient({ mode }: Props) {
         ) : null}
       </div>
 
-      {/* Foreman Totals Summary - quick view of what to pay each foreman */}
       {mode === "ADMIN" && foremanTotals.length > 0 && !loading && (
         <div className="rounded border bg-card overflow-hidden">
           <div
@@ -2352,7 +2280,10 @@ export default function TimesheetsListClient({ mode }: Props) {
             tabIndex={0}
             className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer"
             onClick={() => setForemanTotalsExpanded(!foremanTotalsExpanded)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setForemanTotalsExpanded((v) => !v); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ")
+                setForemanTotalsExpanded((v) => !v);
+            }}
           >
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium">Foreman Totals</span>
@@ -2396,7 +2327,10 @@ export default function TimesheetsListClient({ mode }: Props) {
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1.5 text-xs"
-                onClick={(e) => { e.stopPropagation(); handleExportAllForemenExcel(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleExportAllForemenExcel();
+                }}
                 title="Export all foremen to Excel"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -2429,9 +2363,7 @@ export default function TimesheetsListClient({ mode }: Props) {
           </div>
           <div
             className="grid transition-all duration-300 ease-in-out"
-            style={{
-              gridTemplateRows: foremanTotalsExpanded ? "1fr" : "0fr",
-            }}
+            style={{ gridTemplateRows: foremanTotalsExpanded ? "1fr" : "0fr" }}
           >
             <div className="overflow-hidden">
               <div className="border-t max-h-72 overflow-y-auto overflow-x-auto">
@@ -2503,14 +2435,12 @@ export default function TimesheetsListClient({ mode }: Props) {
                                 }
                                 onClick={async (e) => {
                                   e.stopPropagation();
-
                                   if (
                                     overtimeExpandedForemanId === ft.foremanId
                                   ) {
                                     setOvertimeExpandedForemanId(null);
                                     return;
                                   }
-
                                   const existing =
                                     overtimeEntriesByForeman[ft.foremanId];
                                   const entries =
@@ -2518,14 +2448,12 @@ export default function TimesheetsListClient({ mode }: Props) {
                                     (await loadOvertimeEntriesForForeman(
                                       ft.foremanId,
                                     ));
-
                                   if (!entries.length) {
                                     toast.info(
                                       "No overtime entries for this foreman in this period",
                                     );
                                     return;
                                   }
-
                                   setOvertimeExpandedForemanId(ft.foremanId);
                                 }}
                                 title="View overtime dates"
@@ -2610,17 +2538,13 @@ export default function TimesheetsListClient({ mode }: Props) {
                                       </span>
                                     );
                                   }
-
                                   return (
                                     <div className="flex flex-col gap-2">
                                       <div className="flex items-center justify-between">
                                         <span className="font-medium">
                                           Overtime dates for {ft.foremanName}
                                           {currentPeriod
-                                            ? ` (${prettyRange(
-                                                currentPeriod.startISO,
-                                                currentPeriod.endISO,
-                                              )})`
+                                            ? ` (${prettyRange(currentPeriod.startISO, currentPeriod.endISO)})`
                                             : ""}
                                         </span>
                                         <span className="text-muted-foreground">
@@ -2674,6 +2598,7 @@ export default function TimesheetsListClient({ mode }: Props) {
           </div>
         </div>
       )}
+
       <div className="border bg-card">
         <div className="overflow-x-auto">
           <Table className="border-collapse">
@@ -2758,7 +2683,6 @@ export default function TimesheetsListClient({ mode }: Props) {
           </Table>
         </div>
 
-        {/* Pagination Controls */}
         <div className="flex items-center justify-between border-t px-4 py-3">
           <div className="text-muted-foreground hidden text-sm lg:flex">
             Showing{" "}
@@ -2903,7 +2827,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                       onChange={(e) => setAnalyticsFromISO(e.target.value)}
                     />
                   </div>
-
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
                       To
@@ -2914,7 +2837,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                       onChange={(e) => setAnalyticsToISO(e.target.value)}
                     />
                   </div>
-
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
                       Month
@@ -2936,7 +2858,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
                       Fortnight
@@ -2958,7 +2879,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
                       Supervisor
@@ -2980,7 +2900,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
                       Search (Job code / site / foreman)
@@ -3035,8 +2954,7 @@ export default function TimesheetsListClient({ mode }: Props) {
                             className="inline-flex items-center gap-1"
                             onClick={() => toggleMonthlySort("month")}
                           >
-                            Month
-                            {monthlySortIcon("month")}
+                            Month {monthlySortIcon("month")}
                           </button>
                         </TableHead>
                         <TableHead className="text-right border-r border-zinc-200 dark:border-zinc-700">
@@ -3045,8 +2963,7 @@ export default function TimesheetsListClient({ mode }: Props) {
                             className="ml-auto inline-flex items-center gap-1"
                             onClick={() => toggleMonthlySort("wages")}
                           >
-                            Total Wages
-                            {monthlySortIcon("wages")}
+                            Total Wages {monthlySortIcon("wages")}
                           </button>
                         </TableHead>
                         <TableHead className="text-right border-r border-zinc-200 dark:border-zinc-700">
@@ -3055,8 +2972,7 @@ export default function TimesheetsListClient({ mode }: Props) {
                             className="ml-auto inline-flex items-center gap-1"
                             onClick={() => toggleMonthlySort("pct")}
                           >
-                            % of Selected Total
-                            {monthlySortIcon("pct")}
+                            % of Selected Total {monthlySortIcon("pct")}
                           </button>
                         </TableHead>
                         <TableHead className="text-center">
@@ -3065,8 +2981,7 @@ export default function TimesheetsListClient({ mode }: Props) {
                             className="inline-flex items-center gap-1"
                             onClick={() => toggleMonthlySort("rank")}
                           >
-                            Rank
-                            {monthlySortIcon("rank")}
+                            Rank {monthlySortIcon("rank")}
                           </button>
                         </TableHead>
                       </TableRow>
@@ -3082,7 +2997,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                                 : m.rank === 3
                                   ? "bg-amber-600/12 dark:bg-amber-600/18"
                                   : "";
-
                           return (
                             <TableRow key={m.monthIndex} className={rowTone}>
                               <TableCell className="font-medium border-r border-zinc-200 dark:border-zinc-700">
@@ -3134,7 +3048,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                     )}{" "}
                     of {analyticsMonthlyRows.length} months
                   </div>
-
                   <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
                     <div className="hidden items-center gap-2 lg:flex">
                       <span className="text-sm font-medium">Rows per page</span>
@@ -3161,26 +3074,20 @@ export default function TimesheetsListClient({ mode }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="flex w-fit items-center justify-center text-sm font-medium">
                       Page {monthlyPagination.pageIndex + 1} of{" "}
                       {monthlyPageCount}
                     </div>
-
                     <div className="ml-auto flex items-center gap-2 lg:ml-0">
                       <Button
                         variant="outline"
                         size="icon"
                         className="hidden h-8 w-8 lg:flex"
                         onClick={() =>
-                          setMonthlyPagination((prev) => ({
-                            ...prev,
-                            pageIndex: 0,
-                          }))
+                          setMonthlyPagination((p) => ({ ...p, pageIndex: 0 }))
                         }
                         disabled={monthlyPagination.pageIndex <= 0}
                       >
-                        <span className="sr-only">Go to first page</span>
                         <ChevronsLeft className="h-4 w-4" />
                       </Button>
                       <Button
@@ -3188,14 +3095,13 @@ export default function TimesheetsListClient({ mode }: Props) {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() =>
-                          setMonthlyPagination((prev) => ({
-                            ...prev,
-                            pageIndex: Math.max(0, prev.pageIndex - 1),
+                          setMonthlyPagination((p) => ({
+                            ...p,
+                            pageIndex: Math.max(0, p.pageIndex - 1),
                           }))
                         }
                         disabled={monthlyPagination.pageIndex <= 0}
                       >
-                        <span className="sr-only">Go to previous page</span>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <Button
@@ -3203,11 +3109,11 @@ export default function TimesheetsListClient({ mode }: Props) {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() =>
-                          setMonthlyPagination((prev) => ({
-                            ...prev,
+                          setMonthlyPagination((p) => ({
+                            ...p,
                             pageIndex: Math.min(
                               monthlyPageCount - 1,
-                              prev.pageIndex + 1,
+                              p.pageIndex + 1,
                             ),
                           }))
                         }
@@ -3215,7 +3121,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                           monthlyPagination.pageIndex >= monthlyPageCount - 1
                         }
                       >
-                        <span className="sr-only">Go to next page</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                       <Button
@@ -3223,8 +3128,8 @@ export default function TimesheetsListClient({ mode }: Props) {
                         size="icon"
                         className="hidden h-8 w-8 lg:flex"
                         onClick={() =>
-                          setMonthlyPagination((prev) => ({
-                            ...prev,
+                          setMonthlyPagination((p) => ({
+                            ...p,
                             pageIndex: monthlyPageCount - 1,
                           }))
                         }
@@ -3232,7 +3137,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                           monthlyPagination.pageIndex >= monthlyPageCount - 1
                         }
                       >
-                        <span className="sr-only">Go to last page</span>
                         <ChevronsRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -3317,7 +3221,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                     )}{" "}
                     of {analyticsSitesByFortnight.length} site rows
                   </div>
-
                   <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
                     <div className="hidden items-center gap-2 lg:flex">
                       <span className="text-sm font-medium">Rows per page</span>
@@ -3344,26 +3247,23 @@ export default function TimesheetsListClient({ mode }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="flex w-fit items-center justify-center text-sm font-medium">
                       Page {siteAnalyticsPagination.pageIndex + 1} of{" "}
                       {siteAnalyticsPageCount}
                     </div>
-
                     <div className="ml-auto flex items-center gap-2 lg:ml-0">
                       <Button
                         variant="outline"
                         size="icon"
                         className="hidden h-8 w-8 lg:flex"
                         onClick={() =>
-                          setSiteAnalyticsPagination((prev) => ({
-                            ...prev,
+                          setSiteAnalyticsPagination((p) => ({
+                            ...p,
                             pageIndex: 0,
                           }))
                         }
                         disabled={siteAnalyticsPagination.pageIndex <= 0}
                       >
-                        <span className="sr-only">Go to first page</span>
                         <ChevronsLeft className="h-4 w-4" />
                       </Button>
                       <Button
@@ -3371,14 +3271,13 @@ export default function TimesheetsListClient({ mode }: Props) {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() =>
-                          setSiteAnalyticsPagination((prev) => ({
-                            ...prev,
-                            pageIndex: Math.max(0, prev.pageIndex - 1),
+                          setSiteAnalyticsPagination((p) => ({
+                            ...p,
+                            pageIndex: Math.max(0, p.pageIndex - 1),
                           }))
                         }
                         disabled={siteAnalyticsPagination.pageIndex <= 0}
                       >
-                        <span className="sr-only">Go to previous page</span>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <Button
@@ -3386,11 +3285,11 @@ export default function TimesheetsListClient({ mode }: Props) {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() =>
-                          setSiteAnalyticsPagination((prev) => ({
-                            ...prev,
+                          setSiteAnalyticsPagination((p) => ({
+                            ...p,
                             pageIndex: Math.min(
                               siteAnalyticsPageCount - 1,
-                              prev.pageIndex + 1,
+                              p.pageIndex + 1,
                             ),
                           }))
                         }
@@ -3399,7 +3298,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                           siteAnalyticsPageCount - 1
                         }
                       >
-                        <span className="sr-only">Go to next page</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                       <Button
@@ -3407,8 +3305,8 @@ export default function TimesheetsListClient({ mode }: Props) {
                         size="icon"
                         className="hidden h-8 w-8 lg:flex"
                         onClick={() =>
-                          setSiteAnalyticsPagination((prev) => ({
-                            ...prev,
+                          setSiteAnalyticsPagination((p) => ({
+                            ...p,
                             pageIndex: siteAnalyticsPageCount - 1,
                           }))
                         }
@@ -3417,7 +3315,6 @@ export default function TimesheetsListClient({ mode }: Props) {
                           siteAnalyticsPageCount - 1
                         }
                       >
-                        <span className="sr-only">Go to last page</span>
                         <ChevronsRight className="h-4 w-4" />
                       </Button>
                     </div>
