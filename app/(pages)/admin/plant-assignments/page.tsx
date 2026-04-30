@@ -367,6 +367,14 @@ function PlantAssignmentsTab() {
   const selectedTransferSite = sites.find((s) => s.id === transferSiteId);
   const transferableSites = sites.filter((s) => s.id !== transferTarget?.site.id);
 
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(0); }, [search, filterStatus, filterSupervisor]);
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -419,84 +427,113 @@ function PlantAssignmentsTab() {
       </div>
 
       {/* Table */}
-      <div className="rounded border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-48">Item</TableHead>
-              <TableHead className="w-40">
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Site
-                </span>
-              </TableHead>
-              <TableHead className="w-16 text-center">Qty</TableHead>
-              <TableHead className="w-28 text-center">Status</TableHead>
-              <TableHead className="w-32">Deployed On</TableHead>
-              <TableHead className="w-36">Transferred From</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Loading…
-                </TableCell>
+      <div className="rounded border overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/60">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r">Item</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r">
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />Site</span>
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-16">Qty</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-28">Status</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r w-32">Deployed On</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r w-36">From</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide w-24">Actions</TableHead>
               </TableRow>
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  <Wrench className="mx-auto h-6 w-6 mb-1 opacity-30" />
-                  {search ? "No assignments match your search" : "No assignments yet"}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.product.name}</TableCell>
-                  <TableCell className="text-sm">
-                    <div>{a.site.name}</div>
-                    {a.site.code && (
-                      <div className="text-xs text-muted-foreground">{a.site.code}</div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary">{a.quantity}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusClass(a.status)}`}>
-                      {a.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDate(a.deployedOn)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {a.transfersIn.length > 0 ? a.transfersIn[0].fromSite.name : "Office"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => openEdit(a)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      {a.status === "DEPLOYED" && (
-                        <>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Transfer to another site" onClick={() => openTransfer(a)}>
-                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            title="Return to office" disabled={returningId === a.id} onClick={() => handleReturnToOffice(a)}
-                          >
-                            <Undo2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                    Loading…
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : paged.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                    <Wrench className="mx-auto h-6 w-6 mb-1 opacity-30" />
+                    {search ? "No assignments match your search" : "No assignments yet"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paged.map((a) => (
+                  <TableRow key={a.id} className="hover:bg-muted/30">
+                    <TableCell className="font-medium border-r">{a.product.name}</TableCell>
+                    <TableCell className="text-sm border-r whitespace-nowrap">
+                      {a.site.code ? `${a.site.code} — ${a.site.name}` : a.site.name}
+                    </TableCell>
+                    <TableCell className="text-center border-r">
+                      <Badge variant="secondary">{a.quantity}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center border-r">
+                      <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusClass(a.status)}`}>
+                        {a.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground border-r">{formatDate(a.deployedOn)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground border-r">
+                      {a.transfersIn.length > 0 ? a.transfersIn[0].fromSite.name : "Office"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => openEdit(a)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        {a.status === "DEPLOYED" && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Transfer to another site" onClick={() => openTransfer(a)}>
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Return to office" disabled={returningId === a.id} onClick={() => handleReturnToOffice(a)}
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination footer */}
+        <div className="flex items-center justify-between border-t px-4 py-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Rows per page</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
+              <SelectTrigger className="h-7 w-16 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[5, 10, 25, 50].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="mr-2 text-xs">
+              {filtered.length === 0 ? "0 of 0" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length}`}
+            </span>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(0)} disabled={page === 0}>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Edit Dialog */}
