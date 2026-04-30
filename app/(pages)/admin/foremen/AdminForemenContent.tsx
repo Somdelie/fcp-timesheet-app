@@ -58,6 +58,7 @@ import {
 } from "@/actions/admin";
 import { switchForemanTeam } from "@/actions/foreman-team";
 import { updateForemanBankName } from "@/actions/foreman-bank";
+import { updateForeman } from "@/actions/foreman-update";
 import type { AdminEmployee } from "@/lib/apiClient";
 
 const TEAM_OPTIONS = [
@@ -145,6 +146,12 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
   const [bankDialogValue, setBankDialogValue] = useState<string>("");
   const [isUpdatingBank, setIsUpdatingBank] = useState(false);
 
+  // Edit foreman dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Foreman | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", defaultDayRate: "", bankName: "" });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/" }, { label: "Foremen" }]);
   }, [setBreadcrumbs]);
@@ -184,6 +191,42 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
       toast.error(e?.message || "Failed to switch team.");
     } finally {
       setIsSwitchingTeam(false);
+    }
+  };
+
+  const handleOpenEdit = (foreman: Foreman) => {
+    setEditTarget(foreman);
+    setEditForm({
+      name: foreman.name,
+      defaultDayRate: foreman.foreman?.defaultDayRate ?? "",
+      bankName: foreman.foreman?.bankName ?? "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget?.foreman?.id) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await updateForeman({
+        foremanId: editTarget.foreman.id,
+        name: editForm.name,
+        defaultDayRate: editForm.defaultDayRate || null,
+        bankName: (editForm.bankName || null) as any,
+      });
+      if (res.ok) {
+        toast.success(res.message || "Foreman updated!");
+        setEditDialogOpen(false);
+        closeDialog();
+        router.refresh();
+      } else {
+        toast.error(res.error || "Failed to update foreman.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update foreman.");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -525,9 +568,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t">
                 <Button
-                  onClick={() => {
-                    console.log("Edit foreman:", selectedForeman);
-                  }}
+                  onClick={() => handleOpenEdit(selectedForeman)}
                   className="flex-1 bg-primary hover:bg-primary/90 text-white font-medium h-10 gap-2"
                 >
                   <Edit2 size={16} />
@@ -807,6 +848,70 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Edit Foreman Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Foreman</DialogTitle>
+            <DialogDescription>
+              Update details for <strong>{editTarget?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSaveEdit} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Full name"
+                required
+                minLength={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Default Day Rate (R)</label>
+              <Input
+                value={editForm.defaultDayRate}
+                onChange={(e) => setEditForm({ ...editForm, defaultDayRate: e.target.value })}
+                placeholder="e.g. 350.00"
+                type="number"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Bank</label>
+              <Select
+                value={editForm.bankName}
+                onValueChange={(v) => setEditForm({ ...editForm, bankName: v })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STD">STD</SelectItem>
+                  <SelectItem value="CAPITEC">CAPITEC</SelectItem>
+                  <SelectItem value="FNB">FNB</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                disabled={isSavingEdit}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSavingEdit}>
+                {isSavingEdit ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Bank Name Dialog */}
       <Dialog open={bankDialogOpen} onOpenChange={setBankDialogOpen}>
