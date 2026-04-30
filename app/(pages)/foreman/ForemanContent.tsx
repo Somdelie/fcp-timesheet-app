@@ -27,6 +27,7 @@ import {
   Users,
   Check,
   ChevronsUpDown,
+  Landmark,
 } from "lucide-react";
 import {
   Dialog,
@@ -518,6 +519,23 @@ export function ForemanContent({
                           selectedForeman.foreman.defaultTeam}
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bank Name */}
+              {selectedForeman.foreman && (
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 p-2 bg-green-50 rounded">
+                    <Landmark size={18} className="text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider">
+                      BANK
+                    </p>
+                    <p className="mt-1.5 font-semibold text-foreground">
+                      {selectedForeman.foreman.bankName ?? "—"}
+                    </p>
                   </div>
                 </div>
               )}
