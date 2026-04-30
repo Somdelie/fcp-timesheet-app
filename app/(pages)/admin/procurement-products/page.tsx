@@ -20,6 +20,7 @@ import {
   Layers,
   MoreHorizontal,
   RotateCcw,
+  DollarSign,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,17 @@ type SupplierPriceEntry = {
   unitSize: number | null;
   supplierId: string;
   supplier: { id: string; name: string };
+  isActive: boolean;
 };
+
+const PRODUCT_UOMS = [
+  "EACH", "UNIT", "PIECE", "PACK", "BOX", "BAG", "BUCKET", "DRUM", "CAN", "BOTTLE", "TUBE", "BAR",
+  "ROLL", "SHEET", "BUNDLE", "PALLET",
+  "MM", "CM", "M", "M2", "M3",
+  "G", "KG", "TON",
+  "ML", "L",
+  "HOUR", "DAY",
+] as const;
 
 type ProductVariantStock = {
   id: string;
@@ -203,6 +214,14 @@ export default function ProcurementProductsPage() {
   const [bulkSummary, setBulkSummary] = useState<{
     total: number; deletable: number; blocked: number;
   } | null>(null);
+
+  const [pricesOpen, setPricesOpen] = useState(false);
+  const [pricesProduct, setPricesProduct] = useState<ProcurementProduct | null>(null);
+  const [dialogPrices, setDialogPrices] = useState<SupplierPriceEntry[]>([]);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [priceForm, setPriceForm] = useState({ supplierId: "", price: "", uom: "", isActive: true });
+  const [savingPrice, setSavingPrice] = useState(false);
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
@@ -384,6 +403,99 @@ export default function ProcurementProductsPage() {
     }
   }
 
+  function openPricesDialog(product: ProcurementProduct) {
+    setPricesProduct(product);
+    setDialogPrices(product.supplierPrices);
+    setEditingPriceId(null);
+    setPriceForm({ supplierId: "", price: "", uom: "", isActive: true });
+    setPricesOpen(true);
+  }
+
+  async function reloadPrices(productId: string) {
+    setLoadingPrices(true);
+    try {
+      const res = await fetch(
+        `/api/app/admin/supplier-prices?productId=${productId}&includeInactive=true`,
+        { credentials: "include" },
+      );
+      const json = await res.json();
+      if (!res.ok) return;
+      const prices: SupplierPriceEntry[] = json.data;
+      setDialogPrices(prices);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId
+            ? { ...p, supplierPrices: prices.filter((x) => x.isActive) }
+            : p,
+        ),
+      );
+      setPricesProduct((prev) =>
+        prev?.id === productId ? { ...prev, supplierPrices: prices.filter((x) => x.isActive) } : prev,
+      );
+    } finally {
+      setLoadingPrices(false);
+    }
+  }
+
+  async function handleSavePrice() {
+    if (!pricesProduct) return;
+    if (!priceForm.supplierId && !editingPriceId) { toast.error("Supplier is required"); return; }
+    const priceNum = Number(priceForm.price);
+    if (!priceForm.price || isNaN(priceNum) || priceNum < 0) { toast.error("Valid price is required"); return; }
+    setSavingPrice(true);
+    try {
+      let res: Response;
+      if (editingPriceId) {
+        res = await fetch(`/api/app/admin/supplier-prices/${editingPriceId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ price: priceNum, uom: priceForm.uom || null, isActive: priceForm.isActive }),
+        });
+      } else {
+        res = await fetch("/api/app/admin/supplier-prices", {
+          method: "POST", credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            supplierId: priceForm.supplierId,
+            productId: pricesProduct.id,
+            price: priceNum,
+            uom: priceForm.uom || null,
+          }),
+        });
+      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to save price");
+      toast.success(editingPriceId ? "Price updated" : "Price added");
+      setEditingPriceId(null);
+      setPriceForm({ supplierId: "", price: "", uom: "", isActive: true });
+      await reloadPrices(pricesProduct.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save price");
+    } finally {
+      setSavingPrice(false);
+    }
+  }
+
+  async function handleDeletePrice(priceId: string) {
+    if (!pricesProduct) return;
+    try {
+      const res = await fetch(`/api/app/admin/supplier-prices/${priceId}`, {
+        method: "DELETE", credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to delete price");
+      toast.success("Price removed");
+      await reloadPrices(pricesProduct.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete price");
+    }
+  }
+
+  function startEditPrice(price: SupplierPriceEntry) {
+    setEditingPriceId(price.id);
+    setPriceForm({ supplierId: price.supplierId, price: price.price.toString(), uom: price.uom ?? "", isActive: price.isActive });
+  }
+
   // Tab counts
   const counts = useMemo(() => {
     const c: Record<string, number> = { ALL: products.length };
@@ -530,15 +642,29 @@ export default function ProcurementProductsPage() {
       header: () => <span>In Stock</span>,
       cell: ({ row }) => {
         const variants = row.original.variantStocks ?? [];
-        const total = variants.length > 0
-          ? variants.reduce((s, v) => s + v.qty, 0)
-          : (row.original.stockQty ?? 0);
+        if (variants.length === 0) {
+          return <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>;
+        }
+        const total = variants.reduce((s, v) => s + v.qty, 0);
+        const shown = variants.slice(0, 8);
+        const extra = variants.length - 8;
         return (
-          <div>
-            <Badge variant="secondary">{total}</Badge>
-            {variants.length > 0 && (
-              <div className="text-[10px] text-muted-foreground mt-0.5">{variants.length} variants</div>
-            )}
+          <div className="space-y-1 min-w-[110px]">
+            <Badge variant="secondary">{total} total</Badge>
+            <div className="space-y-0.5">
+              {shown.map((v) => {
+                const label = [v.size, v.color].filter(Boolean).join(" / ") || "—";
+                return (
+                  <div key={v.id} className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{label}</span>
+                    <span className="text-[10px] font-medium tabular-nums shrink-0">{v.qty}</span>
+                  </div>
+                );
+              })}
+              {extra > 0 && (
+                <div className="text-[10px] text-muted-foreground">+{extra} more</div>
+              )}
+            </div>
           </div>
         );
       },
@@ -573,7 +699,10 @@ export default function ProcurementProductsPage() {
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="icon" onClick={() => openEdit(row.original)}>
+          <Button variant="ghost" size="icon" title="Manage prices" onClick={() => openPricesDialog(row.original)}>
+            <DollarSign className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" title="Edit product" onClick={() => openEdit(row.original)}>
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
@@ -1102,6 +1231,128 @@ export default function ProcurementProductsPage() {
         }}
         confirmText={bulkDeleting ? "Deleting…" : "Delete selected"} variant="destructive"
       />
+
+      {/* Prices Dialog */}
+      <Dialog open={pricesOpen} onOpenChange={(o) => { if (!o) { setPricesOpen(false); setEditingPriceId(null); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Prices — {pricesProduct?.name}</DialogTitle>
+            <DialogDescription>Manage supplier prices for this product.</DialogDescription>
+          </DialogHeader>
+
+          {/* Price list */}
+          {loadingPrices ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : dialogPrices.length === 0 ? (
+            <div className="rounded border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+              No prices yet — add one below.
+            </div>
+          ) : (
+            <div className="rounded border border-border overflow-hidden">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-muted/60">
+                  <tr>
+                    <th className="border-b border-border px-3 py-2 text-left text-xs font-semibold">Supplier</th>
+                    <th className="border-b border-border px-3 py-2 text-right text-xs font-semibold">Price</th>
+                    <th className="border-b border-border px-3 py-2 text-left text-xs font-semibold">UOM</th>
+                    <th className="border-b border-border px-2 py-2 text-center text-xs font-semibold">Active</th>
+                    <th className="border-b border-border px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dialogPrices.map((price, i) => (
+                    <tr key={price.id} className={`${i % 2 !== 0 ? "bg-muted/20" : ""} ${editingPriceId === price.id ? "ring-1 ring-inset ring-primary/30" : ""}`}>
+                      <td className="border-b border-border px-3 py-2 text-xs last:border-b-0">{price.supplier.name}</td>
+                      <td className="border-b border-border px-3 py-2 text-xs text-right font-medium tabular-nums last:border-b-0">
+                        R {price.price.toFixed(2)}
+                      </td>
+                      <td className="border-b border-border px-3 py-2 text-xs text-muted-foreground last:border-b-0">{price.uom || "—"}</td>
+                      <td className="border-b border-border px-2 py-2 text-center last:border-b-0">
+                        <span className={`inline-flex h-2 w-2 rounded-full ${price.isActive ? "bg-green-500" : "bg-zinc-400"}`} />
+                      </td>
+                      <td className="border-b border-border px-2 py-2 last:border-b-0">
+                        <div className="flex items-center gap-0.5 justify-end">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Edit" onClick={() => startEditPrice(price)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" title="Remove" onClick={() => handleDeletePrice(price.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Add / Edit form */}
+          <div className="rounded border border-border bg-muted/20 p-3 space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {editingPriceId ? "Edit Price" : "Add Price"}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Supplier {!editingPriceId && <span className="text-destructive">*</span>}</label>
+                <Select
+                  value={priceForm.supplierId || "NONE"}
+                  onValueChange={(v) => setPriceForm({ ...priceForm, supplierId: v === "NONE" ? "" : v })}
+                  disabled={!!editingPriceId}
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">Select supplier…</SelectItem>
+                    {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Price (R) <span className="text-destructive">*</span></label>
+                <Input
+                  type="number" min={0} step="0.01"
+                  value={priceForm.price}
+                  onChange={(e) => setPriceForm({ ...priceForm, price: e.target.value })}
+                  className="h-8 text-xs" placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Unit of Measure</label>
+                <Select value={priceForm.uom || "NONE"} onValueChange={(v) => setPriceForm({ ...priceForm, uom: v === "NONE" ? "" : v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">None</SelectItem>
+                    {PRODUCT_UOMS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editingPriceId && (
+                <div className="flex items-end">
+                  <label className="flex w-full cursor-pointer items-center gap-2 rounded border border-border px-3 py-2 hover:bg-muted/40">
+                    <Checkbox checked={priceForm.isActive} onCheckedChange={(v) => setPriceForm({ ...priceForm, isActive: !!v })} />
+                    <span className="text-xs">Active</span>
+                  </label>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              {editingPriceId && (
+                <Button variant="outline" size="sm" className="h-7 text-xs"
+                  onClick={() => { setEditingPriceId(null); setPriceForm({ supplierId: "", price: "", uom: "", isActive: true }); }}>
+                  Cancel
+                </Button>
+              )}
+              <Button size="sm" className="h-7 text-xs" onClick={handleSavePrice} disabled={savingPrice}>
+                {savingPrice ? "Saving…" : editingPriceId ? "Update Price" : "Add Price"}
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPricesOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
