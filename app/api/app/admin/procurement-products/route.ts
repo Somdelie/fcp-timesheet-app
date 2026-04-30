@@ -117,6 +117,7 @@ export async function GET(req: Request) {
               supplier: { select: { id: true, name: true } },
             },
           },
+          variantStocks: { select: { id: true, size: true, color: true, qty: true } },
           _count: { select: { orderItems: true, supplierPrices: true } },
         },
       }),
@@ -185,13 +186,23 @@ export async function POST(req: Request) {
       colors?: string[];
       sizes?: string[];
       stockQty?: number;
+      variantStocks?: { size?: string | null; color?: string | null; qty?: number }[];
     };
+
+    const variantStocksInput = (body as any).variantStocks as
+      | { size?: string | null; color?: string | null; qty?: number }[]
+      | undefined;
 
     if (!name?.trim())
       return NextResponse.json(
         { error: "Name is required" },
         { status: 400, headers: CORS },
       );
+
+    const computedStockQty =
+      variantStocksInput?.length
+        ? variantStocksInput.reduce((s, v) => s + (Number(v.qty) || 0), 0)
+        : (stockQty != null ? Number(stockQty) : 0);
 
     const product = await prisma.procurementProduct.create({
       data: {
@@ -207,11 +218,25 @@ export async function POST(req: Request) {
         isReturnable: isReturnable ?? false,
         colors: colors ?? [],
         sizes: (body as any).sizes ?? [],
-        stockQty: stockQty != null ? Number(stockQty) : 0,
+        stockQty: computedStockQty,
+        ...(variantStocksInput?.length
+          ? {
+              variantStocks: {
+                createMany: {
+                  data: variantStocksInput.map((v) => ({
+                    size: v.size || null,
+                    color: v.color || null,
+                    qty: Math.max(0, Number(v.qty) || 0),
+                  })),
+                },
+              },
+            }
+          : {}),
       },
       include: {
         category: { select: { id: true, name: true } },
         supplier: { select: { id: true, name: true } },
+        variantStocks: { select: { id: true, size: true, color: true, qty: true } },
       },
     });
 

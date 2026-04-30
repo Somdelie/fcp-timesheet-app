@@ -94,6 +94,13 @@ type SupplierPriceEntry = {
   supplier: { id: string; name: string };
 };
 
+type ProductVariantStock = {
+  id: string;
+  size: string | null;
+  color: string | null;
+  qty: number;
+};
+
 type ProcurementProduct = {
   id: string;
   name: string;
@@ -104,12 +111,35 @@ type ProcurementProduct = {
   productType: ProductType;
   isReturnable: boolean;
   colors: string[];
+  sizes: string[];
   stockQty: number;
+  variantStocks: ProductVariantStock[];
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
   supplierPrices: SupplierPriceEntry[];
   _count: { orderItems: number; supplierPrices: number };
 };
+
+function variantKey(size: string, color: string) {
+  return `${size}\x00${color}`;
+}
+
+function buildVariantStocks(
+  sizes: string[],
+  colors: string[],
+  qtys: Record<string, number>,
+): { size: string | null; color: string | null; qty: number }[] {
+  if (sizes.length === 0 && colors.length === 0) return [];
+  const sizeList = sizes.length > 0 ? sizes : [""];
+  const colorList = colors.length > 0 ? colors : [""];
+  const result: { size: string | null; color: string | null; qty: number }[] = [];
+  for (const size of sizeList) {
+    for (const color of colorList) {
+      result.push({ size: size || null, color: color || null, qty: qtys[variantKey(size, color)] ?? 0 });
+    }
+  }
+  return result;
+}
 
 type Category = { id: string; name: string };
 type Supplier = { id: string; name: string };
@@ -158,6 +188,8 @@ export default function ProcurementProductsPage() {
     productType: "MATERIAL" as ProductType,
     isReturnable: false,
     colorsRaw: "",
+    sizesRaw: "",
+    variantQtys: {} as Record<string, number>,
     stockQty: 0,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -215,12 +247,16 @@ export default function ProcurementProductsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", sku: "", description: "", categoryId: "", supplierId: "", thumbnailUrl: "", productType: "MATERIAL", isReturnable: false, colorsRaw: "", stockQty: 0 });
+    setForm({ name: "", sku: "", description: "", categoryId: "", supplierId: "", thumbnailUrl: "", productType: "MATERIAL", isReturnable: false, colorsRaw: "", sizesRaw: "", variantQtys: {}, stockQty: 0 });
     setDialogOpen(true);
   }
 
   function openEdit(p: ProcurementProduct) {
     setEditing(p);
+    const variantQtys: Record<string, number> = {};
+    for (const v of (p.variantStocks ?? [])) {
+      variantQtys[variantKey(v.size ?? "", v.color ?? "")] = v.qty;
+    }
     setForm({
       name: p.name,
       sku: p.sku ?? "",
@@ -231,6 +267,8 @@ export default function ProcurementProductsPage() {
       productType: p.productType,
       isReturnable: p.isReturnable,
       colorsRaw: p.colors.join(", "),
+      sizesRaw: p.sizes.join(", "),
+      variantQtys,
       stockQty: p.stockQty ?? 0,
     });
     setDialogOpen(true);
@@ -285,6 +323,16 @@ export default function ProcurementProductsPage() {
         .map((c) => c.trim())
         .filter(Boolean);
 
+      const sizes = form.sizesRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const variantStocks = buildVariantStocks(sizes, colors, form.variantQtys);
+      const stockQty = variantStocks.length > 0
+        ? variantStocks.reduce((s, v) => s + v.qty, 0)
+        : form.stockQty;
+
       const url = editing
         ? `/api/app/admin/procurement-products/${editing.id}`
         : `/api/app/admin/procurement-products`;
@@ -303,7 +351,9 @@ export default function ProcurementProductsPage() {
           productType: form.productType,
           isReturnable: form.isReturnable,
           colors,
-          stockQty: form.stockQty,
+          sizes,
+          variantStocks,
+          stockQty,
         }),
       });
       const json = await res.json();
@@ -444,6 +494,16 @@ export default function ProcurementProductsPage() {
               )}
             </div>
           )}
+          {(row.original.sizes ?? []).length > 0 && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {(row.original.sizes ?? []).slice(0, 8).map((s) => (
+                <span key={s} className="inline-flex items-center rounded border border-border bg-muted/50 px-1.5 py-0 text-[10px] font-medium text-muted-foreground">{s}</span>
+              ))}
+              {(row.original.sizes ?? []).length > 8 && (
+                <span className="text-[10px] text-muted-foreground">+{(row.original.sizes ?? []).length - 8}</span>
+              )}
+            </div>
+          )}
         </div>
       ),
     },
@@ -468,9 +528,20 @@ export default function ProcurementProductsPage() {
     {
       id: "stockQty",
       header: () => <span>In Stock</span>,
-      cell: ({ row }) => (
-        <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>
-      ),
+      cell: ({ row }) => {
+        const variants = row.original.variantStocks ?? [];
+        const total = variants.length > 0
+          ? variants.reduce((s, v) => s + v.qty, 0)
+          : (row.original.stockQty ?? 0);
+        return (
+          <div>
+            <Badge variant="secondary">{total}</Badge>
+            {variants.length > 0 && (
+              <div className="text-[10px] text-muted-foreground mt-0.5">{variants.length} variants</div>
+            )}
+          </div>
+        );
+      },
       enableSorting: false,
     },
     {
@@ -840,23 +911,155 @@ export default function ProcurementProductsPage() {
               )}
             </div>
 
+            {/* Sizes */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Sizes <span className="text-muted-foreground font-normal">(comma-separated, optional)</span></label>
+              <Input
+                value={form.sizesRaw}
+                onChange={(e) => setForm({ ...form, sizesRaw: e.target.value })}
+                placeholder="e.g. S, M, L, XL, 2XL, Size 8, Size 9"
+              />
+              {form.sizesRaw && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {form.sizesRaw.split(",").map((s) => s.trim()).filter(Boolean).map((s) => (
+                    <span key={s} className="inline-flex items-center rounded border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium">{s}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Description */}
             <div className="space-y-1">
               <label className="text-sm font-medium">Description</label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional description" />
             </div>
 
-            {/* Stock Quantity */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Stock Quantity</label>
-              <Input
-                type="number"
-                min={0}
-                value={form.stockQty}
-                onChange={(e) => setForm({ ...form, stockQty: Math.max(0, Number(e.target.value)) })}
-                placeholder="0"
-              />
-            </div>
+            {/* Stock Quantities */}
+            {(() => {
+              const sizes = form.sizesRaw.split(",").map((s) => s.trim()).filter(Boolean);
+              const colors = form.colorsRaw.split(",").map((c) => c.trim()).filter(Boolean);
+              const hasVariants = sizes.length > 0 || colors.length > 0;
+
+              const getQty = (size: string, color: string) =>
+                form.variantQtys[variantKey(size, color)] ?? 0;
+              const setQty = (size: string, color: string, qty: number) =>
+                setForm((f) => ({
+                  ...f,
+                  variantQtys: { ...f.variantQtys, [variantKey(size, color)]: Math.max(0, qty) },
+                }));
+
+              if (!hasVariants) {
+                return (
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Stock Quantity</label>
+                    <Input
+                      type="number" min={0}
+                      value={form.stockQty}
+                      onChange={(e) => setForm({ ...form, stockQty: Math.max(0, Number(e.target.value)) })}
+                      placeholder="0"
+                    />
+                  </div>
+                );
+              }
+
+              if (sizes.length > 0 && colors.length > 0) {
+                const total = sizes.flatMap((s) => colors.map((c) => getQty(s, c))).reduce((a, b) => a + b, 0);
+                return (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">
+                      Stock per Size &amp; Color
+                      <span className="ml-2 font-normal text-muted-foreground text-xs">total: {total}</span>
+                    </label>
+                    <div className="overflow-x-auto rounded border border-border">
+                      <table className="w-full border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-muted/60">
+                            <th className="border-b border-r border-border px-2 py-1.5 text-left font-medium text-muted-foreground">Size / Color</th>
+                            {colors.map((color) => (
+                              <th key={color} className="border-b border-r border-border px-2 py-1.5 text-center font-medium last:border-r-0">
+                                <div className="flex items-center justify-center gap-1">
+                                  <ColorDot color={color} />{color}
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sizes.map((size, si) => (
+                            <tr key={size} className={si % 2 === 0 ? "" : "bg-muted/20"}>
+                              <td className="border-b border-r border-border px-2 py-1 font-medium last:border-b-0">{size}</td>
+                              {colors.map((color) => (
+                                <td key={color} className="border-b border-r border-border px-1 py-1 last:border-r-0 last:border-b-0">
+                                  <Input
+                                    type="number" min={0}
+                                    value={getQty(size, color)}
+                                    onChange={(e) => setQty(size, color, Number(e.target.value))}
+                                    className="h-7 w-16 text-center text-xs"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (sizes.length > 0) {
+                const total = sizes.map((s) => getQty(s, "")).reduce((a, b) => a + b, 0);
+                return (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">
+                      Stock per Size
+                      <span className="ml-2 font-normal text-muted-foreground text-xs">total: {total}</span>
+                    </label>
+                    <div className="space-y-1">
+                      {sizes.map((size) => (
+                        <div key={size} className="flex items-center gap-3">
+                          <span className="w-20 shrink-0 rounded border border-border bg-muted/40 px-2 py-1 text-center text-xs font-medium">{size}</span>
+                          <Input
+                            type="number" min={0}
+                            value={getQty(size, "")}
+                            onChange={(e) => setQty(size, "", Number(e.target.value))}
+                            className="h-8 w-24 text-xs"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              const total = colors.map((c) => getQty("", c)).reduce((a, b) => a + b, 0);
+              return (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">
+                    Stock per Color
+                    <span className="ml-2 font-normal text-muted-foreground text-xs">total: {total}</span>
+                  </label>
+                  <div className="space-y-1">
+                    {colors.map((color) => (
+                      <div key={color} className="flex items-center gap-3">
+                        <div className="flex w-32 shrink-0 items-center gap-1.5 rounded border border-border bg-muted/40 px-2 py-1">
+                          <ColorDot color={color} />
+                          <span className="truncate text-xs">{color}</span>
+                        </div>
+                        <Input
+                          type="number" min={0}
+                          value={getQty("", color)}
+                          onChange={(e) => setQty("", color, Number(e.target.value))}
+                          className="h-8 w-24 text-xs"
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

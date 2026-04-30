@@ -64,6 +64,7 @@ export async function GET(
           include: { supplier: { select: { id: true, name: true } } },
           orderBy: { startsOn: "desc" },
         },
+        variantStocks: { select: { id: true, size: true, color: true, qty: true } },
         _count: { select: { orderItems: true } },
       },
     });
@@ -140,7 +141,12 @@ export async function PATCH(
       colors?: string[];
       sizes?: string[];
       stockQty?: number;
+      variantStocks?: { size?: string | null; color?: string | null; qty?: number }[];
     };
+
+    const variantStocksInput = (body as any).variantStocks as
+      | { size?: string | null; color?: string | null; qty?: number }[]
+      | undefined;
 
     const data: Record<string, unknown> = {};
     if (name !== undefined) data.name = name.trim();
@@ -165,15 +171,44 @@ export async function PATCH(
     if (isReturnable !== undefined) data.isReturnable = isReturnable;
     if (colors !== undefined) data.colors = colors;
     if ((body as any).sizes !== undefined) data.sizes = (body as any).sizes;
-    if (stockQty !== undefined) data.stockQty = Number(stockQty);
 
-    const updated = await prisma.procurementProduct.update({
-      where: { id },
-      data,
-      include: {
-        category: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } },
-      },
+    if (variantStocksInput !== undefined) {
+      data.stockQty = variantStocksInput.reduce(
+        (s, v) => s + (Number(v.qty) || 0),
+        0,
+      );
+    } else if (stockQty !== undefined) {
+      data.stockQty = Number(stockQty);
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (variantStocksInput !== undefined) {
+        await tx.productVariantStock.deleteMany({ where: { productId: id } });
+      }
+      const product = await tx.procurementProduct.update({
+        where: { id },
+        data,
+        include: {
+          category: { select: { id: true, name: true } },
+          supplier: { select: { id: true, name: true } },
+          variantStocks: { select: { id: true, size: true, color: true, qty: true } },
+        },
+      });
+      if (variantStocksInput?.length) {
+        await tx.productVariantStock.createMany({
+          data: variantStocksInput.map((v) => ({
+            productId: id,
+            size: v.size || null,
+            color: v.color || null,
+            qty: Math.max(0, Number(v.qty) || 0),
+          })),
+        });
+        product.variantStocks = await tx.productVariantStock.findMany({
+          where: { productId: id },
+          select: { id: true, size: true, color: true, qty: true },
+        });
+      }
+      return product;
     });
 
     const result = {

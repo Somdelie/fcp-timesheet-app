@@ -1212,6 +1212,9 @@ model ProcurementProduct {
   // Plant transfer audit trail
   plantTransfers PlantTransfer[]
 
+  // Per-variant inventory (size × color)
+  variantStocks ProductVariantStock[]
+
   @@unique([sku])
   @@index([isActive])
   @@index([categoryId])
@@ -1219,6 +1222,19 @@ model ProcurementProduct {
   @@index([normalizedName])
   @@index([productType])
   @@index([isReturnable])
+}
+
+// Per-variant inventory tracking (size × color quantities)
+model ProductVariantStock {
+  id        String             @id @default(cuid())
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String?
+  color     String?
+  qty       Int                @default(0)
+
+  @@unique([productId, size, color])
+  @@index([productId])
 }
 
 // Price list per supplier per product (optionally time-bounded)
