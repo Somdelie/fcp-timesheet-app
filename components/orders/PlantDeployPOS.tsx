@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "react-toastify";
 
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, FileDown, Loader2, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,15 @@ type CartItem = {
   note: string;
 };
 
+type LastOrder = {
+  orderNumber: string;
+  issuedDate: string;
+  siteName: string;
+  siteCode?: string | null;
+  supervisorName: string;
+  items: { productName: string; quantity: number; note?: string }[];
+};
+
 export default function PlantDeployPOS({
   supervisors,
   items,
@@ -79,6 +88,8 @@ export default function PlantDeployPOS({
   const [productSearch, setProductSearch] = React.useState("");
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  const [printing, setPrinting] = React.useState(false);
+  const [lastOrder, setLastOrder] = React.useState<LastOrder | null>(null);
 
   const selectedSupervisor = React.useMemo(
     () => supervisors.find((s) => s.id === selectedSupervisorId) ?? null,
@@ -190,6 +201,26 @@ export default function PlantDeployPOS({
         toast.success(
           `${cart.length} item${cart.length !== 1 ? "s" : ""} deployed to ${selectedSite?.name}`,
         );
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const now = new Date();
+        const orderNumber = `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const issuedDate = now.toLocaleDateString("en-ZA", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+        setLastOrder({
+          orderNumber,
+          issuedDate,
+          siteName: selectedSite?.name ?? "",
+          siteCode: selectedSite?.code,
+          supervisorName: selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
+          items: cart.map((i) => ({
+            productName: i.productName,
+            quantity: i.quantity,
+            note: i.note.trim() || undefined,
+          })),
+        });
         setCart([]);
         onDeployed?.();
       } else if (failed.length < cart.length) {
@@ -207,6 +238,55 @@ export default function PlantDeployPOS({
       );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handlePrintVoucher() {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const now = new Date();
+    const orderNumber = `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const issuedDate = now.toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    const voucherData =
+      cart.length > 0
+        ? {
+            orderNumber,
+            issuedDate,
+            siteName: selectedSite?.name ?? "",
+            siteCode: selectedSite?.code,
+            supervisorName:
+              selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
+            items: cart.map((i) => ({
+              productName: i.productName,
+              quantity: i.quantity,
+              note: i.note.trim() || undefined,
+            })),
+          }
+        : lastOrder;
+
+    if (!voucherData) return;
+
+    setPrinting(true);
+    try {
+      const res = await fetch("/api/app/admin/plant-voucher/pdf", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(voucherData),
+      });
+      if (!res.ok) throw new Error("Failed to generate voucher");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Could not generate voucher PDF");
+    } finally {
+      setPrinting(false);
     }
   }
 
@@ -532,26 +612,51 @@ export default function PlantDeployPOS({
                       {totalUnits} unit{totalUnits !== 1 ? "s" : ""}
                     </div>
                   </div>
+                ) : lastOrder ? (
+                  <div>
+                    <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
+                      <span>Last Order</span>
+                    </div>
+                    <div className="text-sm font-bold tabular-nums">
+                      {lastOrder.orderNumber}
+                    </div>
+                  </div>
                 ) : (
                   <span className="text-[11px] text-primary-foreground/50 tracking-wide">
                     No items selected
                   </span>
                 )}
               </div>
-              <button
-                onClick={handleDeploy}
-                disabled={submitting || !canDeploy}
-                className={`
-                  px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
-                  ${
-                    submitting || !canDeploy
-                      ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
-                      : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
-                  }
-                `}
-              >
-                {submitting ? "Deploying…" : "Deploy to Site →"}
-              </button>
+              <div className="flex items-center gap-2">
+                {(canDeploy || lastOrder) && (
+                  <button
+                    onClick={handlePrintVoucher}
+                    disabled={printing}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold tracking-[0.15em] uppercase rounded border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {printing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Printer className="h-3.5 w-3.5" />
+                    )}
+                    {printing ? "Generating…" : "Print Voucher"}
+                  </button>
+                )}
+                <button
+                  onClick={handleDeploy}
+                  disabled={submitting || !canDeploy}
+                  className={`
+                    px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
+                    ${
+                      submitting || !canDeploy
+                        ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
+                        : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
+                    }
+                  `}
+                >
+                  {submitting ? "Deploying…" : "Deploy to Site →"}
+                </button>
+              </div>
             </div>
           </div>
 

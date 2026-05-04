@@ -598,22 +598,18 @@ export default function ProcurementProductsPage() {
         return (
           <div className="min-w-[180px] max-w-[280px]">
             <div className="font-medium leading-tight">{p.name}</div>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               {p.sku && <span className="text-[10px] text-muted-foreground">SKU: {p.sku}</span>}
               {p.category && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{p.category.name}</Badge>}
               {p.supplier && <span className="text-[10px] text-muted-foreground">{p.supplier.name}</span>}
+              {colors.slice(0, 5).map((c) => <ColorDot key={c} color={c} />)}
+              {colors.length > 5 && <span className="text-[10px] text-muted-foreground">+{colors.length - 5}</span>}
+              {colors.length > 0 && sizes.length > 0 && <span className="text-[10px] text-muted-foreground/50">·</span>}
+              {sizes.slice(0, 4).map((s) => (
+                <span key={s} className="text-[10px] text-muted-foreground font-medium">{s}</span>
+              ))}
+              {sizes.length > 4 && <span className="text-[10px] text-muted-foreground">+{sizes.length - 4}</span>}
             </div>
-            {(colors.length > 0 || sizes.length > 0) && (
-              <div className="flex items-center gap-1 mt-1 flex-wrap">
-                {colors.slice(0, 5).map((c) => <ColorDot key={c} color={c} />)}
-                {colors.length > 5 && <span className="text-[10px] text-muted-foreground">+{colors.length - 5}</span>}
-                {colors.length > 0 && sizes.length > 0 && <span className="text-[10px] text-muted-foreground">·</span>}
-                {sizes.slice(0, 4).map((s) => (
-                  <span key={s} className="text-[10px] text-muted-foreground font-medium">{s}</span>
-                ))}
-                {sizes.length > 4 && <span className="text-[10px] text-muted-foreground">+{sizes.length - 4}</span>}
-              </div>
-            )}
           </div>
         );
       },

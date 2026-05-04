@@ -260,14 +260,20 @@ const menuGroups: {
       },
       {
         href: "/admin/plant-list",
-        label: "Plant List",
+        label: "Plant Catalogue",
         icon: Wrench,
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/admin/plant-assignments",
-        label: "Plant & Equipment",
+        label: "Plant Assignments",
         icon: Wrench,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
+        href: "/admin/equipment-inventory",
+        label: "Equipment Inventory",
+        icon: Package,
         roles: ["ADMIN", "OFFICE"],
       },
       {

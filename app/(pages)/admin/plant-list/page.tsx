@@ -19,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
-  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +40,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Table,
   TableBody,
   TableCell,
@@ -64,10 +57,6 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import PlantDeployPOS, {
-  type PlantSupervisorDto,
-  type PlantItemDto,
-} from "@/components/orders/PlantDeployPOS";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -104,10 +93,6 @@ export default function PlantListPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  // Deploy sheet
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [supervisors, setSupervisors] = useState<PlantSupervisorDto[]>([]);
-
   // Create/Edit Dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PlantItem | null>(null);
@@ -137,33 +122,16 @@ export default function PlantListPage() {
   useEffect(() => {
     async function loadLookups() {
       try {
-        const [catRes, supRes, svRes] = await Promise.all([
+        const [catRes, supRes] = await Promise.all([
           fetch("/api/app/admin/product-categories", { credentials: "include" }),
           fetch("/api/app/admin/suppliers?includeInactive=false", { credentials: "include" }),
-          fetch("/api/app/admin/supervisors", { credentials: "include" }),
         ]);
-        const [catJson, supJson, svJson] = await Promise.all([
+        const [catJson, supJson] = await Promise.all([
           catRes.json(),
           supRes.json(),
-          svRes.json(),
         ]);
         if (catRes.ok) setCategories(catJson.data ?? []);
         if (supRes.ok) setSuppliers(supJson.data ?? []);
-        if (svRes.ok) {
-          const svData: PlantSupervisorDto[] = (svJson.supervisors ?? []).map(
-            (s: any) => ({
-              id: s.id,
-              name: s.name ?? null,
-              email: s.email,
-              sites: (s.sites ?? []).map((site: any) => ({
-                id: site.id,
-                name: site.name,
-                code: site.code ?? null,
-              })),
-            }),
-          );
-          setSupervisors(svData);
-        }
       } catch {}
     }
     loadLookups();
@@ -520,25 +488,12 @@ export default function PlantListPage() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  /* -------- plant items for POS -------- */
-  const plantItemDtos: PlantItemDto[] = useMemo(
-    () =>
-      items.map((p) => ({
-        id: p.id,
-        name: p.name,
-        sku: p.sku,
-        thumbnailUrl: p.thumbnailUrl,
-        sizes: p.sizes ?? [],
-      })),
-    [items],
-  );
-
   /* ================================================================== */
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* ---- Header + Toolbar ---- */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h1 className="text-xl font-semibold">Plant List</h1>
+        <h1 className="text-xl font-semibold">Plant Catalogue</h1>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -578,9 +533,6 @@ export default function PlantListPage() {
           </Button>
           <Button onClick={openCreate} size="sm" variant="outline">
             <Plus className="mr-1 h-4 w-4" /> Add Plant Item
-          </Button>
-          <Button onClick={() => setSheetOpen(true)} size="sm">
-            <Truck className="mr-1 h-4 w-4" /> Deploy Plant
           </Button>
         </div>
       </div>
@@ -739,26 +691,6 @@ export default function PlantListPage() {
           </div>
         </div>
       )}
-
-      {/* ---- Deploy Sheet ---- */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-full lg:max-w-[85vw] p-0 overflow-y-auto"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Deploy Plant to Site</SheetTitle>
-          </SheetHeader>
-          <PlantDeployPOS
-            supervisors={supervisors}
-            items={plantItemDtos}
-            onDeployed={() => {
-              setSheetOpen(false);
-              load();
-            }}
-          />
-        </SheetContent>
-      </Sheet>
 
       {/* ---- Create / Edit Dialog ---- */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
