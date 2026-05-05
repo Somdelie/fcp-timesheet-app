@@ -271,12 +271,12 @@ const menuGroups: {
         icon: Package,
         roles: ["ADMIN", "OFFICE"],
       },
-      {
-        href: "/admin/fortnight-meetings",
-        label: "Fortnight Meetings",
-        icon: CalendarCheck,
-        roles: ["ADMIN"],
-      },
+      // {
+      //   href: "/admin/fortnight-meetings",
+      //   label: "Fortnight Meetings",
+      //   icon: CalendarCheck,
+      //   roles: ["ADMIN"],
+      // },
       {
         href: "/admin/paint-planning",
         label: "Paint Planning",
