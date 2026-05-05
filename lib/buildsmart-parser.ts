@@ -19,6 +19,7 @@ export type ParsedOrder = {
   siteCode: string | null;
   siteName: string | null;
   createdDate: string | null;
+  foremanNameHint: string | null;
   items: ParsedItem[];
   rawText?: string;
 };
@@ -49,6 +50,18 @@ export function cleanText(input: string): string {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{2,}/g, "\n")
     .trim();
+}
+
+export function extractSubject(text: string): string | null {
+  const m = text.match(/Subject\s*:\s*([^\n]+)/i);
+  return m ? m[1].trim() : null;
+}
+
+export function extractForemanNameFromSubject(subject: string | null): string | null {
+  if (!subject) return null;
+  // "STOCK - KENNETH NDLOVU" or "PPE - JOHN SMITH" → "KENNETH NDLOVU"
+  const m = subject.match(/^[A-Z0-9\s]+\s*-\s*(.+)$/i);
+  return m ? m[1].trim() : null;
 }
 
 export function extractOrderNumber(text: string): string | null {
@@ -130,16 +143,22 @@ function parseItemChunk(chunk: string): ParsedItem | null {
   const costCode = costMatch[1];
   let content = joined.slice(costMatch[0].length).trim();
 
-  // Extract unit + quantity from end: "20L 5", "5L 2", "each 48"
-  const uqMatch = content.match(/(each|\d+\s*[A-Z]{1,3})\s+(\d+)\s*$/i);
-
   let unit = "";
   let quantity = 1;
+
+  // Format A: "unit qty" at end — e.g. "20L 5", "each 48" (Contract POs)
+  const uqMatch = content.match(/(each|\d+\s*[A-Z]{1,3})\s+(\d+)\s*$/i);
+  // Format B: "qty unit" at end — e.g. "1 each", "3 each" (Balance Sheet POs)
+  const quMatch = content.match(/(\d+)\s+(each)\s*$/i);
 
   if (uqMatch) {
     unit = uqMatch[1].replace(/\s/g, "");
     quantity = Number(uqMatch[2]);
     content = content.slice(0, uqMatch.index!).trim();
+  } else if (quMatch) {
+    quantity = Number(quMatch[1]);
+    unit = quMatch[2].toLowerCase();
+    content = content.slice(0, quMatch.index!).trim();
   }
 
   if (!content) return null;
@@ -161,26 +180,69 @@ function parseItemChunk(chunk: string): ParsedItem | null {
   };
 }
 
+function getSection(
+  text: string,
+  match: RegExpMatchArray,
+): string {
+  const startIdx = match.index! + match[0].length;
+  const footerIdx = text.indexOf("Authorised Signatory", startIdx);
+  const endIdx = footerIdx !== -1 ? footerIdx : text.length;
+  return text.slice(startIdx, endIdx).trim();
+}
+
+function extractBalanceSheetItems(section: string): ParsedItem[] {
+  const items: ParsedItem[] = [];
+  // Use a direct regex that matches each item regardless of exact line structure.
+  // Pattern: 6-digit cost code, then description (lazy), then qty digit(s), then unit.
+  // The `s` flag lets `.+?` span newlines so wrapped descriptions are handled.
+  const re =
+    /\b(\d{6})\b[ \t]+(.+?)[ \t]+(\d+(?:\.\d+)?)[ \t]+(each|\d+\s*[A-Za-z]{1,3})\b/gis;
+  for (const m of section.matchAll(re)) {
+    const [, costCode, desc, qtyStr, unit] = m;
+    const quantity = parseFloat(qtyStr);
+    if (!quantity) continue;
+    const description = desc.trim().replace(/\s+/g, " ");
+    if (!description) continue;
+    const codeMatch = description.match(
+      /^([A-Z]{2,4}\s*[\d]+(?:\s*[\d]+)*[A-Z]*)/i,
+    );
+    const productCode = codeMatch ? codeMatch[1].trim() : "";
+    const unitClean = unit.replace(/\s/g, "");
+    const candidateSku =
+      productCode && unitClean ? pdfCodeToSku(productCode, unitClean) : null;
+    items.push({
+      costCode,
+      productCode,
+      rawDescription: description,
+      unit: unitClean.toLowerCase(),
+      quantity,
+      candidateSku,
+    });
+  }
+  return items;
+}
+
 export function extractItems(
   text: string,
   siteCode: string | null,
 ): ParsedItem[] {
-  // Try Contract section first, then Balance Sheet section
   const contractMatch = text.match(/Contract\s*:\s*\d+\s*-\s*[^\n]+/);
   const balanceMatch = text.match(/Balance Sheet Item\(s\)/i);
 
-  const sectionMatch = contractMatch ?? balanceMatch;
-  if (!sectionMatch || sectionMatch.index === undefined) return [];
+  // Balance Sheet marker takes priority — try it first
+  if (balanceMatch) {
+    const section = getSection(text, balanceMatch);
+    if (section) {
+      const items = extractBalanceSheetItems(section);
+      if (items.length > 0) return items;
+    }
+  }
 
-  const startIdx = sectionMatch.index + sectionMatch[0].length;
-  const footerIdx = text.indexOf("Authorised Signatory", startIdx);
-  const endIdx = footerIdx !== -1 ? footerIdx : text.length;
-
-  const section = text.slice(startIdx, endIdx).trim();
-  if (!section) return [];
-
+  // Contract-based POs: split by "siteCode, Blank <lineNumber>" delimiter
   if (contractMatch) {
-    // Contract-based POs: split by "siteCode, Blank <lineNumber>" delimiter
+    const section = getSection(text, contractMatch);
+    if (!section) return [];
+
     const escCode = (siteCode || "\\d{4}").replace(
       /[.*+?^${}()|[\]\\]/g,
       "\\$&",
@@ -199,22 +261,7 @@ export function extractItems(
     return items;
   }
 
-  // Balance Sheet POs: items are line-delimited, each starting with a
-  // line number + 6-digit material code (e.g. "1 080110 1838 Sandpaper ...")
-  const lines = section
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const items: ParsedItem[] = [];
-
-  for (const line of lines) {
-    // Strip leading line number (e.g. "1 " or "2 ")
-    const stripped = line.replace(/^\d+\s+/, "");
-    const parsed = parseItemChunk(stripped);
-    if (parsed) items.push(parsed);
-  }
-
-  return items;
+  return [];
 }
 
 // ── Parse a single PDF buffer ──
@@ -238,6 +285,7 @@ export async function parsePdfBuffer(
   const { siteCode, siteName } = extractContract(text);
   const createdDate = extractCreatedDate(text);
   const items = extractItems(text, siteCode);
+  const foremanNameHint = extractForemanNameFromSubject(extractSubject(text));
 
   return {
     orderNumber,
@@ -246,6 +294,7 @@ export async function parsePdfBuffer(
     siteCode,
     siteName,
     createdDate,
+    foremanNameHint,
     items,
     rawText: text,
   };

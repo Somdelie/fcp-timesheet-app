@@ -740,24 +740,75 @@ model TimesheetDayAcceptance {
 //
 
 model Product {
-  id             String  @id @default(cuid())
+  id             String        @id @default(cuid())
   name           String
   normalizedName String?
-  price          Decimal @db.Decimal(12, 2)
-  isActive       Boolean @default(true)
+  sku            String?
+  description    String?
+  price          Decimal       @db.Decimal(12, 2)
+  isActive       Boolean       @default(true)
+  category       StockCategory @default(PPE)
+  sizes          String[]
+  colors         String[]
+  stockQty       Int           @default(0)
+  thumbnailUrl   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Used by product-based deductions
-  deductions Deduction[]
-
-  // Used by product orders
-  orderItems ProductOrderItem[]
+  deductions    Deduction[]
+  orderItems    ProductOrderItem[]
+  variants      StockItemVariant[]
+  receiptItems  StockReceiptItem[]
 
   @@index([isActive])
   @@index([name])
   @@index([normalizedName])
+  @@index([category])
+}
+
+model StockItemVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String?
+  color     String?
+  qty       Int     @default(0)
+
+  @@unique([productId, size, color])
+  @@index([productId])
+}
+
+// ============================
+// STOCK RECEIPTS (BuildSmart PO intake)
+// ============================
+
+model StockReceipt {
+  id         String   @id @default(cuid())
+  reference  String
+  vendorName String?
+  receivedAt DateTime @default(now())
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  items StockReceiptItem[]
+
+  @@index([reference])
+  @@index([receivedAt])
+}
+
+model StockReceiptItem {
+  id        String @id @default(cuid())
+  receiptId String
+  productId String
+  quantity  Int
+  note      String?
+
+  receipt StockReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  product Product      @relation(fields: [productId], references: [id])
+
+  @@index([receiptId])
+  @@index([productId])
 }
 
 model Deduction {
@@ -1018,6 +1069,11 @@ enum ProductOrderStatus {
   PARTIALLY_APPLIED
   APPLIED
   CANCELLED
+}
+
+enum StockCategory {
+  PPE
+  TOOL
 }
 
 // ✅ NEW: teams for team-based default day rates

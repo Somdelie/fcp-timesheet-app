@@ -85,14 +85,16 @@ export async function DELETE(
       );
     }
 
+    // Already-cancelled orders: hard delete immediately
     if (order.status === "CANCELLED") {
+      await prisma.productOrder.delete({ where: { id: itemId } });
       return NextResponse.json(
-        { error: "Order is already cancelled" },
-        { status: 400, headers: CORS_HEADERS },
+        { ok: true, deleted: true },
+        { headers: CORS_HEADERS },
       );
     }
 
-    // Check if any linked deductions belong to a PAID timesheet
+    // Active orders: check for paid deductions before cancelling
     const linkedDeductions = order.items.flatMap((i) => i.deductions);
     const hasPaidDeduction = linkedDeductions.some(
       (d) => d.timesheet?.status === "PAID",
@@ -100,22 +102,18 @@ export async function DELETE(
 
     if (hasPaidDeduction) {
       return NextResponse.json(
-        {
-          error:
-            "Cannot cancel order — some deductions are on a paid timesheet",
-        },
+        { error: "Cannot cancel order — some deductions are on a paid timesheet" },
         { status: 400, headers: CORS_HEADERS },
       );
     }
 
-    // Delete linked deductions (if order was APPLIED)
+    // Delete linked deductions then soft-cancel
     if (linkedDeductions.length > 0) {
       await prisma.deduction.deleteMany({
         where: { id: { in: linkedDeductions.map((d) => d.id) } },
       });
     }
 
-    // Mark order as cancelled
     await prisma.productOrder.update({
       where: { id: itemId },
       data: { status: "CANCELLED" },

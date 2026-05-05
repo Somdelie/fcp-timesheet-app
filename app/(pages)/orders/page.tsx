@@ -27,8 +27,18 @@ export default async function OrdersPage() {
       select: {
         id: true,
         name: true,
+        sku: true,
+        description: true,
         price: true,
         isActive: true,
+        category: true,
+        sizes: true,
+        colors: true,
+        stockQty: true,
+        thumbnailUrl: true,
+        variants: {
+          select: { id: true, size: true, color: true, qty: true },
+        },
       },
     }),
   ]);
@@ -43,8 +53,16 @@ export default async function OrdersPage() {
   const products: AdminProductDto[] = productRows.map((p) => ({
     id: p.id,
     name: p.name,
+    sku: p.sku ?? null,
+    description: p.description ?? null,
     price: (p.price as any).toString?.() ?? String(p.price ?? "0"),
     isActive: p.isActive,
+    category: p.category as "PPE" | "TOOL",
+    sizes: p.sizes ?? [],
+    colors: p.colors ?? [],
+    stockQty: p.stockQty ?? 0,
+    thumbnailUrl: p.thumbnailUrl ?? null,
+    variants: p.variants ?? [],
   }));
 
   return (

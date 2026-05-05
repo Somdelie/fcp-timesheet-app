@@ -14,9 +14,7 @@ import {
   ChevronDown,
   ArrowUpDown,
   Upload,
-  HardHat,
   Wrench,
-  ShieldCheck,
   Layers,
   MoreHorizontal,
   RotateCcw,
@@ -81,7 +79,6 @@ type ProductType = "MATERIAL" | "PPE" | "PLANT" | "CONSUMABLE" | "OTHER";
 
 const PRODUCT_TYPES: { value: ProductType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: "MATERIAL", label: "Material", icon: <Layers className="h-3.5 w-3.5" />, color: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" },
-  { value: "PPE", label: "PPE", icon: <ShieldCheck className="h-3.5 w-3.5" />, color: "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300" },
   { value: "PLANT", label: "Plant", icon: <Wrench className="h-3.5 w-3.5" />, color: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300" },
   { value: "CONSUMABLE", label: "Consumable", icon: <Package className="h-3.5 w-3.5" />, color: "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300" },
   { value: "OTHER", label: "Other", icon: <MoreHorizontal className="h-3.5 w-3.5" />, color: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
@@ -501,12 +498,13 @@ export default function ProcurementProductsPage() {
     setPriceForm({ supplierId: price.supplierId, price: price.price.toString(), uom: price.uom ?? "", isActive: price.isActive });
   }
 
-  // Tab counts
   const counts = useMemo(() => {
-    const c: Record<string, number> = { ALL: products.length };
+    const c: Record<string, number> = { ALL: 0 };
     for (const p of products) {
       const t = p.productType ?? "MATERIAL";
+      if (t === "PPE") continue;
       c[t] = (c[t] ?? 0) + 1;
+      c.ALL += 1;
     }
     return c;
   }, [products]);
@@ -514,6 +512,7 @@ export default function ProcurementProductsPage() {
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
+      if ((p.productType ?? "MATERIAL") === "PPE") return false;
       if (activeTab !== "ALL" && (p.productType ?? "MATERIAL") !== activeTab) return false;
       if (!term) return true;
       return (
@@ -720,7 +719,6 @@ export default function ProcurementProductsPage() {
   const TABS: { value: ProductType | "ALL"; label: string }[] = [
     { value: "ALL", label: "All" },
     { value: "MATERIAL", label: "Materials" },
-    { value: "PPE", label: "PPE" },
     { value: "PLANT", label: "Plant" },
     { value: "CONSUMABLE", label: "Consumables" },
     { value: "OTHER", label: "Other" },

@@ -221,23 +221,6 @@ const menuGroups: {
     ],
   },
   {
-    group: "Commerce",
-    items: [
-      {
-        href: "/products",
-        label: "Products",
-        icon: Package,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/orders",
-        label: "Stock Orders",
-        icon: ShoppingCart,
-        roles: ["ADMIN", "OFFICE"],
-      },
-    ],
-  },
-  {
     group: "Procurement",
     items: [
       {
@@ -259,6 +242,18 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE"],
       },
       {
+        href: "/admin/material-orders",
+        label: "Material Orders",
+        icon: ShoppingCart,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
+        href: "/admin/supplier-prices",
+        label: "Supplier Prices",
+        icon: DollarSign,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
         href: "/admin/plant-list",
         label: "Plant Catalogue",
         icon: Wrench,
@@ -277,18 +272,6 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE"],
       },
       {
-        href: "/admin/supplier-prices",
-        label: "Supplier Prices",
-        icon: DollarSign,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/material-orders",
-        label: "Material Orders",
-        icon: ShoppingCart,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
         href: "/admin/fortnight-meetings",
         label: "Fortnight Meetings",
         icon: CalendarCheck,
@@ -298,6 +281,23 @@ const menuGroups: {
         href: "/admin/paint-planning",
         label: "Paint Planning",
         icon: Paintbrush,
+        roles: ["ADMIN", "OFFICE"],
+      },
+    ],
+  },
+  {
+    group: "PPE & Tools",
+    items: [
+      {
+        href: "/products",
+        label: "PPE & Tools Catalogue",
+        icon: Package,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
+        href: "/orders",
+        label: "PPE & Tools Orders",
+        icon: ShoppingCart,
         roles: ["ADMIN", "OFFICE"],
       },
     ],
@@ -322,7 +322,12 @@ const roleBadgeConfig: Record<Role, { label: string; color: string }> = {
   FOREMAN: { label: "Foreman", color: "#2ae87a" },
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, isOverlay = false, role, userName }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  isOverlay = false,
+  role,
+  userName,
+}) => {
   const pathname = usePathname();
   const badge = roleBadgeConfig[role];
 
