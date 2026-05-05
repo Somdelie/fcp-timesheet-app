@@ -47,7 +47,7 @@ export type SeedOrder = {
 export function cleanText(input: string): string {
   return input
     .replace(/\r/g, "\n")
-    .replace(/[ \t]+/g, " ")
+    .replace(/[ \t\xa0]+/g, " ")
     .replace(/\n{2,}/g, "\n")
     .trim();
 }
@@ -57,7 +57,9 @@ export function extractSubject(text: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-export function extractForemanNameFromSubject(subject: string | null): string | null {
+export function extractForemanNameFromSubject(
+  subject: string | null,
+): string | null {
   if (!subject) return null;
   // "STOCK - KENNETH NDLOVU" or "PPE - JOHN SMITH" → "KENNETH NDLOVU"
   const m = subject.match(/^[A-Z0-9\s]+\s*-\s*(.+)$/i);
@@ -180,10 +182,7 @@ function parseItemChunk(chunk: string): ParsedItem | null {
   };
 }
 
-function getSection(
-  text: string,
-  match: RegExpMatchArray,
-): string {
+function getSection(text: string, match: RegExpMatchArray): string {
   const startIdx = match.index! + match[0].length;
   const footerIdx = text.indexOf("Authorised Signatory", startIdx);
   const endIdx = footerIdx !== -1 ? footerIdx : text.length;
@@ -192,33 +191,59 @@ function getSection(
 
 function extractBalanceSheetItems(section: string): ParsedItem[] {
   const items: ParsedItem[] = [];
-  // Use a direct regex that matches each item regardless of exact line structure.
-  // Pattern: 6-digit cost code, then description (lazy), then qty digit(s), then unit.
-  // The `s` flag lets `.+?` span newlines so wrapped descriptions are handled.
-  const re =
-    /\b(\d{6})\b[ \t]+(.+?)[ \t]+(\d+(?:\.\d+)?)[ \t]+(each|\d+\s*[A-Za-z]{1,3})\b/gis;
-  for (const m of section.matchAll(re)) {
-    const [, costCode, desc, qtyStr, unit] = m;
-    const quantity = parseFloat(qtyStr);
-    if (!quantity) continue;
-    const description = desc.trim().replace(/\s+/g, " ");
-    if (!description) continue;
-    const codeMatch = description.match(
-      /^([A-Z]{2,4}\s*[\d]+(?:\s*[\d]+)*[A-Z]*)/i,
+
+  const lines = section
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx];
+
+    // ✅ FORMAT 1: Proper spaced format
+    let m = line.match(
+      /^\d+\s+(\d{6})\s+([A-Z0-9]+)\s+(.+?)\s+(\d+)\s+(each|[A-Za-z]+)/i,
     );
-    const productCode = codeMatch ? codeMatch[1].trim() : "";
-    const unitClean = unit.replace(/\s/g, "");
-    const candidateSku =
-      productCode && unitClean ? pdfCodeToSku(productCode, unitClean) : null;
-    items.push({
-      costCode,
-      productCode,
-      rawDescription: description,
-      unit: unitClean.toLowerCase(),
-      quantity,
-      candidateSku,
-    });
+
+    if (m) {
+      const [, costCode, productCode, desc, qty, unit] = m;
+
+      items.push({
+        costCode,
+        productCode,
+        rawDescription: desc.trim(),
+        unit: unit.toLowerCase(),
+        quantity: Number(qty),
+        candidateSku: pdfCodeToSku(productCode, unit),
+      });
+
+      continue;
+    }
+
+    // ✅ FORMAT 2: Collapsed pdf-parse format
+    m = line.match(/^(\d{6})([A-Z0-9]+)\s+(.+?)(each|[A-Za-z]+)\s+(\d+)$/i);
+
+    if (m) {
+      const [, costCode, productCode, desc, unit, qtyAndRow] = m;
+
+      // remove row number from end
+      const rowLen = String(idx + 1).length;
+      const qtyStr =
+        qtyAndRow.length > rowLen ? qtyAndRow.slice(0, -rowLen) : qtyAndRow;
+
+      items.push({
+        costCode,
+        productCode,
+        rawDescription: desc.trim(),
+        unit: unit.toLowerCase(),
+        quantity: Number(qtyStr),
+        candidateSku: pdfCodeToSku(productCode, unit),
+      });
+    }
   }
+
+  console.log("[BS-DEBUG LINES]", lines);
+
   return items;
 }
 
@@ -230,10 +255,18 @@ export function extractItems(
   const balanceMatch = text.match(/Balance Sheet Item\(s\)/i);
 
   // Balance Sheet marker takes priority — try it first
+  console.log(
+    "[BS-DEBUG] contractMatch:",
+    !!contractMatch,
+    "balanceMatch:",
+    !!balanceMatch,
+  );
   if (balanceMatch) {
     const section = getSection(text, balanceMatch);
+    console.log("[BS-DEBUG] section length:", section.length);
     if (section) {
       const items = extractBalanceSheetItems(section);
+      console.log("[BS-DEBUG] items found:", items.length);
       if (items.length > 0) return items;
     }
   }
