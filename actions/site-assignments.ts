@@ -264,3 +264,82 @@ export async function endForemanSiteAssignment(input: {
   revalidatePath(`/sites/${input.siteId}`);
   return { ok: true as const };
 }
+
+/** ========= Admin ↔ Site ========= */
+
+export async function listAdminSiteAssignments(siteId: string) {
+  const auth = await requireServerAuth();
+  await requireCanManageSite(auth, siteId);
+
+  const rows = await prisma.adminSiteAssignment.findMany({
+    where: { siteId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      startsOn: true,
+      endsOn: true,
+      siteId: true,
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  return {
+    ok: true as const,
+    assignments: rows.map((r) =>
+      serializeAssignment({
+        ...r,
+        person: { name: r.user.name, email: r.user.email },
+      }),
+    ),
+  };
+}
+
+export async function assignAdminToSite(input: {
+  siteId: string;
+  adminUserId: string;
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN")
+    return { ok: false as const, error: "Only admin can assign admins to sites." };
+
+  const siteId = String(input.siteId);
+  const userId = String(input.adminUserId);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true },
+  });
+  if (!user || !["ADMIN", "OFFICE"].includes(user.role))
+    return { ok: false as const, error: "Admin user not found." };
+
+  const existing = await prisma.adminSiteAssignment.findFirst({
+    where: { siteId, userId, endsOn: null },
+    select: { id: true },
+  });
+  if (existing)
+    return { ok: false as const, error: "Admin is already assigned to this site." };
+
+  await prisma.adminSiteAssignment.create({
+    data: { site: { connect: { id: siteId } }, user: { connect: { id: userId } } },
+  });
+
+  revalidatePath(`/sites/${siteId}`);
+  return { ok: true as const };
+}
+
+export async function endAdminSiteAssignment(input: {
+  assignmentId: string;
+  siteId: string;
+}) {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN")
+    return { ok: false as const, error: "Only admin can end admin assignments." };
+
+  await prisma.adminSiteAssignment.update({
+    where: { id: input.assignmentId },
+    data: { endsOn: new Date() },
+  });
+
+  revalidatePath(`/sites/${input.siteId}`);
+  return { ok: true as const };
+}

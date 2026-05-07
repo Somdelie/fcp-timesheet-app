@@ -9,17 +9,15 @@ export const revalidate = 0;
 export default async function OrdersPage() {
   await requireAuth({ roles: ["ADMIN"] });
 
-  const [foremanRows, productRows] = await Promise.all([
+  const [foremanRows, adminRows, productRows] = await Promise.all([
     prisma.foreman.findMany({
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
+      include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "OFFICE"] } },
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: "asc" },
     }),
     prisma.product.findMany({
       where: { isActive: true },
@@ -43,12 +41,22 @@ export default async function OrdersPage() {
     }),
   ]);
 
-  const foremen: AdminForemanDto[] = foremanRows.map((f) => ({
-    id: f.id,
-    userId: f.userId,
-    name: f.user?.name ?? "",
-    email: f.user?.email ?? "",
-  }));
+  const foremen: AdminForemanDto[] = [
+    ...foremanRows.map((f) => ({
+      id: f.id,
+      userId: f.userId,
+      name: f.user?.name ?? "",
+      email: f.user?.email ?? "",
+      type: "foreman" as const,
+    })),
+    ...adminRows.map((u) => ({
+      id: u.id,
+      userId: u.id,
+      name: u.name ?? "",
+      email: u.email ?? "",
+      type: "admin" as const,
+    })),
+  ];
 
   const products: AdminProductDto[] = productRows.map((p) => ({
     id: p.id,

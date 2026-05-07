@@ -544,15 +544,16 @@ export default function TimesheetDetailSheet<
 
                         const totals = (detail as any)?.totals ?? {};
                         const overtimeTotal = Number(totals.overtimeTotal ?? 0);
-                        const deductionsTotal = Number(
-                          totals.totalDeductions ?? totals.deductionsTotal ?? 0,
-                        );
+                        const cashDeductionsTotal = Number(totals.cashDeductions ?? totals.totalDeductions ?? 0);
+                        const productDeductionsTotal = Number(totals.productDeductions ?? 0);
+                        const wagesCost =
+                          typeof totals.wagesCost === "number"
+                            ? Number(totals.wagesCost)
+                            : Number(totals.totalPay ?? 0) + overtimeTotal - cashDeductionsTotal;
                         const netTotal =
                           typeof totals.netPay === "number"
                             ? Number(totals.netPay)
-                            : Number(totals.totalPay ?? 0) +
-                              overtimeTotal -
-                              deductionsTotal;
+                            : wagesCost - productDeductionsTotal;
 
                         printTimesheet(gridModel, {
                           foremanName: foremanDisplay,
@@ -562,7 +563,9 @@ export default function TimesheetDetailSheet<
                           sites: sites,
                           status: detailStatus,
                           overtimeTotal,
-                          deductionsTotal,
+                          cashDeductionsTotal,
+                          productDeductionsTotal,
+                          wagesCost,
                           netTotal,
                         });
                       }}

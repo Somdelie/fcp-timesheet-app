@@ -169,6 +169,8 @@ export async function PATCH(
       data.thumbnailUrl = thumbnailUrl?.trim() || null;
     if (productType !== undefined) data.productType = productType;
     if (isReturnable !== undefined) data.isReturnable = isReturnable;
+    if ((body as any).isDeductible !== undefined) data.isDeductible = (body as any).isDeductible;
+    if ((body as any).deductionSplits !== undefined) data.deductionSplits = Number((body as any).deductionSplits) || 1;
     if (colors !== undefined) data.colors = colors;
     if ((body as any).sizes !== undefined) data.sizes = (body as any).sizes;
 

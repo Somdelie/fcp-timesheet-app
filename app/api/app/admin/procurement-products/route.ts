@@ -216,6 +216,8 @@ export async function POST(req: Request) {
         thumbnailUrl: thumbnailUrl?.trim() || null,
         productType: productType ?? "MATERIAL",
         isReturnable: isReturnable ?? false,
+        isDeductible: (body as any).isDeductible ?? true,
+        deductionSplits: Number((body as any).deductionSplits) || 1,
         colors: colors ?? [],
         sizes: (body as any).sizes ?? [],
         stockQty: computedStockQty,

@@ -909,8 +909,14 @@ export interface TimesheetPrintMeta {
   status?: string;
   // Optional financial extras for print view
   overtimeTotal?: number;
+  // Cash deductions reduce both the site wages cost and foreman net pay
+  cashDeductionsTotal?: number;
+  // Product (PPE/tools) deductions reduce foreman net pay only — not site wages cost
+  productDeductionsTotal?: number;
+  /** @deprecated pass cashDeductionsTotal + productDeductionsTotal instead */
   deductionsTotal?: number;
   netTotal?: number;
+  wagesCost?: number;
 }
 
 function escapeHTML(str: string): string {
@@ -934,11 +940,20 @@ export function generateTimesheetPrintHTML(
   const totals = model.totals;
 
   const overtimeTotal = Number(meta?.overtimeTotal ?? 0);
-  const deductionsTotal = Number(meta?.deductionsTotal ?? 0);
+  // Support both new split fields and legacy deductionsTotal
+  const cashDeductionsTotal = Number(meta?.cashDeductionsTotal ?? meta?.deductionsTotal ?? 0);
+  const productDeductionsTotal = Number(meta?.productDeductionsTotal ?? 0);
+  const totalDeductionsAll = cashDeductionsTotal + productDeductionsTotal;
+  // Site wages cost: gross wages − CASH deductions only (PPE/tools don't reduce site wages)
+  const wagesCost =
+    typeof meta?.wagesCost === "number"
+      ? meta.wagesCost
+      : (totals?.totalPay ?? 0) + overtimeTotal - cashDeductionsTotal;
+  // Foreman net pay: gross wages − ALL deductions
   const netTotal =
     typeof meta?.netTotal === "number"
       ? meta.netTotal
-      : (totals?.totalPay ?? 0) + overtimeTotal - deductionsTotal;
+      : (totals?.totalPay ?? 0) + overtimeTotal - totalDeductionsAll;
 
   // Build main table headers
   const tableHeaders = `
@@ -1306,10 +1321,12 @@ export function generateTimesheetPrintHTML(
           <div class="totals-card grand">
             <div class="totals-label">Grand Total</div>
             <div class="totals-row"><span>Days</span><span class="totals-value">${totals.totalDays}</span></div>
-            <div class="totals-row"><span>Wages</span><span class="totals-value">${formatCurrencyHtml(totals.totalPay)}</span></div>
+            <div class="totals-row"><span>Gross Wages</span><span class="totals-value">${formatCurrencyHtml(totals.totalPay)}</span></div>
             ${overtimeTotal > 0 ? `<div class="totals-row"><span>Overtime</span><span class="totals-value">${formatCurrencyHtml(overtimeTotal)}</span></div>` : ""}
-            ${deductionsTotal > 0 ? `<div class="totals-row"><span>Deductions</span><span class="totals-value">-${formatCurrencyHtml(deductionsTotal)}</span></div>` : ""}
-            <div class="totals-row"><span>Net Pay</span><span class="totals-value">${formatCurrencyHtml(netTotal)}</span></div>
+            ${cashDeductionsTotal > 0 ? `<div class="totals-row"><span>Cash Deductions</span><span class="totals-value">-${formatCurrencyHtml(cashDeductionsTotal)}</span></div>` : ""}
+            <div class="totals-row" style="border-top:1px solid #ccc;margin-top:2px;padding-top:2px"><span><strong>Site Wages Cost</strong></span><span class="totals-value"><strong>${formatCurrencyHtml(wagesCost)}</strong></span></div>
+            ${productDeductionsTotal > 0 ? `<div class="totals-row" style="color:#b45309"><span>PPE/Tools Recovery</span><span class="totals-value">-${formatCurrencyHtml(productDeductionsTotal)}</span></div>` : ""}
+            <div class="totals-row" style="border-top:1px solid #ccc;margin-top:2px;padding-top:2px"><span><strong>Foreman Net Pay</strong></span><span class="totals-value"><strong>${formatCurrencyHtml(netTotal)}</strong></span></div>
           </div>
         </div>
       </div>

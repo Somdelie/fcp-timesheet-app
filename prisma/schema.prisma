@@ -53,7 +53,9 @@ model User {
 
   createdDeductions                  Deduction[]                  @relation("DeductionCreatedByUser")
   employeeDayRateOverrides           EmployeeDayRateOverride[]
-  productOrders                      ProductOrder[]
+  productOrders                      ProductOrder[]              @relation("ProductOrderCreatedBy")
+  adminProductOrders                 ProductOrder[]              @relation("ProductOrderAdmin")
+  adminSiteAssignments               AdminSiteAssignment[]
   siteProductOrders                  SiteProductOrder[]
   fortnightMeetings                  FortnightMeeting[]
   employeeTransfers                  AttendanceScan[]             @relation("TransferredByUser")
@@ -290,6 +292,7 @@ model Site {
   attendanceScans       AttendanceScan[]
   foremanAssignments    ForemanSiteAssignment[]
   supervisorAssignments SupervisorSiteAssignment[]
+  adminAssignments      AdminSiteAssignment[]
   siteDays              SiteDay[]
   timesheets            Timesheet[]
   // Optional: site-specific employee day rate overrides
@@ -321,6 +324,8 @@ model Site {
 
   plantTransfersFrom PlantTransfer[] @relation("PlantTransferFromSite")
   plantTransfersTo   PlantTransfer[] @relation("PlantTransferToSite")
+
+  deductions Deduction[]
 
   @@index([isActive])
   @@index([name])
@@ -418,6 +423,22 @@ model ForemanSiteAssignment {
 
   @@unique([foremanId, siteId, startsOn])
   @@index([foremanId])
+  @@index([siteId])
+}
+
+model AdminSiteAssignment {
+  id       String    @id @default(cuid())
+  userId   String
+  siteId   String
+  startsOn DateTime  @default(now())
+  endsOn   DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, siteId, startsOn])
+  @@index([userId])
   @@index([siteId])
 }
 
@@ -846,6 +867,10 @@ model Deduction {
   orderItemId String?
   orderItem   ProductOrderItem? @relation(fields: [orderItemId], references: [id])
 
+  // Optional: site this deduction is associated with (for foreman order deductions)
+  siteId String?
+  site   Site?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
   // Cash amount OR optional manual amount if needed
   amount Decimal? @db.Decimal(12, 2)
 
@@ -857,6 +882,7 @@ model Deduction {
   @@index([foremanId, createdAt])
   @@index([timesheetId])
   @@index([productId])
+  @@index([siteId])
   @@index([applyTo])
   @@index([type])
 }
@@ -867,10 +893,13 @@ model Deduction {
 
 model ProductOrder {
   id              String             @id @default(cuid())
-  foremanId       String
-  foreman         Foreman            @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  // Either foremanId OR adminUserId must be set (enforced at app level)
+  foremanId       String?
+  foreman         Foreman?           @relation(fields: [foremanId], references: [id], onDelete: Cascade)
+  adminUserId     String?
+  adminUser       User?              @relation("ProductOrderAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
   createdByUserId String
-  createdByUser   User               @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdByUser   User               @relation("ProductOrderCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
   status          ProductOrderStatus @default(PENDING)
 
   createdAt DateTime @default(now())
@@ -879,6 +908,7 @@ model ProductOrder {
   items ProductOrderItem[]
 
   @@index([foremanId, createdAt])
+  @@index([adminUserId, createdAt])
   @@index([createdByUserId, createdAt])
   @@index([status])
 }
@@ -891,6 +921,8 @@ model ProductOrderItem {
   product   Product      @relation(fields: [productId], references: [id])
   quantity  Int
   unitPrice Decimal      @db.Decimal(12, 2)
+  size      String?
+  color     String?
   note      String?
 
   // Deductions created against this order item
@@ -1236,6 +1268,11 @@ model ProcurementProduct {
   description String?
 
   isActive  Boolean  @default(true)
+
+  // Deduction settings (PPE only)
+  isDeductible    Boolean @default(true)
+  deductionSplits Int     @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2300,4 +2337,85 @@ model EquipmentItem {
   @@index([holderId])
   @@index([category])
   @@index([condition])
+}
+
+// ============================
+// CAPE TOWN STOCK
+// ============================
+
+model CapeTownStockItem {
+  id       String        @id @default(cuid())
+  name     String
+  category StockCategory
+  // total quantity (sum of variants when variants exist, direct count otherwise)
+  quantity Int           @default(0)
+  unit     String?
+  notes    String?
+  // available size options (e.g. ["S","M","L","XL"] or ["Small","Medium","Large"])
+  sizes    String[]
+  // available colour options (e.g. ["Yellow","Orange","White"])
+  colors   String[]
+  isActive Boolean       @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  variants    CapeTownStockVariant[]
+  deployments CapeTownDeployment[]
+  orders      CapeTownStockOrder[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+// Per size × color inventory for a Cape Town stock item
+model CapeTownStockVariant {
+  id     String            @id @default(cuid())
+  itemId String
+  item   CapeTownStockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  size   String?
+  color  String?
+  qty    Int               @default(0)
+
+  @@unique([itemId, size, color])
+  @@index([itemId])
+}
+
+model CapeTownDeployment {
+  id         String            @id @default(cuid())
+  itemId     String
+  item       CapeTownStockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  qty        Int
+  size       String?
+  color      String?
+  deployedTo String
+  notes      String?
+  deployedAt DateTime          @default(now())
+  createdAt  DateTime          @default(now())
+
+  @@index([itemId])
+  @@index([deployedAt])
+}
+
+model CapeTownStockOrder {
+  id        String              @id @default(cuid())
+  itemId    String
+  item      CapeTownStockItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  qty       Int
+  size      String?
+  color     String?
+  supplier  String?
+  status    CapeTownOrderStatus @default(PENDING)
+  notes     String?
+  orderedAt DateTime            @default(now())
+  createdAt DateTime            @default(now())
+
+  @@index([itemId])
+  @@index([status])
+}
+
+enum CapeTownOrderStatus {
+  PENDING
+  ORDERED
+  RECEIVED
+  CANCELLED
 }

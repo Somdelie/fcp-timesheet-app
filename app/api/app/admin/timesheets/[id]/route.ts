@@ -148,7 +148,7 @@ export async function GET(
     // Get foreman info
     const foreman = await prisma.foreman.findUnique({
       where: { id: foremanId },
-      select: { id: true, user: { select: { name: true } } },
+      select: { id: true, user: { select: { name: true, employee: { select: { id: true } } } } },
     });
 
     if (!foreman) {
@@ -290,7 +290,8 @@ export async function GET(
 
     const employeeIds = rows.map((r) => r.employeeId);
 
-    let totalDeductions = 0;
+    let cashDeductions = 0;
+    let productDeductions = 0;
     let deductionItems: {
       id: string;
       type: string;
@@ -363,9 +364,16 @@ export async function GET(
       });
 
       for (const d of deductionItems) {
-        totalDeductions += d.amount;
+        if (d.type === "CASH") {
+          cashDeductions += d.amount;
+        } else {
+          // PRODUCT (PPE/tools) — reduce foreman net pay but NOT site wages cost
+          productDeductions += d.amount;
+        }
       }
     }
+
+    const totalDeductions = cashDeductions + productDeductions;
 
     // OVERTIME: sum overtime entries for this foreman/site in the period
     const overtimeEntries = await prisma.overtimeEntry.findMany({
@@ -382,6 +390,9 @@ export async function GET(
       overtimeTotal += decimalToNumber(ot.totalCost);
     }
 
+    // wagesCost = what the site pays — only reduced by CASH deductions
+    // netPay    = what the foreman actually receives — reduced by ALL deductions
+    const wagesCost = grossTotals.totalPay + overtimeTotal - cashDeductions;
     const netPay = grossTotals.totalPay + overtimeTotal - totalDeductions;
 
     // Get supervisor for this foreman (derived from site assignments)
@@ -417,7 +428,7 @@ export async function GET(
           startISO,
           endISO,
           status: timesheetStatus,
-          foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman" },
+          foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman", employeeId: foreman.user?.employee?.id ?? null },
           supervisor,
           sites,
           columns,
@@ -426,7 +437,10 @@ export async function GET(
             totalDays: grossTotals.totalDays,
             totalPay: grossTotals.totalPay,
             overtimeTotal,
+            cashDeductions,
+            productDeductions,
             totalDeductions,
+            wagesCost,
             netPay,
           },
           deductions: deductionItems,

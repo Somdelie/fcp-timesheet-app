@@ -3,7 +3,13 @@
 import * as React from "react";
 import { toast } from "react-toastify";
 
-import { Check, ChevronsUpDown, FileDown, Loader2, Printer } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  FileDown,
+  Loader2,
+  Printer,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,7 +220,8 @@ export default function PlantDeployPOS({
           issuedDate,
           siteName: selectedSite?.name ?? "",
           siteCode: selectedSite?.code,
-          supervisorName: selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
+          supervisorName:
+            selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
           items: cart.map((i) => ({
             productName: i.productName,
             quantity: i.quantity,
@@ -291,7 +298,8 @@ export default function PlantDeployPOS({
   }
 
   const totalUnits = cart.reduce((s, i) => s + i.quantity, 0);
-  const canDeploy = !!selectedSupervisorId && !!selectedSiteId && cart.length > 0;
+  const canDeploy =
+    !!selectedSupervisorId && !!selectedSiteId && cart.length > 0;
 
   return (
     <div className="h-full bg-background">
@@ -639,7 +647,7 @@ export default function PlantDeployPOS({
                     ) : (
                       <Printer className="h-3.5 w-3.5" />
                     )}
-                    {printing ? "Generating…" : "Print Voucher"}
+                    {printing ? "Generating…" : "Print Order"}
                   </button>
                 )}
                 <button

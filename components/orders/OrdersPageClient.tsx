@@ -15,6 +15,10 @@ import {
   RotateCcw,
   ChevronsUpDown,
   Check,
+  Printer,
+  Pencil,
+  BadgeCheck,
+  Receipt,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,6 +57,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 import OrdersPOS, { type AdminForemanDto } from "@/components/orders/OrdersPOS";
 import type { AdminProductDto } from "@/components/products/ProductsList";
@@ -68,12 +79,17 @@ type OrderItem = {
   productName: string;
   quantity: number;
   unitPrice: string;
+  size: string | null;
+  color: string | null;
   note: string | null;
+  deductions: { id: string; applyTo: string; quantity: number | null; amount: string | null }[];
 };
 
 type Order = {
   id: string;
-  foremanId: string;
+  foremanId: string | null;
+  adminUserId: string | null;
+  isAdminOrder: boolean;
   foremanName: string;
   status: string;
   createdAt: string;
@@ -125,6 +141,16 @@ function statusBadgeVariant(status: string) {
   }
 }
 
+function statusLabel(status: string) {
+  switch (status) {
+    case "APPLIED": return "Deducted";
+    case "PENDING": return "Pending";
+    case "PARTIALLY_APPLIED": return "Partial";
+    case "CANCELLED": return "Cancelled";
+    default: return status;
+  }
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
     day: "numeric",
@@ -137,6 +163,12 @@ function formatDate(iso: string) {
 
 function orderTotal(items: OrderItem[]) {
   return items.reduce((sum, i) => sum + Number(i.unitPrice) * i.quantity, 0);
+}
+
+function buildOrderNumber(order: Order) {
+  const d = new Date(order.createdAt);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `PO-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${order.id.slice(-6).toUpperCase()}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -198,6 +230,389 @@ function ForemanCombobox({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Create Deduction Dialog                                            */
+/* ------------------------------------------------------------------ */
+
+type ForemanSite = { id: string; name: string; code: string | null; client: string | null };
+
+function CreateDeductionDialog({
+  open,
+  order,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  order: Order | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [applyTo, setApplyTo] = useState<"CURRENT" | "NEXT">("CURRENT");
+  const [split, setSplit] = useState<1 | 2>(1);
+  const [siteId, setSiteId] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [sites, setSites] = useState<ForemanSite[]>([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+
+  // Reset form and load sites when dialog opens for a new order
+  useEffect(() => {
+    if (!open || !order?.foremanId) return;
+    setApplyTo("CURRENT");
+    setSplit(1);
+    setSiteId("");
+    setNote("");
+    setSites([]);
+
+    setLoadingSites(true);
+    fetch(`/api/app/admin/foreman/${order.foremanId}/sites`, {
+      credentials: "include",
+      headers: { accept: "application/json" },
+    })
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data?.sites)) setSites(data.sites); })
+      .catch(() => { /* non-critical */ })
+      .finally(() => setLoadingSites(false));
+  }, [open, order?.foremanId, order?.id]);
+
+  async function handleSubmit() {
+    if (!order || !order.foremanId) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/app/admin/deductions", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          foremanId: order.foremanId,
+          type: "PRODUCT",
+          applyTo,
+          orderId: order.id,
+          splitFortnights: split,
+          siteId: siteId || undefined,
+          note: note.trim() || undefined,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ?? "Failed to create deduction");
+      toast.success("Deduction created — order marked as deducted from foreman pay");
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to create deduction");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!order) return null;
+
+  const selectedSite = sites.find((s) => s.id === siteId);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create Deduction from Order</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="rounded-md bg-muted px-3 py-2 text-sm space-y-0.5">
+            <p className="font-medium">{order.foremanName}</p>
+            <p className="text-muted-foreground">
+              {order.items.length} item{order.items.length !== 1 ? "s" : ""} · {formatCurrency(orderTotal(order.items))}
+            </p>
+            <p className="text-xs text-muted-foreground pt-1">
+              Deduction will be applied to this foreman&apos;s grand total pay.
+            </p>
+          </div>
+
+          {/* Site picker */}
+          <div className="space-y-1.5">
+            <Label htmlFor="deduct-site">Site</Label>
+            {loadingSites ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-1">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Loading sites…
+              </div>
+            ) : sites.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-1">No active site assignments found for this foreman.</p>
+            ) : (
+              <Select value={siteId} onValueChange={setSiteId}>
+                <SelectTrigger id="deduct-site">
+                  <SelectValue placeholder="— select site —" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {sites.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}{s.code ? ` (${s.code})` : ""}{s.client ? ` — ${s.client}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {selectedSite && (
+              <p className="text-xs text-muted-foreground">
+                Deduction will be linked to <span className="font-medium">{selectedSite.name}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="deduct-apply">Apply To Fortnight</Label>
+            <Select value={applyTo} onValueChange={(v) => setApplyTo(v as "CURRENT" | "NEXT")}>
+              <SelectTrigger id="deduct-apply">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CURRENT">Current Fortnight</SelectItem>
+                <SelectItem value="NEXT">Next Fortnight</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="deduct-split">Payment Split</Label>
+            <Select value={String(split)} onValueChange={(v) => setSplit(Number(v) as 1 | 2)}>
+              <SelectTrigger id="deduct-split">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Full amount this fortnight</SelectItem>
+                <SelectItem value="2">Half now, half next fortnight</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="deduct-note">Note (optional)</Label>
+            <Input
+              id="deduct-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. PPE issued on site"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={saving || (sites.length > 0 && !siteId)}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Receipt className="mr-2 h-4 w-4" />}
+            Create Deduction
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Edit Order Sheet                                                   */
+/* ------------------------------------------------------------------ */
+
+function EditOrderSheet({
+  open,
+  order,
+  products,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  order: Order | null;
+  products: AdminProductDto[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  type EditRow = {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    size: string | null;
+    color: string | null;
+    note: string | null;
+  };
+
+  const [rows, setRows] = useState<EditRow[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [addProductId, setAddProductId] = useState("");
+
+  useEffect(() => {
+    if (order) {
+      setRows(
+        order.items.map((i) => ({
+          productId: i.productId,
+          productName: i.productName,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          size: i.size,
+          color: i.color,
+          note: i.note,
+        })),
+      );
+      setAddProductId("");
+    }
+  }, [order?.id, open]);
+
+  const selectedProduct = products.find((p) => p.id === addProductId);
+
+  function addProduct() {
+    if (!selectedProduct) return;
+    setRows((prev) => [
+      ...prev,
+      {
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: 1,
+        unitPrice: Number(selectedProduct.price),
+        size: null,
+        color: null,
+        note: null,
+      },
+    ]);
+    setAddProductId("");
+  }
+
+  async function handleSave() {
+    if (!order) return;
+    if (rows.length === 0) { toast.error("Order must have at least one item"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/app/admin/orders/${order.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          items: rows.map((r) => ({
+            productId: r.productId,
+            quantity: r.quantity,
+            ...(r.size ? { size: r.size } : {}),
+            ...(r.color ? { color: r.color } : {}),
+            ...(r.note ? { note: r.note } : {}),
+          })),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ?? "Failed to update order");
+      toast.success("Order updated");
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update order");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const total = rows.reduce((s, r) => s + r.unitPrice * r.quantity, 0);
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader className="mb-4">
+          <SheetTitle>Edit Order — {order?.foremanName}</SheetTitle>
+        </SheetHeader>
+
+        <div className="space-y-4">
+          {/* Existing items */}
+          <div className="border rounded overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="w-24 text-right">Qty</TableHead>
+                  <TableHead className="w-28 text-right">Unit Price</TableHead>
+                  <TableHead className="w-8" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground h-16">
+                      No items — add at least one below
+                    </TableCell>
+                  </TableRow>
+                ) : rows.map((row, i) => (
+                  <TableRow key={`${row.productId}-${i}`}>
+                    <TableCell className="text-sm">
+                      <p className="font-medium">{row.productName}</p>
+                      {(row.size || row.color) && (
+                        <p className="text-xs text-muted-foreground">{[row.size, row.color].filter(Boolean).join(" / ")}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={row.quantity}
+                        onChange={(e) =>
+                          setRows((prev) => {
+                            const next = [...prev];
+                            next[i] = { ...next[i], quantity: Math.max(1, Number(e.target.value)) };
+                            return next;
+                          })
+                        }
+                        className="h-7 w-20 text-sm text-right ml-auto"
+                      />
+                    </TableCell>
+                    <TableCell className="text-sm text-right">
+                      {formatCurrency(row.unitPrice)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Add product */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 space-y-1">
+              <Label>Add Product</Label>
+              <Select value={addProductId} onValueChange={setAddProductId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="— select product to add —" />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      [{p.category}] {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={addProduct} disabled={!addProductId}>
+              <Plus className="h-4 w-4 mr-1" /> Add
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div className="text-sm font-medium">
+              Total: <span className="font-bold">{formatCurrency(total)}</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+              <Button onClick={handleSave} disabled={saving || rows.length === 0}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  BuildSmart Import Tab                                              */
 /* ------------------------------------------------------------------ */
 
@@ -241,7 +656,6 @@ function BuildSmartImportTab({
         })),
       );
       if (result.suggestedForemanId) setForemanId(result.suggestedForemanId);
-      // Log raw text to console for debugging quantity parsing issues
       if ((json as any).rawText) console.log("[BuildSmart rawText]", (json as any).rawText);
       setStep("review");
     } catch (err) {
@@ -515,6 +929,9 @@ export default function OrdersPageClient({
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [cancelDialogOrderId, setCancelDialogOrderId] = useState<string | null>(null);
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
+  const [deductionDialogOrder, setDeductionDialogOrder] = useState<Order | null>(null);
+  const [editSheetOrder, setEditSheetOrder] = useState<Order | null>(null);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -568,6 +985,47 @@ export default function OrdersPageClient({
     [loadOrders, orders],
   );
 
+  const printOrder = useCallback(async (order: Order) => {
+    setPrintingOrderId(order.id);
+    try {
+      const d = new Date(order.createdAt);
+      const issuedDate = d.toLocaleDateString("en-ZA", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const voucherData = {
+        orderNumber: buildOrderNumber(order),
+        issuedDate,
+        recipientName: order.foremanName,
+        recipientType: order.isAdminOrder ? "admin" : "foreman",
+        items: order.items.map((i) => ({
+          productName: i.productName,
+          size: i.size ?? null,
+          color: i.color ?? null,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          note: i.note ?? null,
+        })),
+      };
+      const res = await fetch("/api/app/admin/product-order/pdf", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(voucherData),
+      });
+      if (!res.ok) throw new Error("Failed to generate voucher");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Could not generate voucher PDF");
+    } finally {
+      setPrintingOrderId(null);
+    }
+  }, []);
+
   const handleOrderCreated = useCallback(() => {
     setSheetOpen(false);
     loadOrders();
@@ -619,7 +1077,7 @@ export default function OrdersPageClient({
                     <TableHead className="text-xs font-semibold">Items</TableHead>
                     <TableHead className="text-xs font-semibold text-right">Total</TableHead>
                     <TableHead className="text-xs font-semibold">Status</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="text-xs font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -639,6 +1097,10 @@ export default function OrdersPageClient({
                     orders.map((order) => {
                       const isExpanded = expandedOrderId === order.id;
                       const isCancelled = order.status === "CANCELLED";
+                      const isPending = order.status === "PENDING";
+                      const isDeducted = order.status === "APPLIED";
+                      const isPrinting = printingOrderId === order.id;
+
                       return (
                         <React.Fragment key={order.id}>
                           <TableRow
@@ -648,7 +1110,14 @@ export default function OrdersPageClient({
                             }
                           >
                             <TableCell className="text-sm">{formatDate(order.createdAt)}</TableCell>
-                            <TableCell className="text-sm font-medium">{order.foremanName}</TableCell>
+                            <TableCell className="text-sm font-medium">
+                              <span className="flex items-center gap-1.5">
+                                {order.isAdminOrder && (
+                                  <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Admin</span>
+                                )}
+                                {order.foremanName}
+                              </span>
+                            </TableCell>
                             <TableCell className="text-sm">
                               {order.items.length} item{order.items.length !== 1 ? "s" : ""}
                             </TableCell>
@@ -656,24 +1125,71 @@ export default function OrdersPageClient({
                               {formatCurrency(orderTotal(order.items))}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={statusBadgeVariant(order.status)}>
-                                {order.status}
-                              </Badge>
+                              <div className="flex items-center gap-1.5">
+                                <Badge variant={statusBadgeVariant(order.status)}>
+                                  {statusLabel(order.status)}
+                                </Badge>
+                                {isDeducted && (
+                                  <div title="Deduction applied">
+                                    <BadgeCheck className="h-4 w-4 text-green-600" />
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                disabled={cancellingOrderId === order.id}
-                                title={isCancelled ? "Permanently delete order" : "Cancel order"}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCancelDialogOrderId(order.id);
-                                }}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1">
+                                {/* Print / Reprint */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  disabled={isPrinting}
+                                  title="Print voucher"
+                                  onClick={() => printOrder(order)}
+                                >
+                                  {isPrinting
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    : <Printer className="h-3.5 w-3.5" />}
+                                </Button>
+
+                                {/* Edit — only for PENDING orders */}
+                                {isPending && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    title="Edit order"
+                                    onClick={() => setEditSheetOrder(order)}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+
+                                {/* Create Deduction — only for PENDING foreman orders */}
+                                {isPending && !order.isAdminOrder && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-amber-600"
+                                    title="Create deduction"
+                                    onClick={() => setDeductionDialogOrder(order)}
+                                  >
+                                    <Receipt className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+
+                                {/* Cancel / Delete */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  disabled={cancellingOrderId === order.id}
+                                  title={isCancelled ? "Permanently delete order" : "Cancel order"}
+                                  onClick={() => setCancelDialogOrderId(order.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                           {isExpanded && (
@@ -687,28 +1203,46 @@ export default function OrdersPageClient({
                                     <TableHeader>
                                       <TableRow className="hover:bg-transparent">
                                         <TableHead className="text-xs">Product</TableHead>
+                                        <TableHead className="text-xs">Size</TableHead>
+                                        <TableHead className="text-xs">Color</TableHead>
                                         <TableHead className="text-xs text-right">Qty</TableHead>
                                         <TableHead className="text-xs text-right">Unit Price</TableHead>
                                         <TableHead className="text-xs text-right">Subtotal</TableHead>
                                         <TableHead className="text-xs">Note</TableHead>
+                                        <TableHead className="text-xs">Deducted</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {order.items.map((item) => (
-                                        <TableRow key={item.id} className="hover:bg-transparent">
-                                          <TableCell className="text-sm">{item.productName}</TableCell>
-                                          <TableCell className="text-sm text-right">{item.quantity}</TableCell>
-                                          <TableCell className="text-sm text-right">
-                                            {formatCurrency(Number(item.unitPrice))}
-                                          </TableCell>
-                                          <TableCell className="text-sm font-medium text-right">
-                                            {formatCurrency(Number(item.unitPrice) * item.quantity)}
-                                          </TableCell>
-                                          <TableCell className="text-sm text-muted-foreground">
-                                            {item.note || "—"}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
+                                      {order.items.map((item) => {
+                                        const hasDeduction = item.deductions.length > 0;
+                                        return (
+                                          <TableRow key={item.id} className="hover:bg-transparent">
+                                            <TableCell className="text-sm">{item.productName}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">{item.size || "—"}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">{item.color || "—"}</TableCell>
+                                            <TableCell className="text-sm text-right">{item.quantity}</TableCell>
+                                            <TableCell className="text-sm text-right">
+                                              {formatCurrency(Number(item.unitPrice))}
+                                            </TableCell>
+                                            <TableCell className="text-sm font-medium text-right">
+                                              {formatCurrency(Number(item.unitPrice) * item.quantity)}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">
+                                              {item.note || "—"}
+                                            </TableCell>
+                                            <TableCell>
+                                              {hasDeduction ? (
+                                                <Badge variant="outline" className="border-green-500 text-green-700 text-xs">
+                                                  <BadgeCheck className="mr-1 h-3 w-3" />
+                                                  Yes
+                                                </Badge>
+                                              ) : (
+                                                <span className="text-xs text-muted-foreground">No</span>
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
                                     </TableBody>
                                   </Table>
                                 </div>
@@ -752,6 +1286,23 @@ export default function OrdersPageClient({
         </SheetContent>
       </Sheet>
 
+      {/* Edit Order Sheet */}
+      <EditOrderSheet
+        open={editSheetOrder !== null}
+        order={editSheetOrder}
+        products={products}
+        onClose={() => setEditSheetOrder(null)}
+        onSuccess={loadOrders}
+      />
+
+      {/* Create Deduction Dialog */}
+      <CreateDeductionDialog
+        open={deductionDialogOrder !== null}
+        order={deductionDialogOrder}
+        onClose={() => setDeductionDialogOrder(null)}
+        onSuccess={loadOrders}
+      />
+
       <ConfirmationDialog
         open={cancelDialogOrderId !== null}
         onOpenChange={(open) => { if (!open) setCancelDialogOrderId(null); }}
@@ -763,7 +1314,7 @@ export default function OrdersPageClient({
         description={
           orders.find((o) => o.id === cancelDialogOrderId)?.status === "CANCELLED"
             ? "This will permanently delete the order record. This action cannot be undone."
-            : "This will cancel the order and remove any linked deductions. This action cannot be undone."
+            : "This will cancel the order, remove any linked deductions, and restore stock quantities. This action cannot be undone."
         }
         onConfirm={() => {
           if (cancelDialogOrderId) {

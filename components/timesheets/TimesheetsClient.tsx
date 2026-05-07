@@ -23,6 +23,7 @@ import {
   Printer,
   Download,
   X,
+  Eye,
 } from "lucide-react";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
@@ -57,6 +58,7 @@ import {
 import TimesheetDetailSheet, {
   type TimesheetAction,
 } from "@/components/timesheets/TimesheetDetailSheet";
+import TimesheetQuickViewClient from "@/components/timesheets/TimesheetQuickViewClient";
 import TimesheetGrid from "@/components/timesheets/TimesheetGrid";
 import { normalizeTimesheetToGrid } from "@/lib/timesheets/normalizeTimesheetDetail";
 import { Spinner } from "@/components/ui/spinner";
@@ -387,6 +389,7 @@ export default function TimesheetsListClient({ mode }: Props) {
   const [detail, setDetail] = useState<any>(null);
 
   const [foremanTotalsExpanded, setForemanTotalsExpanded] = useState(false);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   const [overtimeExpandedForemanId, setOvertimeExpandedForemanId] = useState<
     string | null
@@ -955,7 +958,10 @@ export default function TimesheetsListClient({ mode }: Props) {
     });
 
     // Group sites
-    const sitesByForeman = new Map<string, { siteName: string; value: number }[]>();
+    const sitesByForeman = new Map<
+      string,
+      { siteName: string; value: number }[]
+    >();
     for (const row of rowsAdmin) {
       const fmId = row.foreman?.id ?? "unknown";
       if (!sitesByForeman.has(fmId)) sitesByForeman.set(fmId, []);
@@ -2434,6 +2440,16 @@ export default function TimesheetsListClient({ mode }: Props) {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                className="gap-1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQuickViewOpen(true);
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Quick View
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1.5 text-xs"
@@ -2895,6 +2911,23 @@ export default function TimesheetsListClient({ mode }: Props) {
         prettyRange={prettyRange}
         mode={mode}
       />
+
+      <Sheet open={quickViewOpen} onOpenChange={setQuickViewOpen}>
+        <SheetContent
+          side="bottom"
+          className="h-[90vh] overflow-y-auto px-4 [&>button]:z-50 [&>button]:rounded-md [&>button]:bg-background"
+        >
+          <SheetHeader className="sticky top-0 z-30 -mx-4 border-b bg-background/95 px-4 pb-3 pt-2 backdrop-blur">
+            <SheetTitle>Quick View</SheetTitle>
+            <SheetDescription>
+              Select a supervisor and period to preview their timesheet.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            <TimesheetQuickViewClient />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
         <SheetContent

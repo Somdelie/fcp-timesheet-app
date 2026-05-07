@@ -20,6 +20,9 @@ import {
   assignForemanToSite,
   endForemanSiteAssignment,
   listForemanSiteAssignments,
+  assignAdminToSite,
+  endAdminSiteAssignment,
+  listAdminSiteAssignments,
 } from "@/actions/site-assignments";
 
 interface Assignment {
@@ -124,20 +127,25 @@ export default function SiteAssignmentsPanel({
   siteId,
   supervisorOptions,
   foremanOptions,
+  adminOptions,
 }: {
   siteId: string;
   supervisorOptions: PersonOption[];
   foremanOptions: PersonOption[];
+  adminOptions: PersonOption[];
 }) {
   const [supervisorUserId, setSupervisorUserId] = React.useState<string>("");
   const [foremanUserId, setForemanUserId] = React.useState<string>("");
+  const [adminUserId, setAdminUserId] = React.useState<string>("");
 
   const [supervisors, setSupervisors] = React.useState<Assignment[]>([]);
   const [foremen, setForemen] = React.useState<Assignment[]>([]);
+  const [admins, setAdmins] = React.useState<Assignment[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   const [assigningSuper, setAssigningSuper] = React.useState(false);
   const [assigningFore, setAssigningFore] = React.useState(false);
+  const [assigningAdmin, setAssigningAdmin] = React.useState(false);
   const [endingId, setEndingId] = React.useState<string | null>(null);
 
   // Check if there are any active supervisors (no endsOn date)
@@ -146,12 +154,14 @@ export default function SiteAssignmentsPanel({
   async function refresh() {
     setLoading(true);
     try {
-      const [supRes, foreRes] = await Promise.all([
+      const [supRes, foreRes, adminRes] = await Promise.all([
         listSupervisorSiteAssignments(siteId),
         listForemanSiteAssignments(siteId),
+        listAdminSiteAssignments(siteId),
       ]);
       setSupervisors(supRes.ok ? supRes.assignments : []);
       setForemen(foreRes.ok ? foreRes.assignments : []);
+      setAdmins(adminRes.ok ? adminRes.assignments : []);
     } finally {
       setLoading(false);
     }
@@ -221,13 +231,40 @@ export default function SiteAssignmentsPanel({
     }
   };
 
+  const handleAssignAdmin = async () => {
+    if (!adminUserId) return toast.error("Please select an admin");
+
+    setAssigningAdmin(true);
+    try {
+      const res = await assignAdminToSite({ siteId, adminUserId });
+      if (!res.ok) return toast.error(res.error ?? "Failed to assign admin");
+      toast.success("Admin assigned");
+      setAdminUserId("");
+      await refresh();
+    } finally {
+      setAssigningAdmin(false);
+    }
+  };
+
+  const handleEndAdminAssignment = async (assignmentId: string) => {
+    setEndingId(assignmentId);
+    try {
+      const res = await endAdminSiteAssignment({ assignmentId, siteId });
+      if (!res.ok) return toast.error(res.error ?? "Failed to end assignment");
+      toast.success("Assignment ended");
+      await refresh();
+    } finally {
+      setEndingId(null);
+    }
+  };
+
   return (
     <Card
       title="Assignments"
-      description="Manage supervisors and foremen"
+      description="Manage supervisors, foremen, and admins"
       icon={Users}
     >
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Supervisors */}
         <div className="space-y-4">
           <div>
@@ -375,6 +412,70 @@ export default function SiteAssignmentsPanel({
                   a={f}
                   isLoading={endingId === f.id}
                   onEnd={() => handleEndForemanAssignment(f.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Admins */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">
+              Admins
+            </h3>
+
+            <div className="flex gap-2">
+              <Select value={adminUserId} onValueChange={setAdminUserId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select an admin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {adminOptions.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} — {a.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={handleAssignAdmin}
+                disabled={assigningAdmin || !adminUserId}
+                className="gap-2"
+              >
+                {assigningAdmin ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Assigning...</span>
+                  </>
+                ) : (
+                  "Add"
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center rounded border border-dashed border-slate-300 py-8 dark:border-slate-700">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Loading...
+              </p>
+            </div>
+          ) : admins.length === 0 ? (
+            <div className="rounded border border-dashed border-slate-300 bg-slate-50/30 p-8 text-center dark:border-slate-700 dark:bg-slate-800/20">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                No admins assigned yet
+              </p>
+            </div>
+          ) : (
+            <div className="max-h-[300px] space-y-2 overflow-y-auto pr-1">
+              {admins.map((a) => (
+                <AssignmentRow
+                  key={a.id}
+                  a={a}
+                  isLoading={endingId === a.id}
+                  onEnd={() => handleEndAdminAssignment(a.id)}
                 />
               ))}
             </div>

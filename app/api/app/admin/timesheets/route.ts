@@ -405,22 +405,21 @@ export async function GET(req: NextRequest) {
           })
         : [];
 
-    // Sum deductions per foreman
-    const deductionsByForeman = new Map<string, number>();
+    // Sum deductions per foreman — split CASH vs PRODUCT
+    // CASH deductions reduce the site wages cost
+    // PRODUCT (PPE/tools) deductions reduce foreman net pay only, NOT site wages cost
+    const cashDeductionsByForeman = new Map<string, number>();
+    const productDeductionsByForeman = new Map<string, number>();
     for (const d of allDeductions) {
       let amt = 0;
       if (d.type === "CASH") {
         amt = decimalToNumber(d.amount);
+        if (amt > 0) cashDeductionsByForeman.set(d.foremanId, (cashDeductionsByForeman.get(d.foremanId) ?? 0) + amt);
       } else if (d.type === "PRODUCT") {
         const qty = Number(d.quantity ?? 0);
         const price = decimalToNumber(d.product?.price ?? 0);
-        if (qty > 0 && price > 0) amt = qty * price;
-      }
-      if (amt > 0) {
-        deductionsByForeman.set(
-          d.foremanId,
-          (deductionsByForeman.get(d.foremanId) ?? 0) + amt,
-        );
+        amt = qty > 0 && price > 0 ? qty * price : decimalToNumber(d.amount);
+        if (amt > 0) productDeductionsByForeman.set(d.foremanId, (productDeductionsByForeman.get(d.foremanId) ?? 0) + amt);
       }
     }
 
@@ -472,7 +471,10 @@ export async function GET(req: NextRequest) {
       foremanWages: number;
       teamDays: number;
       teamWages: number;
+      cashDeductions: number;
+      productDeductions: number;
       totalDeductions: number;
+      wagesCost: number;
       totalOvertimeCost: number;
       sites: SiteLite[];
     }> = [];
@@ -505,6 +507,10 @@ export async function GET(req: NextRequest) {
         const supervisor = supervisorsBySite.get(site.id) ?? null;
         const timesheetStatus = statusByForemanSite.get(key) ?? "SUBMITTED";
 
+        const cashDed = cashDeductionsByForeman.get(foremanId) ?? 0;
+        const productDed = productDeductionsByForeman.get(foremanId) ?? 0;
+        const overtimeCost = overtimeByForemanSite.get(key) ?? 0;
+        const grossWages = totals.wages + overtimeCost;
         rows.push({
           id: `${startISO}_${endISO}_${foremanId}_${site.id}`,
           startISO,
@@ -518,8 +524,13 @@ export async function GET(req: NextRequest) {
           foremanWages: totals.foremanWages,
           teamDays: totals.teamDays,
           teamWages: totals.teamWages,
-          totalDeductions: deductionsByForeman.get(foremanId) ?? 0,
-          totalOvertimeCost: overtimeByForemanSite.get(key) ?? 0,
+          cashDeductions: cashDed,
+          productDeductions: productDed,
+          totalDeductions: cashDed + productDed,
+          // Site wages cost only reduced by CASH deductions; PRODUCT (PPE) deductions
+          // are cost-recovery from the foreman and do not reduce what the site owes in wages
+          wagesCost: grossWages - cashDed,
+          totalOvertimeCost: overtimeCost,
           sites: [site],
         });
       }

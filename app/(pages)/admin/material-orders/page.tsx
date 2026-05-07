@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PpeOrdersTab } from "@/components/orders/PpeOrdersTab";
 import { toast } from "react-toastify";
 import {
   Plus,
@@ -170,6 +171,9 @@ type Order = {
 /* ─── Component ─── */
 
 export default function MaterialOrdersPage() {
+  // Tab
+  const [activeTab, setActiveTab] = useState<"materials" | "ppe">("materials");
+
   // Lookups
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -538,11 +542,44 @@ export default function MaterialOrdersPage() {
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Procurement</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage material purchases for sites.
+            Manage material and PPE orders for sites.
           </p>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("materials")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "materials"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Material Orders
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("ppe")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "ppe"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          PPE Orders
+        </button>
+      </div>
+
+      {activeTab === "ppe" && <PpeOrdersTab />}
+
+      {activeTab === "materials" && <>
+      {/* Material Orders filter bar */}
+      <div className="flex items-end justify-between flex-wrap gap-4">
         <div className="flex items-end gap-3 flex-wrap">
           <Button onClick={openPos}>
             <Plus className="mr-2 h-4 w-4" />
@@ -1298,6 +1335,7 @@ export default function MaterialOrdersPage() {
         loadingText="Deleting..."
         variant="destructive"
       />
+      </>}
     </div>
   );
 }

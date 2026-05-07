@@ -10,6 +10,10 @@ export type ParsedItem = {
   unit: string;
   quantity: number;
   candidateSku: string | null;
+  matched?: boolean;
+  confidence?: number;
+  productId?: string | null;
+  productName?: string | null;
 };
 
 export type ParsedOrder = {
@@ -189,60 +193,186 @@ function getSection(text: string, match: RegExpMatchArray): string {
   return text.slice(startIdx, endIdx).trim();
 }
 
-function extractBalanceSheetItems(section: string): ParsedItem[] {
+
+
+type AdminProductDto = {
+  id: string;
+  name: string;
+  sku: string | null;
+};
+
+/* ------------------------------------------------------------ */
+/* 🔧 TEXT NORMALIZATION (CRITICAL)                             */
+/* ------------------------------------------------------------ */
+function normalizePdfText(section: string): string {
+  return section
+    .replace(/\u00A0/g, " ")                 // fix NBSP
+    .replace(/(\d{6}[A-Z0-9]+)/g, "\n$1")    // split merged rows
+    .replace(/\s+/g, " ")                    // collapse spaces
+    .replace(/\n\s+/g, "\n")                 // trim line starts
+    .trim();
+}
+
+/* ------------------------------------------------------------ */
+/* 🔍 PRODUCT MATCHING                                          */
+/* ------------------------------------------------------------ */
+function matchProduct(
+  item: ParsedItem,
+  products: AdminProductDto[]
+): {
+  productId: string | null;
+  productName: string | null;
+  confidence: number;
+} {
+  const desc = item.rawDescription.toLowerCase();
+
+  // 1. SKU match (strongest)
+  if (item.candidateSku) {
+    const skuMatch = products.find(
+      (p) => p.sku?.toLowerCase() === item.candidateSku?.toLowerCase()
+    );
+    if (skuMatch) {
+      return {
+        productId: skuMatch.id,
+        productName: skuMatch.name,
+        confidence: 1,
+      };
+    }
+  }
+
+  // 2. Product code match
+  if (item.productCode) {
+    const codeMatch = products.find((p) =>
+      p.name.toLowerCase().includes(item.productCode.toLowerCase())
+    );
+    if (codeMatch) {
+      return {
+        productId: codeMatch.id,
+        productName: codeMatch.name,
+        confidence: 0.7,
+      };
+    }
+  }
+
+  // 3. Description match
+  const descMatch = products.find((p) =>
+    desc.includes(p.name.toLowerCase())
+  );
+  if (descMatch) {
+    return {
+      productId: descMatch.id,
+      productName: descMatch.name,
+      confidence: 0.4,
+    };
+  }
+
+  return {
+    productId: null,
+    productName: null,
+    confidence: 0,
+  };
+}
+
+/* ------------------------------------------------------------ */
+/* 🧠 MAIN PARSER                                               */
+/* ------------------------------------------------------------ */
+export function extractBalanceSheetItems(
+  section: string,
+  products: AdminProductDto[]
+): ParsedItem[] {
   const items: ParsedItem[] = [];
 
-  const lines = section
+  const normalized = normalizePdfText(section);
+
+  const lines = normalized
     .split(/\n/)
-    .map((s) => s.trim())
+    .map((l) => l.trim())
     .filter(Boolean);
+
+  console.log("[BS-DEBUG LINES]", lines);
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx];
 
-    // ✅ FORMAT 1: Proper spaced format
+    let costCode = "";
+    let productCode = "";
+    let description = "";
+    let quantity = 0;
+    let unit = "";
+
+    /* ----------------------------- */
+    /* FORMAT 1: Proper spaced PDF   */
+    /* 1 080110 F0203 Brush ... 1 each */
+    /* ----------------------------- */
     let m = line.match(
-      /^\d+\s+(\d{6})\s+([A-Z0-9]+)\s+(.+?)\s+(\d+)\s+(each|[A-Za-z]+)/i,
+      /^\d+\s+(\d{6})\s+([A-Z0-9]+)\s+(.+?)\s+(\d+)\s+(each|[A-Za-z]+)/i
     );
 
     if (m) {
-      const [, costCode, productCode, desc, qty, unit] = m;
+      costCode = m[1];
+      productCode = m[2];
+      description = m[3];
+      quantity = Number(m[4]);
+      unit = m[5];
+    } else {
+      /* ----------------------------- */
+      /* FORMAT 2: Collapsed PDF       */
+      /* 080110F0203 Brush ...each 11  */
+      /* ----------------------------- */
+      m = line.match(
+        /^(\d{6})([A-Z0-9]+)\s+(.+?)(each|[A-Za-z]+)\s+(\d+)$/i
+      );
 
-      items.push({
-        costCode,
-        productCode,
-        rawDescription: desc.trim(),
-        unit: unit.toLowerCase(),
-        quantity: Number(qty),
-        candidateSku: pdfCodeToSku(productCode, unit),
-      });
+      if (!m) continue;
 
-      continue;
-    }
+      costCode = m[1];
+      productCode = m[2];
+      description = m[3];
+      unit = m[4];
 
-    // ✅ FORMAT 2: Collapsed pdf-parse format
-    m = line.match(/^(\d{6})([A-Z0-9]+)\s+(.+?)(each|[A-Za-z]+)\s+(\d+)$/i);
+      const qtyAndRow = m[5];
 
-    if (m) {
-      const [, costCode, productCode, desc, unit, qtyAndRow] = m;
-
-      // remove row number from end
+      // remove row number suffix
       const rowLen = String(idx + 1).length;
       const qtyStr =
-        qtyAndRow.length > rowLen ? qtyAndRow.slice(0, -rowLen) : qtyAndRow;
+        qtyAndRow.length > rowLen
+          ? qtyAndRow.slice(0, -rowLen)
+          : qtyAndRow;
 
-      items.push({
-        costCode,
-        productCode,
-        rawDescription: desc.trim(),
-        unit: unit.toLowerCase(),
-        quantity: Number(qtyStr),
-        candidateSku: pdfCodeToSku(productCode, unit),
-      });
+      quantity = Number(qtyStr);
     }
+
+    if (!quantity || quantity <= 0) continue;
+
+    const unitClean = unit.toLowerCase().replace(/\s/g, "");
+
+    const candidateSku =
+      productCode && unitClean
+        ? pdfCodeToSku(productCode, unitClean)
+        : null;
+
+    const baseItem: ParsedItem = {
+      costCode,
+      productCode,
+      rawDescription: description.trim(),
+      unit: unitClean,
+      quantity,
+      candidateSku,
+    };
+
+    // 🔍 Match product
+    const match = matchProduct(baseItem, products);
+
+    items.push({
+      ...baseItem,
+      productId: match.productId,
+      productName: match.productName,
+      confidence: match.confidence,
+      matched: match.confidence >= 0.7,
+    });
   }
 
-  console.log("[BS-DEBUG LINES]", lines);
+  console.log("[BS-DEBUG items parsed]", items);
 
   return items;
 }
@@ -265,7 +395,7 @@ export function extractItems(
     const section = getSection(text, balanceMatch);
     console.log("[BS-DEBUG] section length:", section.length);
     if (section) {
-      const items = extractBalanceSheetItems(section);
+      const items = extractBalanceSheetItems(section, []);
       console.log("[BS-DEBUG] items found:", items.length);
       if (items.length > 0) return items;
     }

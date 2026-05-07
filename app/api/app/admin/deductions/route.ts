@@ -46,7 +46,8 @@ async function getAdminFromRequest(req: NextRequest) {
 }
 
 const CreateDeductionSchema = z.object({
-  employeeId: z.string().min(1),
+  // employeeId is optional for order-based foreman deductions — resolved automatically
+  employeeId: z.string().min(1).optional(),
   foremanId: z.string().min(1),
   type: z.enum(["CASH", "PRODUCT"]),
   applyTo: z.enum(["CURRENT", "NEXT"]).optional().default("CURRENT"),
@@ -57,6 +58,8 @@ const CreateDeductionSchema = z.object({
   orderId: z.string().min(1).optional(),
   // Split order deduction across fortnights (1 = full this fortnight, 2 = half now + half next)
   splitFortnights: z.number().int().min(1).max(2).optional().default(1),
+  // Optional: site this deduction is linked to
+  siteId: z.string().min(1).optional(),
   // CASH or manual amount override
   amount: z.union([z.string(), z.number()]).optional(),
   note: z.string().max(2000).optional(),
@@ -94,29 +97,45 @@ export async function POST(req: NextRequest) {
 
     const data = body.data;
 
-    // Ensure employee & foreman exist (lightweight safety checks)
-    const [employee, foreman] = await Promise.all([
-      prisma.employee.findUnique({
-        where: { id: data.employeeId },
-        select: { id: true, firstName: true, lastName: true },
-      }),
-      prisma.foreman.findUnique({
-        where: { id: data.foremanId },
-        select: { id: true },
-      }),
-    ]);
-
-    if (!employee) {
-      return NextResponse.json(
-        { error: "Employee not found" },
-        { status: 404, headers: CORS_HEADERS },
-      );
-    }
+    // Resolve foreman — also fetch userId so we can find their employee record
+    const foreman = await prisma.foreman.findUnique({
+      where: { id: data.foremanId },
+      select: { id: true, userId: true },
+    });
     if (!foreman) {
       return NextResponse.json(
         { error: "Foreman not found" },
         { status: 404, headers: CORS_HEADERS },
       );
+    }
+
+    // Resolve employee: use provided employeeId, or auto-find the foreman's own employee record
+    let resolvedEmployeeId: string;
+    if (data.employeeId) {
+      const emp = await prisma.employee.findUnique({
+        where: { id: data.employeeId },
+        select: { id: true },
+      });
+      if (!emp) {
+        return NextResponse.json(
+          { error: "Employee not found" },
+          { status: 404, headers: CORS_HEADERS },
+        );
+      }
+      resolvedEmployeeId = emp.id;
+    } else {
+      // Auto-resolve: the foreman's own employee record (matched by shared userId)
+      const foremanEmployee = await prisma.employee.findUnique({
+        where: { userId: foreman.userId },
+        select: { id: true },
+      });
+      if (!foremanEmployee) {
+        return NextResponse.json(
+          { error: "This foreman does not have a linked employee record. Ask admin to create one before applying deductions." },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+      resolvedEmployeeId = foremanEmployee.id;
     }
 
     let amountDecimal: string | null = null;
@@ -182,13 +201,14 @@ export async function POST(req: NextRequest) {
               data: {
                 type: "PRODUCT",
                 applyTo,
-                employee: { connect: { id: data.employeeId } },
+                employee: { connect: { id: resolvedEmployeeId } },
                 foreman: { connect: { id: data.foremanId } },
                 createdByUser: { connect: { id: admin.id } },
                 product: { connect: { id: item.productId } },
                 quantity: item.quantity,
                 amount: money as any,
                 orderItem: { connect: { id: item.id } },
+                ...(data.siteId ? { site: { connect: { id: data.siteId } } } : {}),
                 note: `${noteBase} (${applyTo === "CURRENT" ? "1/2" : "2/2"})`,
               },
               select: {
@@ -213,13 +233,14 @@ export async function POST(req: NextRequest) {
             data: {
               type: "PRODUCT",
               applyTo: data.applyTo ?? "CURRENT",
-              employee: { connect: { id: data.employeeId } },
+              employee: { connect: { id: resolvedEmployeeId } },
               foreman: { connect: { id: data.foremanId } },
               createdByUser: { connect: { id: admin.id } },
               product: { connect: { id: item.productId } },
               quantity: item.quantity,
               amount: money as any,
               orderItem: { connect: { id: item.id } },
+              ...(data.siteId ? { site: { connect: { id: data.siteId } } } : {}),
               note:
                 data.note?.trim() ||
                 `Order #${order.id.slice(-6)} – ${item.product?.name ?? "product"}`,
@@ -310,12 +331,13 @@ export async function POST(req: NextRequest) {
       data: {
         type: data.type,
         applyTo: data.applyTo ?? "CURRENT",
-        employee: { connect: { id: data.employeeId } },
+        employee: { connect: { id: resolvedEmployeeId } },
         foreman: { connect: { id: data.foremanId } },
         createdByUser: { connect: { id: admin.id } },
         product: productId ? { connect: { id: productId } } : undefined,
         quantity: quantity ?? undefined,
         amount: amountDecimal as any,
+        ...(data.siteId ? { site: { connect: { id: data.siteId } } } : {}),
         note: data.note?.trim() || undefined,
       },
       select: {

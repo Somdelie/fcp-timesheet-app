@@ -3,10 +3,11 @@
 import * as React from "react";
 import { toast } from "react-toastify";
 
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Printer, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -28,6 +29,20 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { AdminProductDto } from "@/components/products/ProductsList";
@@ -37,6 +52,7 @@ export interface AdminForemanDto {
   userId: string;
   name: string;
   email: string;
+  type: "foreman" | "admin";
 }
 
 interface OrdersPOSProps {
@@ -46,12 +62,146 @@ interface OrdersPOSProps {
 }
 
 type CartItem = {
+  cartKey: string; // productId|size|color — allows same product in multiple variants
   productId: string;
   productName: string;
   unitPrice: number;
   quantity: number;
+  size: string | null;
+  color: string | null;
   note: string;
 };
+
+function makeCartKey(
+  productId: string,
+  size: string | null,
+  color: string | null,
+) {
+  return `${productId}|${size ?? ""}|${color ?? ""}`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Variant Picker Dialog                                              */
+/* ------------------------------------------------------------------ */
+
+function VariantPickerDialog({
+  product,
+  open,
+  onClose,
+  onAdd,
+}: {
+  product: AdminProductDto | null;
+  open: boolean;
+  onClose: () => void;
+  onAdd: (size: string | null, color: string | null, qty: number) => void;
+}) {
+  const [size, setSize] = React.useState<string>("");
+  const [color, setColor] = React.useState<string>("");
+  const [qty, setQty] = React.useState(1);
+
+  React.useEffect(() => {
+    if (open) {
+      setSize(product?.sizes?.[0] ?? "");
+      setColor(product?.colors?.[0] ?? "");
+      setQty(1);
+    }
+  }, [open, product]);
+
+  if (!product) return null;
+
+  const hasSizes = product.sizes.length > 0;
+  const hasColors = product.colors.length > 0;
+
+  function handleAdd() {
+    if (hasSizes && !size) {
+      toast.error("Please select a size");
+      return;
+    }
+    if (hasColors && !color) {
+      toast.error("Please select a color");
+      return;
+    }
+    onAdd(hasSizes ? size : null, hasColors ? color : null, qty);
+    onClose();
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base">{product.name}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {hasSizes && (
+            <div className="space-y-1.5">
+              <Label>Size</Label>
+              <Select value={size} onValueChange={setSize}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {product.sizes.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {hasColors && (
+            <div className="space-y-1.5">
+              <Label>Color</Label>
+              <Select value={color} onValueChange={setColor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select color" />
+                </SelectTrigger>
+                <SelectContent>
+                  {product.colors.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label>Quantity</Label>
+            <Input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) =>
+                setQty(Math.max(1, Math.floor(Number(e.target.value))))
+              }
+              className="w-28"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleAdd}>Add to Order</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main POS Component                                                 */
+/* ------------------------------------------------------------------ */
 
 export default function OrdersPOS({
   foremen,
@@ -65,6 +215,12 @@ export default function OrdersPOS({
   const [productSearch, setProductSearch] = React.useState("");
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  const [printing, setPrinting] = React.useState(false);
+
+  // Variant picker state
+  const [pickerProduct, setPickerProduct] =
+    React.useState<AdminProductDto | null>(null);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
 
   const filteredProducts = React.useMemo(() => {
     const q = productSearch.trim().toLowerCase();
@@ -72,61 +228,126 @@ export default function OrdersPOS({
     return products.filter((p) => p.name.toLowerCase().includes(q));
   }, [productSearch, products]);
 
-  function addToCart(product: AdminProductDto) {
+  function openAddProduct(product: AdminProductDto) {
     const priceNum = Number(product.price);
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
       toast.error("Product price is invalid");
       return;
     }
+    const hasSizes = product.sizes.length > 0;
+    const hasColors = product.colors.length > 0;
+
+    if (hasSizes || hasColors) {
+      setPickerProduct(product);
+      setPickerOpen(true);
+    } else {
+      addToCart(product, null, null, 1);
+    }
+  }
+
+  function addToCart(
+    product: AdminProductDto,
+    size: string | null,
+    color: string | null,
+    qty: number,
+  ) {
+    const priceNum = Number(product.price);
+    const key = makeCartKey(product.id, size, color);
     setCart((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
+      const existing = prev.find((i) => i.cartKey === key);
       if (existing) {
         return prev.map((i) =>
-          i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i,
+          i.cartKey === key ? { ...i, quantity: i.quantity + qty } : i,
         );
       }
       return [
         ...prev,
         {
+          cartKey: key,
           productId: product.id,
           productName: product.name,
           unitPrice: priceNum,
-          quantity: 1,
+          quantity: qty,
+          size,
+          color,
           note: "",
         },
       ];
     });
   }
 
-  function updateQuantity(productId: string, quantity: number) {
+  function updateQuantity(cartKey: string, quantity: number) {
     setCart((prev) =>
       prev
         .map((item) =>
-          item.productId === productId ? { ...item, quantity } : item,
+          item.cartKey === cartKey ? { ...item, quantity } : item,
         )
         .filter((item) => item.quantity > 0),
     );
   }
 
-  function updateNote(productId: string, note: string) {
+  function updateNote(cartKey: string, note: string) {
     setCart((prev) =>
-      prev.map((item) =>
-        item.productId === productId ? { ...item, note } : item,
-      ),
+      prev.map((item) => (item.cartKey === cartKey ? { ...item, note } : item)),
     );
   }
 
-  function removeFromCart(productId: string) {
-    setCart((prev) => prev.filter((item) => item.productId !== productId));
+  function removeFromCart(cartKey: string) {
+    setCart((prev) => prev.filter((item) => item.cartKey !== cartKey));
   }
 
   const cartTotal = React.useMemo(() => {
     return cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   }, [cart]);
 
+  async function handlePrintVoucher() {
+    if (!selectedForemanId || cart.length === 0) return;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const now = new Date();
+    const orderNumber = `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const issuedDate = now.toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    const selected = foremen.find((f) => f.id === selectedForemanId);
+    const voucherData = {
+      orderNumber,
+      issuedDate,
+      recipientName: selected?.name || selected?.email || "",
+      recipientType: (selected?.type ?? "foreman") as "foreman" | "admin",
+      items: cart.map((i) => ({
+        productName: i.productName,
+        size: i.size ?? null,
+        color: i.color ?? null,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        note: i.note.trim() || null,
+      })),
+    };
+    setPrinting(true);
+    try {
+      const res = await fetch("/api/app/admin/product-order/pdf", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(voucherData),
+      });
+      if (!res.ok) throw new Error("Failed to generate voucher");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Could not generate voucher PDF");
+    } finally {
+      setPrinting(false);
+    }
+  }
+
   async function handleCreateOrder() {
     if (!selectedForemanId) {
-      toast.error("Please select a foreman");
+      toast.error("Please select a foreman or admin");
       return;
     }
     if (cart.length === 0) {
@@ -134,9 +355,14 @@ export default function OrdersPOS({
       return;
     }
 
+    const selected = foremen.find((f) => f.id === selectedForemanId);
+    const isAdmin = selected?.type === "admin";
+
     const itemsPayload = cart.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.color ? { color: item.color } : {}),
       note: item.note.trim() || undefined,
     }));
 
@@ -150,7 +376,9 @@ export default function OrdersPOS({
           accept: "application/json",
         },
         body: JSON.stringify({
-          foremanId: selectedForemanId,
+          ...(isAdmin
+            ? { adminUserId: selectedForemanId }
+            : { foremanId: selectedForemanId }),
           items: itemsPayload,
         }),
       });
@@ -211,15 +439,17 @@ export default function OrdersPOS({
         </div>
 
         {/* Main grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border border-border rounded-md overflow-hidden">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-0 border border-border rounded-md overflow-hidden">
           {/* LEFT PANEL */}
           <div className="border-r border-border">
-            {/* Foreman selector */}
+            {/* Foreman / Admin selector */}
             <div className="border-b border-border p-5 bg-card">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  Assign Foreman
+                  {selectedForeman?.type === "admin"
+                    ? "Assign Admin"
+                    : "Assign Foreman / Admin"}
                 </span>
               </div>
               <Popover open={foremanOpen} onOpenChange={setForemanOpen}>
@@ -230,48 +460,82 @@ export default function OrdersPOS({
                     aria-expanded={foremanOpen}
                     className="w-full justify-between h-10 text-sm font-medium"
                   >
-                    <span className="truncate">
-                      {selectedForemanId
-                        ? foremen.find((f) => f.id === selectedForemanId)
-                            ?.name ||
-                          foremen.find((f) => f.id === selectedForemanId)
-                            ?.email ||
-                          "Select foreman"
-                        : "Select foreman"}
+                    <span className="truncate flex items-center gap-2">
+                      {selectedForemanId ? (
+                        <>
+                          {selectedForeman?.type === "admin" && (
+                            <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                              Admin
+                            </span>
+                          )}
+                          {selectedForeman?.name ||
+                            selectedForeman?.email ||
+                            "Select…"}
+                        </>
+                      ) : (
+                        "Select foreman or admin"
+                      )}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
-                    <CommandInput
-                      placeholder="Search foreman..."
-                      className="text-sm"
-                    />
+                    <CommandInput placeholder="Search…" className="text-sm" />
                     <CommandList>
-                      <CommandEmpty>No foreman found.</CommandEmpty>
-                      <CommandGroup>
-                        {foremen.map((f) => (
-                          <CommandItem
-                            key={f.id}
-                            value={f.name || f.email}
-                            onSelect={() => {
-                              setSelectedForemanId(f.id);
-                              setForemanOpen(false);
-                            }}
-                            className="text-sm"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedForemanId === f.id
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            {f.name || f.email}
-                          </CommandItem>
-                        ))}
+                      <CommandEmpty>No results found.</CommandEmpty>
+                      <CommandGroup heading="Foremen">
+                        {foremen
+                          .filter((f) => f.type === "foreman")
+                          .map((f) => (
+                            <CommandItem
+                              key={f.id}
+                              value={`foreman ${f.name || f.email}`}
+                              onSelect={() => {
+                                setSelectedForemanId(f.id);
+                                setForemanOpen(false);
+                              }}
+                              className="text-sm"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedForemanId === f.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {f.name || f.email}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                      <CommandGroup heading="Admins">
+                        {foremen
+                          .filter((f) => f.type === "admin")
+                          .map((f) => (
+                            <CommandItem
+                              key={f.id}
+                              value={`admin ${f.name || f.email}`}
+                              onSelect={() => {
+                                setSelectedForemanId(f.id);
+                                setForemanOpen(false);
+                              }}
+                              className="text-sm"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedForemanId === f.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1 rounded mr-1.5">
+                                Admin
+                              </span>
+                              {f.name || f.email}
+                            </CommandItem>
+                          ))}
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -285,6 +549,11 @@ export default function OrdersPOS({
                     <span className="font-bold text-foreground">
                       {selectedForeman.name || selectedForeman.email}
                     </span>
+                    {selectedForeman.type === "admin" && (
+                      <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                        Admin
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
@@ -323,22 +592,22 @@ export default function OrdersPOS({
                   </p>
                 </div>
               ) : (
-                <Table>
+                <Table className="w-full">
                   <TableHeader>
                     <TableRow className="border-b border-border hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5 w-[180px]">
                         Product
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
                         Qty
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
                         Unit
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
                         Total
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-36">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-58 text-right">
                         Note
                       </TableHead>
                       <TableHead className="w-10" />
@@ -347,13 +616,29 @@ export default function OrdersPOS({
                   <TableBody>
                     {cart.map((item, idx) => (
                       <TableRow
-                        key={item.productId}
+                        key={item.cartKey}
                         className={`border-b border-border transition-colors ${
                           idx % 2 === 0 ? "" : "bg-muted/20"
                         }`}
                       >
-                        <TableCell className="py-2.5 pl-5 text-sm font-medium text-foreground">
-                          {item.productName}
+                        <TableCell className="py-2.5 pl-5">
+                          <div className="text-sm font-medium text-foreground">
+                            {item.productName}
+                          </div>
+                          {(item.size || item.color) && (
+                            <div className="mt-0.5 flex flex-wrap gap-1">
+                              {item.size && (
+                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                                  {item.size}
+                                </span>
+                              )}
+                              {item.color && (
+                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                                  {item.color}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="py-2 pr-2">
                           <Input
@@ -364,7 +649,7 @@ export default function OrdersPOS({
                               const n = Number(e.target.value);
                               if (!Number.isFinite(n)) return;
                               updateQuantity(
-                                item.productId,
+                                item.cartKey,
                                 Math.max(1, Math.floor(n)),
                               );
                             }}
@@ -381,7 +666,7 @@ export default function OrdersPOS({
                           <Input
                             value={item.note}
                             onChange={(e) =>
-                              updateNote(item.productId, e.target.value)
+                              updateNote(item.cartKey, e.target.value)
                             }
                             placeholder="Note…"
                             className="h-7 text-xs px-2"
@@ -389,7 +674,7 @@ export default function OrdersPOS({
                         </TableCell>
                         <TableCell className="py-2 pr-3 text-center">
                           <button
-                            onClick={() => removeFromCart(item.productId)}
+                            onClick={() => removeFromCart(item.cartKey)}
                             className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
                             aria-label="Remove item"
                           >
@@ -421,25 +706,43 @@ export default function OrdersPOS({
                   </span>
                 )}
               </div>
-              <button
-                onClick={handleCreateOrder}
-                disabled={submitting || !selectedForemanId || cart.length === 0}
-                className={`
-                  px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
-                  ${
+              <div className="flex items-center gap-2">
+                {cart.length > 0 && selectedForemanId && (
+                  <button
+                    onClick={handlePrintVoucher}
+                    disabled={printing}
+                    className="flex items-center px-4 py-2.5 text-xs font-bold tracking-[0.15em] uppercase rounded border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {printing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Printer className="h-3.5 w-3.5" />
+                    )}
+                    {printing ? "Generating…" : "Print Order"}
+                  </button>
+                )}
+                <button
+                  onClick={handleCreateOrder}
+                  disabled={
                     submitting || !selectedForemanId || cart.length === 0
-                      ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
-                      : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
                   }
-                `}
-              >
-                {submitting ? "Saving…" : "Confirm Order →"}
-              </button>
+                  className={`
+                    px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
+                    ${
+                      submitting || !selectedForemanId || cart.length === 0
+                        ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
+                        : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
+                    }
+                  `}
+                >
+                  {submitting ? "Saving…" : "Confirm Order →"}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* RIGHT PANEL — Product Picker */}
-          <div className="flex flex-col min-h-0">
+          <div className="flex flex-col min-h-0 flex-1">
             {/* Product picker header */}
             <div className="border-b border-border p-5 bg-muted/40 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-2 shrink-0">
@@ -489,7 +792,12 @@ export default function OrdersPOS({
                   </TableHeader>
                   <TableBody>
                     {filteredProducts.map((p, idx) => {
-                      const inCart = cart.find((c) => c.productId === p.id);
+                      const inCart = cart.some((c) => c.productId === p.id);
+                      const cartQty = cart
+                        .filter((c) => c.productId === p.id)
+                        .reduce((s, c) => s + c.quantity, 0);
+                      const hasVariants =
+                        p.sizes.length > 0 || p.colors.length > 0;
                       return (
                         <TableRow
                           key={p.id}
@@ -513,8 +821,38 @@ export default function OrdersPOS({
                             </div>
                             {inCart && (
                               <span className="text-[10px] text-primary tracking-wider mt-0.5 ml-3.5 block">
-                                ×{inCart.quantity} in order
+                                ×{cartQty} in order
                               </span>
+                            )}
+                            {hasVariants && (
+                              <div className="mt-0.5 ml-3.5 flex flex-wrap gap-1">
+                                {p.sizes.slice(0, 3).map((s) => (
+                                  <span
+                                    key={s}
+                                    className="text-[9px] border border-border rounded px-1 text-muted-foreground/70"
+                                  >
+                                    {s}
+                                  </span>
+                                ))}
+                                {p.sizes.length > 3 && (
+                                  <span className="text-[9px] text-muted-foreground/50">
+                                    +{p.sizes.length - 3}
+                                  </span>
+                                )}
+                                {p.colors.slice(0, 3).map((c) => (
+                                  <span
+                                    key={c}
+                                    className="text-[9px] border border-border rounded px-1 text-muted-foreground/70"
+                                  >
+                                    {c}
+                                  </span>
+                                ))}
+                                {p.colors.length > 3 && (
+                                  <span className="text-[9px] text-muted-foreground/50">
+                                    +{p.colors.length - 3}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </TableCell>
                           <TableCell className="py-3 text-sm tabular-nums font-semibold text-muted-foreground text-right pr-4">
@@ -522,7 +860,7 @@ export default function OrdersPOS({
                           </TableCell>
                           <TableCell className="py-3 text-right pr-5">
                             <button
-                              onClick={() => addToCart(p)}
+                              onClick={() => openAddProduct(p)}
                               className={`
                                 text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95
                                 ${
@@ -561,6 +899,16 @@ export default function OrdersPOS({
           </div>
         </div>
       </div>
+
+      {/* Variant picker dialog */}
+      <VariantPickerDialog
+        product={pickerProduct}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onAdd={(size, color, qty) => {
+          if (pickerProduct) addToCart(pickerProduct, size, color, qty);
+        }}
+      />
     </div>
   );
 }

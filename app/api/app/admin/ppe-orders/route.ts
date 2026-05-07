@@ -16,7 +16,21 @@ async function getAuth(req: Request) {
 }
 
 const itemInclude = {
-  product: { select: { id: true, name: true, thumbnailUrl: true, colors: true } },
+  product: {
+    select: {
+      id: true,
+      name: true,
+      thumbnailUrl: true,
+      colors: true,
+      isDeductible: true,
+      deductionSplits: true,
+      supplierPrices: {
+        where: { isActive: true },
+        select: { price: true, supplierId: true },
+        take: 1,
+      },
+    },
+  },
 };
 
 const orderInclude = {

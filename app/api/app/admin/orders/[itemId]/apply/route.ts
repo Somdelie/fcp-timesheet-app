@@ -108,6 +108,13 @@ export async function POST(
       );
     }
 
+    if (!item.order.foremanId) {
+      return NextResponse.json(
+        { error: "Admin orders cannot be applied as employee deductions." },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
     const totalQty = item.quantity;
     const usedQty = item.deductions
       .filter((d) => d.type === "PRODUCT")
@@ -139,7 +146,7 @@ export async function POST(
             type: "PRODUCT",
             applyTo: split.applyTo,
             employee: { connect: { id: data.employeeId } },
-            foreman: { connect: { id: item.order!.foremanId } },
+            foreman: { connect: { id: item.order!.foremanId as string } },
             createdByUser: { connect: { id: admin.id } },
             product: { connect: { id: item.productId } },
             quantity: split.quantity,

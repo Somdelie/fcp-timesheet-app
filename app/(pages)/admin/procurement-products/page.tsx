@@ -79,6 +79,7 @@ type ProductType = "MATERIAL" | "PPE" | "PLANT" | "CONSUMABLE" | "OTHER";
 
 const PRODUCT_TYPES: { value: ProductType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: "MATERIAL", label: "Material", icon: <Layers className="h-3.5 w-3.5" />, color: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" },
+  { value: "PPE", label: "PPE", icon: <Package className="h-3.5 w-3.5" />, color: "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300" },
   { value: "PLANT", label: "Plant", icon: <Wrench className="h-3.5 w-3.5" />, color: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300" },
   { value: "CONSUMABLE", label: "Consumable", icon: <Package className="h-3.5 w-3.5" />, color: "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300" },
   { value: "OTHER", label: "Other", icon: <MoreHorizontal className="h-3.5 w-3.5" />, color: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
@@ -123,6 +124,8 @@ type ProcurementProduct = {
   isActive: boolean;
   productType: ProductType;
   isReturnable: boolean;
+  isDeductible: boolean;
+  deductionSplits: number;
   colors: string[];
   sizes: string[];
   stockQty: number;
@@ -200,6 +203,8 @@ export default function ProcurementProductsPage() {
     thumbnailUrl: "",
     productType: "MATERIAL" as ProductType,
     isReturnable: false,
+    isDeductible: true,
+    deductionSplits: 1,
     colorsRaw: "",
     sizesRaw: "",
     variantQtys: {} as Record<string, number>,
@@ -268,7 +273,7 @@ export default function ProcurementProductsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", sku: "", description: "", categoryId: "", supplierId: "", thumbnailUrl: "", productType: "MATERIAL", isReturnable: false, colorsRaw: "", sizesRaw: "", variantQtys: {}, stockQty: 0 });
+    setForm({ name: "", sku: "", description: "", categoryId: "", supplierId: "", thumbnailUrl: "", productType: activeTab === "PPE" ? "PPE" : "MATERIAL", isReturnable: false, isDeductible: true, deductionSplits: 1, colorsRaw: "", sizesRaw: "", variantQtys: {}, stockQty: 0 });
     setDialogOpen(true);
   }
 
@@ -287,6 +292,8 @@ export default function ProcurementProductsPage() {
       thumbnailUrl: p.thumbnailUrl ?? "",
       productType: p.productType,
       isReturnable: p.isReturnable,
+      isDeductible: p.isDeductible ?? true,
+      deductionSplits: p.deductionSplits ?? 1,
       colorsRaw: p.colors.join(", "),
       sizesRaw: p.sizes.join(", "),
       variantQtys,
@@ -371,6 +378,8 @@ export default function ProcurementProductsPage() {
           thumbnailUrl: form.thumbnailUrl || null,
           productType: form.productType,
           isReturnable: form.isReturnable,
+          isDeductible: form.isDeductible,
+          deductionSplits: form.deductionSplits,
           colors,
           sizes,
           variantStocks,
@@ -502,7 +511,6 @@ export default function ProcurementProductsPage() {
     const c: Record<string, number> = { ALL: 0 };
     for (const p of products) {
       const t = p.productType ?? "MATERIAL";
-      if (t === "PPE") continue;
       c[t] = (c[t] ?? 0) + 1;
       c.ALL += 1;
     }
@@ -512,16 +520,18 @@ export default function ProcurementProductsPage() {
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
-      if ((p.productType ?? "MATERIAL") === "PPE") return false;
       if (activeTab !== "ALL" && (p.productType ?? "MATERIAL") !== activeTab) return false;
       if (!term) return true;
       return (
         p.name.toLowerCase().includes(term) ||
         (p.sku && p.sku.toLowerCase().includes(term)) ||
-        p.colors.some((c) => c.toLowerCase().includes(term))
+        p.colors.some((c) => c.toLowerCase().includes(term)) ||
+        p.sizes.some((s) => s.toLowerCase().includes(term))
       );
     });
   }, [products, search, activeTab]);
+
+  const isPpeTab = activeTab === "PPE";
 
   const columns: ColumnDef<ProcurementProduct>[] = [
     {
@@ -557,11 +567,11 @@ export default function ProcurementProductsPage() {
         ),
       enableSorting: false,
     },
-    {
+    ...(!isPpeTab ? [{
       id: "type",
       size: 110,
       header: () => <span>Type</span>,
-      cell: ({ row }) => {
+      cell: ({ row }: any) => {
         const t = typeStyle(row.original.productType ?? "MATERIAL");
         return (
           <div className="flex flex-col gap-1">
@@ -577,7 +587,7 @@ export default function ProcurementProductsPage() {
         );
       },
       enableSorting: false,
-    },
+    } as ColumnDef<ProcurementProduct>] : []),
     {
       accessorKey: "name",
       header: ({ column }) => {
@@ -585,33 +595,85 @@ export default function ProcurementProductsPage() {
         return (
           <button className="flex items-center gap-1 hover:text-foreground transition-colors"
             onClick={() => column.toggleSorting(s === "asc")}>
-            Product
+            Name
             {s === "asc" ? <ChevronUp className="h-4 w-4" /> : s === "desc" ? <ChevronDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
           </button>
         );
       },
       cell: ({ row }) => {
         const p = row.original;
-        const colors = p.colors ?? [];
-        const sizes = p.sizes ?? [];
         return (
-          <div className="min-w-[180px] max-w-[280px]">
+          <div className="min-w-[160px] max-w-[260px]">
             <div className="font-medium leading-tight">{p.name}</div>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               {p.sku && <span className="text-[10px] text-muted-foreground">SKU: {p.sku}</span>}
               {p.category && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{p.category.name}</Badge>}
               {p.supplier && <span className="text-[10px] text-muted-foreground">{p.supplier.name}</span>}
-              {colors.slice(0, 5).map((c) => <ColorDot key={c} color={c} />)}
-              {colors.length > 5 && <span className="text-[10px] text-muted-foreground">+{colors.length - 5}</span>}
-              {colors.length > 0 && sizes.length > 0 && <span className="text-[10px] text-muted-foreground/50">·</span>}
-              {sizes.slice(0, 4).map((s) => (
-                <span key={s} className="text-[10px] text-muted-foreground font-medium">{s}</span>
-              ))}
-              {sizes.length > 4 && <span className="text-[10px] text-muted-foreground">+{sizes.length - 4}</span>}
+              {isPpeTab && !p.isDeductible && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">Non-deductible</span>
+              )}
+              {isPpeTab && p.isDeductible && p.deductionSplits === 2 && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">2× fortnights</span>
+              )}
             </div>
           </div>
         );
       },
+    },
+    {
+      id: "sizesColors",
+      header: () => <span>Sizes / Colors</span>,
+      cell: ({ row }) => {
+        const p = row.original;
+        const variants = p.variantStocks ?? [];
+        const sizes = p.sizes ?? [];
+        const colors = p.colors ?? [];
+
+        if (variants.length > 0) {
+          const shown = variants.slice(0, 6);
+          const rest = variants.length - shown.length;
+          return (
+            <div className="flex flex-wrap gap-1 max-w-[220px]">
+              {shown.map((v) => {
+                const parts = [v.color, v.size].filter(Boolean);
+                const label = parts.join("-") || "Default";
+                return (
+                  <span key={v.id} className="inline-flex items-center rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium leading-tight whitespace-nowrap">
+                    {label}
+                    <span className="ml-1 text-muted-foreground">({v.qty})</span>
+                  </span>
+                );
+              })}
+              {rest > 0 && <span className="text-[10px] text-muted-foreground self-center">+{rest} more</span>}
+            </div>
+          );
+        }
+
+        if (sizes.length === 0 && colors.length === 0) {
+          return <span className="text-muted-foreground text-sm">—</span>;
+        }
+
+        const tags: string[] = [];
+        if (sizes.length > 0 && colors.length > 0) {
+          for (const c of colors.slice(0, 3)) for (const s of sizes.slice(0, 3)) tags.push(`${c}-${s}`);
+        } else {
+          tags.push(...sizes.slice(0, 6), ...colors.slice(0, 6));
+        }
+        const totalCombos = Math.max(sizes.length, 1) * Math.max(colors.length, 1);
+        const shown = tags.slice(0, 5);
+        const rest = totalCombos - shown.length;
+        return (
+          <div className="flex flex-wrap gap-1 max-w-[220px]">
+            {shown.map((tag) => (
+              <span key={tag} className="inline-flex items-center rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium leading-tight whitespace-nowrap">
+                {tag}
+              </span>
+            ))}
+            {rest > 0 && <span className="text-[10px] text-muted-foreground self-center">+{rest} more</span>}
+          </div>
+        );
+      },
+      enableSorting: false,
     },
     {
       id: "stockQty",
@@ -630,14 +692,15 @@ export default function ProcurementProductsPage() {
                 <span className="text-[10px] text-muted-foreground">{variants.length} variants</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-52 p-3" align="start">
+            <PopoverContent className="w-56 p-3" align="start">
               <div className="text-xs font-semibold mb-2 text-foreground">Stock by variant</div>
               <div className="space-y-1">
                 {variants.map((v) => {
-                  const label = [v.size, v.color].filter(Boolean).join(" / ") || "—";
+                  const parts = [v.color, v.size].filter(Boolean);
+                  const label = parts.join("-") || "Default";
                   return (
                     <div key={v.id} className="flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-muted-foreground">{label}</span>
+                      <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
                       <span className="text-[11px] font-semibold tabular-nums">{v.qty}</span>
                     </div>
                   );
@@ -657,13 +720,14 @@ export default function ProcurementProductsPage() {
       id: "price",
       header: () => <span>Price</span>,
       cell: ({ row }) => {
-        if ((row.original.productType ?? "MATERIAL") === "PLANT")
+        const p = row.original;
+        if (p.productType === "PLANT")
           return <span className="text-xs text-muted-foreground italic">No price</span>;
-        const prices = row.original.supplierPrices;
+        if (p.productType === "PPE" && !p.isDeductible)
+          return <span className="text-xs text-muted-foreground italic">Non-deductible</span>;
+        const prices = p.supplierPrices;
         if (!prices?.length) return <span className="text-muted-foreground">—</span>;
-        const preferred = row.original.supplier?.id
-          ? prices.find((sp) => sp.supplierId === row.original.supplier!.id)
-          : null;
+        const preferred = p.supplier?.id ? prices.find((sp) => sp.supplierId === p.supplier!.id) : null;
         const entry = preferred ?? prices[0];
         return (
           <div className="text-sm">
@@ -675,6 +739,16 @@ export default function ProcurementProductsPage() {
           </div>
         );
       },
+      enableSorting: false,
+    },
+    {
+      id: "status",
+      header: () => <span>Status</span>,
+      cell: ({ row }) => (
+        <Badge variant={row.original.isActive ? "default" : "secondary"} className={row.original.isActive ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-950/50 dark:text-green-300" : ""}>
+          {row.original.isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
       enableSorting: false,
     },
     {
@@ -718,6 +792,7 @@ export default function ProcurementProductsPage() {
 
   const TABS: { value: ProductType | "ALL"; label: string }[] = [
     { value: "ALL", label: "All" },
+    { value: "PPE", label: "PPE" },
     { value: "MATERIAL", label: "Materials" },
     { value: "PLANT", label: "Plant" },
     { value: "CONSUMABLE", label: "Consumables" },
@@ -966,6 +1041,35 @@ export default function ProcurementProductsPage() {
                 </label>
               </div>
             </div>
+
+            {/* PPE-specific: deductible + split */}
+            {form.productType === "PPE" && (
+              <div className="rounded border border-border bg-muted/20 p-3 space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deduction Settings</div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={form.isDeductible}
+                    onCheckedChange={(v) => setForm({ ...form, isDeductible: !!v })}
+                  />
+                  <span className="text-sm">Deductible from pay</span>
+                </label>
+                {form.isDeductible && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Default deduction split</label>
+                    <Select
+                      value={String(form.deductionSplits)}
+                      onValueChange={(v) => setForm({ ...form, deductionSplits: Number(v) })}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Full amount in 1 fortnight</SelectItem>
+                        <SelectItem value="2">Half per fortnight (split over 2)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Name + SKU */}
             <div className="grid grid-cols-2 gap-3">

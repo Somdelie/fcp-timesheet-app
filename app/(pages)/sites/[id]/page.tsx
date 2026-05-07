@@ -73,7 +73,7 @@ export default async function SiteManagePage({
   }
 
   // IMPORTANT: Options must be User.id (not Supervisor.id / Foreman.id)
-  const [supervisors, foremen] = await Promise.all([
+  const [supervisors, foremen, adminUsers] = await Promise.all([
     prisma.user.findMany({
       where: { role: "SUPERVISOR" },
       select: { id: true, name: true, email: true },
@@ -81,6 +81,11 @@ export default async function SiteManagePage({
     }),
     prisma.user.findMany({
       where: { role: "FOREMAN" },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "OFFICE"] } },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),
@@ -93,6 +98,12 @@ export default async function SiteManagePage({
   }));
 
   const foremanOptions = foremen.map((u) => ({
+    id: u.id,
+    name: u.name ?? u.email ?? "Unknown",
+    email: u.email ?? "",
+  }));
+
+  const adminOptions = adminUsers.map((u) => ({
     id: u.id,
     name: u.name ?? u.email ?? "Unknown",
     email: u.email ?? "",
@@ -231,6 +242,7 @@ export default async function SiteManagePage({
             siteId={site.id}
             supervisorOptions={supervisorOptions}
             foremanOptions={foremanOptions}
+            adminOptions={adminOptions}
           />
 
           {auth.role === "ADMIN" && (
