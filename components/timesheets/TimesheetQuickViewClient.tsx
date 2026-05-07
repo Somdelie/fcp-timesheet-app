@@ -19,10 +19,10 @@ import {
 
 type SupervisorOption = { id: string; name: string | null; email: string };
 type PeriodOption = {
-  id: string;
-  startDate: string;
-  endDate: string;
-  label: string;
+  id: string;      // YYYY-MM-DD_YYYY-MM-DD
+  startISO: string;
+  endISO: string;
+  label?: string | null;
 };
 
 type ListRow = {
@@ -41,6 +41,7 @@ type DetailRow = {
   fullName: string;
   present: boolean[];
   daysWorked: number;
+  isForeman?: boolean;
 };
 
 type ForemanSiteRow = {
@@ -62,8 +63,8 @@ function foremanInitial(name: string): string {
 }
 
 function periodHeaderLabel(p: PeriodOption): string {
-  const start = new Date(p.startDate + "T00:00:00Z");
-  const end = new Date(p.endDate + "T00:00:00Z");
+  const start = new Date(p.startISO + "T00:00:00Z");
+  const end = new Date(p.endISO + "T00:00:00Z");
   const startMonth = start.toLocaleDateString("en-ZA", {
     month: "long",
     timeZone: "UTC",
@@ -81,20 +82,11 @@ function periodHeaderLabel(p: PeriodOption): string {
 }
 
 function periodSelectLabel(p: PeriodOption): string {
-  if (p.label) return p.label;
-  const start = new Date(p.startDate + "T00:00:00Z");
-  const end = new Date(p.endDate + "T00:00:00Z");
+  const a = new Date(`${p.startISO}T00:00:00.000Z`);
+  const b = new Date(`${p.endISO}T00:00:00.000Z`);
   const fmt = (d: Date) =>
-    d.toLocaleDateString("en-ZA", {
-      day: "2-digit",
-      month: "short",
-      timeZone: "UTC",
-    });
-  const year = end.toLocaleDateString("en-ZA", {
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  return `${fmt(start)} – ${fmt(end)} ${year}`;
+    d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return `${fmt(a)} – ${fmt(b)} (Sat–Fri)`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -130,17 +122,19 @@ export default function TimesheetQuickViewClient() {
             ),
           );
         }),
-      fetch("/api/app/admin/timesheet-periods?limit=50", {
+      fetch("/api/app/timesheets/periods", {
         credentials: "include",
       })
         .then((r) => r.json())
         .then((d) => {
-          const list: PeriodOption[] = d.data ?? [];
-          list.sort((a, b) => b.startDate.localeCompare(a.startDate));
+          const list: PeriodOption[] = d.periods ?? [];
+          list.sort((a, b) => b.startISO.localeCompare(a.startISO));
           setPeriods(list);
           if (list.length > 0) {
-            setSelectedPeriodId(list[0].id);
-            setSelectedPeriod(list[0]);
+            const today = new Date().toISOString().slice(0, 10);
+            const current = list.find(p => p.startISO <= today && p.endISO >= today) ?? list[0];
+            setSelectedPeriodId(current.id);
+            setSelectedPeriod(current);
           }
         }),
     ])
@@ -148,7 +142,6 @@ export default function TimesheetQuickViewClient() {
       .finally(() => setOptionsLoading(false));
   }, []);
 
-  /* Sync selectedPeriod object when id changes */
   useEffect(() => {
     setSelectedPeriod(periods.find((p) => p.id === selectedPeriodId) ?? null);
   }, [selectedPeriodId, periods]);
@@ -225,11 +218,13 @@ export default function TimesheetQuickViewClient() {
       for (const d of valid) {
         const { listRow, workerRows, foremanEmployeeId } = d;
         const site = listRow.sites[0] ?? { code: null, name: "Unknown" };
-        const foremanRow = foremanEmployeeId
-          ? workerRows.find((r) => r.employeeId === foremanEmployeeId)
-          : null;
-        const teamRows = workerRows.filter(
-          (r) => r.employeeId !== foremanEmployeeId,
+        // Use isForeman flag stamped by the API; fall back to ID match if the
+        // flag is absent (older API response shape).
+        const foremanRow = workerRows.find((r) =>
+          r.isForeman ?? (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false),
+        );
+        const teamRows = workerRows.filter((r) =>
+          !(r.isForeman ?? (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false)),
         );
         const dailyCounts = cols.map(
           (_, dayIdx) => teamRows.filter((r) => r.present[dayIdx]).length,

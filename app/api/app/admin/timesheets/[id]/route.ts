@@ -254,6 +254,20 @@ export async function GET(
       if (name) agg.fullName = name;
     }
 
+    // Resolve foreman's employee ID: primary path via User→Employee link,
+    // fallback to name match against scanned employees (covers cases where
+    // the Employee record exists but isn't linked back to the User account).
+    let foremanEmpId: string | null = foreman.user?.employee?.id ?? null;
+    if (!foremanEmpId && foreman.user?.name) {
+      const foremanUserName = foreman.user.name.trim();
+      for (const agg of byEmp.values()) {
+        if (agg.fullName.trim() === foremanUserName) {
+          foremanEmpId = agg.employeeId;
+          break;
+        }
+      }
+    }
+
     const rows = Array.from(byEmp.values())
       .sort((a, b) => a.fullName.localeCompare(b.fullName))
       .map((r) => {
@@ -266,6 +280,7 @@ export async function GET(
           present: r.present,
           daysWorked,
           pay,
+          isForeman: r.employeeId === foremanEmpId,
         };
       });
 
@@ -428,7 +443,7 @@ export async function GET(
           startISO,
           endISO,
           status: timesheetStatus,
-          foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman", employeeId: foreman.user?.employee?.id ?? null },
+          foreman: { id: foreman.id, name: foreman.user?.name ?? "Foreman", employeeId: foremanEmpId },
           supervisor,
           sites,
           columns,
