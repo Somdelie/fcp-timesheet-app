@@ -17,6 +17,7 @@ import {
   ChevronsRight,
   FileText,
   ShieldCheck,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  PpeAdminOrderSheet,
+  type PpeAdminSupervisorDto,
+  type PpeProductDto,
+} from "@/components/orders/PpeAdminOrderSheet";
 import {
   useReactTable,
   getCoreRowModel,
@@ -111,6 +123,9 @@ export function PpeOrdersTab() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSupervisors, setCreateSupervisors] = useState<PpeAdminSupervisorDto[]>([]);
+  const [createProducts, setCreateProducts] = useState<PpeProductDto[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<PpeOrder | null>(null);
   const [deductOrder, setDeductOrder] = useState<PpeOrder | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -146,6 +161,41 @@ export function PpeOrdersTab() {
       setEmployees([]);
     } finally {
       setLoadingEmployees(false);
+    }
+  }
+
+  async function openCreateSheet() {
+    setCreateOpen(true);
+    if (createSupervisors.length === 0) {
+      try {
+        const [svRes, ppRes] = await Promise.all([
+          fetch("/api/app/admin/supervisors", { credentials: "include" }).then((r) => r.json()),
+          fetch("/api/app/admin/procurement-products?productType=PPE&limit=500", { credentials: "include" }).then((r) => r.json()),
+        ]);
+        setCreateSupervisors(
+          (svRes.supervisors ?? []).map((s: any) => ({
+            id: s.id,
+            name: s.name ?? null,
+            email: s.email,
+            sites: (s.sites ?? []).map((site: any) => ({ id: site.id, name: site.name, code: site.code ?? null })),
+            foremen: (s.foremen ?? []).map((f: any) => ({ id: f.id, name: f.name ?? "Unknown" })),
+          })),
+        );
+        const products = ppRes.data ?? ppRes.products ?? [];
+        setCreateProducts(
+          products.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku ?? null,
+            colors: p.colors ?? [],
+            sizes: p.sizes ?? [],
+            isDeductible: p.isDeductible ?? false,
+            unitPrice: p.supplierPrices?.[0]?.price ?? null,
+          })),
+        );
+      } catch {
+        toast.error("Failed to load data for order creation");
+      }
     }
   }
 
@@ -375,6 +425,10 @@ export function PpeOrdersTab() {
             ))}
           </SelectContent>
         </Select>
+        <Button variant="default" size="sm" className="gap-1.5" onClick={openCreateSheet}>
+          <Plus className="h-4 w-4" />
+          New Order
+        </Button>
         <Button variant="ghost" size="icon" onClick={load}><RotateCw className="h-4 w-4" /></Button>
       </div>
 
@@ -437,6 +491,20 @@ export function PpeOrdersTab() {
           </div>
         </div>
       )}
+
+      {/* Create Order Sheet */}
+      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-full lg:max-w-[85vw] p-0 overflow-y-auto">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Create PPE Order</SheetTitle>
+          </SheetHeader>
+          <PpeAdminOrderSheet
+            supervisors={createSupervisors}
+            products={createProducts}
+            onCreated={() => { setCreateOpen(false); load(); }}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Delete confirmation */}
       <ConfirmationDialog

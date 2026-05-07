@@ -17,6 +17,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Trash2,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -172,6 +174,10 @@ function PlantAssignmentsTab() {
   const [transferNote, setTransferNote] = useState("");
   const [transferSaving, setTransferSaving] = useState(false);
 
+  const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [reprinting, setReprinting] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -313,6 +319,67 @@ function PlantAssignmentsTab() {
     }
   }
 
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/app/admin/plant-assignments/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to delete");
+      toast.success(`${deleteTarget.product.name} assignment deleted`);
+      setDeleteTarget(null);
+      load();
+    } catch (e: unknown) {
+      toast.error((e as Error)?.message || "Failed to delete");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleReprint(a: Assignment) {
+    setReprinting(a.id);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const deployed = new Date(a.deployedOn);
+    const orderNumber = `PO-${deployed.getFullYear()}${pad(deployed.getMonth() + 1)}${pad(deployed.getDate())}-${a.id.slice(-4).toUpperCase()}`;
+    const issuedDate = deployed.toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    const voucherData = {
+      orderNumber,
+      issuedDate,
+      supervisorName: a.assignedByUser?.name ?? "",
+      sites: [
+        {
+          siteName: a.site.name,
+          siteCode: a.site.code,
+          items: [{ productName: a.product.name, quantity: a.quantity, note: a.note ?? undefined }],
+        },
+      ],
+    };
+    try {
+      const res = await fetch("/api/app/admin/plant-voucher/pdf", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(voucherData),
+      });
+      if (!res.ok) throw new Error("Failed to generate voucher");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Could not generate voucher PDF");
+    } finally {
+      setReprinting(null);
+    }
+  }
+
   const selectedTransferSite = sites.find((s) => s.id === transferSiteId);
   const transferableSites = sites.filter((s) => s.id !== transferTarget?.site.id);
 
@@ -442,6 +509,18 @@ function PlantAssignmentsTab() {
                             </Button>
                           </>
                         )}
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Reprint voucher" disabled={reprinting === a.id} onClick={() => handleReprint(a)}
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Delete assignment" onClick={() => setDeleteTarget(a)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -573,6 +652,27 @@ function PlantAssignmentsTab() {
             <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancel</Button>
             <Button onClick={handleTransfer} disabled={transferSaving || !transferSiteId}>
               {transferSaving ? "Transferring…" : "Transfer →"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Delete Assignment</DialogTitle></DialogHeader>
+          <div className="py-2">
+            <p className="text-sm">
+              Are you sure you want to delete the assignment of{" "}
+              <span className="font-semibold">{deleteTarget?.product.name}</span> at{" "}
+              <span className="font-semibold">{deleteTarget?.site.name}</span>?
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">This action cannot be undone.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

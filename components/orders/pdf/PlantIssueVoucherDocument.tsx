@@ -20,9 +20,7 @@ function resolveLogoDataUri(): string {
     try {
       const buf = fs.readFileSync(p);
       return `data:image/png;base64,${buf.toString("base64")}`;
-    } catch {
-      /* try next */
-    }
+    } catch { /* try next */ }
   }
   return "";
 }
@@ -30,18 +28,19 @@ function resolveLogoDataUri(): string {
 const LOGO_DATA_URI = resolveLogoDataUri();
 const BORDER = "1 solid #666666";
 
+export interface PlantIssueVoucherSite {
+  siteName: string;
+  siteCode?: string | null;
+  items: { productName: string; quantity: number; note?: string }[];
+}
+
 export interface PlantIssueVoucherData {
   orderNumber: string;
   issuedDate: string;
-  siteName: string;
-  siteCode?: string | null;
   supervisorName: string;
   issuedBy?: string | null;
-  items: {
-    productName: string;
-    quantity: number;
-    note?: string;
-  }[];
+  /** Multi-site: pass one entry per site. Single-site: array with one entry. */
+  sites: PlantIssueVoucherSite[];
 }
 
 const styles = StyleSheet.create({
@@ -105,6 +104,30 @@ const styles = StyleSheet.create({
   metaLine: { flexDirection: "row", marginBottom: 4 },
   metaLabel: { width: "40%", fontSize: 8.5, fontWeight: 700 },
   metaValue: { width: "60%", fontSize: 8.5 },
+
+  /* ---- Site section header (multi-site) ---- */
+  siteSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2B2B2B",
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    marginTop: 10,
+    marginBottom: 0,
+  },
+  siteSectionLabel: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    flex: 1,
+  },
+  siteSectionCode: {
+    fontSize: 7.5,
+    color: "#AAAAAA",
+    letterSpacing: 0.3,
+  },
 
   /* ---- Table ---- */
   table: { border: BORDER, marginBottom: 14 },
@@ -184,12 +207,63 @@ function MetaField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PlantIssueVoucherDocument({
-  data,
-}: {
-  data: PlantIssueVoucherData;
-}) {
-  const totalUnits = data.items.reduce((s, i) => s + i.quantity, 0);
+function SiteItemsTable({ site, startIndex }: { site: PlantIssueVoucherSite; startIndex: number }) {
+  const totalUnits = site.items.reduce((s, i) => s + i.quantity, 0);
+  return (
+    <View style={styles.table}>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.th, { width: "6%", textAlign: "center" }]}>No.</Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { flex: 1 }]}>Item Description</Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { width: "12%", textAlign: "center" }]}>Qty</Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { width: "32%" }]}>Notes / Condition</Text>
+      </View>
+
+      {site.items.map((item, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <View style={styles.rowDivider} />}
+          <View style={[styles.row, i % 2 === 1 ? styles.rowAlt : {}]} wrap={false}>
+            <Text style={[styles.td, { width: "6%", textAlign: "center", color: "#999999" }]}>
+              {startIndex + i + 1}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { flex: 1, fontWeight: 700 }]}>{item.productName}</Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { width: "12%", textAlign: "center", fontWeight: 700 }]}>
+              {item.quantity}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { width: "32%", color: "#555555" }]}>{item.note ?? ""}</Text>
+          </View>
+        </React.Fragment>
+      ))}
+
+      {/* Total row */}
+      <View style={styles.totalRow} wrap={false}>
+        <Text style={[styles.td, { width: "6%", textAlign: "center" }]} />
+        <View style={styles.vDivider} />
+        <Text style={[styles.td, { flex: 1, fontWeight: 700, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }]}>
+          Site Total
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.td, { width: "12%", textAlign: "center", fontWeight: 700 }]}>
+          {totalUnits}
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.td, { width: "32%" }]} />
+      </View>
+    </View>
+  );
+}
+
+export function PlantIssueVoucherDocument({ data }: { data: PlantIssueVoucherData }) {
+  const grandTotal = data.sites.reduce(
+    (acc, s) => acc + s.items.reduce((sum, i) => sum + i.quantity, 0),
+    0,
+  );
+  const isMultiSite = data.sites.length > 1;
 
   return (
     <Document title={`Plant Issue Order ${data.orderNumber}`}>
@@ -205,9 +279,7 @@ export function PlantIssueVoucherDocument({
           </View>
           <View style={styles.titleBox}>
             <Text style={styles.title}>Plant Issue Order</Text>
-            <Text style={styles.subtitle}>
-              Plant &amp; Equipment Issue Record
-            </Text>
+            <Text style={styles.subtitle}>Plant &amp; Equipment Issue Record</Text>
           </View>
           <View style={styles.orderBox}>
             <Text style={styles.orderLabel}>Order Number</Text>
@@ -219,115 +291,79 @@ export function PlantIssueVoucherDocument({
         {/* ---- Meta panels ---- */}
         <View style={styles.metaRow}>
           <View style={styles.metaPanel}>
-            <Text style={styles.metaPanelTitle}>Site Details</Text>
-            <MetaField label="Site Name" value={data.siteName} />
-            {data.siteCode ? (
-              <MetaField label="Site Code" value={data.siteCode} />
-            ) : null}
-            <MetaField label="Issued To" value={data.supervisorName} />
+            <Text style={styles.metaPanelTitle}>
+              {isMultiSite ? "Deployment Details" : "Site Details"}
+            </Text>
+            {isMultiSite ? (
+              <>
+                <MetaField
+                  label="Sites"
+                  value={data.sites
+                    .map((s) => (s.siteCode ? `${s.siteCode} – ${s.siteName}` : s.siteName))
+                    .join(", ")}
+                />
+                <MetaField label="Issued To" value={data.supervisorName} />
+              </>
+            ) : (
+              <>
+                <MetaField label="Site Name" value={data.sites[0]?.siteName ?? "—"} />
+                {data.sites[0]?.siteCode && (
+                  <MetaField label="Site Code" value={data.sites[0].siteCode} />
+                )}
+                <MetaField label="Issued To" value={data.supervisorName} />
+              </>
+            )}
           </View>
           <View style={styles.metaPanel}>
             <Text style={styles.metaPanelTitle}>Order Details</Text>
             <MetaField label="Order No." value={data.orderNumber} />
             <MetaField label="Date Issued" value={data.issuedDate} />
-            {/* <MetaField label="Issued By" value={data.issuedBy ?? ""} /> */}
-            <MetaField label="Total Units" value={String(totalUnits)} />
+            {data.issuedBy && <MetaField label="Issued By" value={data.issuedBy} />}
+            <MetaField label="Total Units" value={String(grandTotal)} />
+            {isMultiSite && (
+              <MetaField label="No. of Sites" value={String(data.sites.length)} />
+            )}
           </View>
         </View>
 
-        {/* ---- Items table ---- */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.th, { width: "7%", textAlign: "center" }]}>
-              No.
-            </Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { flex: 1 }]}>Item Description</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "14%", textAlign: "center" }]}>
-              Qty
-            </Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "35%" }]}>Notes / Condition</Text>
-          </View>
-
-          {data.items.map((item, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <View style={styles.rowDivider} />}
-              <View
-                style={[styles.row, i % 2 === 1 ? styles.rowAlt : {}]}
-                wrap={false}
-              >
-                <Text
-                  style={[
-                    styles.td,
-                    { width: "7%", textAlign: "center", color: "#999999" },
-                  ]}
-                >
-                  {i + 1}
-                </Text>
-                <View style={styles.vDivider} />
-                <Text style={[styles.td, { flex: 1, fontWeight: 700 }]}>
-                  {item.productName}
-                </Text>
-                <View style={styles.vDivider} />
-                <Text
-                  style={[
-                    styles.td,
-                    { width: "14%", textAlign: "center", fontWeight: 700 },
-                  ]}
-                >
-                  {item.quantity}
-                </Text>
-                <View style={styles.vDivider} />
-                <Text style={[styles.td, { width: "35%", color: "#555555" }]}>
-                  {item.note ?? ""}
-                </Text>
-              </View>
+        {/* ---- Items: per-site sections ---- */}
+        {data.sites.map((site, sIdx) => {
+          const prevCount = data.sites
+            .slice(0, sIdx)
+            .reduce((sum, s) => sum + s.items.length, 0);
+          return (
+            <React.Fragment key={sIdx}>
+              {isMultiSite && (
+                <View style={styles.siteSectionHeader} wrap={false}>
+                  <Text style={styles.siteSectionLabel}>
+                    {site.siteCode ? `${site.siteCode} – ${site.siteName}` : site.siteName}
+                  </Text>
+                  <Text style={styles.siteSectionCode}>
+                    {site.items.reduce((s, i) => s + i.quantity, 0)} units
+                  </Text>
+                </View>
+              )}
+              <SiteItemsTable site={site} startIndex={isMultiSite ? prevCount : 0} />
             </React.Fragment>
-          ))}
+          );
+        })}
 
-          {/* Total row */}
-          <View style={styles.totalRow} wrap={false}>
-            <Text
-              style={[
-                styles.td,
-                {
-                  width: "7%",
-                  textAlign: "center",
-                  fontWeight: 700,
-                  color: "#555",
-                },
-              ]}
-            />
+        {/* Grand total row if multi-site */}
+        {isMultiSite && (
+          <View style={[styles.totalRow, { border: BORDER, marginBottom: 14 }]} wrap={false}>
+            <Text style={[styles.td, { width: "6%", textAlign: "center" }]} />
             <View style={styles.vDivider} />
-            <Text
-              style={[
-                styles.td,
-                {
-                  flex: 1,
-                  fontWeight: 700,
-                  fontSize: 8,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.3,
-                },
-              ]}
-            >
-              Total Units
+            <Text style={[styles.td, { flex: 1, fontWeight: 700, fontSize: 8.5, textTransform: "uppercase", letterSpacing: 0.3 }]}>
+              Grand Total — All Sites
             </Text>
             <View style={styles.vDivider} />
-            <Text
-              style={[
-                styles.td,
-                { width: "14%", textAlign: "center", fontWeight: 700 },
-              ]}
-            >
-              {totalUnits}
+            <Text style={[styles.td, { width: "12%", textAlign: "center", fontWeight: 700, fontSize: 10 }]}>
+              {grandTotal}
             </Text>
             <View style={styles.vDivider} />
-            <Text style={[styles.td, { width: "35%" }]} />
+            <Text style={[styles.td, { width: "32%" }]} />
           </View>
-        </View>
+        )}
 
         {/* Spacer */}
         <View style={{ flex: 1 }} />
@@ -335,11 +371,10 @@ export function PlantIssueVoucherDocument({
         {/* ---- Disclaimer ---- */}
         <View style={styles.disclaimer}>
           <Text style={styles.disclaimerText}>
-            By signing this document, the recipient confirms that all items
-            listed above have been received in good condition and accepts full
-            responsibility for their safekeeping. All plant and equipment must
-            be returned in the same condition upon completion of works. Any loss
-            or damage must be reported immediately to the site supervisor.
+            By signing this document, the recipient confirms that all items listed above have been
+            received in good condition and accepts full responsibility for their safekeeping. All
+            plant and equipment must be returned in the same condition upon completion of works. Any
+            loss or damage must be reported immediately to the site supervisor.
           </Text>
         </View>
 
@@ -360,7 +395,6 @@ export function PlantIssueVoucherDocument({
               <View style={styles.sigLine} />
             </View>
           </View>
-
           <View style={styles.sigBox}>
             <Text style={styles.sigTitle}>Issued By</Text>
             <View style={styles.sigField}>
@@ -382,11 +416,7 @@ export function PlantIssueVoucherDocument({
         <View style={styles.footer} fixed>
           <Text>First Class Projects (Pty) Ltd</Text>
           <Text>{data.orderNumber} — Plant Issue Order</Text>
-          <Text
-            render={({ pageNumber, totalPages }) =>
-              `Page ${pageNumber} of ${totalPages}`
-            }
-          />
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
       </Page>
     </Document>

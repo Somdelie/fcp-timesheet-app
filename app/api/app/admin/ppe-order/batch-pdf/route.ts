@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { pdf } from "@react-pdf/renderer";
 import React from "react";
 import {
-  PpeIssueOrderDocument,
-  type PpeIssueOrderData,
+  PpeMultiOrderDocument,
+  type PpeMultiOrderData,
 } from "@/components/orders/pdf/PpeIssueOrderDocument";
 
 export const runtime = "nodejs";
@@ -30,24 +30,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS });
   }
 
-  let data: PpeIssueOrderData;
+  let data: PpeMultiOrderData;
   try {
     data = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400, headers: CORS });
   }
 
-  if (!data.orderNumber || !data.foremanName || !Array.isArray(data.items) || data.items.length === 0) {
+  if (
+    !data.orderNumber ||
+    !data.supervisorName ||
+    !Array.isArray(data.orders) ||
+    data.orders.length === 0 ||
+    data.orders.every((o) => !o.items || o.items.length === 0)
+  ) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: CORS });
   }
 
-  const pdfDoc = React.createElement(PpeIssueOrderDocument, { data }) as React.ReactElement<any>;
+  const pdfDoc = React.createElement(PpeMultiOrderDocument, { data }) as React.ReactElement<any>;
   const blob = await pdf(pdfDoc as React.ReactElement<any>).toBlob();
   const buffer = Buffer.from(await blob.arrayBuffer());
 
-  const safeSite = (data.siteName ?? data.foremanName).replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "_").substring(0, 40);
   const safeOrder = data.orderNumber.replace(/[^a-zA-Z0-9-]/g, "");
-  const filename = `PPE_Order_${safeSite}_${safeOrder}.pdf`;
+  const filename = `PPE_Batch_Order_${safeOrder}.pdf`;
 
   return new NextResponse(buffer, {
     status: 200,

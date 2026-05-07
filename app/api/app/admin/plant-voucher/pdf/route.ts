@@ -45,10 +45,10 @@ export async function POST(req: NextRequest) {
 
   if (
     !data.orderNumber ||
-    !data.siteName ||
     !data.supervisorName ||
-    !Array.isArray(data.items) ||
-    data.items.length === 0
+    !Array.isArray(data.sites) ||
+    data.sites.length === 0 ||
+    data.sites.every((s) => !s.items || s.items.length === 0)
   ) {
     return NextResponse.json(
       { error: "Missing required fields" },
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   const blob = await pdf(pdfDoc as React.ReactElement<any>).toBlob();
   const buffer = Buffer.from(await blob.arrayBuffer());
 
-  const safeSite = data.siteName
+  const safeSite = (data.sites[0]?.siteName ?? "Multi-Site")
     .replace(/[^a-zA-Z0-9 _-]/g, "")
     .replace(/\s+/g, "_")
     .substring(0, 40);

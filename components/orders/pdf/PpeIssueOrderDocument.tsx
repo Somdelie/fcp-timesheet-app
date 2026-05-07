@@ -34,7 +34,7 @@ export interface PpeIssueOrderData {
   orderNumber: string;
   issuedDate: string;
   foremanName: string;
-  siteName: string;
+  siteName?: string | null;
   siteCode?: string | null;
   issuedBy?: string | null;
   items: {
@@ -45,6 +45,18 @@ export interface PpeIssueOrderData {
     unitPrice?: number | null;
     deductible?: boolean;
     note?: string | null;
+  }[];
+}
+
+export interface PpeMultiOrderData {
+  orderNumber: string;
+  issuedDate: string;
+  supervisorName: string;
+  orders: {
+    foremanName: string;
+    siteName?: string | null;
+    siteCode?: string | null;
+    items: PpeIssueOrderData["items"];
   }[];
 }
 
@@ -176,171 +188,199 @@ function MetaField({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PpeIssueOrderDocument({ data }: { data: PpeIssueOrderData }) {
+function PpeOrderPage({ data }: { data: PpeIssueOrderData }) {
   const totalUnits = data.items.reduce((s, i) => s + i.quantity, 0);
   const deductibleItems = data.items.filter((i) => i.deductible !== false && i.unitPrice);
   const totalDeduction = deductibleItems.reduce((s, i) => s + (i.unitPrice ?? 0) * i.quantity, 0);
 
   return (
-    <Document title={`PPE Issue Order ${data.orderNumber}`}>
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.topRow}>
-          <View style={styles.brandBox}>
-            {LOGO_DATA_URI ? (
-              <Image src={LOGO_DATA_URI} style={styles.brandLogo} />
-            ) : (
-              <Text style={styles.brandFallback}>FIRST CLASS PROJECTS</Text>
-            )}
-          </View>
-          <View style={styles.titleBox}>
-            <Text style={styles.title}>PPE Issue Order</Text>
-            <Text style={styles.subtitle}>Personal Protective Equipment Issue Record</Text>
-          </View>
-          <View style={styles.orderBox}>
-            <Text style={styles.orderLabel}>Order Number</Text>
-            <Text style={styles.orderValue}>{data.orderNumber}</Text>
-            <Text style={styles.dateValue}>{data.issuedDate}</Text>
-          </View>
+    <Page size="A4" style={styles.page}>
+      {/* Header */}
+      <View style={styles.topRow}>
+        <View style={styles.brandBox}>
+          {LOGO_DATA_URI ? (
+            <Image src={LOGO_DATA_URI} style={styles.brandLogo} />
+          ) : (
+            <Text style={styles.brandFallback}>FIRST CLASS PROJECTS</Text>
+          )}
+        </View>
+        <View style={styles.titleBox}>
+          <Text style={styles.title}>PPE Issue Order</Text>
+          <Text style={styles.subtitle}>Personal Protective Equipment Issue Record</Text>
+        </View>
+        <View style={styles.orderBox}>
+          <Text style={styles.orderLabel}>Order Number</Text>
+          <Text style={styles.orderValue}>{data.orderNumber}</Text>
+          <Text style={styles.dateValue}>{data.issuedDate}</Text>
+        </View>
+      </View>
+
+      {/* Meta panels */}
+      <View style={styles.metaRow}>
+        <View style={styles.metaPanel}>
+          <Text style={styles.metaPanelTitle}>Issue Details</Text>
+          <MetaField label="Foreman" value={data.foremanName} />
+          {data.siteName && <MetaField label="Site Name" value={data.siteName} />}
+          {data.siteCode && <MetaField label="Site Code" value={data.siteCode} />}
+        </View>
+        <View style={styles.metaPanel}>
+          <Text style={styles.metaPanelTitle}>Order Details</Text>
+          <MetaField label="Order No." value={data.orderNumber} />
+          <MetaField label="Date Issued" value={data.issuedDate} />
+          {data.issuedBy && <MetaField label="Issued By" value={data.issuedBy} />}
+          <MetaField label="Total Units" value={String(totalUnits)} />
+          {totalDeduction > 0 && (
+            <MetaField label="Total Deduction" value={`R ${totalDeduction.toFixed(2)}`} />
+          )}
+        </View>
+      </View>
+
+      {/* Items table */}
+      <View style={styles.table}>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.th, { width: "6%", textAlign: "center" }]}>No.</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { flex: 1 }]}>Item Description</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: "12%", textAlign: "center" }]}>Size</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: "12%", textAlign: "center" }]}>Color</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: "8%", textAlign: "center" }]}>Qty</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: "14%", textAlign: "right" }]}>Unit Price</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.th, { width: "14%", textAlign: "right" }]}>Total</Text>
         </View>
 
-        {/* Meta panels */}
-        <View style={styles.metaRow}>
-          <View style={styles.metaPanel}>
-            <Text style={styles.metaPanelTitle}>Site Details</Text>
-            <MetaField label="Site Name" value={data.siteName} />
-            {data.siteCode ? <MetaField label="Site Code" value={data.siteCode} /> : null}
-            <MetaField label="Foreman" value={data.foremanName} />
-          </View>
-          <View style={styles.metaPanel}>
-            <Text style={styles.metaPanelTitle}>Order Details</Text>
-            <MetaField label="Order No." value={data.orderNumber} />
-            <MetaField label="Date Issued" value={data.issuedDate} />
-            <MetaField label="Total Units" value={String(totalUnits)} />
-            {totalDeduction > 0 && (
-              <MetaField label="Total Deduction" value={`R ${totalDeduction.toFixed(2)}`} />
-            )}
-          </View>
-        </View>
+        {data.items.map((item, i) => {
+          const lineTotal = item.unitPrice ? item.unitPrice * item.quantity : null;
+          return (
+            <React.Fragment key={i}>
+              {i > 0 && <View style={styles.rowDivider} />}
+              <View style={[styles.row, i % 2 === 1 ? styles.rowAlt : {}]} wrap={false}>
+                <Text style={[styles.td, { width: "6%", textAlign: "center", color: "#999999" }]}>{i + 1}</Text>
+                <View style={styles.vDivider} />
+                <Text style={[styles.td, { flex: 1, fontWeight: 700 }]}>{item.productName}</Text>
+                <View style={styles.vDivider} />
+                <Text style={[styles.td, { width: "12%", textAlign: "center" }]}>{item.size ?? "—"}</Text>
+                <View style={styles.vDivider} />
+                <Text style={[styles.td, { width: "12%", textAlign: "center" }]}>{item.color ?? "—"}</Text>
+                <View style={styles.vDivider} />
+                <Text style={[styles.td, { width: "8%", textAlign: "center", fontWeight: 700 }]}>{item.quantity}</Text>
+                <View style={styles.vDivider} />
+                <Text style={[styles.td, { width: "14%", textAlign: "right", color: item.deductible === false ? "#999999" : "#111111" }]}>
+                  {item.deductible === false ? "—" : item.unitPrice ? `R ${item.unitPrice.toFixed(2)}` : "—"}
+                </Text>
+                <View style={styles.vDivider} />
+                <Text style={[styles.td, { width: "14%", textAlign: "right", fontWeight: 700 }]}>
+                  {lineTotal != null ? `R ${lineTotal.toFixed(2)}` : "—"}
+                </Text>
+              </View>
+            </React.Fragment>
+          );
+        })}
 
-        {/* Items table */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.th, { width: "6%", textAlign: "center" }]}>No.</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { flex: 1 }]}>Item Description</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "12%", textAlign: "center" }]}>Size</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "12%", textAlign: "center" }]}>Color</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "8%", textAlign: "center" }]}>Qty</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "14%", textAlign: "right" }]}>Unit Price</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.th, { width: "14%", textAlign: "right" }]}>Total</Text>
-          </View>
-
-          {data.items.map((item, i) => {
-            const lineTotal = item.unitPrice ? item.unitPrice * item.quantity : null;
-            return (
-              <React.Fragment key={i}>
-                {i > 0 && <View style={styles.rowDivider} />}
-                <View style={[styles.row, i % 2 === 1 ? styles.rowAlt : {}]} wrap={false}>
-                  <Text style={[styles.td, { width: "6%", textAlign: "center", color: "#999999" }]}>{i + 1}</Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { flex: 1, fontWeight: 700 }]}>{item.productName}</Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { width: "12%", textAlign: "center" }]}>{item.size ?? "—"}</Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { width: "12%", textAlign: "center" }]}>{item.color ?? "—"}</Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { width: "8%", textAlign: "center", fontWeight: 700 }]}>{item.quantity}</Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { width: "14%", textAlign: "right", color: item.deductible === false ? "#999999" : "#111111" }]}>
-                    {item.deductible === false ? "—" : item.unitPrice ? `R ${item.unitPrice.toFixed(2)}` : "—"}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { width: "14%", textAlign: "right", fontWeight: 700 }]}>
-                    {lineTotal != null ? `R ${lineTotal.toFixed(2)}` : "—"}
-                  </Text>
-                </View>
-              </React.Fragment>
-            );
-          })}
-
-          {/* Total row */}
-          <View style={styles.totalRow} wrap={false}>
-            <Text style={[styles.td, { width: "6%", textAlign: "center" }]} />
-            <View style={styles.vDivider} />
-            <Text style={[styles.td, { flex: 1, fontWeight: 700, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }]}>Total</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.td, { width: "12%" }]} />
-            <View style={styles.vDivider} />
-            <Text style={[styles.td, { width: "12%" }]} />
-            <View style={styles.vDivider} />
-            <Text style={[styles.td, { width: "8%", textAlign: "center", fontWeight: 700 }]}>{totalUnits}</Text>
-            <View style={styles.vDivider} />
-            <Text style={[styles.td, { width: "14%" }]} />
-            <View style={styles.vDivider} />
-            <Text style={[styles.td, { width: "14%", textAlign: "right", fontWeight: 700 }]}>
-              {totalDeduction > 0 ? `R ${totalDeduction.toFixed(2)}` : "—"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ flex: 1 }} />
-
-        {/* Disclaimer */}
-        <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerText}>
-            By signing this document, the recipient confirms that all PPE items listed above have been received in good condition
-            and accepts responsibility for their proper use and care. Deductible items will be recovered from wages as indicated.
-            Any loss or damage must be reported immediately to the foreman or site supervisor.
+        {/* Total row */}
+        <View style={styles.totalRow} wrap={false}>
+          <Text style={[styles.td, { width: "6%", textAlign: "center" }]} />
+          <View style={styles.vDivider} />
+          <Text style={[styles.td, { flex: 1, fontWeight: 700, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }]}>Total</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.td, { width: "12%" }]} />
+          <View style={styles.vDivider} />
+          <Text style={[styles.td, { width: "12%" }]} />
+          <View style={styles.vDivider} />
+          <Text style={[styles.td, { width: "8%", textAlign: "center", fontWeight: 700 }]}>{totalUnits}</Text>
+          <View style={styles.vDivider} />
+          <Text style={[styles.td, { width: "14%" }]} />
+          <View style={styles.vDivider} />
+          <Text style={[styles.td, { width: "14%", textAlign: "right", fontWeight: 700 }]}>
+            {totalDeduction > 0 ? `R ${totalDeduction.toFixed(2)}` : "—"}
           </Text>
         </View>
+      </View>
 
-        {/* Signatures */}
-        <View style={styles.sigRow} wrap={false}>
-          <View style={styles.sigBox}>
-            <Text style={styles.sigTitle}>Received By</Text>
-            <View style={styles.sigField}>
-              <Text style={styles.sigLabel}>Full Name</Text>
-              <View style={styles.sigLine} />
-            </View>
-            <View style={styles.sigField}>
-              <Text style={styles.sigLabel}>Signature</Text>
-              <View style={styles.sigLineWide} />
-            </View>
-            <View style={styles.sigField}>
-              <Text style={styles.sigLabel}>Date</Text>
-              <View style={styles.sigLine} />
-            </View>
+      <View style={{ flex: 1 }} />
+
+      {/* Disclaimer */}
+      <View style={styles.disclaimer}>
+        <Text style={styles.disclaimerText}>
+          By signing this document, the recipient confirms that all PPE items listed above have been received in good condition
+          and accepts responsibility for their proper use and care. Deductible items will be recovered from wages as indicated.
+          Any loss or damage must be reported immediately to the foreman or site supervisor.
+        </Text>
+      </View>
+
+      {/* Signatures */}
+      <View style={styles.sigRow} wrap={false}>
+        <View style={styles.sigBox}>
+          <Text style={styles.sigTitle}>Received By</Text>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Full Name</Text>
+            <View style={styles.sigLine} />
           </View>
-          <View style={styles.sigBox}>
-            <Text style={styles.sigTitle}>Issued By</Text>
-            <View style={styles.sigField}>
-              <Text style={styles.sigLabel}>Full Name</Text>
-              <View style={styles.sigLine} />
-            </View>
-            <View style={styles.sigField}>
-              <Text style={styles.sigLabel}>Signature</Text>
-              <View style={styles.sigLineWide} />
-            </View>
-            <View style={styles.sigField}>
-              <Text style={styles.sigLabel}>Date</Text>
-              <View style={styles.sigLine} />
-            </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Signature</Text>
+            <View style={styles.sigLineWide} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Date</Text>
+            <View style={styles.sigLine} />
           </View>
         </View>
-
-        {/* Footer */}
-        <View style={styles.footer} fixed>
-          <Text>First Class Projects (Pty) Ltd</Text>
-          <Text>{data.orderNumber} — PPE Issue Order</Text>
-          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+        <View style={styles.sigBox}>
+          <Text style={styles.sigTitle}>Issued By</Text>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Full Name</Text>
+            <View style={styles.sigLine} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Signature</Text>
+            <View style={styles.sigLineWide} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Date</Text>
+            <View style={styles.sigLine} />
+          </View>
         </View>
-      </Page>
+      </View>
+
+      {/* Footer */}
+      <View style={styles.footer} fixed>
+        <Text>First Class Projects (Pty) Ltd</Text>
+        <Text>{data.orderNumber} — PPE Issue Order</Text>
+        <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+      </View>
+    </Page>
+  );
+}
+
+export function PpeIssueOrderDocument({ data }: { data: PpeIssueOrderData }) {
+  return (
+    <Document title={`PPE Issue Order ${data.orderNumber}`}>
+      <PpeOrderPage data={data} />
+    </Document>
+  );
+}
+
+export function PpeMultiOrderDocument({ data }: { data: PpeMultiOrderData }) {
+  return (
+    <Document title={`PPE Batch Order ${data.orderNumber}`}>
+      {data.orders.map((order, idx) => (
+        <PpeOrderPage
+          key={idx}
+          data={{
+            orderNumber: data.orderNumber,
+            issuedDate: data.issuedDate,
+            foremanName: order.foremanName,
+            siteName: order.siteName,
+            siteCode: order.siteCode,
+            issuedBy: data.supervisorName,
+            items: order.items,
+          }}
+        />
+      ))}
     </Document>
   );
 }
