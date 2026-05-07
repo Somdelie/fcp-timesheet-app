@@ -211,7 +211,7 @@ export async function PATCH(
         });
       }
       return product;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     const result = {
       ...updated,

@@ -86,12 +86,14 @@ export async function POST(req: Request) {
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { siteId, productId, quantity, note, deployedOn } = body as {
+    const { siteId, productId, quantity, note, deployedOn, unitPrice, chargeToSite } = body as {
       siteId: string;
       productId: string;
       quantity?: number;
       note?: string;
       deployedOn?: string;
+      unitPrice?: number | null;
+      chargeToSite?: boolean;
     };
 
     if (!siteId || !productId)
@@ -106,6 +108,8 @@ export async function POST(req: Request) {
         deployedOn: deployedOn ? new Date(deployedOn) : new Date(),
         status: "DEPLOYED",
         assignedByUserId: auth.id,
+        unitPrice: unitPrice != null ? unitPrice : null,
+        chargeToSite: chargeToSite ?? false,
       },
       include: {
         product: { select: { id: true, name: true, thumbnailUrl: true } },

@@ -76,15 +76,28 @@ export async function POST(req: Request) {
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { foremanId, siteId, note, items } = body as {
+    const { foremanId, siteId, note, chargeToSite, items } = body as {
       foremanId: string;
       siteId?: string;
       note?: string;
-      items: { productId: string; quantity: number; size?: string; color?: string; note?: string }[];
+      chargeToSite?: boolean;
+      items: { productId: string; quantity: number; size?: string; color?: string; note?: string; unitPriceAtOrder?: number | null }[];
     };
 
     if (!foremanId) return NextResponse.json({ error: "foremanId is required" }, { status: 400 });
     if (!items?.length) return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
+
+    // Pre-fetch active supplier prices for all products in one query
+    const productIds = [...new Set(items.map((i) => i.productId))];
+    const supplierPrices = await prisma.supplierProductPrice.findMany({
+      where: { productId: { in: productIds }, isActive: true },
+      select: { productId: true, price: true },
+      orderBy: { startsOn: "desc" },
+    });
+    const priceMap = new Map<string, number>();
+    for (const sp of supplierPrices) {
+      if (!priceMap.has(sp.productId)) priceMap.set(sp.productId, Number(sp.price));
+    }
 
     const order = await prisma.foremanPpeOrder.create({
       data: {
@@ -93,6 +106,7 @@ export async function POST(req: Request) {
         note: note?.trim() || null,
         createdByUserId: auth.id,
         status: "PENDING",
+        chargeToSite: chargeToSite ?? false,
         items: {
           create: items.map((i) => ({
             productId: i.productId,
@@ -100,6 +114,7 @@ export async function POST(req: Request) {
             size: i.size?.trim() || null,
             color: i.color?.trim() || null,
             note: i.note?.trim() || null,
+            unitPriceAtOrder: i.unitPriceAtOrder != null ? i.unitPriceAtOrder : (priceMap.get(i.productId) ?? null),
           })),
         },
       },

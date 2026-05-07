@@ -19,8 +19,7 @@ function createPrismaClient() {
 
 const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Cache across hot-reloads in dev and across invocations in production serverless
+globalForPrisma.prisma = prisma;
 
 export { prisma };

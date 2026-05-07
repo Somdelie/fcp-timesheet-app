@@ -26,17 +26,21 @@ export async function PATCH(
 
     const { id } = await ctx.params;
     const body = await req.json();
-    const { status, note, returnedOn, quantity } = body as {
+    const { status, note, returnedOn, quantity, unitPrice, chargeToSite } = body as {
       status?: PlantStatus;
       note?: string;
       returnedOn?: string;
       quantity?: number;
+      unitPrice?: number | null;
+      chargeToSite?: boolean;
     };
 
     const data: Record<string, unknown> = {};
     if (status !== undefined) data.status = status;
     if (note !== undefined) data.note = note?.trim() || null;
     if (quantity !== undefined) data.quantity = quantity;
+    if (unitPrice !== undefined) data.unitPrice = unitPrice;
+    if (chargeToSite !== undefined) data.chargeToSite = chargeToSite;
     if (returnedOn !== undefined)
       data.returnedOn = returnedOn ? new Date(returnedOn) : null;
     else if (status === "RETURNED" && !returnedOn)

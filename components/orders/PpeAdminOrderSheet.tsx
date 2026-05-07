@@ -72,6 +72,7 @@ type ForemanCart = {
   siteId: string;
   siteName: string;
   siteCode: string | null;
+  chargeToSite: boolean;
   items: PpeCartItem[];
 };
 
@@ -132,6 +133,7 @@ export function PpeAdminOrderSheet({
         siteId: "",
         siteName: "",
         siteCode: null,
+        chargeToSite: false,
         items: [],
       },
     ]);
@@ -194,11 +196,17 @@ export function PpeAdminOrderSheet({
 
   function updateRow(
     rowId: string,
-    fields: Partial<Pick<PpeCartItem, "size" | "color" | "quantity">>,
+    fields: Partial<Pick<PpeCartItem, "size" | "color" | "quantity" | "unitPrice">>,
   ) {
     if (!activeForemanId) return;
     updateCart(activeForemanId, (items) =>
       items.map((i) => (i.rowId !== rowId ? i : { ...i, ...fields })),
+    );
+  }
+
+  function toggleForemanChargeToSite(foremanId: string) {
+    setForemanCarts((prev) =>
+      prev.map((fc) => (fc.foremanId !== foremanId ? fc : { ...fc, chargeToSite: !fc.chargeToSite })),
     );
   }
 
@@ -208,6 +216,16 @@ export function PpeAdminOrderSheet({
   }
 
   const totalForemanItems = foremanCarts.reduce((sum, fc) => sum + fc.items.length, 0);
+  const totalCharged = foremanCarts
+    .filter((fc) => fc.chargeToSite)
+    .reduce(
+      (sum, fc) =>
+        sum + fc.items.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0),
+      0,
+    );
+  const activeCartCharged = activeCart?.chargeToSite
+    ? (activeCart.items.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0))
+    : 0;
   const canSubmit =
     !!selectedSupervisorId &&
     foremanCarts.length > 0 &&
@@ -265,11 +283,13 @@ export function PpeAdminOrderSheet({
               body: JSON.stringify({
                 foremanId: fc.foremanId,
                 siteId: fc.siteId || undefined,
+                chargeToSite: fc.chargeToSite,
                 items: fc.items.map((i) => ({
                   productId: i.productId,
                   quantity: i.quantity,
                   size: i.size || undefined,
                   color: i.color || undefined,
+                  unitPriceAtOrder: i.unitPrice,
                 })),
               }),
             }).then(async (res) => {
@@ -540,16 +560,42 @@ export function PpeAdminOrderSheet({
             )}
 
             {/* Cart header */}
-            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground truncate">
                   {activeCart ? `Items — ${activeCart.foremanName}` : "PPE Items"}
                 </span>
               </div>
-              <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
-                {activeCart?.items.length ?? 0} line{(activeCart?.items.length ?? 0) !== 1 ? "s" : ""}
-              </span>
+              <div className="flex items-center gap-4 shrink-0">
+                {activeForemanId && (
+                  <button
+                    onClick={() => toggleForemanChargeToSite(activeForemanId)}
+                    className={cn(
+                      "flex items-center gap-1.5 text-[10px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded border transition-all",
+                      activeCart?.chargeToSite
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:border-primary/40",
+                    )}
+                  >
+                    <span className={cn(
+                      "w-2.5 h-2.5 rounded-sm border flex items-center justify-center",
+                      activeCart?.chargeToSite ? "bg-primary-foreground border-primary-foreground" : "border-current",
+                    )}>
+                      {activeCart?.chargeToSite && (
+                        <span className="block w-1.5 h-1 border-b-2 border-l-2 border-primary -rotate-45 -translate-y-px" />
+                      )}
+                    </span>
+                    Charge to Site
+                    {activeCart?.chargeToSite && activeCartCharged > 0 && (
+                      <span className="ml-0.5 opacity-80">R{activeCartCharged.toFixed(2)}</span>
+                    )}
+                  </button>
+                )}
+                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                  {activeCart?.items.length ?? 0} line{(activeCart?.items.length ?? 0) !== 1 ? "s" : ""}
+                </span>
+              </div>
             </div>
 
             {/* Cart */}
@@ -584,14 +630,17 @@ export function PpeAdminOrderSheet({
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
                         Item
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-18">
                         Size
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-18">
                         Color
                       </TableHead>
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-16 text-right">
                         Qty
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-22 text-right">
+                        Unit Price
                       </TableHead>
                       <TableHead className="w-8" />
                     </TableRow>
@@ -604,11 +653,6 @@ export function PpeAdminOrderSheet({
                       >
                         <TableCell className="py-2.5 pl-5 text-sm font-medium text-foreground">
                           {item.productName}
-                          {item.isDeductible && item.unitPrice && (
-                            <span className="ml-1 text-[10px] text-muted-foreground font-normal">
-                              R{item.unitPrice.toFixed(2)}
-                            </span>
-                          )}
                         </TableCell>
                         <TableCell className="py-2 pr-1">
                           <Input
@@ -638,6 +682,22 @@ export function PpeAdminOrderSheet({
                             className="h-7 w-14 text-sm text-right tabular-nums px-2"
                           />
                         </TableCell>
+                        <TableCell className="py-2 pr-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={item.unitPrice ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateRow(item.rowId, {
+                                unitPrice: val === "" ? null : Math.max(0, Number(val)),
+                              });
+                            }}
+                            placeholder="—"
+                            className="h-7 w-20 text-sm text-right tabular-nums px-2"
+                          />
+                        </TableCell>
                         <TableCell className="py-2 pr-3 text-center">
                           <button
                             onClick={() => removeRow(item.rowId)}
@@ -662,9 +722,16 @@ export function PpeAdminOrderSheet({
                     <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
                       Creating
                     </div>
-                    <div className="text-sm font-bold">
-                      {foremanCarts.filter((fc) => fc.items.length > 0).length} order
-                      {foremanCarts.filter((fc) => fc.items.length > 0).length !== 1 ? "s" : ""}
+                    <div className="flex items-baseline gap-3">
+                      <div className="text-sm font-bold">
+                        {foremanCarts.filter((fc) => fc.items.length > 0).length} order
+                        {foremanCarts.filter((fc) => fc.items.length > 0).length !== 1 ? "s" : ""}
+                      </div>
+                      {totalCharged > 0 && (
+                        <div className="text-xs font-semibold tabular-nums text-primary-foreground/80">
+                          R{totalCharged.toFixed(2)} charged
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (

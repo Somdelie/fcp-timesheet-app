@@ -2198,6 +2198,10 @@ model SitePlantAssignment {
 
   note String?
 
+  // Optional cost charging
+  unitPrice    Decimal? @db.Decimal(12, 2)
+  chargeToSite Boolean  @default(false)
+
   assignedByUserId String?
 
   // Transfer provenance — set when this assignment was created via a transfer
@@ -2273,6 +2277,9 @@ model ForemanPpeOrder {
   status    PpeOrderStatus @default(PENDING)
   note      String?
 
+  // Whether this order's cost is charged against the site's material budget
+  chargeToSite Boolean @default(false)
+
   createdByUserId String?
 
   foreman       Foreman  @relation(fields: [foremanId], references: [id], onDelete: Cascade)
@@ -2298,6 +2305,9 @@ model ForemanPpeOrderItem {
   size     String? // "S", "M", "L", "XL", "Size 8", etc.
   color    String? // selected color if product has colors
   note     String?
+
+  // Price snapshot at order time (for charge-to-site calculation)
+  unitPriceAtOrder Decimal? @db.Decimal(12, 2)
 
   order   ForemanPpeOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)

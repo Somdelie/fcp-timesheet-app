@@ -60,12 +60,14 @@ type CartItem = {
   productName: string;
   quantity: number;
   note: string;
+  unitPrice: number | null;
 };
 
 type SiteCart = {
   siteId: string;
   siteName: string;
   siteCode?: string | null;
+  chargeToSite: boolean;
   items: CartItem[];
 };
 
@@ -117,7 +119,7 @@ export default function PlantDeployPOS({
   function addSite(site: PlantSiteDto) {
     setSitesCarts((prev) => [
       ...prev,
-      { siteId: site.id, siteName: site.name, siteCode: site.code, items: [] },
+      { siteId: site.id, siteName: site.name, siteCode: site.code, chargeToSite: false, items: [] },
     ]);
     setActiveSiteId(site.id);
     setAddSiteOpen(false);
@@ -159,7 +161,7 @@ export default function PlantDeployPOS({
         return prev.map((i) =>
           i.productId === item.id ? { ...i, quantity: i.quantity + 1 } : i,
         );
-      return [...prev, { productId: item.id, productName: item.name, quantity: 1, note: "" }];
+      return [...prev, { productId: item.id, productName: item.name, quantity: 1, note: "", unitPrice: null }];
     });
   }
 
@@ -181,10 +183,32 @@ export default function PlantDeployPOS({
     updateSiteCart(activeSiteId, (prev) => prev.filter((i) => i.productId !== productId));
   }
 
+  function updateUnitPrice(productId: string, unitPrice: number | null) {
+    updateSiteCart(activeSiteId, (prev) =>
+      prev.map((i) => (i.productId === productId ? { ...i, unitPrice } : i)),
+    );
+  }
+
+  function toggleChargeToSite(siteId: string) {
+    setSitesCarts((prev) =>
+      prev.map((sc) => (sc.siteId !== siteId ? sc : { ...sc, chargeToSite: !sc.chargeToSite })),
+    );
+  }
+
   const totalUnits = sitesCarts.reduce(
     (sum, sc) => sum + sc.items.reduce((s, i) => s + i.quantity, 0),
     0,
   );
+  const totalCharged = sitesCarts
+    .filter((sc) => sc.chargeToSite)
+    .reduce(
+      (sum, sc) =>
+        sum + sc.items.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0),
+      0,
+    );
+  const activeCartCharged = activeSiteCart?.chargeToSite
+    ? activeCart.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0)
+    : 0;
   const canDeploy = !!selectedSupervisorId && sitesCarts.length > 0 && totalUnits > 0;
 
   function buildVoucherData(orderNumber: string, issuedDate: string): LastOrder {
@@ -236,6 +260,8 @@ export default function PlantDeployPOS({
               productId: item.productId,
               quantity: item.quantity,
               note: item.note.trim() || undefined,
+              unitPrice: item.unitPrice,
+              chargeToSite: siteCart.chargeToSite,
             }),
           }).then(async (res) => {
             const json = await res.json().catch(() => null);
@@ -519,20 +545,48 @@ export default function PlantDeployPOS({
             </div>
 
             {/* Cart section header */}
-            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground truncate">
                   {activeSiteCart ? `Items — ${activeSiteCart.siteName}` : "Deployment Items"}
                 </span>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
-                  Units
-                </span>
-                <span className="text-base font-bold tabular-nums text-foreground">
-                  {totalUnits}
-                </span>
+              <div className="flex items-center gap-4 shrink-0">
+                {activeSiteId && (
+                  <button
+                    onClick={() => toggleChargeToSite(activeSiteId)}
+                    className={cn(
+                      "flex items-center gap-1.5 text-[10px] font-bold tracking-[0.15em] uppercase px-2.5 py-1 rounded border transition-all",
+                      activeSiteCart?.chargeToSite
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:border-primary/40",
+                    )}
+                  >
+                    <span className={cn(
+                      "w-2.5 h-2.5 rounded-sm border flex items-center justify-center",
+                      activeSiteCart?.chargeToSite ? "bg-primary-foreground border-primary-foreground" : "border-current",
+                    )}>
+                      {activeSiteCart?.chargeToSite && (
+                        <span className="block w-1.5 h-1 border-b-2 border-l-2 border-primary -rotate-45 -translate-y-px" />
+                      )}
+                    </span>
+                    Charge to Site
+                    {activeSiteCart?.chargeToSite && activeCartCharged > 0 && (
+                      <span className="ml-0.5 opacity-80">
+                        R{activeCartCharged.toFixed(2)}
+                      </span>
+                    )}
+                  </button>
+                )}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                    Units
+                  </span>
+                  <span className="text-base font-bold tabular-nums text-foreground">
+                    {totalUnits}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -571,7 +625,10 @@ export default function PlantDeployPOS({
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20 text-right">
                         Qty
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-36">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-right">
+                        Unit Price
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-32">
                         Note
                       </TableHead>
                       <TableHead className="w-10" />
@@ -599,6 +656,23 @@ export default function PlantDeployPOS({
                               updateQuantity(item.productId, Math.max(1, Math.floor(n)));
                             }}
                             className="h-7 w-16 text-sm text-right tabular-nums px-2"
+                          />
+                        </TableCell>
+                        <TableCell className="py-2 pr-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={item.unitPrice ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateUnitPrice(
+                                item.productId,
+                                val === "" ? null : Math.max(0, Number(val)),
+                              );
+                            }}
+                            placeholder="—"
+                            className="h-7 w-20 text-sm text-right tabular-nums px-2"
                           />
                         </TableCell>
                         <TableCell className="py-2">
@@ -633,8 +707,15 @@ export default function PlantDeployPOS({
                     <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
                       Deploying
                     </div>
-                    <div className="text-xl font-bold tabular-nums">
-                      {totalUnits} unit{totalUnits !== 1 ? "s" : ""}
+                    <div className="flex items-baseline gap-3">
+                      <div className="text-xl font-bold tabular-nums">
+                        {totalUnits} unit{totalUnits !== 1 ? "s" : ""}
+                      </div>
+                      {totalCharged > 0 && (
+                        <div className="text-sm font-semibold tabular-nums text-primary-foreground/80">
+                          R{totalCharged.toFixed(2)} charged
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : lastOrder ? (
