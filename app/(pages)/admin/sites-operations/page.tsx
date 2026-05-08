@@ -1,0 +1,60 @@
+import Link from "next/link";
+
+import JobProgressPage from "@/app/(pages)/admin/job-progress/page";
+import SitesMapPage from "@/app/(pages)/sites/map/page";
+import FinishingSchedulesPage from "@/app/(pages)/admin/finishing-schedules/page";
+import PaintPlanningPage from "@/app/(pages)/admin/paint-planning/page";
+import PrintCardsPage from "@/app/(pages)/admin/print-cards/page";
+
+const TABS = [
+  { value: "job-progress", label: "Job Progress" },
+  { value: "sites-map", label: "Sites Map" },
+  { value: "finishing-schedules", label: "Finishing Schedules" },
+  { value: "paint-planning", label: "Paint Planning" },
+  { value: "print-cards", label: "Print Cards" },
+] as const;
+
+type TabValue = (typeof TABS)[number]["value"];
+
+function isTabValue(value: string | undefined): value is TabValue {
+  return TABS.some((tab) => tab.value === value);
+}
+
+export default async function SitesOperationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const sp = await searchParams;
+  const activeTab = isTabValue(sp?.tab) ? sp.tab : "job-progress";
+
+  return (
+    <div className="mx-auto w-full max-w-7xl">
+      <div className="rounded border border-muted/50 bg-card p-4">
+        <div className="flex flex-wrap gap-1 border-b border-border">
+          {TABS.map((tab) => (
+            <Link
+              key={tab.value}
+              href={`/admin/sites-operations?tab=${tab.value}`}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.value
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-4">
+          {activeTab === "job-progress" ? <JobProgressPage /> : null}
+          {activeTab === "sites-map" ? <SitesMapPage /> : null}
+          {activeTab === "finishing-schedules" ? <FinishingSchedulesPage /> : null}
+          {activeTab === "paint-planning" ? <PaintPlanningPage /> : null}
+          {activeTab === "print-cards" ? <PrintCardsPage /> : null}
+        </div>
+      </div>
+    </div>
+  );
+}

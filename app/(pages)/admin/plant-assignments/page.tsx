@@ -99,7 +99,14 @@ type Supervisor = {
 
 type Site = { id: string; name: string; code: string | null };
 
-const STATUS_OPTIONS = ["ALL", "DEPLOYED", "RETURNED", "REPAIR", "DAMAGED", "LOST"];
+const STATUS_OPTIONS = [
+  "ALL",
+  "DEPLOYED",
+  "RETURNED",
+  "REPAIR",
+  "DAMAGED",
+  "LOST",
+];
 const EDIT_STATUSES = ["DEPLOYED", "RETURNED", "REPAIR", "DAMAGED", "LOST"];
 
 function siteLabel(s: Site) {
@@ -146,12 +153,14 @@ export default function PlantPage() {
 
 // ─── Plant Assignments ────────────────────────────────────────────────────────
 
-function PlantAssignmentsTab() {
+export function PlantAssignmentsTab() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [plantItems, setPlantItems] = useState<PlantItemDto[]>([]);
-  const [deploySupervisors, setDeploySupervisors] = useState<PlantSupervisorDto[]>([]);
+  const [deploySupervisors, setDeploySupervisors] = useState<
+    PlantSupervisorDto[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -196,7 +205,9 @@ function PlantAssignmentsTab() {
     }
   }, [filterStatus]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useEffect(() => {
     fetch("/api/app/admin/supervisors", { credentials: "include" })
@@ -208,24 +219,42 @@ function PlantAssignmentsTab() {
             id: s.id,
             name: s.name ?? null,
             email: s.email,
-            sites: (s.sites ?? []).map((site: any) => ({ id: site.id, name: site.name, code: site.code ?? null })),
-          }))
+            sites: (s.sites ?? []).map((site: any) => ({
+              id: site.id,
+              name: site.name,
+              code: site.code ?? null,
+            })),
+          })),
         );
       });
     fetch("/api/app/admin/sites", { credentials: "include" })
       .then((r) => r.json())
       .then((j) => setSites(j.sites ?? []));
-    fetch("/api/app/admin/procurement-products?productType=PLANT&limit=500", { credentials: "include" })
+    fetch("/api/app/admin/procurement-products?productType=PLANT&limit=500", {
+      credentials: "include",
+    })
       .then((r) => r.json())
       .then((j) => {
         const products = j.data ?? j.products ?? [];
-        setPlantItems(products.map((p: any) => ({ id: p.id, name: p.name, sku: p.sku ?? null, thumbnailUrl: p.thumbnailUrl ?? null, sizes: p.sizes ?? [] })));
+        setPlantItems(
+          products.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku ?? null,
+            thumbnailUrl: p.thumbnailUrl ?? null,
+            sizes: p.sizes ?? [],
+          })),
+        );
       });
   }, []);
 
   const supervisorSiteIds =
     filterSupervisor !== "ALL"
-      ? new Set(supervisors.find((s) => s.id === filterSupervisor)?.sites.map((s) => s.id) ?? [])
+      ? new Set(
+          supervisors
+            .find((s) => s.id === filterSupervisor)
+            ?.sites.map((s) => s.id) ?? [],
+        )
       : null;
 
   const filtered = assignments.filter((a) => {
@@ -251,12 +280,19 @@ function PlantAssignmentsTab() {
     if (!editTarget) return;
     setEditSaving(true);
     try {
-      const res = await fetch(`/api/app/admin/plant-assignments/${editTarget.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: editStatus, quantity: Number(editQty), note: editNote }),
-      });
+      const res = await fetch(
+        `/api/app/admin/plant-assignments/${editTarget.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            status: editStatus,
+            quantity: Number(editQty),
+            note: editNote,
+          }),
+        },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to update");
       toast.success("Assignment updated");
@@ -301,12 +337,19 @@ function PlantAssignmentsTab() {
     if (!transferTarget || !transferSiteId) return;
     setTransferSaving(true);
     try {
-      const res = await fetch(`/api/app/admin/plant-assignments/${transferTarget.id}/transfer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ toSiteId: transferSiteId, quantity: Number(transferQty), note: transferNote || undefined }),
-      });
+      const res = await fetch(
+        `/api/app/admin/plant-assignments/${transferTarget.id}/transfer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            toSiteId: transferSiteId,
+            quantity: Number(transferQty),
+            note: transferNote || undefined,
+          }),
+        },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to transfer");
       toast.success("Plant transferred successfully");
@@ -323,10 +366,13 @@ function PlantAssignmentsTab() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/app/admin/plant-assignments/${deleteTarget.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/app/admin/plant-assignments/${deleteTarget.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to delete");
       toast.success(`${deleteTarget.product.name} assignment deleted`);
@@ -357,7 +403,13 @@ function PlantAssignmentsTab() {
         {
           siteName: a.site.name,
           siteCode: a.site.code,
-          items: [{ productName: a.product.name, quantity: a.quantity, note: a.note ?? undefined }],
+          items: [
+            {
+              productName: a.product.name,
+              quantity: a.quantity,
+              note: a.note ?? undefined,
+            },
+          ],
         },
       ],
     };
@@ -381,14 +433,18 @@ function PlantAssignmentsTab() {
   }
 
   const selectedTransferSite = sites.find((s) => s.id === transferSiteId);
-  const transferableSites = sites.filter((s) => s.id !== transferTarget?.site.id);
+  const transferableSites = sites.filter(
+    (s) => s.id !== transferTarget?.site.id,
+  );
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
-  useEffect(() => { setPage(0); }, [search, filterStatus, filterSupervisor]);
+  useEffect(() => {
+    setPage(0);
+  }, [search, filterStatus, filterSupervisor]);
 
   return (
     <div className="space-y-4">
@@ -418,7 +474,9 @@ function PlantAssignmentsTab() {
           <SelectContent>
             <SelectItem value="ALL">All supervisors</SelectItem>
             {supervisors.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.name ?? s.id}</SelectItem>
+              <SelectItem key={s.id} value={s.id}>
+                {s.name ?? s.id}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -428,11 +486,18 @@ function PlantAssignmentsTab() {
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>{s === "ALL" ? "All statuses" : s}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {s === "ALL" ? "All statuses" : s}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Button variant="default" size="sm" onClick={() => setDeployOpen(true)} className="gap-1.5">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setDeployOpen(true)}
+          className="gap-1.5"
+        >
           <Truck className="h-4 w-4" />
           Deploy Plant
         </Button>
@@ -447,77 +512,133 @@ function PlantAssignmentsTab() {
           <Table>
             <TableHeader className="bg-muted/60">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r">Item</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide border-r">
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />Site</span>
+                  Item
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-16">Qty</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-28">Status</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r w-32">Deployed On</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r w-36">From</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide w-24">Actions</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Site
+                  </span>
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-16">
+                  Qty
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-28">
+                  Status
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r w-32">
+                  Deployed On
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide border-r w-36">
+                  From
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide w-24">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-10 text-muted-foreground"
+                  >
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : paged.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-10 text-muted-foreground"
+                  >
                     <Wrench className="mx-auto h-6 w-6 mb-1 opacity-30" />
-                    {search ? "No assignments match your search" : "No assignments yet"}
+                    {search
+                      ? "No assignments match your search"
+                      : "No assignments yet"}
                   </TableCell>
                 </TableRow>
               ) : (
                 paged.map((a) => (
                   <TableRow key={a.id} className="hover:bg-muted/30">
-                    <TableCell className="font-medium border-r">{a.product.name}</TableCell>
+                    <TableCell className="font-medium border-r">
+                      {a.product.name}
+                    </TableCell>
                     <TableCell className="text-sm border-r whitespace-nowrap">
-                      {a.site.code ? `${a.site.code} — ${a.site.name}` : a.site.name}
+                      {a.site.code
+                        ? `${a.site.code} — ${a.site.name}`
+                        : a.site.name}
                     </TableCell>
                     <TableCell className="text-center border-r">
                       <Badge variant="secondary">{a.quantity}</Badge>
                     </TableCell>
                     <TableCell className="text-center border-r">
-                      <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusClass(a.status)}`}>
+                      <span
+                        className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusClass(a.status)}`}
+                      >
                         {a.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground border-r">{formatDate(a.deployedOn)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground border-r">
-                      {a.transfersIn.length > 0 ? a.transfersIn[0].fromSite.name : "Office"}
+                      {formatDate(a.deployedOn)}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground border-r">
+                      {a.transfersIn.length > 0
+                        ? a.transfersIn[0].fromSite.name
+                        : "Office"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-0.5">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => openEdit(a)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Edit"
+                          onClick={() => openEdit(a)}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         {a.status === "DEPLOYED" && (
                           <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Transfer to another site" onClick={() => openTransfer(a)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Transfer to another site"
+                              onClick={() => openTransfer(a)}
+                            >
                               <ArrowRightLeft className="h-3.5 w-3.5" />
                             </Button>
                             <Button
-                              variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              title="Return to office" disabled={returningId === a.id} onClick={() => handleReturnToOffice(a)}
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Return to office"
+                              disabled={returningId === a.id}
+                              onClick={() => handleReturnToOffice(a)}
                             >
                               <Undo2 className="h-3.5 w-3.5" />
                             </Button>
                           </>
                         )}
                         <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Reprint voucher" disabled={reprinting === a.id} onClick={() => handleReprint(a)}
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Reprint voucher"
+                          disabled={reprinting === a.id}
+                          onClick={() => handleReprint(a)}
                         >
                           <Printer className="h-3.5 w-3.5" />
                         </Button>
                         <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Delete assignment" onClick={() => setDeleteTarget(a)}
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Delete assignment"
+                          onClick={() => setDeleteTarget(a)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -534,29 +655,65 @@ function PlantAssignmentsTab() {
         <div className="flex items-center justify-between border-t px-4 py-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <span>Rows per page</span>
-            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
-              <SelectTrigger className="h-7 w-16 text-xs"><SelectValue /></SelectTrigger>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => {
+                setPageSize(Number(v));
+                setPage(0);
+              }}
+            >
+              <SelectTrigger className="h-7 w-16 text-xs">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {[5, 10, 25, 50].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-1">
             <span className="mr-2 text-xs">
-              {filtered.length === 0 ? "0 of 0" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length}`}
+              {filtered.length === 0
+                ? "0 of 0"
+                : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length}`}
             </span>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(0)} disabled={page === 0}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage(0)}
+              disabled={page === 0}
+            >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 0}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages - 1}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage(totalPages - 1)}
+              disabled={page >= totalPages - 1}
+            >
               <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
@@ -566,33 +723,62 @@ function PlantAssignmentsTab() {
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Edit Assignment</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Edit Assignment</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <p className="text-sm font-medium">{editTarget?.product.name}</p>
-              <p className="text-xs text-muted-foreground">{editTarget?.site.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {editTarget?.site.name}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select value={editStatus} onValueChange={setEditStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {EDIT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {EDIT_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Quantity</Label>
-              <Input type="number" min={1} value={editQty} onChange={(e) => setEditQty(Number(e.target.value))} />
+              <Input
+                type="number"
+                min={1}
+                value={editQty}
+                onChange={(e) => setEditQty(Number(e.target.value))}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={2} placeholder="Add a note…" />
+              <Label>
+                Note{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <Textarea
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                rows={2}
+                placeholder="Add a note…"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleEdit} disabled={editSaving}>{editSaving ? "Saving…" : "Save Changes"}</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEdit} disabled={editSaving}>
+              {editSaving ? "Saving…" : "Save Changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -600,10 +786,14 @@ function PlantAssignmentsTab() {
       {/* Transfer Dialog */}
       <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Transfer Plant</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Transfer Plant</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <p className="text-sm font-medium">{transferTarget?.product.name}</p>
+              <p className="text-sm font-medium">
+                {transferTarget?.product.name}
+              </p>
               <p className="text-xs text-muted-foreground">
                 From:{" "}
                 {transferTarget?.site.code
@@ -614,22 +804,52 @@ function PlantAssignmentsTab() {
             </div>
             <div className="space-y-1.5">
               <Label>To Site</Label>
-              <Popover open={transferSiteOpen} onOpenChange={setTransferSiteOpen}>
+              <Popover
+                open={transferSiteOpen}
+                onOpenChange={setTransferSiteOpen}
+              >
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={transferSiteOpen} className="w-full justify-between h-10 text-sm font-normal">
-                    <span className="truncate">{selectedTransferSite ? siteLabel(selectedTransferSite) : "Select destination site…"}</span>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={transferSiteOpen}
+                    className="w-full justify-between h-10 text-sm font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedTransferSite
+                        ? siteLabel(selectedTransferSite)
+                        : "Select destination site…"}
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
-                    <CommandInput placeholder="Search site…" className="text-sm" />
+                    <CommandInput
+                      placeholder="Search site…"
+                      className="text-sm"
+                    />
                     <CommandList>
                       <CommandEmpty>No site found.</CommandEmpty>
                       <CommandGroup>
                         {transferableSites.map((s) => (
-                          <CommandItem key={s.id} value={siteLabel(s)} onSelect={() => { setTransferSiteId(s.id); setTransferSiteOpen(false); }} className="text-sm">
-                            <Check className={cn("mr-2 h-4 w-4", transferSiteId === s.id ? "opacity-100" : "opacity-0")} />
+                          <CommandItem
+                            key={s.id}
+                            value={siteLabel(s)}
+                            onSelect={() => {
+                              setTransferSiteId(s.id);
+                              setTransferSiteOpen(false);
+                            }}
+                            className="text-sm"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                transferSiteId === s.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
                             {siteLabel(s)}
                           </CommandItem>
                         ))}
@@ -641,16 +861,37 @@ function PlantAssignmentsTab() {
             </div>
             <div className="space-y-1.5">
               <Label>Quantity (max {transferTarget?.quantity})</Label>
-              <Input type="number" min={1} max={transferTarget?.quantity ?? 1} value={transferQty} onChange={(e) => setTransferQty(Number(e.target.value))} />
+              <Input
+                type="number"
+                min={1}
+                max={transferTarget?.quantity ?? 1}
+                value={transferQty}
+                onChange={(e) => setTransferQty(Number(e.target.value))}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Textarea value={transferNote} onChange={(e) => setTransferNote(e.target.value)} rows={2} placeholder="Reason for transfer…" />
+              <Label>
+                Note{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <Textarea
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                rows={2}
+                placeholder="Reason for transfer…"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancel</Button>
-            <Button onClick={handleTransfer} disabled={transferSaving || !transferSiteId}>
+            <Button variant="outline" onClick={() => setTransferOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTransfer}
+              disabled={transferSaving || !transferSiteId}
+            >
               {transferSaving ? "Transferring…" : "Transfer →"}
             </Button>
           </DialogFooter>
@@ -658,20 +899,38 @@ function PlantAssignmentsTab() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Delete Assignment</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Delete Assignment</DialogTitle>
+          </DialogHeader>
           <div className="py-2">
             <p className="text-sm">
               Are you sure you want to delete the assignment of{" "}
-              <span className="font-semibold">{deleteTarget?.product.name}</span> at{" "}
+              <span className="font-semibold">
+                {deleteTarget?.product.name}
+              </span>{" "}
+              at{" "}
               <span className="font-semibold">{deleteTarget?.site.name}</span>?
             </p>
-            <p className="text-xs text-muted-foreground mt-2">This action cannot be undone.</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              This action cannot be undone.
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
               {deleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
@@ -680,14 +939,20 @@ function PlantAssignmentsTab() {
 
       {/* Deploy Sheet */}
       <Sheet open={deployOpen} onOpenChange={setDeployOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-full lg:max-w-[85vw] p-0 overflow-y-auto">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-full lg:max-w-[85vw] p-0 overflow-y-auto"
+        >
           <SheetHeader className="sr-only">
             <SheetTitle>Deploy Plant to Site</SheetTitle>
           </SheetHeader>
           <PlantDeployPOS
             supervisors={deploySupervisors}
             items={plantItems}
-            onDeployed={() => { setDeployOpen(false); load(); }}
+            onDeployed={() => {
+              setDeployOpen(false);
+              load();
+            }}
           />
         </SheetContent>
       </Sheet>

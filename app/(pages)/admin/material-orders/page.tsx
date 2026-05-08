@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PpeOrdersTab } from "@/components/orders/PpeOrdersTab";
 import { toast } from "react-toastify";
 import {
   Plus,
@@ -170,10 +169,15 @@ type Order = {
 
 /* ─── Component ─── */
 
-export default function MaterialOrdersPage() {
-  // Tab
-  const [activeTab, setActiveTab] = useState<"materials" | "ppe">("materials");
+type MaterialOrdersPageProps = {
+  createTrigger?: number;
+  hideCreateButton?: boolean;
+};
 
+export default function MaterialOrdersPage({
+  createTrigger = 0,
+  hideCreateButton = false,
+}: MaterialOrdersPageProps) {
   // Lookups
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
@@ -447,6 +451,10 @@ export default function MaterialOrdersPage() {
     setSheetOpen(true);
   }
 
+  useEffect(() => {
+    if (createTrigger > 0) openPos();
+  }, [createTrigger]);
+
   async function handlePlaceOrder() {
     if (!posSiteId) {
       toast.error("Please select a site");
@@ -540,802 +548,782 @@ export default function MaterialOrdersPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* Header */}
-      <div className="flex items-end justify-between flex-wrap gap-4">
+      {/* <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Paints Orders</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage material and PPE orders for sites.
+            Manage paint and material orders for sites.
           </p>
         </div>
-      </div>
+      </div> */}
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        <button
-          type="button"
-          onClick={() => setActiveTab("materials")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "materials"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Material Orders
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("ppe")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "ppe"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          PPE Orders
-        </button>
-      </div>
-
-      {activeTab === "ppe" && <PpeOrdersTab />}
-
-      {activeTab === "materials" && <>
-      {/* Material Orders filter bar */}
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div className="flex items-end gap-3 flex-wrap">
-          <Button onClick={openPos}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Order
-          </Button>
-          <Input
-            value={filterRef}
-            onChange={(e) => {
-              setFilterRef(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search by reference…"
-            className="w-48"
-          />
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              From
-            </label>
+      <>
+        {/* Paints Orders filter bar */}
+        <div className="flex items-end justify-between flex-wrap gap-4">
+          <div className="flex items-end gap-3 flex-wrap">
+            {!hideCreateButton && (
+              <Button onClick={openPos}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Order
+              </Button>
+            )}
             <Input
-              type="date"
-              value={filterFrom ?? ""}
+              value={filterRef}
               onChange={(e) => {
-                setFilterFrom(e.target.value || null);
+                setFilterRef(e.target.value);
                 setPage(0);
               }}
-              className="w-36"
+              placeholder="Search by reference…"
+              className="w-48"
             />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              To
-            </label>
-            <Input
-              type="date"
-              value={filterTo ?? ""}
-              onChange={(e) => {
-                setFilterTo(e.target.value || null);
-                setPage(0);
-              }}
-              className="w-36"
-            />
-          </div>
-          <div className="w-px self-stretch bg-border" />
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">
-              Site
-            </label>
-            <Select value={filterSiteId} onValueChange={setFilterSiteId}>
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="All sites" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All sites</SelectItem>
-                {sites.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {siteLabel(s.name, s.code)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => {
-              setFilterSiteId("all");
-              setFilterRef("");
-            }}
-          >
-            <RotateCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Orders Table */}
-      <div className="border bg-card rounded overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table className="border-collapse">
-            <TableHeader className="bg-muted/60">
-              <TableRow>
-                <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                  Date
-                </TableHead>
-                <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                  Site
-                </TableHead>
-                <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                  Supplier
-                </TableHead>
-                <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                  Reference
-                </TableHead>
-                <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                  Items
-                </TableHead>
-                <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
-                  Total
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    <span className="text-muted-foreground text-sm">
-                      Loading orders…
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ) : filteredOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    <span className="text-muted-foreground text-sm">
-                      No material orders yet
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedOrders.map((order) => {
-                  const isExpanded = expandedOrderId === order.id;
-                  const rowTotal = order.items.reduce(
-                    (sum, item) => sum + item.quantity * item.unitPriceAtOrder,
-                    0,
-                  );
-                  return (
-                    <React.Fragment key={order.id}>
-                      <TableRow
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() =>
-                          setExpandedOrderId(isExpanded ? null : order.id)
-                        }
-                      >
-                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
-                          {fmtDate(order.createdAt)}
-                        </TableCell>
-                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-medium">
-                          {order.siteName}
-                        </TableCell>
-                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
-                          {order.supplierName ?? "—"}
-                        </TableCell>
-                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
-                          {order.reference ? `#${order.reference}` : "—"}
-                        </TableCell>
-                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
-                          {order.items.length} item
-                          {order.items.length !== 1 ? "s" : ""}
-                        </TableCell>
-                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-semibold text-right">
-                          {formatCurrency(rowTotal)}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow className="bg-muted/30">
-                        <TableCell colSpan={6} className="p-0">
-                          <div
-                            className="grid transition-all duration-300 ease-in-out"
-                            style={{
-                              gridTemplateRows: isExpanded ? "1fr" : "0fr",
-                            }}
-                          >
-                            <div className="overflow-hidden">
-                              <div
-                                className={`px-6 space-y-2 transition-all duration-300 ease-in-out ${isExpanded ? "py-3 opacity-100" : "py-0 opacity-0"}`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Order Items
-                                  </div>
-                                  {order.createdBy && (
-                                    <span className="text-xs text-muted-foreground">
-                                      Created by {order.createdBy}
-                                      {order.note && ` · ${order.note}`}
-                                    </span>
-                                  )}
-                                </div>
-                                <Table className="border-collapse">
-                                  <TableHeader className="bg-muted/60">
-                                    <TableRow className="hover:bg-transparent">
-                                      <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                                        Product
-                                      </TableHead>
-                                      <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                                        Size
-                                      </TableHead>
-                                      <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
-                                        Qty
-                                      </TableHead>
-                                      <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
-                                        Unit Price
-                                      </TableHead>
-                                      <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
-                                        Subtotal
-                                      </TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {order.items.map((item) => (
-                                      <TableRow
-                                        key={item.id}
-                                        className="hover:bg-transparent"
-                                      >
-                                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
-                                          {item.productName}
-                                          {item.sku && (
-                                            <span className="ml-1 text-xs text-muted-foreground">
-                                              ({item.sku})
-                                            </span>
-                                          )}
-                                        </TableCell>
-                                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm text-muted-foreground">
-                                          {fmtSize(
-                                            item.unitSizeAtOrder,
-                                            item.uomAtOrder,
-                                          )}
-                                        </TableCell>
-                                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm text-right">
-                                          {item.quantity}
-                                        </TableCell>
-                                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm text-right">
-                                          {formatCurrency(
-                                            item.unitPriceAtOrder,
-                                          )}
-                                        </TableCell>
-                                        <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-medium text-right">
-                                          {formatCurrency(
-                                            item.unitPriceAtOrder *
-                                              item.quantity,
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                                <div className="flex justify-end pt-2">
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteOrderId(order.id);
-                                    }}
-                                  >
-                                    <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                    Delete Order
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {filteredOrders.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3 bg-muted/60 text-sm">
-            <span className="text-muted-foreground">
-              Showing <b>{pFrom}</b> to <b>{pTo}</b> of{" "}
-              <b>{filteredOrders.length}</b>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">Rows</span>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(v) => {
-                  setPageSize(Number(v));
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                From
+              </label>
+              <Input
+                type="date"
+                value={filterFrom ?? ""}
+                onChange={(e) => {
+                  setFilterFrom(e.target.value || null);
                   setPage(0);
                 }}
-              >
-                <SelectTrigger className="h-8 w-17.5">
-                  <SelectValue />
+                className="w-36"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                To
+              </label>
+              <Input
+                type="date"
+                value={filterTo ?? ""}
+                onChange={(e) => {
+                  setFilterTo(e.target.value || null);
+                  setPage(0);
+                }}
+                className="w-36"
+              />
+            </div>
+            <div className="w-px self-stretch bg-border" />
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Site
+              </label>
+              <Select value={filterSiteId} onValueChange={setFilterSiteId}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="All sites" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[5, 10, 20, 50].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}
+                  <SelectItem value="all">All sites</SelectItem>
+                  {sites.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {siteLabel(s.name, s.code)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={safePage === 0}
-                  onClick={() => setPage(0)}
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setFilterSiteId("all");
+                setFilterRef("");
+              }}
+            >
+              <RotateCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Orders Table */}
+        <div className="border bg-card rounded overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table className="border-collapse">
+              <TableHeader className="bg-muted/60">
+                <TableRow>
+                  <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Date
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Site
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Supplier
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Reference
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                    Items
+                  </TableHead>
+                  <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
+                    Total
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      <span className="text-muted-foreground text-sm">
+                        Loading orders…
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      <span className="text-muted-foreground text-sm">
+                        No paints orders yet
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedOrders.map((order) => {
+                    const isExpanded = expandedOrderId === order.id;
+                    const rowTotal = order.items.reduce(
+                      (sum, item) =>
+                        sum + item.quantity * item.unitPriceAtOrder,
+                      0,
+                    );
+                    return (
+                      <React.Fragment key={order.id}>
+                        <TableRow
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() =>
+                            setExpandedOrderId(isExpanded ? null : order.id)
+                          }
+                        >
+                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
+                            {fmtDate(order.createdAt)}
+                          </TableCell>
+                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-medium">
+                            {order.siteName}
+                          </TableCell>
+                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
+                            {order.supplierName ?? "—"}
+                          </TableCell>
+                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
+                            {order.reference ? `#${order.reference}` : "—"}
+                          </TableCell>
+                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
+                            {order.items.length} item
+                            {order.items.length !== 1 ? "s" : ""}
+                          </TableCell>
+                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-semibold text-right">
+                            {formatCurrency(rowTotal)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className="bg-muted/30">
+                          <TableCell colSpan={6} className="p-0">
+                            <div
+                              className="grid transition-all duration-300 ease-in-out"
+                              style={{
+                                gridTemplateRows: isExpanded ? "1fr" : "0fr",
+                              }}
+                            >
+                              <div className="overflow-hidden">
+                                <div
+                                  className={`px-6 space-y-2 transition-all duration-300 ease-in-out ${isExpanded ? "py-3 opacity-100" : "py-0 opacity-0"}`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                      Order Items
+                                    </div>
+                                    {order.createdBy && (
+                                      <span className="text-xs text-muted-foreground">
+                                        Created by {order.createdBy}
+                                        {order.note && ` · ${order.note}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <Table className="border-collapse">
+                                    <TableHeader className="bg-muted/60">
+                                      <TableRow className="hover:bg-transparent">
+                                        <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                                          Product
+                                        </TableHead>
+                                        <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                                          Size
+                                        </TableHead>
+                                        <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
+                                          Qty
+                                        </TableHead>
+                                        <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
+                                          Unit Price
+                                        </TableHead>
+                                        <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700 text-right">
+                                          Subtotal
+                                        </TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {order.items.map((item) => (
+                                        <TableRow
+                                          key={item.id}
+                                          className="hover:bg-transparent"
+                                        >
+                                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm">
+                                            {item.productName}
+                                            {item.sku && (
+                                              <span className="ml-1 text-xs text-muted-foreground">
+                                                ({item.sku})
+                                              </span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm text-muted-foreground">
+                                            {fmtSize(
+                                              item.unitSizeAtOrder,
+                                              item.uomAtOrder,
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm text-right">
+                                            {item.quantity}
+                                          </TableCell>
+                                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm text-right">
+                                            {formatCurrency(
+                                              item.unitPriceAtOrder,
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-sm font-medium text-right">
+                                            {formatCurrency(
+                                              item.unitPriceAtOrder *
+                                                item.quantity,
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                  <div className="flex justify-end pt-2">
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteOrderId(order.id);
+                                      }}
+                                    >
+                                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                      Delete Order
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {filteredOrders.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t px-4 py-3 bg-muted/60 text-sm">
+              <span className="text-muted-foreground">
+                Showing <b>{pFrom}</b> to <b>{pTo}</b> of{" "}
+                <b>{filteredOrders.length}</b>
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">Rows</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(Number(v));
+                    setPage(0);
+                  }}
                 >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={safePage === 0}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={safePage >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={safePage >= totalPages - 1}
-                  onClick={() => setPage(totalPages - 1)}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
+                  <SelectTrigger className="h-8 w-17.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 10, 20, 50].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={safePage === 0}
+                    onClick={() => setPage(0)}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={safePage === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={safePage >= totalPages - 1}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={safePage >= totalPages - 1}
+                    onClick={() => setPage(totalPages - 1)}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* POS Sheet / Bottom Fullscreen Drawer */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent
-          side="bottom"
-          className="h-dvh max-h-dvh w-full p-0 border-0 rounded overflow-hidden overflow-y-auto"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Procurement</SheetTitle>
-          </SheetHeader>
-          <div className="flex h-full bg-background">
-            {/* left sidebar for site & supplier pickers (popovers) and order summary */}
-            <div className="flex h-full w-72 flex-col items-stretch gap-4 bg-card border-r border-border p-4">
-              <Popover
-                open={posSitePopoverOpen}
-                onOpenChange={setPosSitePopoverOpen}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={posSitePopoverOpen}
-                    className="w-full justify-between"
-                  >
-                    <span className="truncate">
-                      {posSiteId
-                        ? siteLabel(
-                            sites.find((s) => s.id === posSiteId)?.name || "",
-                            sites.find((s) => s.id === posSiteId)?.code,
-                          ) || "Select site"
-                        : "Select site"}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search site..." />
-                    <CommandList>
-                      <CommandEmpty>No sites found.</CommandEmpty>
-                      <CommandGroup>
-                        {sites.map((s) => (
+        {/* POS Sheet / Bottom Fullscreen Drawer */}
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent
+            side="bottom"
+            className="h-dvh max-h-dvh w-full p-0 border-0 rounded overflow-hidden overflow-y-auto"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Procurement</SheetTitle>
+            </SheetHeader>
+            <div className="flex h-full bg-background">
+              {/* left sidebar for site & supplier pickers (popovers) and order summary */}
+              <div className="flex h-full w-72 flex-col items-stretch gap-4 bg-card border-r border-border p-4">
+                <Popover
+                  open={posSitePopoverOpen}
+                  onOpenChange={setPosSitePopoverOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={posSitePopoverOpen}
+                      className="w-full justify-between"
+                    >
+                      <span className="truncate">
+                        {posSiteId
+                          ? siteLabel(
+                              sites.find((s) => s.id === posSiteId)?.name || "",
+                              sites.find((s) => s.id === posSiteId)?.code,
+                            ) || "Select site"
+                          : "Select site"}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search site..." />
+                      <CommandList>
+                        <CommandEmpty>No sites found.</CommandEmpty>
+                        <CommandGroup>
+                          {sites.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={siteLabel(s.name, s.code)}
+                              onSelect={() => {
+                                setPosSiteId(s.id);
+                                setPosSitePopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={
+                                  posSiteId === s.id
+                                    ? "mr-2 h-4 w-4 opacity-100"
+                                    : "mr-2 h-4 w-4 opacity-0"
+                                }
+                              />
+                              {siteLabel(s.name, s.code)}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {/* supplier popover */}
+                <Popover
+                  open={posSupplierPopoverOpen}
+                  onOpenChange={setPosSupplierPopoverOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={posSupplierPopoverOpen}
+                      className="w-full justify-between"
+                    >
+                      <span className="truncate">
+                        {posSupplierId
+                          ? suppliers.find((s) => s.id === posSupplierId)
+                              ?.name || "Select supplier"
+                          : "No specific supplier"}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search supplier..." />
+                      <CommandList>
+                        <CommandEmpty>No suppliers found.</CommandEmpty>
+                        <CommandGroup>
                           <CommandItem
-                            key={s.id}
-                            value={siteLabel(s.name, s.code)}
+                            key="none"
+                            value="No specific supplier"
                             onSelect={() => {
-                              setPosSiteId(s.id);
-                              setPosSitePopoverOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={
-                                posSiteId === s.id
-                                  ? "mr-2 h-4 w-4 opacity-100"
-                                  : "mr-2 h-4 w-4 opacity-0"
-                              }
-                            />
-                            {siteLabel(s.name, s.code)}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {/* supplier popover */}
-              <Popover
-                open={posSupplierPopoverOpen}
-                onOpenChange={setPosSupplierPopoverOpen}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={posSupplierPopoverOpen}
-                    className="w-full justify-between"
-                  >
-                    <span className="truncate">
-                      {posSupplierId
-                        ? suppliers.find((s) => s.id === posSupplierId)?.name ||
-                          "Select supplier"
-                        : "No specific supplier"}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search supplier..." />
-                    <CommandList>
-                      <CommandEmpty>No suppliers found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          key="none"
-                          value="No specific supplier"
-                          onSelect={() => {
-                            setPosSupplierId("");
-                            setPosSupplierPopoverOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={
-                              posSupplierId === ""
-                                ? "mr-2 h-4 w-4 opacity-100"
-                                : "mr-2 h-4 w-4 opacity-0"
-                            }
-                          />
-                          No specific supplier
-                        </CommandItem>
-                        {suppliers.map((s) => (
-                          <CommandItem
-                            key={s.id}
-                            value={s.name}
-                            onSelect={() => {
-                              setPosSupplierId(s.id);
+                              setPosSupplierId("");
                               setPosSupplierPopoverOpen(false);
                             }}
                           >
                             <Check
                               className={
-                                posSupplierId === s.id
+                                posSupplierId === ""
                                   ? "mr-2 h-4 w-4 opacity-100"
                                   : "mr-2 h-4 w-4 opacity-0"
                               }
                             />
-                            {s.name}
+                            No specific supplier
                           </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {/* order summary card */}
-              <div className="flex min-h-0 flex-1 flex-col rounded border border-border bg-card overflow-hidden">
-                <div className="border-b border-border px-3 py-2.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Order Summary
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {cart.length} item{cart.length !== 1 ? "s" : ""} in order
-                  </p>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-3 py-2.5">
-                  <div className="flex flex-col gap-2 mb-3">
-                    <Input
-                      value={posReference}
-                      onChange={(e) => setPosReference(e.target.value)}
-                      placeholder="Reference (optional)"
-                      className="h-8 text-xs"
-                    />
-                    <Input
-                      value={posNote}
-                      onChange={(e) => setPosNote(e.target.value)}
-                      placeholder="Note (optional)"
-                      className="h-8 text-xs"
-                    />
+                          {suppliers.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.name}
+                              onSelect={() => {
+                                setPosSupplierId(s.id);
+                                setPosSupplierPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={
+                                  posSupplierId === s.id
+                                    ? "mr-2 h-4 w-4 opacity-100"
+                                    : "mr-2 h-4 w-4 opacity-0"
+                                }
+                              />
+                              {s.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {/* order summary card */}
+                <div className="flex min-h-0 flex-1 flex-col rounded border border-border bg-card overflow-hidden">
+                  <div className="border-b border-border px-3 py-2.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Order Summary
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {cart.length} item{cart.length !== 1 ? "s" : ""} in order
+                    </p>
                   </div>
 
-                  {cart.length === 0 ? (
-                    <div className="flex flex-1 min-h-40 flex-col items-center justify-center rounded border border-dashed border-border/60 bg-muted/30 p-4 text-center">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        No items yet
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground/70">
-                        Add materials from the catalogue
-                      </p>
+                  <div className="flex-1 overflow-y-auto px-3 py-2.5">
+                    <div className="flex flex-col gap-2 mb-3">
+                      <Input
+                        value={posReference}
+                        onChange={(e) => setPosReference(e.target.value)}
+                        placeholder="Reference (optional)"
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        value={posNote}
+                        onChange={(e) => setPosNote(e.target.value)}
+                        placeholder="Note (optional)"
+                        className="h-8 text-xs"
+                      />
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {cart.map((c) => (
-                        <div
-                          key={c.key}
-                          className="flex items-center gap-2.5 rounded border border-border bg-background/50 p-2"
-                        >
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
-                            <img
-                              src={c.item.thumbnailUrl || "/thumnail.avif"}
-                              alt={c.item.productName}
-                              className="h-full w-full object-contain"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-medium leading-tight">
-                              {c.item.productName}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {c.item.price > 0
-                                ? formatCurrency(c.item.price)
-                                : "—"}{" "}
-                              each
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              type="number"
-                              min={1}
-                              value={c.quantity}
-                              onChange={(e) => {
-                                const n = Number(e.target.value);
-                                if (
-                                  Number.isFinite(n) &&
-                                  n >= 1 &&
-                                  Number.isSafeInteger(n)
-                                ) {
-                                  setCartQty(c.key, n);
-                                }
-                              }}
-                              className="h-7 w-12 px-1.5 text-center text-xs tabular-nums"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeFromCart(c.key)}
-                              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            >
-                              <span className="text-sm">×</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
 
-                {/* footer */}
-                <div className="border-t border-border bg-muted/30 px-3 py-3">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-xs text-muted-foreground">Total</span>
-                    <span className="text-base font-bold tabular-nums">
-                      {formatCurrency(cartTotal)}
+                    {cart.length === 0 ? (
+                      <div className="flex flex-1 min-h-40 flex-col items-center justify-center rounded border border-dashed border-border/60 bg-muted/30 p-4 text-center">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          No items yet
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                          Add materials from the catalogue
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {cart.map((c) => (
+                          <div
+                            key={c.key}
+                            className="flex items-center gap-2.5 rounded border border-border bg-background/50 p-2"
+                          >
+                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
+                              <img
+                                src={c.item.thumbnailUrl || "/thumnail.avif"}
+                                alt={c.item.productName}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium leading-tight">
+                                {c.item.productName}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {c.item.price > 0
+                                  ? formatCurrency(c.item.price)
+                                  : "—"}{" "}
+                                each
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min={1}
+                                value={c.quantity}
+                                onChange={(e) => {
+                                  const n = Number(e.target.value);
+                                  if (
+                                    Number.isFinite(n) &&
+                                    n >= 1 &&
+                                    Number.isSafeInteger(n)
+                                  ) {
+                                    setCartQty(c.key, n);
+                                  }
+                                }}
+                                className="h-7 w-12 px-1.5 text-center text-xs tabular-nums"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeFromCart(c.key)}
+                                className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                              >
+                                <span className="text-sm">×</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* footer */}
+                  <div className="border-t border-border bg-muted/30 px-3 py-3">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs text-muted-foreground">
+                        Total
+                      </span>
+                      <span className="text-base font-bold tabular-nums">
+                        {formatCurrency(cartTotal)}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handlePlaceOrder}
+                      disabled={placing || !posSiteId || cart.length === 0}
+                      className="w-full h-9 text-xs font-semibold"
+                    >
+                      {placing ? "Placing..." : "Confirm Order"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              {/* main POS area: catalogue */}
+              <div className="flex-1 flex flex-col h-full">
+                {/* POS Top Bar */}
+                <div className="flex items-center gap-4 h-14 border-b border-border bg-card px-4 sm:px-6">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Procurement
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Manage material purchases for sites.
                     </span>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={handlePlaceOrder}
-                    disabled={placing || !posSiteId || cart.length === 0}
-                    className="w-full h-9 text-xs font-semibold"
-                  >
-                    {placing ? "Placing..." : "Confirm Order"}
-                  </Button>
+                  <div className="flex items-center gap-1.5 ml-auto mr-8">
+                    <span className="text-[11px] text-muted-foreground">
+                      Order total
+                    </span>
+                    <span className="text-lg font-bold tabular-nums">
+                      {formatCurrency(cartTotal)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loadLookups();
+                        loadOrders();
+                      }}
+                      className="ml-2 p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      title="Refresh orders"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-            {/* main POS area: catalogue */}
-            <div className="flex-1 flex flex-col h-full">
-              {/* POS Top Bar */}
-              <div className="flex items-center gap-4 h-14 border-b border-border bg-card px-4 sm:px-6">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Procurement
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Manage material purchases for sites.
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 ml-auto mr-8">
-                  <span className="text-[11px] text-muted-foreground">
-                    Order total
-                  </span>
-                  <span className="text-lg font-bold tabular-nums">
-                    {formatCurrency(cartTotal)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadLookups();
-                      loadOrders();
-                    }}
-                    className="ml-2 p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    title="Refresh orders"
-                  >
-                    <RotateCw className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
 
-              {/* POS Main Area */}
-              <div className="flex-1 overflow-hidden">
-                <div className="grid h-full w-full gap-4 p-4 sm:p-6">
-                  {/* Catalogue column */}
-                  <div className="flex min-h-0 flex-col gap-4">
-                    <div className="flex flex-col gap-2 rounded border border-border bg-card p-3 sm:p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Material Catalogue
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {filteredCatalog.length} product
-                            {filteredCatalog.length !== 1 ? "s" : ""} available
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Select
-                            value={posCategory}
-                            onValueChange={setPosCategory}
-                          >
-                            <SelectTrigger className="h-8 w-37.5 text-xs">
-                              <SelectValue placeholder="All categories" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ALL">
-                                All categories
-                              </SelectItem>
-                              {categories.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}
+                {/* POS Main Area */}
+                <div className="flex-1 overflow-hidden">
+                  <div className="grid h-full w-full gap-4 p-4 sm:p-6">
+                    {/* Catalogue column */}
+                    <div className="flex min-h-0 flex-col gap-4">
+                      <div className="flex flex-col gap-2 rounded border border-border bg-card p-3 sm:p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Material Catalogue
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {filteredCatalog.length} product
+                              {filteredCatalog.length !== 1 ? "s" : ""}{" "}
+                              available
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                              value={posCategory}
+                              onValueChange={setPosCategory}
+                            >
+                              <SelectTrigger className="h-8 w-37.5 text-xs">
+                                <SelectValue placeholder="All categories" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ALL">
+                                  All categories
                                 </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="relative w-full sm:w-56">
-                            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              value={posSearch}
-                              onChange={(e) => setPosSearch(e.target.value)}
-                              placeholder="Search materials..."
-                              className="h-8 pl-8 text-xs"
-                            />
+                                {categories.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>
+                                    {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="relative w-full sm:w-56">
+                              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                value={posSearch}
+                                onChange={(e) => setPosSearch(e.target.value)}
+                                placeholder="Search materials..."
+                                className="h-8 pl-8 text-xs"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="min-h-0 flex-1 overflow-y-auto rounded border border-dashed border-border/70 bg-muted/30 p-3 sm:p-4">
-                      {filteredCatalog.length === 0 ? (
-                        <div className="flex h-full min-h-55 items-center justify-center text-center">
-                          <div>
-                            <p className="text-sm font-medium">
-                              No materials found
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Adjust your search or category filters.
-                            </p>
+                      <div className="min-h-0 flex-1 overflow-y-auto rounded border border-dashed border-border/70 bg-muted/30 p-3 sm:p-4">
+                        {filteredCatalog.length === 0 ? (
+                          <div className="flex h-full min-h-55 items-center justify-center text-center">
+                            <div>
+                              <p className="text-sm font-medium">
+                                No materials found
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Adjust your search or category filters.
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                          {filteredCatalog.map((c) => {
-                            const inCart = cart.find((ci) => ci.key === c.key);
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                            {filteredCatalog.map((c) => {
+                              const inCart = cart.find(
+                                (ci) => ci.key === c.key,
+                              );
 
-                            return (
-                              <div
-                                key={c.key}
-                                className="group flex flex-col overflow-hidden rounded border border-border bg-card text-xs sm:text-sm shadow-sm transition hover:border-primary/40 hover:shadow-md"
-                              >
-                                <div className="relative aspect-4/3 overflow-hidden bg-muted">
-                                  <img
-                                    src={c.thumbnailUrl || "/thumnail.avif"}
-                                    alt={c.productName}
-                                    className="h-full w-full object-contain"
-                                  />
-                                  {inCart && (
-                                    <Badge className="absolute left-2 top-2 bg-primary text-[10px] font-semibold">
-                                      In order
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                <div className="flex flex-1 flex-col gap-2 p-2.5 sm:p-3">
-                                  <div>
-                                    <div className="line-clamp-2 text-xs font-semibold sm:text-sm">
-                                      {c.productName}
-                                    </div>
-                                    <div className="mt-0.5 text-[11px] text-muted-foreground">
-                                      {c.sku ? `SKU: ${c.sku}` : "No SKU"}
-                                    </div>
+                              return (
+                                <div
+                                  key={c.key}
+                                  className="group flex flex-col overflow-hidden rounded border border-border bg-card text-xs sm:text-sm shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                                >
+                                  <div className="relative aspect-4/3 overflow-hidden bg-muted">
+                                    <img
+                                      src={c.thumbnailUrl || "/thumnail.avif"}
+                                      alt={c.productName}
+                                      className="h-full w-full object-contain"
+                                    />
+                                    {inCart && (
+                                      <Badge className="absolute left-2 top-2 bg-primary text-[10px] font-semibold">
+                                        In order
+                                      </Badge>
+                                    )}
                                   </div>
 
-                                  <div className="mt-auto space-y-1.5 text-[11px] sm:text-xs">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-muted-foreground">
-                                        Size
-                                      </span>
-                                      <span className="font-medium">
-                                        {fmtSize(c.unitSize, c.uom) || "—"}
-                                      </span>
+                                  <div className="flex flex-1 flex-col gap-2 p-2.5 sm:p-3">
+                                    <div>
+                                      <div className="line-clamp-2 text-xs font-semibold sm:text-sm">
+                                        {c.productName}
+                                      </div>
+                                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                        {c.sku ? `SKU: ${c.sku}` : "No SKU"}
+                                      </div>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-muted-foreground">
-                                        Unit price
-                                      </span>
-                                      <span className="font-semibold tabular-nums">
-                                        {c.price > 0
-                                          ? formatCurrency(c.price)
-                                          : "—"}
-                                      </span>
-                                    </div>
-                                  </div>
 
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    className="mt-1 h-8 w-full justify-center text-xs font-semibold"
-                                    variant={inCart ? "outline" : "default"}
-                                    onClick={() => addToCart(c)}
-                                  >
-                                    {inCart ? "Add more" : "Add to order"}
-                                  </Button>
+                                    <div className="mt-auto space-y-1.5 text-[11px] sm:text-xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">
+                                          Size
+                                        </span>
+                                        <span className="font-medium">
+                                          {fmtSize(c.unitSize, c.uom) || "—"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">
+                                          Unit price
+                                        </span>
+                                        <span className="font-semibold tabular-nums">
+                                          {c.price > 0
+                                            ? formatCurrency(c.price)
+                                            : "—"}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="mt-1 h-8 w-full justify-center text-xs font-semibold"
+                                      variant={inCart ? "outline" : "default"}
+                                      onClick={() => addToCart(c)}
+                                    >
+                                      {inCart ? "Add more" : "Add to order"}
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
 
-      <ConfirmationDialog
-        open={deleteOrderId !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteOrderId(null);
-        }}
-        title="Delete Order?"
-        description="This will permanently delete the order and all its items. This cannot be undone."
-        onConfirm={handleDeleteOrder}
-        isLoading={deleteLoading}
-        confirmText="Delete"
-        loadingText="Deleting..."
-        variant="destructive"
-      />
-      </>}
+        <ConfirmationDialog
+          open={deleteOrderId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteOrderId(null);
+          }}
+          title="Delete Order?"
+          description="This will permanently delete the order and all its items. This cannot be undone."
+          onConfirm={handleDeleteOrder}
+          isLoading={deleteLoading}
+          confirmText="Delete"
+          loadingText="Deleting..."
+          variant="destructive"
+        />
+      </>
     </div>
   );
 }

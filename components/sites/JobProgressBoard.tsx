@@ -19,6 +19,7 @@ import {
   ChevronsRight,
   MessageSquare,
   Send,
+  Package,
 } from "lucide-react";
 import {
   Select,
@@ -30,6 +31,13 @@ import {
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   updateSiteJobStatus,
   updateSiteStageIndex,
@@ -55,23 +63,91 @@ type JobStatus = "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
 
 /* One accent colour per supervisor group — teal first (matches primary) */
 const GROUP_ACCENTS = [
-  { dot: "bg-teal-500",   active: "bg-teal-500",   ring: "ring-teal-500/25",   text: "text-teal-600 dark:text-teal-400",   border: "border-teal-500",   track: "bg-teal-500"   },
-  { dot: "bg-blue-500",   active: "bg-blue-500",   ring: "ring-blue-500/25",   text: "text-blue-600 dark:text-blue-400",   border: "border-blue-500",   track: "bg-blue-500"   },
-  { dot: "bg-violet-500", active: "bg-violet-500", ring: "ring-violet-500/25", text: "text-violet-600 dark:text-violet-400", border: "border-violet-500", track: "bg-violet-500" },
-  { dot: "bg-rose-500",   active: "bg-rose-500",   ring: "ring-rose-500/25",   text: "text-rose-600 dark:text-rose-400",   border: "border-rose-500",   track: "bg-rose-500"   },
-  { dot: "bg-amber-500",  active: "bg-amber-500",  ring: "ring-amber-500/25",  text: "text-amber-600 dark:text-amber-400",  border: "border-amber-500",  track: "bg-amber-500"  },
-  { dot: "bg-emerald-500",active: "bg-emerald-500",ring: "ring-emerald-500/25",text: "text-emerald-600 dark:text-emerald-400",border:"border-emerald-500",track:"bg-emerald-500"},
-  { dot: "bg-pink-500",   active: "bg-pink-500",   ring: "ring-pink-500/25",   text: "text-pink-600 dark:text-pink-400",   border: "border-pink-500",   track: "bg-pink-500"   },
-  { dot: "bg-orange-500", active: "bg-orange-500", ring: "ring-orange-500/25", text: "text-orange-600 dark:text-orange-400", border:"border-orange-500",  track: "bg-orange-500" },
+  {
+    dot: "bg-teal-500",
+    active: "bg-teal-500",
+    ring: "ring-teal-500/25",
+    text: "text-teal-600 dark:text-teal-400",
+    border: "border-teal-500",
+    track: "bg-teal-500",
+  },
+  {
+    dot: "bg-blue-500",
+    active: "bg-blue-500",
+    ring: "ring-blue-500/25",
+    text: "text-blue-600 dark:text-blue-400",
+    border: "border-blue-500",
+    track: "bg-blue-500",
+  },
+  {
+    dot: "bg-violet-500",
+    active: "bg-violet-500",
+    ring: "ring-violet-500/25",
+    text: "text-violet-600 dark:text-violet-400",
+    border: "border-violet-500",
+    track: "bg-violet-500",
+  },
+  {
+    dot: "bg-rose-500",
+    active: "bg-rose-500",
+    ring: "ring-rose-500/25",
+    text: "text-rose-600 dark:text-rose-400",
+    border: "border-rose-500",
+    track: "bg-rose-500",
+  },
+  {
+    dot: "bg-amber-500",
+    active: "bg-amber-500",
+    ring: "ring-amber-500/25",
+    text: "text-amber-600 dark:text-amber-400",
+    border: "border-amber-500",
+    track: "bg-amber-500",
+  },
+  {
+    dot: "bg-emerald-500",
+    active: "bg-emerald-500",
+    ring: "ring-emerald-500/25",
+    text: "text-emerald-600 dark:text-emerald-400",
+    border: "border-emerald-500",
+    track: "bg-emerald-500",
+  },
+  {
+    dot: "bg-pink-500",
+    active: "bg-pink-500",
+    ring: "ring-pink-500/25",
+    text: "text-pink-600 dark:text-pink-400",
+    border: "border-pink-500",
+    track: "bg-pink-500",
+  },
+  {
+    dot: "bg-orange-500",
+    active: "bg-orange-500",
+    ring: "ring-orange-500/25",
+    text: "text-orange-600 dark:text-orange-400",
+    border: "border-orange-500",
+    track: "bg-orange-500",
+  },
 ] as const;
 
 type Accent = (typeof GROUP_ACCENTS)[number];
 
 const STATUS_CFG: Record<JobStatus, { label: string; pill: string }> = {
-  NOT_STARTED: { label: "Not Started", pill: "bg-muted text-muted-foreground border-border"                                           },
-  ONGOING:     { label: "Ongoing",     pill: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"  },
-  COMPLETED:   { label: "Completed",   pill: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700" },
-  ON_HOLD:     { label: "On Hold",     pill: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700"  },
+  NOT_STARTED: {
+    label: "Not Started",
+    pill: "bg-muted text-muted-foreground border-border",
+  },
+  ONGOING: {
+    label: "Ongoing",
+    pill: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700",
+  },
+  COMPLETED: {
+    label: "Completed",
+    pill: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700",
+  },
+  ON_HOLD: {
+    label: "On Hold",
+    pill: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700",
+  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -233,11 +309,11 @@ function SidebarRow({
 /* ------------------------------------------------------------------ */
 
 const PAINTING_STAGES = [
-  { key: "primer",    label: "Primer"     },
+  { key: "primer", label: "Primer" },
   { key: "firstCoat", label: "First Coat" },
   { key: "finalCoat", label: "Final Coat" },
-  { key: "snags",     label: "Snags"      },
-  { key: "finish",    label: "Finish"     },
+  { key: "snags", label: "Snags" },
+  { key: "finish", label: "Finish" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -323,8 +399,9 @@ function StageProgressBar({
       {/* Stage nodes */}
       <div className="flex items-start justify-between">
         {PAINTING_STAGES.map((stage, i) => {
-          const isDone   = i < stageIndex;
-          const isActive = i === stageIndex && stageIndex < PAINTING_STAGES.length;
+          const isDone = i < stageIndex;
+          const isActive =
+            i === stageIndex && stageIndex < PAINTING_STAGES.length;
 
           return (
             <button
@@ -341,16 +418,35 @@ function StageProgressBar({
                     isDone
                       ? cn("border-transparent text-white", accent.active)
                       : isActive
-                      ? cn("border-transparent text-white ring-4", accent.active, accent.ring)
-                      : "border-border bg-card text-muted-foreground/30",
+                        ? cn(
+                            "border-transparent text-white ring-4",
+                            accent.active,
+                            accent.ring,
+                          )
+                        : "border-border bg-card text-muted-foreground/30",
                   )}
                 >
                   {isDone ? (
-                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <svg
+                      className="size-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   ) : (
-                    <div className={cn("size-2.5 rounded-full", isActive ? "bg-white" : "bg-muted-foreground/20")} />
+                    <div
+                      className={cn(
+                        "size-2.5 rounded-full",
+                        isActive ? "bg-white" : "bg-muted-foreground/20",
+                      )}
+                    />
                   )}
                 </div>
                 {/* Step number */}
@@ -374,7 +470,9 @@ function StageProgressBar({
 
       {/* Progress summary */}
       <p className="text-center text-xs text-muted-foreground">
-        <span className="font-bold tabular-nums text-foreground">{stageIndex}</span>
+        <span className="font-bold tabular-nums text-foreground">
+          {stageIndex}
+        </span>
         {"/"}
         <span className="tabular-nums">{PAINTING_STAGES.length}</span>
         {" stages done"}
@@ -424,14 +522,20 @@ function StatChip({
 /*  Per-stage percentage bars                                           */
 /* ------------------------------------------------------------------ */
 
-const STAGE_KEYS = ["primer", "firstCoat", "finalCoat", "snags", "finish"] as const;
+const STAGE_KEYS = [
+  "primer",
+  "firstCoat",
+  "finalCoat",
+  "snags",
+  "finish",
+] as const;
 type StageKey = (typeof STAGE_KEYS)[number];
 const STAGE_LABELS: Record<StageKey, string> = {
-  primer:    "Primer",
+  primer: "Primer",
   firstCoat: "First Coat",
   finalCoat: "Final Coat",
-  snags:     "Snags",
-  finish:    "Finish",
+  snags: "Snags",
+  finish: "Finish",
 };
 
 function StagePctBars({
@@ -444,8 +548,15 @@ function StagePctBars({
   accent: Accent;
 }) {
   const [pct, setPct] = useState<Record<StageKey, number>>(() => {
-    const base: Record<StageKey, number> = { primer: 0, firstCoat: 0, finalCoat: 0, snags: 0, finish: 0 };
-    for (const k of STAGE_KEYS) base[k] = Math.min(100, Math.max(0, Number(initialPct[k] ?? 0)));
+    const base: Record<StageKey, number> = {
+      primer: 0,
+      firstCoat: 0,
+      finalCoat: 0,
+      snags: 0,
+      finish: 0,
+    };
+    for (const k of STAGE_KEYS)
+      base[k] = Math.min(100, Math.max(0, Number(initialPct[k] ?? 0)));
     return base;
   });
   const [dirty, setDirty] = useState(false);
@@ -463,7 +574,9 @@ function StagePctBars({
     setDirty(false);
   }
 
-  const overall = Math.round(STAGE_KEYS.reduce((s, k) => s + pct[k], 0) / STAGE_KEYS.length);
+  const overall = Math.round(
+    STAGE_KEYS.reduce((s, k) => s + pct[k], 0) / STAGE_KEYS.length,
+  );
 
   return (
     <div className="space-y-3">
@@ -472,11 +585,16 @@ function StagePctBars({
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
           Overall
         </span>
-        <span className={cn("text-sm font-black tabular-nums", accent.text)}>{overall}%</span>
+        <span className={cn("text-sm font-black tabular-nums", accent.text)}>
+          {overall}%
+        </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-border">
         <div
-          className={cn("h-full rounded-full transition-all duration-500", accent.track)}
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            accent.track,
+          )}
           style={{ width: `${overall}%` }}
         />
       </div>
@@ -501,7 +619,10 @@ function StagePctBars({
               />
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
                 <div
-                  className={cn("h-1.5 rounded-full transition-all duration-300", accent.track)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    accent.track,
+                  )}
                   style={{ width: `${pct[key]}%` }}
                 />
               </div>
@@ -538,7 +659,12 @@ function StagePctBars({
 function MaterialsCard({
   materials,
 }: {
-  materials: { name: string; quantity: number; unitPrice: number; total: number }[];
+  materials: {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
 }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(8);
@@ -546,17 +672,32 @@ function MaterialsCard({
   if (materials.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center">
-        <svg className="size-7 text-muted-foreground/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        <svg
+          className="size-7 text-muted-foreground/20"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+          />
         </svg>
-        <p className="text-xs text-muted-foreground/40">No materials ordered yet</p>
+        <p className="text-xs text-muted-foreground/40">
+          No materials ordered yet
+        </p>
       </div>
     );
   }
 
   const pageCount = Math.max(1, Math.ceil(materials.length / pageSize));
   const safeIndex = Math.min(pageIndex, pageCount - 1);
-  const pageItems = materials.slice(safeIndex * pageSize, (safeIndex + 1) * pageSize);
+  const pageItems = materials.slice(
+    safeIndex * pageSize,
+    (safeIndex + 1) * pageSize,
+  );
   const grandTotal = materials.reduce((s, m) => s + m.total, 0);
 
   const canPrev = safeIndex > 0;
@@ -607,7 +748,10 @@ function MaterialsCard({
         </tbody>
         <tfoot>
           <tr className="bg-muted/50">
-            <td colSpan={3} className="border-r border-border px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <td
+              colSpan={3}
+              className="border-r border-border px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground"
+            >
               Grand Total
             </td>
             <td className="px-4 py-2.5 text-right text-sm font-black tabular-nums text-foreground">
@@ -715,8 +859,8 @@ function JobDetailPanel({
   isPending: boolean;
 }) {
   const status = site.jobStatus as JobStatus;
-  const cfg    = STATUS_CFG[status];
-  const total  = site.totalWages + site.totalMaterialCost;
+  const cfg = STATUS_CFG[status];
+  const total = site.totalWages + site.totalMaterialCost;
 
   const [pendingStage, setPendingStage] = useState<number | null>(null);
   const [notes, setNotes] = useState<ProgressNote[]>([]);
@@ -744,8 +888,10 @@ function JobDetailPanel({
     }
   }
 
-  const nextStageIdx = site.stageIndex < PAINTING_STAGES.length ? site.stageIndex : null;
-  const nextStageLabel = nextStageIdx !== null ? PAINTING_STAGES[nextStageIdx]?.label : null;
+  const nextStageIdx =
+    site.stageIndex < PAINTING_STAGES.length ? site.stageIndex : null;
+  const nextStageLabel =
+    nextStageIdx !== null ? PAINTING_STAGES[nextStageIdx]?.label : null;
 
   function handleStageClick(idx: number) {
     if (idx === site.stageIndex) return;
@@ -770,271 +916,317 @@ function JobDetailPanel({
         onCancel={() => setPendingStage(null)}
       />
 
-    <div className="flex h-full flex-col overflow-y-auto">
-      {/* ── Header — single line ── */}
-      <div className="border-b border-border bg-card px-6 py-4">
-        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-          {/* Name — takes available space, truncates */}
-          <h2 className="min-w-0 shrink truncate text-base font-bold text-foreground">
-            {site.name}
-          </h2>
+      <div className="flex h-full flex-col overflow-y-auto">
+        {/* ── Header — single line ── */}
+        <div className="border-b border-border bg-card px-6 py-4">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+              {/* Name — takes available space, truncates */}
+              <h2 className="min-w-0 shrink truncate text-base font-bold text-foreground">
+                {site.name}
+              </h2>
 
-          {/* Code */}
-          {site.code && (
-            <span className="shrink-0 rounded border border-border bg-muted px-1.5 py-px text-xs font-bold tabular-nums text-muted-foreground">
-              {site.code}
-            </span>
-          )}
+              {/* Code */}
+              {site.code && (
+                <span className="shrink-0 rounded border border-border bg-muted px-1.5 py-px text-xs font-bold tabular-nums text-muted-foreground">
+                  {site.code}
+                </span>
+              )}
 
-          {/* Status */}
-          <span className={cn("shrink-0 rounded-full border px-2.5 py-px text-[10px] font-bold uppercase tracking-wider", cfg.pill)}>
-            {cfg.label}
-          </span>
-
-          {/* Divider */}
-          {(site.client || site.location || site.supervisorName) && (
-            <span className="shrink-0 text-muted-foreground/30">|</span>
-          )}
-
-          {/* Client */}
-          {site.client && (
-            <span className="shrink-0 text-xs text-muted-foreground">{site.client}</span>
-          )}
-
-          {/* Location */}
-          {site.location && (
-            <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="size-3" />
-              {site.location}
-            </span>
-          )}
-
-          {/* Supervisor */}
-          {site.supervisorName && (
-            <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-              <User className="size-3" />
-              {site.supervisorName}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* ── Body ── */}
-      <div className="flex-1 space-y-6 p-6">
-        {/* Stage tracker */}
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Stage Tracker
-            </p>
-            {nextStageLabel && (
-              <button
-                onClick={() => setPendingStage(site.stageIndex)}
-                disabled={isPending}
+              {/* Status */}
+              <span
                 className={cn(
-                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
-                  accent.border,
-                  accent.text,
-                  "bg-transparent hover:opacity-80",
+                  "shrink-0 rounded-full border px-2.5 py-px text-[10px] font-bold uppercase tracking-wider",
+                  cfg.pill,
                 )}
               >
-                Advance
-                <ArrowRight className="size-3" />
-                {nextStageLabel}
-              </button>
-            )}
-          </div>
-          {/* Clickable stage nodes */}
-          <StageProgressBar
-            stageIndex={site.stageIndex}
-            accent={accent}
-            onStageClick={handleStageClick}
-          />
-        </section>
+                {cfg.label}
+              </span>
 
-        {/* Per-stage percentages */}
-        <section>
-          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Stage Completion
-          </p>
-          <StagePctBars
-            siteId={site.id}
-            initialPct={site.stagePct}
-            accent={accent}
-          />
-        </section>
+              {/* Divider */}
+              {(site.client || site.location || site.supervisorName) && (
+                <span className="shrink-0 text-muted-foreground/30">|</span>
+              )}
 
-        {/* Financial stats */}
-        <section>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Financials
-          </p>
-          <div className="flex gap-3">
-            <StatChip label="Wages" value={formatCurrency(site.totalWages)} />
-            <StatChip label="Materials" value={formatCurrency(site.totalMaterialCost)} />
-            <StatChip label="Total" value={formatCurrency(total)} accent={accent} highlighted />
-          </div>
-        </section>
+              {/* Client */}
+              {site.client && (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {site.client}
+                </span>
+              )}
 
-        {/* Materials ordered */}
-        <section>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Materials Ordered
-          </p>
-          <MaterialsCard materials={site.materials} />
-        </section>
+              {/* Location */}
+              {site.location && (
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="size-3" />
+                  {site.location}
+                </span>
+              )}
 
-        {/* Quick actions */}
-        <section>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Quick Actions
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isPending || status === "COMPLETED"}
-              onClick={() => onStatusChange(site.id, "COMPLETED")}
-              className="border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-40"
-            >
-              <svg className="mr-1.5 size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              Mark Complete
-            </Button>
+              {/* Supervisor */}
+              {site.supervisorName && (
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                  <User className="size-3" />
+                  {site.supervisorName}
+                </span>
+              )}
+            </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isPending || status === "ON_HOLD"}
-              onClick={() => onStatusChange(site.id, "ON_HOLD")}
-              className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-40"
-            >
-              <svg className="mr-1.5 size-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="5" width="4" height="14" rx="1" />
-                <rect x="14" y="5" width="4" height="14" rx="1" />
-              </svg>
-              On Hold
-            </Button>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <Package className="size-3.5" />
+                    Materials
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
+                  <SheetHeader>
+                    <SheetTitle>Materials Ordered</SheetTitle>
+                  </SheetHeader>
+                  <div className="px-4 pb-4">
+                    <MaterialsCard materials={site.materials} />
+                  </div>
+                </SheetContent>
+              </Sheet>
 
-            {status !== "ONGOING" && (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <MessageSquare className="size-3.5" />
+                    Notes
+                    <span className="rounded-full bg-muted px-1.5 py-px text-[9px] font-bold tabular-nums text-muted-foreground/60">
+                      {notes.length}
+                    </span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+                  <SheetHeader>
+                    <SheetTitle>Progress Notes</SheetTitle>
+                  </SheetHeader>
+                  <div className="px-4 pb-4">
+                    <div className="mb-4 rounded-lg border border-border bg-card">
+                      <textarea
+                        ref={textareaRef}
+                        value={noteText}
+                        onChange={(e) => {
+                          setNoteText(e.target.value);
+                          e.target.style.height = "auto";
+                          e.target.style.height = e.target.scrollHeight + "px";
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
+                            handleAddNote();
+                        }}
+                        placeholder="Add a progress note… (Ctrl+Enter to submit)"
+                        rows={3}
+                        className="w-full resize-none rounded-t-xl bg-transparent px-4 pt-3 pb-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+                      />
+                      <div className="flex items-center justify-between border-t border-border px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground/40">
+                          Ctrl+Enter to submit
+                        </span>
+                        <button
+                          onClick={handleAddNote}
+                          disabled={isSubmitting || !noteText.trim()}
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                            "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40",
+                          )}
+                        >
+                          <Send className="size-3" />
+                          {isSubmitting ? "Posting…" : "Post"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {notes.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 py-8 text-center">
+                        <MessageSquare className="size-7 text-muted-foreground/20" />
+                        <p className="text-xs text-muted-foreground/40">
+                          No notes yet — add the first one
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {notes.map((note) => {
+                          const initials = note.authorName
+                            .split(" ")
+                            .map((w) => w[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase();
+                          const ts = new Date(note.createdAt);
+                          const now = new Date();
+                          const diffMs = now.getTime() - ts.getTime();
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const timeLabel =
+                            diffMins < 1
+                              ? "just now"
+                              : diffMins < 60
+                                ? `${diffMins}m ago`
+                                : diffMins < 1440
+                                  ? `${Math.floor(diffMins / 60)}h ago`
+                                  : ts.toLocaleDateString("en-ZA", {
+                                      day: "numeric",
+                                      month: "short",
+                                    });
+
+                          return (
+                            <div key={note.id} className="flex gap-3">
+                              <div
+                                className={cn(
+                                  "flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
+                                  accent.active,
+                                )}
+                              >
+                                {initials}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-xs font-semibold text-foreground">
+                                    {note.authorName}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground/50">
+                                    {timeLabel}
+                                  </span>
+                                </div>
+                                <div className="mt-1 whitespace-pre-wrap rounded-lg rounded-tl-none border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground">
+                                  {note.content}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
               <Button
                 size="sm"
                 variant="outline"
-                disabled={isPending}
-                onClick={() => onStatusChange(site.id, "ONGOING")}
-                className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-40"
+                disabled={isPending || status === "COMPLETED"}
+                onClick={() => onStatusChange(site.id, "COMPLETED")}
+                className="border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-40"
               >
-                <RotateCw className="mr-1.5 size-3.5" />
-                Resume
+                <svg
+                  className="mr-1.5 size-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Mark Complete
               </Button>
-            )}
 
-            <Button size="sm" variant="ghost" asChild className="ml-auto text-muted-foreground">
-              <Link href={`/sites/${site.id}`}>
-                View Full Site
-                <ArrowRight className="ml-1.5 size-3.5" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-
-        {/* ── Progress Notes ── */}
-        <section>
-          <div className="mb-3 flex items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Progress Notes
-            </p>
-            <span className="rounded-full bg-muted px-1.5 py-px text-[9px] font-bold tabular-nums text-muted-foreground/60">
-              {notes.length}
-            </span>
-          </div>
-
-          {/* Add note */}
-          <div className="mb-4 rounded-lg border border-border bg-card">
-            <textarea
-              ref={textareaRef}
-              value={noteText}
-              onChange={(e) => {
-                setNoteText(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height = e.target.scrollHeight + "px";
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddNote();
-              }}
-              placeholder="Add a progress note… (Ctrl+Enter to submit)"
-              rows={3}
-              className="w-full resize-none rounded-t-xl bg-transparent px-4 pt-3 pb-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
-            />
-            <div className="flex items-center justify-between border-t border-border px-3 py-2">
-              <span className="text-[10px] text-muted-foreground/40">Ctrl+Enter to submit</span>
-              <button
-                onClick={handleAddNote}
-                disabled={isSubmitting || !noteText.trim()}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                  "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40",
-                )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isPending || status === "ON_HOLD"}
+                onClick={() => onStatusChange(site.id, "ON_HOLD")}
+                className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-40"
               >
-                <Send className="size-3" />
-                {isSubmitting ? "Posting…" : "Post"}
-              </button>
+                <svg
+                  className="mr-1.5 size-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+                On Hold
+              </Button>
+
+              {status !== "ONGOING" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => onStatusChange(site.id, "ONGOING")}
+                  className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-40"
+                >
+                  <RotateCw className="mr-1.5 size-3.5" />
+                  Resume
+                </Button>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Notes thread */}
-          {notes.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-center">
-              <MessageSquare className="size-7 text-muted-foreground/20" />
-              <p className="text-xs text-muted-foreground/40">No notes yet — add the first one</p>
+        {/* ── Body ── */}
+        <div className="flex-1 space-y-6 p-6">
+          {/* Stage tracker */}
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+                Stage Tracker
+              </p>
+              {nextStageLabel && (
+                <button
+                  onClick={() => setPendingStage(site.stageIndex)}
+                  disabled={isPending}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
+                    accent.border,
+                    accent.text,
+                    "bg-transparent hover:opacity-80",
+                  )}
+                >
+                  Advance
+                  <ArrowRight className="size-3" />
+                  {nextStageLabel}
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              {notes.map((note) => {
-                const initials = note.authorName
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase();
-                const ts = new Date(note.createdAt);
-                const now = new Date();
-                const diffMs = now.getTime() - ts.getTime();
-                const diffMins = Math.floor(diffMs / 60000);
-                const timeLabel =
-                  diffMins < 1
-                    ? "just now"
-                    : diffMins < 60
-                    ? `${diffMins}m ago`
-                    : diffMins < 1440
-                    ? `${Math.floor(diffMins / 60)}h ago`
-                    : ts.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+            {/* Clickable stage nodes */}
+            <StageProgressBar
+              stageIndex={site.stageIndex}
+              accent={accent}
+              onStageClick={handleStageClick}
+            />
+          </section>
 
-                return (
-                  <div key={note.id} className="flex gap-3">
-                    {/* Avatar */}
-                    <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white", accent.active)}>
-                      {initials}
-                    </div>
-                    {/* Bubble */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-xs font-semibold text-foreground">{note.authorName}</span>
-                        <span className="text-[10px] text-muted-foreground/50">{timeLabel}</span>
-                      </div>
-                      <div className="mt-1 whitespace-pre-wrap rounded-lg rounded-tl-none border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground">
-                        {note.content}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          {/* Per-stage percentages */}
+          <section>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+              Stage Completion
+            </p>
+            <StagePctBars
+              siteId={site.id}
+              initialPct={site.stagePct}
+              accent={accent}
+            />
+          </section>
+
+          {/* Financial stats */}
+          <section>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+              Financials
+            </p>
+            <div className="flex gap-3">
+              <StatChip label="Wages" value={formatCurrency(site.totalWages)} />
+              <StatChip
+                label="Materials"
+                value={formatCurrency(site.totalMaterialCost)}
+              />
+              <StatChip
+                label="Total"
+                value={formatCurrency(total)}
+                accent={accent}
+                highlighted
+              />
             </div>
-          )}
-        </section>
+          </section>
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -1112,7 +1304,8 @@ export default function JobProgressBoard({
   /* Look up accent for the selected site */
   const selectedSite = sites.find((s) => s.id === selectedId) ?? null;
   const selectedAccentIdx = selectedSite
-    ? (accentMap.get(selectedSite.supervisorName?.trim() || "__unassigned__") ?? 0)
+    ? (accentMap.get(selectedSite.supervisorName?.trim() || "__unassigned__") ??
+      0)
     : 0;
   const selectedAccent = GROUP_ACCENTS[selectedAccentIdx];
 
@@ -1139,8 +1332,8 @@ export default function JobProgressBoard({
           status === "COMPLETED"
             ? "Job marked as complete"
             : status === "ON_HOLD"
-            ? "Job put on hold"
-            : "Job resumed",
+              ? "Job put on hold"
+              : "Job resumed",
         );
         router.refresh();
       }
@@ -1157,7 +1350,9 @@ export default function JobProgressBoard({
         toast.error(res.error ?? "Failed to update stage");
         router.refresh();
       } else {
-        toast.success(`Stage updated to ${PAINTING_STAGES[stageIndex - 1]?.label ?? "complete"}`);
+        toast.success(
+          `Stage updated to ${PAINTING_STAGES[stageIndex - 1]?.label ?? "complete"}`,
+        );
         router.refresh();
       }
     });
@@ -1200,38 +1395,42 @@ export default function JobProgressBoard({
               </div>
             ) : (
               Array.from(groups.entries())
-              .sort(([a], [b]) => {
-                if (a === "__unassigned__") return 1;
-                if (b === "__unassigned__") return -1;
-                return a.localeCompare(b);
-              })
-              .map(([supervisorKey, groupSites]) => {
-                const accentIdx  = accentMap.get(supervisorKey) ?? 0;
-                const accent     = GROUP_ACCENTS[accentIdx];
-                const label      = supervisorKey === "__unassigned__" ? "Unassigned" : supervisorKey;
-                const isExpanded = expandedGroups.has(supervisorKey);
+                .sort(([a], [b]) => {
+                  if (a === "__unassigned__") return 1;
+                  if (b === "__unassigned__") return -1;
+                  return a.localeCompare(b);
+                })
+                .map(([supervisorKey, groupSites]) => {
+                  const accentIdx = accentMap.get(supervisorKey) ?? 0;
+                  const accent = GROUP_ACCENTS[accentIdx];
+                  const label =
+                    supervisorKey === "__unassigned__"
+                      ? "Unassigned"
+                      : supervisorKey;
+                  const isExpanded = expandedGroups.has(supervisorKey);
 
-                return (
-                  <section key={supervisorKey}>
-                    <SectionLabel
-                      label={label}
-                      count={groupSites.length}
-                      accent={accent}
-                      isExpanded={isExpanded}
-                      onToggle={() => toggleGroup(supervisorKey)}
-                    />
-                    {isExpanded && groupSites.map((site) => (
-                      <SidebarRow
-                        key={site.id}
-                        site={site}
+                  return (
+                    <section key={supervisorKey}>
+                      <SectionLabel
+                        label={label}
+                        count={groupSites.length}
                         accent={accent}
-                        isSelected={selectedId === site.id}
-                        onSelect={() => setSelectedId(site.id)}
+                        isExpanded={isExpanded}
+                        onToggle={() => toggleGroup(supervisorKey)}
                       />
-                    ))}
-                  </section>
-                );
-              })
+                      {isExpanded &&
+                        groupSites.map((site) => (
+                          <SidebarRow
+                            key={site.id}
+                            site={site}
+                            accent={accent}
+                            isSelected={selectedId === site.id}
+                            onSelect={() => setSelectedId(site.id)}
+                          />
+                        ))}
+                    </section>
+                  );
+                })
             )}
           </div>
         </aside>

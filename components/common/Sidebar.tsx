@@ -38,7 +38,6 @@ import {
   Hammer,
   Archive,
   BadgeMinus,
-  FileText,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -69,21 +68,9 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
       },
       {
-        href: "/scheduler",
-        label: "Scheduler",
+        href: "/overview",
+        label: "Overview",
         icon: CalendarDays,
-        roles: ["ADMIN", "OFFICE", "FOREMAN"],
-      },
-      {
-        href: "/notes",
-        label: "Notes",
-        icon: StickyNote,
-        roles: ["ADMIN", "OFFICE", "FOREMAN"],
-      },
-      {
-        href: "/weather",
-        label: "Weather",
-        icon: CloudSun,
         roles: ["ADMIN", "OFFICE", "FOREMAN"],
       },
     ],
@@ -98,35 +85,16 @@ const menuGroups: {
         roles: ["ADMIN"],
       },
       {
-        href: "/supervisor/timesheets",
-        label: "Manage Timesheets",
-        icon: NotebookIcon,
-        roles: ["SUPERVISOR"],
-      },
-
-      {
-        href: "/admin/overtime",
-        label: "Overtime Entries",
+        href: "/admin/payroll",
+        label: "Payroll",
         icon: Clock,
         roles: ["ADMIN"],
       },
       {
-        href: "/admin/overtime-prices",
-        label: "Overtime Prices",
-        icon: DollarSign,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/deductions",
-        label: "Deductions",
-        icon: BadgeMinus,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/timesheet-print",
-        label: "Timesheet Quick View",
-        icon: Printer,
-        roles: ["ADMIN"],
+        href: "/supervisor/timesheets",
+        label: "Manage Timesheets",
+        icon: NotebookIcon,
+        roles: ["SUPERVISOR"],
       },
     ],
   },
@@ -140,8 +108,8 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
       },
       {
-        href: "/admin/job-progress",
-        label: "Job Progress",
+        href: "/admin/sites-operations",
+        label: "Sites Operations",
         icon: TrendingUp,
         roles: ["ADMIN", "OFFICE"],
       },
@@ -157,46 +125,28 @@ const menuGroups: {
         icon: Camera,
         roles: ["SUPERVISOR"],
       },
-      {
-        href: "/sites/map",
-        label: "Sites Map",
-        icon: MapPin,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/finishing-schedules",
-        label: "Finishing Schedules",
-        icon: ClipboardList,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/paint-planning",
-        label: "Paint Planning",
-        icon: Paintbrush,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/print-cards",
-        label: "Print Cards",
-        icon: Printer,
-        roles: ["ADMIN"],
-      },
     ],
   },
   {
-    group: "People",
+    group: "People & Attendance",
     items: [
+      {
+        href: "/admin/people",
+        label: "People",
+        icon: Users,
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/attendance",
+        label: "Attendance",
+        icon: ScanLine,
+        roles: ["ADMIN"],
+      },
       {
         href: "/employees",
         label: "Employees",
         icon: Users,
-        roles: ["ADMIN", "SUPERVISOR", "FOREMAN"],
-      },
-      {
-        href: "/foreman",
-        label: "Foremen",
-        icon: HardHat,
-        roles: ["ADMIN"],
+        roles: ["SUPERVISOR", "FOREMAN"],
       },
       {
         href: "/supervisor/foremen",
@@ -204,131 +154,32 @@ const menuGroups: {
         icon: HardHat,
         roles: ["SUPERVISOR"],
       },
-      {
-        href: "/users",
-        label: "User Management",
-        icon: UserCog,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/supervisors",
-        label: "Supervisors",
-        icon: Shield,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/transfer-employee",
-        label: "Transfer Employee",
-        icon: ArrowRightLeft,
-        roles: ["ADMIN"],
-      },
-    ],
-  },
-
-  {
-    group: "Attendance",
-    items: [
-      {
-        href: "/admin/attendance-scans",
-        label: "Attendance Scans",
-        icon: ScanLine,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/manual-scan",
-        label: "Manual Scan",
-        icon: UserPlus,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/site-photos",
-        label: "Photo Verification",
-        icon: Camera,
-        roles: ["ADMIN"],
-      },
     ],
   },
   {
     group: "Procurement",
     items: [
       {
-        href: "/admin/suppliers",
-        label: "Suppliers",
+        href: "/admin/procurement",
+        label: "Procurement",
         icon: Truck,
         roles: ["ADMIN", "OFFICE"],
       },
       {
-        href: "/admin/product-categories",
-        label: "Categories",
-        icon: FolderTree,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/procurement-products",
-        label: "Materials & PPE",
-        icon: Package,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/material-orders",
-        label: "Orders",
-        icon: ShoppingCart,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/supplier-prices",
-        label: "Supplier Prices",
-        icon: Tag,
-        roles: ["ADMIN", "OFFICE"],
-      },
-    ],
-  },
-  {
-    group: "Plant & Equipment",
-    items: [
-      {
-        href: "/admin/plant-list",
-        label: "Plant Catalogue",
+        href: "/admin/equipment",
+        label: "Equipment Catelogue",
         icon: Wrench,
         roles: ["ADMIN", "OFFICE"],
       },
       {
-        href: "/admin/plant-assignments",
-        label: "Plant Assignments",
-        icon: Hammer,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/equipment-inventory",
-        label: "Equipment Inventory",
-        icon: Boxes,
+        href: "/admin/orders",
+        label: "Orders Catalogue",
+        icon: ShoppingCart,
         roles: ["ADMIN", "OFFICE"],
       },
     ],
   },
-  {
-    group: "PPE & Tools",
-    items: [
-      {
-        href: "/ppe-tools",
-        label: "Catalogue",
-        icon: Archive,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/orders",
-        label: "Orders",
-        icon: ShoppingBag,
-        roles: ["ADMIN", "OFFICE"],
-      },
-      {
-        href: "/admin/capetown-stock",
-        label: "Cape Town Stock",
-        icon: Warehouse,
-        roles: ["ADMIN", "OFFICE"],
-      },
-    ],
-  },
+
   {
     group: "System",
     items: [
@@ -336,12 +187,6 @@ const menuGroups: {
         href: "/settings",
         label: "Settings",
         icon: Settings,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/merge-pdfs",
-        label: "Merge PDFs",
-        icon: FileText,
         roles: ["ADMIN"],
       },
     ],

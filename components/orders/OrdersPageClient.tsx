@@ -47,8 +47,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -82,7 +85,12 @@ type OrderItem = {
   size: string | null;
   color: string | null;
   note: string | null;
-  deductions: { id: string; applyTo: string; quantity: number | null; amount: string | null }[];
+  deductions: {
+    id: string;
+    applyTo: string;
+    quantity: number | null;
+    amount: string | null;
+  }[];
 };
 
 type Order = {
@@ -122,6 +130,8 @@ type ImportRowState = {
   include: boolean;
 };
 
+type CreateOrderMode = "choose" | "manual" | "buildsmart";
+
 interface OrdersPageClientProps {
   foremen: AdminForemanDto[];
   products: AdminProductDto[];
@@ -137,10 +147,14 @@ function statusBadgeVariant(status: string) {
     case "APPLIED":
     case "COLLECTED":
       return "default" as const;
-    case "PENDING": return "secondary" as const;
-    case "PARTIALLY_APPLIED": return "outline" as const;
-    case "CANCELLED": return "destructive" as const;
-    default: return "secondary" as const;
+    case "PENDING":
+      return "secondary" as const;
+    case "PARTIALLY_APPLIED":
+      return "outline" as const;
+    case "CANCELLED":
+      return "destructive" as const;
+    default:
+      return "secondary" as const;
   }
 }
 
@@ -149,11 +163,16 @@ function statusLabel(status: string) {
     case "DEDUCTED":
     case "APPLIED":
       return "Deducted";
-    case "COLLECTED": return "Collected";
-    case "PENDING": return "Pending";
-    case "PARTIALLY_APPLIED": return "Partial Deduction";
-    case "CANCELLED": return "Cancelled";
-    default: return status;
+    case "COLLECTED":
+      return "Collected";
+    case "PENDING":
+      return "Pending";
+    case "PARTIALLY_APPLIED":
+      return "Partial Deduction";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return status;
   }
 }
 
@@ -213,7 +232,10 @@ function ForemanCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
         <Command>
           <CommandInput placeholder="Search foreman…" />
           <CommandList>
@@ -246,7 +268,12 @@ function ForemanCombobox({
 /*  Create Deduction Dialog                                            */
 /* ------------------------------------------------------------------ */
 
-type ForemanSite = { id: string; name: string; code: string | null; client: string | null };
+type ForemanSite = {
+  id: string;
+  name: string;
+  code: string | null;
+  client: string | null;
+};
 
 function CreateDeductionDialog({
   open,
@@ -282,8 +309,12 @@ function CreateDeductionDialog({
       headers: { accept: "application/json" },
     })
       .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data?.sites)) setSites(data.sites); })
-      .catch(() => { /* non-critical */ })
+      .then((data) => {
+        if (Array.isArray(data?.sites)) setSites(data.sites);
+      })
+      .catch(() => {
+        /* non-critical */
+      })
       .finally(() => setLoadingSites(false));
   }, [open, order?.foremanId, order?.id]);
 
@@ -307,7 +338,9 @@ function CreateDeductionDialog({
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ?? "Failed to create deduction");
-      toast.success("Deduction created — order marked as deducted from foreman pay");
+      toast.success(
+        "Deduction created — order marked as deducted from foreman pay",
+      );
       onSuccess();
       onClose();
     } catch (e: any) {
@@ -322,7 +355,12 @@ function CreateDeductionDialog({
   const selectedSite = sites.find((s) => s.id === siteId);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create Deduction from Order</DialogTitle>
@@ -331,7 +369,8 @@ function CreateDeductionDialog({
           <div className="rounded-md bg-muted px-3 py-2 text-sm space-y-0.5">
             <p className="font-medium">{order.foremanName}</p>
             <p className="text-muted-foreground">
-              {order.items.length} item{order.items.length !== 1 ? "s" : ""} · {formatCurrency(orderTotal(order.items))}
+              {order.items.length} item{order.items.length !== 1 ? "s" : ""} ·{" "}
+              {formatCurrency(orderTotal(order.items))}
             </p>
             <p className="text-xs text-muted-foreground pt-1">
               Deduction will be applied to this foreman&apos;s grand total pay.
@@ -347,7 +386,9 @@ function CreateDeductionDialog({
                 Loading sites…
               </div>
             ) : sites.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-1">No active site assignments found for this foreman.</p>
+              <p className="text-xs text-muted-foreground py-1">
+                No active site assignments found for this foreman.
+              </p>
             ) : (
               <Select value={siteId} onValueChange={setSiteId}>
                 <SelectTrigger id="deduct-site">
@@ -356,7 +397,9 @@ function CreateDeductionDialog({
                 <SelectContent className="max-h-60">
                   {sites.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.name}{s.code ? ` (${s.code})` : ""}{s.client ? ` — ${s.client}` : ""}
+                      {s.name}
+                      {s.code ? ` (${s.code})` : ""}
+                      {s.client ? ` — ${s.client}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -364,14 +407,18 @@ function CreateDeductionDialog({
             )}
             {selectedSite && (
               <p className="text-xs text-muted-foreground">
-                Deduction will be linked to <span className="font-medium">{selectedSite.name}</span>
+                Deduction will be linked to{" "}
+                <span className="font-medium">{selectedSite.name}</span>
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="deduct-apply">Apply To Fortnight</Label>
-            <Select value={applyTo} onValueChange={(v) => setApplyTo(v as "CURRENT" | "NEXT")}>
+            <Select
+              value={applyTo}
+              onValueChange={(v) => setApplyTo(v as "CURRENT" | "NEXT")}
+            >
               <SelectTrigger id="deduct-apply">
                 <SelectValue />
               </SelectTrigger>
@@ -384,7 +431,10 @@ function CreateDeductionDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="deduct-split">Payment Split</Label>
-            <Select value={String(split)} onValueChange={(v) => setSplit(Number(v) as 1 | 2)}>
+            <Select
+              value={String(split)}
+              onValueChange={(v) => setSplit(Number(v) as 1 | 2)}
+            >
               <SelectTrigger id="deduct-split">
                 <SelectValue />
               </SelectTrigger>
@@ -406,9 +456,18 @@ function CreateDeductionDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving || (sites.length > 0 && !siteId)}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Receipt className="mr-2 h-4 w-4" />}
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving || (sites.length > 0 && !siteId)}
+          >
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Receipt className="mr-2 h-4 w-4" />
+            )}
             Create Deduction
           </Button>
         </DialogFooter>
@@ -486,7 +545,10 @@ function EditOrderSheet({
 
   async function handleSave() {
     if (!order) return;
-    if (rows.length === 0) { toast.error("Order must have at least one item"); return; }
+    if (rows.length === 0) {
+      toast.error("Order must have at least one item");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/app/admin/orders/${order.id}`, {
@@ -518,8 +580,16 @@ function EditOrderSheet({
   const total = rows.reduce((s, r) => s + r.unitPrice * r.quantity, 0);
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-2xl overflow-y-auto"
+      >
         <SheetHeader className="mb-4">
           <SheetTitle>Edit Order — {order?.foremanName}</SheetTitle>
         </SheetHeader>
@@ -539,48 +609,62 @@ function EditOrderSheet({
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground h-16">
+                    <TableCell
+                      colSpan={4}
+                      className="text-center text-sm text-muted-foreground h-16"
+                    >
                       No items — add at least one below
                     </TableCell>
                   </TableRow>
-                ) : rows.map((row, i) => (
-                  <TableRow key={`${row.productId}-${i}`}>
-                    <TableCell className="text-sm">
-                      <p className="font-medium">{row.productName}</p>
-                      {(row.size || row.color) && (
-                        <p className="text-xs text-muted-foreground">{[row.size, row.color].filter(Boolean).join(" / ")}</p>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        min={1}
-                        value={row.quantity}
-                        onChange={(e) =>
-                          setRows((prev) => {
-                            const next = [...prev];
-                            next[i] = { ...next[i], quantity: Math.max(1, Number(e.target.value)) };
-                            return next;
-                          })
-                        }
-                        className="h-7 w-20 text-sm text-right ml-auto"
-                      />
-                    </TableCell>
-                    <TableCell className="text-sm text-right">
-                      {formatCurrency(row.unitPrice)}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                ) : (
+                  rows.map((row, i) => (
+                    <TableRow key={`${row.productId}-${i}`}>
+                      <TableCell className="text-sm">
+                        <p className="font-medium">{row.productName}</p>
+                        {(row.size || row.color) && (
+                          <p className="text-xs text-muted-foreground">
+                            {[row.size, row.color].filter(Boolean).join(" / ")}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={row.quantity}
+                          onChange={(e) =>
+                            setRows((prev) => {
+                              const next = [...prev];
+                              next[i] = {
+                                ...next[i],
+                                quantity: Math.max(1, Number(e.target.value)),
+                              };
+                              return next;
+                            })
+                          }
+                          className="h-7 w-20 text-sm text-right ml-auto"
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm text-right">
+                        {formatCurrency(row.unitPrice)}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() =>
+                            setRows((prev) =>
+                              prev.filter((_, idx) => idx !== i),
+                            )
+                          }
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -602,7 +686,11 @@ function EditOrderSheet({
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" onClick={addProduct} disabled={!addProductId}>
+            <Button
+              variant="outline"
+              onClick={addProduct}
+              disabled={!addProductId}
+            >
               <Plus className="h-4 w-4 mr-1" /> Add
             </Button>
           </div>
@@ -612,9 +700,16 @@ function EditOrderSheet({
               Total: <span className="font-bold">{formatCurrency(total)}</span>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving || rows.length === 0}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              <Button variant="outline" onClick={onClose} disabled={saving}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving || rows.length === 0}
+              >
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
                 Save Changes
               </Button>
             </div>
@@ -632,6 +727,7 @@ function EditOrderSheet({
 function BuildSmartImportTab({
   foremen,
   products,
+  onOrderCreated,
 }: {
   foremen: AdminForemanDto[];
   products: AdminProductDto[];
@@ -650,13 +746,19 @@ function BuildSmartImportTab({
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
-    if (!file) { toast.error("Select a PDF first"); return; }
+    if (!file) {
+      toast.error("Select a PDF first");
+      return;
+    }
 
     setIsParsing(true);
     try {
       const fd = new FormData();
       fd.append("pdf", file);
-      const res = await fetch("/api/app/admin/stock-receipts/parse", { method: "POST", body: fd });
+      const res = await fetch("/api/app/admin/stock-receipts/parse", {
+        method: "POST",
+        body: fd,
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Parse failed");
       const result = json as ParseResult;
@@ -669,7 +771,8 @@ function BuildSmartImportTab({
         })),
       );
       if (result.suggestedForemanId) setForemanId(result.suggestedForemanId);
-      if ((json as any).rawText) console.log("[BuildSmart rawText]", (json as any).rawText);
+      if ((json as any).rawText)
+        console.log("[BuildSmart rawText]", (json as any).rawText);
       setStep("review");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to parse PDF");
@@ -679,13 +782,19 @@ function BuildSmartImportTab({
   };
 
   const handleConfirm = async () => {
-    if (!foremanId) { toast.error("Select a foreman first"); return; }
+    if (!foremanId) {
+      toast.error("Select a foreman first");
+      return;
+    }
 
     const items = rows
       .filter((r) => r.include && r.productId)
       .map((r) => ({ productId: r.productId!, quantity: r.quantity }));
 
-    if (items.length === 0) { toast.error("No items selected"); return; }
+    if (items.length === 0) {
+      toast.error("No items selected");
+      return;
+    }
 
     setIsConfirming(true);
     try {
@@ -701,9 +810,12 @@ function BuildSmartImportTab({
       setDoneForemanName(fm?.name ?? "foreman");
       setDoneCount(items.length);
       toast.success(`Order created for ${fm?.name ?? "foreman"}`);
+      onOrderCreated();
       setStep("done");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create order");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create order",
+      );
     } finally {
       setIsConfirming(false);
     }
@@ -741,8 +853,13 @@ function BuildSmartImportTab({
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">PO #{parsed.orderNumber}{parsed.vendorName ? ` · ${parsed.vendorName}` : ""}</p>
-            <p className="text-sm text-muted-foreground">{parsed.items.length} line items parsed</p>
+            <p className="font-medium">
+              PO #{parsed.orderNumber}
+              {parsed.vendorName ? ` · ${parsed.vendorName}` : ""}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {parsed.items.length} line items parsed
+            </p>
           </div>
           <Button variant="outline" size="sm" onClick={reset}>
             <RotateCcw className="mr-1.5 h-4 w-4" />
@@ -775,7 +892,9 @@ function BuildSmartImportTab({
                     type="checkbox"
                     checked={rows.length > 0 && rows.every((r) => r.include)}
                     onChange={(e) =>
-                      setRows((prev) => prev.map((r) => ({ ...r, include: e.target.checked })))
+                      setRows((prev) =>
+                        prev.map((r) => ({ ...r, include: e.target.checked })),
+                      )
                     }
                   />
                 </TableHead>
@@ -790,7 +909,10 @@ function BuildSmartImportTab({
                 const row = rows[i];
                 if (!row) return null;
                 return (
-                  <TableRow key={i} className={!row.include ? "opacity-50" : undefined}>
+                  <TableRow
+                    key={i}
+                    className={!row.include ? "opacity-50" : undefined}
+                  >
                     <TableCell>
                       <input
                         type="checkbox"
@@ -805,9 +927,13 @@ function BuildSmartImportTab({
                       />
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="text-sm font-medium truncate">{item.rawDescription}</p>
+                      <p className="text-sm font-medium truncate">
+                        {item.rawDescription}
+                      </p>
                       {item.productCode && (
-                        <p className="text-xs text-muted-foreground">{item.productCode}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.productCode}
+                        </p>
                       )}
                     </TableCell>
                     <TableCell className="min-w-52">
@@ -846,7 +972,10 @@ function BuildSmartImportTab({
                         onChange={(e) =>
                           setRows((prev) => {
                             const next = [...prev];
-                            next[i] = { ...next[i], quantity: Math.max(1, Number(e.target.value)) };
+                            next[i] = {
+                              ...next[i],
+                              quantity: Math.max(1, Number(e.target.value)),
+                            };
                             return next;
                           })
                         }
@@ -855,17 +984,26 @@ function BuildSmartImportTab({
                     </TableCell>
                     <TableCell>
                       {item.matched ? (
-                        <Badge variant="outline" className="border-green-500 text-green-700 text-xs">
+                        <Badge
+                          variant="outline"
+                          className="border-green-500 text-green-700 text-xs"
+                        >
                           <CheckCircle2 className="mr-1 h-3 w-3" />
                           Matched
                         </Badge>
                       ) : item.confidence > 0 ? (
-                        <Badge variant="outline" className="border-amber-500 text-amber-700 text-xs">
+                        <Badge
+                          variant="outline"
+                          className="border-amber-500 text-amber-700 text-xs"
+                        >
                           <AlertCircle className="mr-1 h-3 w-3" />
                           Partial
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="border-red-400 text-red-600 text-xs">
+                        <Badge
+                          variant="outline"
+                          className="border-red-400 text-red-600 text-xs"
+                        >
                           <XCircle className="mr-1 h-3 w-3" />
                           Unmatched
                         </Badge>
@@ -891,7 +1029,8 @@ function BuildSmartImportTab({
             Create Order ({includedCount} item{includedCount !== 1 ? "s" : ""})
           </Button>
           <p className="text-sm text-muted-foreground">
-            Adds a pending foreman order — apply deductions from the Foreman Orders tab.
+            Adds a pending foreman order — apply deductions from the Foreman
+            Orders tab.
           </p>
         </div>
       </div>
@@ -901,8 +1040,8 @@ function BuildSmartImportTab({
   return (
     <div className="max-w-lg space-y-4">
       <p className="text-sm text-muted-foreground">
-        Upload a BuildSmart PO PDF. Items are matched to the PPE &amp; Tools catalogue
-        and added as a pending foreman order ready for deduction.
+        Upload a BuildSmart PO PDF. Items are matched to the PPE &amp; Tools
+        catalogue and added as a pending foreman order ready for deduction.
       </p>
       <form onSubmit={handleUpload} className="space-y-4">
         <div className="space-y-1.5">
@@ -939,14 +1078,25 @@ export default function OrdersPageClient({
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [createOrderMode, setCreateOrderMode] =
+    useState<CreateOrderMode>("choose");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
+    null,
+  );
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
-  const [updatingStatusOrderId, setUpdatingStatusOrderId] = useState<string | null>(null);
-  const [cancelDialogOrderId, setCancelDialogOrderId] = useState<string | null>(null);
-  const [deleteDialogOrderId, setDeleteDialogOrderId] = useState<string | null>(null);
+  const [updatingStatusOrderId, setUpdatingStatusOrderId] = useState<
+    string | null
+  >(null);
+  const [cancelDialogOrderId, setCancelDialogOrderId] = useState<string | null>(
+    null,
+  );
+  const [deleteDialogOrderId, setDeleteDialogOrderId] = useState<string | null>(
+    null,
+  );
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
-  const [deductionDialogOrder, setDeductionDialogOrder] = useState<Order | null>(null);
+  const [deductionDialogOrder, setDeductionDialogOrder] =
+    useState<Order | null>(null);
   const [editSheetOrder, setEditSheetOrder] = useState<Order | null>(null);
 
   const loadOrders = useCallback(async () => {
@@ -988,7 +1138,8 @@ export default function OrdersPageClient({
           body: JSON.stringify({ status }),
         });
         const data = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(data?.error ?? "Failed to update order status");
+        if (!res.ok)
+          throw new Error(data?.error ?? "Failed to update order status");
         toast.success(`Order marked ${statusLabel(status).toLowerCase()}`);
         loadOrders();
       } catch (e: any) {
@@ -1077,298 +1228,457 @@ export default function OrdersPageClient({
 
   const handleOrderCreated = useCallback(() => {
     setSheetOpen(false);
+    setCreateOrderMode("choose");
     loadOrders();
   }, [loadOrders]);
 
+  const openCreateOrder = useCallback(() => {
+    setCreateOrderMode("choose");
+    setSheetOpen(true);
+  }, []);
+
+  const closeCreateOrder = useCallback((open: boolean) => {
+    setSheetOpen(open);
+    if (!open) setCreateOrderMode("choose");
+  }, []);
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">PPE & Tools Orders</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage foreman orders and import BuildSmart purchase orders.
+            Manage order records from one clean creation flow.
           </p>
         </div>
+        <Button onClick={openCreateOrder}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Order
+        </Button>
       </div>
 
-      <Tabs defaultValue="orders">
-        <TabsList>
-          <TabsTrigger value="orders">Foreman Orders</TabsTrigger>
-          <TabsTrigger value="import">Import BuildSmart PO</TabsTrigger>
-        </TabsList>
-
-        {/* ── Foreman Orders Tab ── */}
-        <TabsContent value="orders" className="space-y-5 mt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-4 flex-wrap">
-              <div className="border rounded px-4 py-3 bg-card">
-                <div className="text-xs text-muted-foreground font-medium">Total Orders</div>
-                <div className="text-2xl font-bold mt-1">{orders.length}</div>
+      {/* ── Foreman Orders Tab ── */}
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-4 flex-wrap">
+            <div className="border rounded px-4 py-3 bg-card">
+              <div className="text-xs text-muted-foreground font-medium">
+                Total Orders
               </div>
-              <div className="border rounded px-4 py-3 bg-card">
-                <div className="text-xs text-muted-foreground font-medium">Total Value</div>
-                <div className="text-2xl font-bold mt-1">{formatCurrency(totalOrderValue)}</div>
+              <div className="text-2xl font-bold mt-1">{orders.length}</div>
+            </div>
+            <div className="border rounded px-4 py-3 bg-card">
+              <div className="text-xs text-muted-foreground font-medium">
+                Total Value
+              </div>
+              <div className="text-2xl font-bold mt-1">
+                {formatCurrency(totalOrderValue)}
               </div>
             </div>
-            <Button onClick={() => setSheetOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Order
-            </Button>
           </div>
+        </div>
 
-          <div className="border rounded bg-card">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+        <div className="border rounded bg-card">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs font-semibold">Date</TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Foreman
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">Items</TableHead>
+                  <TableHead className="text-xs font-semibold text-right">
+                    Total
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
                   <TableRow>
-                    <TableHead className="text-xs font-semibold">Date</TableHead>
-                    <TableHead className="text-xs font-semibold">Foreman</TableHead>
-                    <TableHead className="text-xs font-semibold">Items</TableHead>
-                    <TableHead className="text-xs font-semibold text-right">Total</TableHead>
-                    <TableHead className="text-xs font-semibold">Status</TableHead>
-                    <TableHead className="text-xs font-semibold">Actions</TableHead>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      <span className="text-muted-foreground text-sm">
+                        Loading orders…
+                      </span>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        <span className="text-muted-foreground text-sm">Loading orders…</span>
-                      </TableCell>
-                    </TableRow>
-                  ) : orders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        <span className="text-muted-foreground text-sm">No orders yet</span>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    orders.map((order) => {
-                      const isExpanded = expandedOrderId === order.id;
-                      const isCancelled = order.status === "CANCELLED";
-                      const isPending = order.status === "PENDING";
-                      const isDeducted = order.status === "DEDUCTED" || order.status === "APPLIED";
-                      const isPrinting = printingOrderId === order.id;
-                      const isUpdatingStatus = updatingStatusOrderId === order.id;
+                ) : orders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      <span className="text-muted-foreground text-sm">
+                        No orders yet
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  orders.map((order) => {
+                    const isExpanded = expandedOrderId === order.id;
+                    const isCancelled = order.status === "CANCELLED";
+                    const isPending = order.status === "PENDING";
+                    const isDeducted =
+                      order.status === "DEDUCTED" || order.status === "APPLIED";
+                    const isPrinting = printingOrderId === order.id;
+                    const isUpdatingStatus = updatingStatusOrderId === order.id;
 
-                      return (
-                        <React.Fragment key={order.id}>
-                          <TableRow
-                            className="cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() =>
-                              setExpandedOrderId(isExpanded ? null : order.id)
-                            }
-                          >
-                            <TableCell className="text-sm">{formatDate(order.createdAt)}</TableCell>
-                            <TableCell className="text-sm font-medium">
-                              <span className="flex items-center gap-1.5">
-                                {order.isAdminOrder && (
-                                  <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Admin</span>
-                                )}
-                                {order.foremanName}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {order.items.length} item{order.items.length !== 1 ? "s" : ""}
-                            </TableCell>
-                            <TableCell className="text-sm font-semibold text-right">
-                              {formatCurrency(orderTotal(order.items))}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Select
-                                  value={order.status}
-                                  onValueChange={(status) => updateOrderStatus(order.id, status)}
-                                  disabled={isUpdatingStatus}
+                    return (
+                      <React.Fragment key={order.id}>
+                        <TableRow
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() =>
+                            setExpandedOrderId(isExpanded ? null : order.id)
+                          }
+                        >
+                          <TableCell className="text-sm">
+                            {formatDate(order.createdAt)}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">
+                            <span className="flex items-center gap-1.5">
+                              {order.isAdminOrder && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                                  Admin
+                                </span>
+                              )}
+                              {order.foremanName}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {order.items.length} item
+                            {order.items.length !== 1 ? "s" : ""}
+                          </TableCell>
+                          <TableCell className="text-sm font-semibold text-right">
+                            {formatCurrency(orderTotal(order.items))}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={order.status}
+                                onValueChange={(status) =>
+                                  updateOrderStatus(order.id, status)
+                                }
+                                disabled={isUpdatingStatus}
+                              >
+                                <SelectTrigger
+                                  className="h-8 w-36 text-xs"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <SelectTrigger className="h-8 w-36 text-xs" onClick={(e) => e.stopPropagation()}>
-                                    <SelectValue>
-                                      {isUpdatingStatus ? "Updating..." : statusLabel(order.status)}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {ORDER_STATUS_OPTIONS.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                    {order.status === "PARTIALLY_APPLIED" && (
-                                      <SelectItem value="PARTIALLY_APPLIED">Partial Deduction</SelectItem>
-                                    )}
-                                    {order.status === "APPLIED" && (
-                                      <SelectItem value="APPLIED">Deducted</SelectItem>
-                                    )}
-                                  </SelectContent>
-                                </Select>
-                                <Badge variant={statusBadgeVariant(order.status)} className="hidden xl:inline-flex">
-                                  {statusLabel(order.status)}
-                                </Badge>
-                                {isDeducted && (
-                                  <div title="Deduction applied">
-                                    <BadgeCheck className="h-4 w-4 text-green-600" />
-                                  </div>
+                                  <SelectValue>
+                                    {isUpdatingStatus
+                                      ? "Updating..."
+                                      : statusLabel(order.status)}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ORDER_STATUS_OPTIONS.map((option) => (
+                                    <SelectItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                  {order.status === "PARTIALLY_APPLIED" && (
+                                    <SelectItem value="PARTIALLY_APPLIED">
+                                      Partial Deduction
+                                    </SelectItem>
+                                  )}
+                                  {order.status === "APPLIED" && (
+                                    <SelectItem value="APPLIED">
+                                      Deducted
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <Badge
+                                variant={statusBadgeVariant(order.status)}
+                                className="hidden xl:inline-flex"
+                              >
+                                {statusLabel(order.status)}
+                              </Badge>
+                              {isDeducted && (
+                                <div title="Deduction applied">
+                                  <BadgeCheck className="h-4 w-4 text-green-600" />
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
+                              {/* Print / Reprint */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                disabled={isPrinting}
+                                title="Print voucher"
+                                onClick={() => printOrder(order)}
+                              >
+                                {isPrinting ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Printer className="h-3.5 w-3.5" />
                                 )}
-                              </div>
-                            </TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1">
-                                {/* Print / Reprint */}
+                              </Button>
+
+                              {/* Edit — only for PENDING orders */}
+                              {isPending && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                  disabled={isPrinting}
-                                  title="Print voucher"
-                                  onClick={() => printOrder(order)}
+                                  title="Edit order"
+                                  onClick={() => setEditSheetOrder(order)}
                                 >
-                                  {isPrinting
-                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    : <Printer className="h-3.5 w-3.5" />}
+                                  <Pencil className="h-3.5 w-3.5" />
                                 </Button>
+                              )}
 
-                                {/* Edit — only for PENDING orders */}
-                                {isPending && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                    title="Edit order"
-                                    onClick={() => setEditSheetOrder(order)}
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
+                              {/* Create Deduction — only for PENDING foreman orders */}
+                              {isPending && !order.isAdminOrder && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-amber-600"
+                                  title="Create deduction"
+                                  onClick={() => setDeductionDialogOrder(order)}
+                                >
+                                  <Receipt className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
 
-                                {/* Create Deduction — only for PENDING foreman orders */}
-                                {isPending && !order.isAdminOrder && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-amber-600"
-                                    title="Create deduction"
-                                    onClick={() => setDeductionDialogOrder(order)}
-                                  >
-                                    <Receipt className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-
-                                {!isCancelled && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                    disabled={cancellingOrderId === order.id}
-                                    title="Cancel order"
-                                    onClick={() => setCancelDialogOrderId(order.id)}
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-
+                              {!isCancelled && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                  disabled={deletingOrderId === order.id}
-                                  title="Delete order"
-                                  onClick={() => setDeleteDialogOrderId(order.id)}
+                                  disabled={cancellingOrderId === order.id}
+                                  title="Cancel order"
+                                  onClick={() =>
+                                    setCancelDialogOrderId(order.id)
+                                  }
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <XCircle className="h-3.5 w-3.5" />
                                 </Button>
+                              )}
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                disabled={deletingOrderId === order.id}
+                                title="Delete order"
+                                onClick={() => setDeleteDialogOrderId(order.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow className="bg-muted/30">
+                            <TableCell colSpan={6} className="p-0">
+                              <div className="px-6 py-3 space-y-2">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                  Order Items
+                                </div>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="hover:bg-transparent">
+                                      <TableHead className="text-xs">
+                                        Product
+                                      </TableHead>
+                                      <TableHead className="text-xs">
+                                        Size
+                                      </TableHead>
+                                      <TableHead className="text-xs">
+                                        Color
+                                      </TableHead>
+                                      <TableHead className="text-xs text-right">
+                                        Qty
+                                      </TableHead>
+                                      <TableHead className="text-xs text-right">
+                                        Unit Price
+                                      </TableHead>
+                                      <TableHead className="text-xs text-right">
+                                        Subtotal
+                                      </TableHead>
+                                      <TableHead className="text-xs">
+                                        Note
+                                      </TableHead>
+                                      <TableHead className="text-xs">
+                                        Deducted
+                                      </TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {order.items.map((item) => {
+                                      const hasDeduction =
+                                        item.deductions.length > 0;
+                                      return (
+                                        <TableRow
+                                          key={item.id}
+                                          className="hover:bg-transparent"
+                                        >
+                                          <TableCell className="text-sm">
+                                            {item.productName}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-muted-foreground">
+                                            {item.size || "—"}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-muted-foreground">
+                                            {item.color || "—"}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-right">
+                                            {item.quantity}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-right">
+                                            {formatCurrency(
+                                              Number(item.unitPrice),
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-sm font-medium text-right">
+                                            {formatCurrency(
+                                              Number(item.unitPrice) *
+                                                item.quantity,
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-sm text-muted-foreground">
+                                            {item.note || "—"}
+                                          </TableCell>
+                                          <TableCell>
+                                            {hasDeduction ? (
+                                              <Badge
+                                                variant="outline"
+                                                className="border-green-500 text-green-700 text-xs"
+                                              >
+                                                <BadgeCheck className="mr-1 h-3 w-3" />
+                                                Yes
+                                              </Badge>
+                                            ) : (
+                                              <span className="text-xs text-muted-foreground">
+                                                No
+                                              </span>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
                               </div>
                             </TableCell>
                           </TableRow>
-                          {isExpanded && (
-                            <TableRow className="bg-muted/30">
-                              <TableCell colSpan={6} className="p-0">
-                                <div className="px-6 py-3 space-y-2">
-                                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Order Items
-                                  </div>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow className="hover:bg-transparent">
-                                        <TableHead className="text-xs">Product</TableHead>
-                                        <TableHead className="text-xs">Size</TableHead>
-                                        <TableHead className="text-xs">Color</TableHead>
-                                        <TableHead className="text-xs text-right">Qty</TableHead>
-                                        <TableHead className="text-xs text-right">Unit Price</TableHead>
-                                        <TableHead className="text-xs text-right">Subtotal</TableHead>
-                                        <TableHead className="text-xs">Note</TableHead>
-                                        <TableHead className="text-xs">Deducted</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {order.items.map((item) => {
-                                        const hasDeduction = item.deductions.length > 0;
-                                        return (
-                                          <TableRow key={item.id} className="hover:bg-transparent">
-                                            <TableCell className="text-sm">{item.productName}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">{item.size || "—"}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">{item.color || "—"}</TableCell>
-                                            <TableCell className="text-sm text-right">{item.quantity}</TableCell>
-                                            <TableCell className="text-sm text-right">
-                                              {formatCurrency(Number(item.unitPrice))}
-                                            </TableCell>
-                                            <TableCell className="text-sm font-medium text-right">
-                                              {formatCurrency(Number(item.unitPrice) * item.quantity)}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                              {item.note || "—"}
-                                            </TableCell>
-                                            <TableCell>
-                                              {hasDeduction ? (
-                                                <Badge variant="outline" className="border-green-500 text-green-700 text-xs">
-                                                  <BadgeCheck className="mr-1 h-3 w-3" />
-                                                  Yes
-                                                </Badge>
-                                              ) : (
-                                                <span className="text-xs text-muted-foreground">No</span>
-                                              )}
-                                            </TableCell>
-                                          </TableRow>
-                                        );
-                                      })}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </TabsContent>
-
-        {/* ── BuildSmart Import Tab ── */}
-        <TabsContent value="import" className="mt-4">
-          <BuildSmartImportTab
-            foremen={foremen}
-            products={products}
-            onOrderCreated={loadOrders}
-          />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* New Order Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <Sheet open={sheetOpen} onOpenChange={closeCreateOrder}>
         <SheetContent
           side="right"
-          className="w-full sm:max-w-full lg:max-w-[85vw] p-0 overflow-y-auto"
+          className={
+            createOrderMode === "choose"
+              ? "w-full sm:max-w-xl overflow-y-auto"
+              : "w-full sm:max-w-full lg:max-w-[85vw] p-0 overflow-y-auto"
+          }
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>New Product Order</SheetTitle>
+            <SheetTitle>Create Order</SheetTitle>
           </SheetHeader>
-          <OrdersPOS
-            foremen={foremen}
-            products={products}
-            onOrderCreated={handleOrderCreated}
-          />
+          {createOrderMode === "choose" ? (
+            <div className="space-y-5 p-6">
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">
+                  Create Order
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Choose the type of order you want to create.
+                </p>
+              </div>
+              <div className="grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCreateOrderMode("manual")}
+                  className="rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-muted/40"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-md bg-primary/10 p-2 text-primary">
+                      <PackagePlus className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">
+                        Product / PPE & Tools Order
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        Create an order manually for a foreman or admin using
+                        the shared product order form.
+                      </div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateOrderMode("buildsmart")}
+                  className="rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-muted/40"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-md bg-primary/10 p-2 text-primary">
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Import BuildSmart PO</div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        Upload a BuildSmart PDF and confirm the matched products
+                        before creating the order.
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          ) : createOrderMode === "manual" ? (
+            <OrdersPOS
+              foremen={foremen}
+              products={products}
+              onOrderCreated={handleOrderCreated}
+            />
+          ) : (
+            <div className="p-6">
+              <div className="mb-5 flex items-center justify-between gap-3 border-b pb-4">
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight">
+                    Import BuildSmart PO
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Upload the PDF, review the matches, then create the order.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setCreateOrderMode("choose")}
+                >
+                  Back
+                </Button>
+              </div>
+              <BuildSmartImportTab
+                foremen={foremen}
+                products={products}
+                onOrderCreated={handleOrderCreated}
+              />
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
@@ -1391,7 +1701,9 @@ export default function OrdersPageClient({
 
       <ConfirmationDialog
         open={cancelDialogOrderId !== null}
-        onOpenChange={(open) => { if (!open) setCancelDialogOrderId(null); }}
+        onOpenChange={(open) => {
+          if (!open) setCancelDialogOrderId(null);
+        }}
         title="Cancel Order?"
         description="This will mark the order as cancelled, remove any linked unpaid deductions, and restore PPE stock quantities."
         onConfirm={() => {
@@ -1407,7 +1719,9 @@ export default function OrdersPageClient({
 
       <ConfirmationDialog
         open={deleteDialogOrderId !== null}
-        onOpenChange={(open) => { if (!open) setDeleteDialogOrderId(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteDialogOrderId(null);
+        }}
         title="Delete Order?"
         description="This will permanently delete the order record. If it is not already cancelled, PPE stock will be restored first."
         onConfirm={() => {

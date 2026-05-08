@@ -645,30 +645,6 @@ export default function OvertimeEntriesPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">
-            Total Entries
-          </div>
-          <div className="text-2xl font-bold mt-1">{entries.length}</div>
-        </div>
-        <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">
-            Total Employees (OT)
-          </div>
-          <div className="text-2xl font-bold mt-1">{totalEmployeesAll}</div>
-        </div>
-        <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">
-            Total Cost
-          </div>
-          <div className="text-2xl font-bold mt-1">
-            {formatCurrency(totalCostAll)}
-          </div>
-        </div>
-      </div>
-
       {/* Table (matches SitesTable) */}
       {loading ? (
         <div className="rounded border border-dashed border-border bg-card/50 p-12 text-center">

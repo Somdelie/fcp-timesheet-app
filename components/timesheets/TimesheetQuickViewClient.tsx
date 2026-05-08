@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { FileText, Loader2, Printer } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { Printer, FileText, Loader2 } from "lucide-react";
+
+import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,7 +22,7 @@ import {
 
 type SupervisorOption = { id: string; name: string | null; email: string };
 type PeriodOption = {
-  id: string;      // YYYY-MM-DD_YYYY-MM-DD
+  id: string; // YYYY-MM-DD_YYYY-MM-DD
   startISO: string;
   endISO: string;
   label?: string | null;
@@ -57,6 +60,39 @@ type ForemanSiteRow = {
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
+
+async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: { accept: "application/json" },
+    credentials: "include",
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg =
+      payload?.error || payload?.message || `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
+  return payload as T;
+}
+
+async function getYearAnchorISO(year: number): Promise<string | null> {
+  try {
+    const data = await getJson<{
+      ok: boolean;
+      year: number;
+      anchorISO: string | null;
+    }>(`/api/app/admin/timesheets/year-anchor?year=${year}`);
+    return data.anchorISO ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function utcDateFromISO(iso: string) {
+  const d = new Date(`${iso}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${iso}`);
+  return d;
+}
 
 function foremanInitial(name: string): string {
   return name.trim().split(/\s+/)[0]?.slice(0, 1).toUpperCase() ?? "?";
@@ -126,15 +162,26 @@ export default function TimesheetQuickViewClient() {
         credentials: "include",
       })
         .then((r) => r.json())
-        .then((d) => {
+        .then(async (d) => {
           const list: PeriodOption[] = d.periods ?? [];
           list.sort((a, b) => b.startISO.localeCompare(a.startISO));
           setPeriods(list);
           if (list.length > 0) {
-            const today = new Date().toISOString().slice(0, 10);
-            const current = list.find(p => p.startISO <= today && p.endISO >= today) ?? list[0];
-            setSelectedPeriodId(current.id);
-            setSelectedPeriod(current);
+            let defaultId = list[0]?.id ?? "";
+            const year = new Date().getUTCFullYear();
+            const anchorISO = await getYearAnchorISO(year);
+            if (anchorISO) {
+              try {
+                const anchor = utcDateFromISO(anchorISO);
+                const current = getFortnightForDateUTC(new Date(), anchor);
+                defaultId = current.id;
+              } catch {
+                // ignore
+              }
+            }
+            const selected = list.find((p) => p.id === defaultId) ?? list[0];
+            setSelectedPeriodId(selected.id);
+            setSelectedPeriod(selected);
           }
         }),
     ])
@@ -195,7 +242,9 @@ export default function TimesheetQuickViewClient() {
             listRow: row,
             columns: (ts.columns ?? []) as DetailColumn[],
             workerRows: (ts.rows ?? []) as DetailRow[],
-            foremanEmployeeId: (ts.foreman?.employeeId ?? null) as string | null,
+            foremanEmployeeId: (ts.foreman?.employeeId ?? null) as
+              | string
+              | null,
           };
         }),
       );
@@ -220,11 +269,17 @@ export default function TimesheetQuickViewClient() {
         const site = listRow.sites[0] ?? { code: null, name: "Unknown" };
         // Use isForeman flag stamped by the API; fall back to ID match if the
         // flag is absent (older API response shape).
-        const foremanRow = workerRows.find((r) =>
-          r.isForeman ?? (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false),
+        const foremanRow = workerRows.find(
+          (r) =>
+            r.isForeman ??
+            (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false),
         );
-        const teamRows = workerRows.filter((r) =>
-          !(r.isForeman ?? (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false)),
+        const teamRows = workerRows.filter(
+          (r) =>
+            !(
+              r.isForeman ??
+              (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false)
+            ),
         );
         const dailyCounts = cols.map(
           (_, dayIdx) => teamRows.filter((r) => r.present[dayIdx]).length,
@@ -269,7 +324,10 @@ export default function TimesheetQuickViewClient() {
     const printRoot = document.getElementById("ts-print-root");
     if (!printRoot) return;
     const win = window.open("", "_blank");
-    if (!win) { window.print(); return; }
+    if (!win) {
+      window.print();
+      return;
+    }
     win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Time Sheet</title><style>
 @page { size: A4 landscape; margin: 8mm 12mm; }
@@ -298,7 +356,10 @@ body { margin: 0; }
 </style></head><body>${printRoot.outerHTML}</body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 200);
+    setTimeout(() => {
+      win.print();
+      win.close();
+    }, 200);
   }, []);
 
   return (
@@ -371,15 +432,15 @@ body { margin: 0; }
 
       <div className="space-y-6">
         {/* ── Controls ── */}
-        <div className="ts-no-print flex flex-wrap gap-4 items-end">
-          <div className="space-y-1.5">
+        <div className="ts-no-print flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1.5 lg:flex-1">
             <Label>Supervisor</Label>
             <Select
               value={selectedSupervisorId}
               onValueChange={setSelectedSupervisorId}
               disabled={optionsLoading}
             >
-              <SelectTrigger className="w-60">
+              <SelectTrigger className="w-full lg:w-60">
                 <SelectValue
                   placeholder={
                     optionsLoading ? "Loading…" : "— select supervisor —"
@@ -396,14 +457,14 @@ body { margin: 0; }
             </Select>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 lg:flex-1">
             <Label>Fortnight Period</Label>
             <Select
               value={selectedPeriodId}
               onValueChange={setSelectedPeriodId}
               disabled={optionsLoading}
             >
-              <SelectTrigger className="w-68">
+              <SelectTrigger className="w-full lg:w-68">
                 <SelectValue placeholder="— select period —" />
               </SelectTrigger>
               <SelectContent className="max-h-72">
@@ -420,7 +481,7 @@ body { margin: 0; }
             <Button
               variant="outline"
               onClick={handlePrint}
-              className="gap-2 self-end"
+              className="gap-2 lg:self-end"
             >
               <Printer className="h-4 w-4" />
               Print / Save PDF
@@ -519,7 +580,11 @@ body { margin: 0; }
                             }
                           >
                             {isFuture ? null : hasActivity ? (
-                              foremanIn ? `${initial}+${count}` : `${count}`
+                              foremanIn ? (
+                                `${initial}+${count}`
+                              ) : (
+                                `${count}`
+                              )
                             ) : (
                               <svg
                                 width="18"

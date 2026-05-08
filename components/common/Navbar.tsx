@@ -58,6 +58,11 @@ type NavbarProps = {
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
   const pathname = usePathname();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const breadcrumbs = React.useMemo(() => {
     const segments = pathname.split("/").filter(Boolean);
@@ -78,6 +83,20 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
 
     return crumbs;
   }, [pathname]);
+
+  if (!mounted) {
+    return (
+      <header className="navbar z-10 flex h-16 w-full shrink-0 items-center justify-between border-b bg-card/80 px-4 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="flex-1 px-4" />
+        <div className="h-8 w-40" />
+      </header>
+    );
+  }
 
   return (
     <header className="navbar z-10 flex h-16 w-full shrink-0 items-center justify-between border-b bg-card/80 px-4 backdrop-blur">

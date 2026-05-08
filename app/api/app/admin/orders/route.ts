@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
 
     const json = await req.json().catch(() => null as any);
@@ -82,14 +85,26 @@ export async function POST(req: NextRequest) {
 
     // Validate the target (foreman or admin)
     if (data.foremanId) {
-      const foreman = await prisma.foreman.findUnique({ where: { id: data.foremanId }, select: { id: true } });
+      const foreman = await prisma.foreman.findUnique({
+        where: { id: data.foremanId },
+        select: { id: true },
+      });
       if (!foreman) {
-        return NextResponse.json({ error: "Foreman not found" }, { status: 404, headers: CORS_HEADERS });
+        return NextResponse.json(
+          { error: "Foreman not found" },
+          { status: 404, headers: CORS_HEADERS },
+        );
       }
     } else if (data.adminUserId) {
-      const user = await prisma.user.findUnique({ where: { id: data.adminUserId }, select: { id: true, role: true } });
+      const user = await prisma.user.findUnique({
+        where: { id: data.adminUserId },
+        select: { id: true, role: true },
+      });
       if (!user || !["ADMIN", "OFFICE"].includes(user.role)) {
-        return NextResponse.json({ error: "Admin user not found" }, { status: 404, headers: CORS_HEADERS });
+        return NextResponse.json(
+          { error: "Admin user not found" },
+          { status: 404, headers: CORS_HEADERS },
+        );
       }
     }
 
@@ -100,21 +115,36 @@ export async function POST(req: NextRequest) {
     });
 
     if (products.length !== productIds.length) {
-      return NextResponse.json({ error: "One or more products not found" }, { status: 400, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { error: "One or more products not found" },
+        { status: 400, headers: CORS_HEADERS },
+      );
     }
 
     const productsById = new Map(products.map((p) => [p.id, p] as const));
 
     const order = await prisma.productOrder.create({
       data: {
-        ...(data.foremanId ? { foreman: { connect: { id: data.foremanId } } } : {}),
-        ...(data.adminUserId ? { adminUser: { connect: { id: data.adminUserId } } } : {}),
+        ...(data.foremanId
+          ? { foreman: { connect: { id: data.foremanId } } }
+          : {}),
+        ...(data.adminUserId
+          ? { adminUser: { connect: { id: data.adminUserId } } }
+          : {}),
         createdByUser: { connect: { id: admin.id } },
         status: "PENDING",
       },
     });
 
-    const items = [] as { id: string; productId: string; quantity: number; unitPrice: any; size: string | null; color: string | null; note: string | null }[];
+    const items = [] as {
+      id: string;
+      productId: string;
+      quantity: number;
+      unitPrice: any;
+      size: string | null;
+      color: string | null;
+      note: string | null;
+    }[];
 
     for (const item of data.items) {
       const p = productsById.get(item.productId)!;
@@ -131,7 +161,15 @@ export async function POST(req: NextRequest) {
           color: normalizedColor,
           note: item.note?.trim() || undefined,
         },
-        select: { id: true, productId: true, quantity: true, unitPrice: true, size: true, color: true, note: true },
+        select: {
+          id: true,
+          productId: true,
+          quantity: true,
+          unitPrice: true,
+          size: true,
+          color: true,
+          note: true,
+        },
       });
       items.push(createdItem);
 
@@ -142,7 +180,11 @@ export async function POST(req: NextRequest) {
         });
         if (normalizedSize !== null || normalizedColor !== null) {
           await prisma.stockItemVariant.updateMany({
-            where: { productId: item.productId, size: normalizedSize, color: normalizedColor },
+            where: {
+              productId: item.productId,
+              size: normalizedSize,
+              color: normalizedColor,
+            },
             data: { qty: { decrement: item.quantity } },
           });
         }
@@ -162,7 +204,8 @@ export async function POST(req: NextRequest) {
             id: i.id,
             productId: i.productId,
             quantity: i.quantity,
-            unitPrice: (i.unitPrice as any).toString?.() ?? String(i.unitPrice ?? "0"),
+            unitPrice:
+              (i.unitPrice as any).toString?.() ?? String(i.unitPrice ?? "0"),
             size: i.size ?? null,
             color: i.color ?? null,
             note: i.note ?? null,
@@ -173,7 +216,10 @@ export async function POST(req: NextRequest) {
     );
   } catch (e: any) {
     console.error("/api/app/admin/orders POST error", e);
-    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500, headers: CORS_HEADERS });
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500, headers: CORS_HEADERS },
+    );
   }
 }
 
@@ -182,21 +228,38 @@ export async function GET(req: NextRequest) {
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
+      );
     }
 
     const url = new URL(req.url);
     const foremanId = (url.searchParams.get("foremanId") ?? "").trim();
     const adminUserId = (url.searchParams.get("adminUserId") ?? "").trim();
     const status = (url.searchParams.get("status") ?? "").trim();
+    const category = (url.searchParams.get("category") ?? "").trim();
     const startISO = (url.searchParams.get("startISO") ?? "").trim();
     const endISO = (url.searchParams.get("endISO") ?? "").trim();
 
     const where: any = {};
     if (foremanId) where.foremanId = foremanId;
     if (adminUserId) where.adminUserId = adminUserId;
-    if (status && ["PENDING", "COLLECTED", "DEDUCTED", "PARTIALLY_APPLIED", "APPLIED", "CANCELLED"].includes(status)) {
+    if (
+      status &&
+      [
+        "PENDING",
+        "COLLECTED",
+        "DEDUCTED",
+        "PARTIALLY_APPLIED",
+        "APPLIED",
+        "CANCELLED",
+      ].includes(status)
+    ) {
       where.status = status as any;
+    }
+    if (category && ["PPE", "TOOL"].includes(category)) {
+      where.items = { some: { product: { category: category as any } } };
     }
 
     if (startISO || endISO) {
@@ -220,8 +283,10 @@ export async function GET(req: NextRequest) {
         adminUser: { select: { name: true, email: true } },
         items: {
           include: {
-            product: { select: { name: true } },
-            deductions: { select: { id: true, applyTo: true, quantity: true, amount: true } },
+            product: { select: { name: true, category: true } },
+            deductions: {
+              select: { id: true, applyTo: true, quantity: true, amount: true },
+            },
           },
         },
       },
@@ -245,8 +310,10 @@ export async function GET(req: NextRequest) {
           id: i.id,
           productId: i.productId,
           productName: i.product?.name ?? "Product",
+          productCategory: i.product?.category ?? null,
           quantity: i.quantity,
-          unitPrice: (i.unitPrice as any).toString?.() ?? String(i.unitPrice ?? "0"),
+          unitPrice:
+            (i.unitPrice as any).toString?.() ?? String(i.unitPrice ?? "0"),
           size: i.size ?? null,
           color: i.color ?? null,
           note: i.note ?? null,
@@ -254,15 +321,23 @@ export async function GET(req: NextRequest) {
             id: d.id,
             applyTo: d.applyTo,
             quantity: d.quantity,
-            amount: d.amount ? ((d.amount as any).toString?.() ?? String(d.amount ?? "0")) : null,
+            amount: d.amount
+              ? ((d.amount as any).toString?.() ?? String(d.amount ?? "0"))
+              : null,
           })),
         })),
       };
     });
 
-    return NextResponse.json({ ok: true, orders: list }, { headers: CORS_HEADERS });
+    return NextResponse.json(
+      { ok: true, orders: list },
+      { headers: CORS_HEADERS },
+    );
   } catch (e: any) {
     console.error("/api/app/admin/orders GET error", e);
-    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500, headers: CORS_HEADERS });
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500, headers: CORS_HEADERS },
+    );
   }
 }

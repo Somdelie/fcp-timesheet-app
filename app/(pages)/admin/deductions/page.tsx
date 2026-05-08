@@ -636,32 +636,6 @@ export default function DeductionsPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">
-            Total Entries
-          </div>
-          <div className="text-2xl font-bold mt-1">{entries.length}</div>
-        </div>
-        <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">
-            Cash Deductions
-          </div>
-          <div className="text-2xl font-bold mt-1">
-            {formatCurrency(totalCash)}
-          </div>
-        </div>
-        <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm px-4 py-3 shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">
-            Product Deductions
-          </div>
-          <div className="text-2xl font-bold mt-1">
-            {formatCurrency(totalProduct)}
-          </div>
-        </div>
-      </div>
-
       {/* Table */}
       {loading ? (
         <div className="rounded border border-dashed border-border bg-card/50 p-12 text-center">

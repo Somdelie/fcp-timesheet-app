@@ -81,8 +81,7 @@ const TEAM_COLORS: Record<string, string> = {
     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   SPECIAL_COATINGS:
     "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  CAPE_TOWN:
-    "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
+  CAPE_TOWN: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
 interface Foreman {
@@ -150,7 +149,11 @@ export function ForemanContent({
   // Edit foreman dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Foreman | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", defaultDayRate: "", bankName: "" });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    defaultDayRate: "",
+    bankName: "",
+  });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Team switch dialog state
@@ -355,12 +358,12 @@ export function ForemanContent({
         {/* Search + Filters */}
         <div className="mb-3 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm px-5 py-3 shadow-sm transition-all hover:shadow-md dark:border-zinc-700/50 dark:bg-card/40">
           <div className="flex flex-col gap-3">
-            <label
+            {/* <label
               htmlFor="search"
               className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300"
             >
               Search Foremen, Manage all foremen in the system.
-            </label>
+            </label> */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Search input */}
               <div className="relative flex-1">
@@ -377,9 +380,7 @@ export function ForemanContent({
               {/* Team filter */}
               <Select
                 value={selectedTeam || "__all__"}
-                onValueChange={(v) =>
-                  setSelectedTeam(v === "__all__" ? "" : v)
-                }
+                onValueChange={(v) => setSelectedTeam(v === "__all__" ? "" : v)}
               >
                 <SelectTrigger className="h-10 w-full sm:w-44">
                   <SelectValue placeholder="All Teams" />
@@ -650,17 +651,23 @@ export function ForemanContent({
               <label className="text-sm font-medium">Name</label>
               <Input
                 value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
                 placeholder="Full name"
                 required
                 minLength={2}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Default Day Rate (R)</label>
+              <label className="text-sm font-medium">
+                Default Day Rate (R)
+              </label>
               <Input
                 value={editForm.defaultDayRate}
-                onChange={(e) => setEditForm({ ...editForm, defaultDayRate: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, defaultDayRate: e.target.value })
+                }
                 placeholder="e.g. 350.00"
                 type="number"
                 min="0"
@@ -678,7 +685,9 @@ export function ForemanContent({
                 </SelectTrigger>
                 <SelectContent>
                   {SA_BANKS.map((bank) => (
-                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    <SelectItem key={bank} value={bank}>
+                      {bank}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

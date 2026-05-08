@@ -1,9 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Loader2, Mail, Building2, Users, Shield } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  Mail,
+  Shield,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -12,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 
 type SupervisorRow = {
   id: string;
@@ -25,18 +40,13 @@ type SupervisorRow = {
   foremen: { id: string; name: string }[];
 };
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-ZA", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export default function AdminSupervisorsPage() {
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [viewTarget, setViewTarget] = useState<SupervisorRow | null>(null);
+  const [editTarget, setEditTarget] = useState<SupervisorRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SupervisorRow | null>(null);
 
   const loadSupervisors = useCallback(async () => {
     setLoading(true);
@@ -78,10 +88,6 @@ export default function AdminSupervisorsPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Supervisors</h1>
-      </div>
-
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -115,7 +121,7 @@ export default function AdminSupervisorsPage() {
                   Foremen
                 </TableHead>
                 <TableHead className="border border-zinc-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
-                  Joined
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -164,28 +170,41 @@ export default function AdminSupervisorsPage() {
                         {s.sites.length}
                       </span>
                     </TableCell>
-                    <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700">
-                      {s.foremen.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">
-                          None
-                        </span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {s.foremen.map((f) => (
-                            <Badge
-                              key={f.id}
-                              variant="outline"
-                              className="text-[11px]"
-                            >
-                              <Users className="h-3 w-3 mr-0.5" />
-                              {f.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
+                    <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-center">
+                      <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+                        {s.foremen.length}
+                      </span>
                     </TableCell>
-                    <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-[13px] text-muted-foreground">
-                      {fmtDate(s.createdAt)}
+                    <TableCell className="border border-zinc-200 px-3 py-1 dark:border-zinc-700 text-[13px]">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setViewTarget(s)}
+                        >
+                          <Eye className="mr-1 h-3 w-3" />
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setEditTarget(s)}
+                        >
+                          <Pencil className="mr-1 h-3 w-3" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteTarget(s)}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -194,6 +213,112 @@ export default function AdminSupervisorsPage() {
           </Table>
         </div>
       </div>
+
+      <Dialog
+        open={!!viewTarget}
+        onOpenChange={(open) => !open && setViewTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>View Supervisor</DialogTitle>
+          </DialogHeader>
+          {viewTarget ? (
+            <div className="space-y-3 text-sm">
+              <div>
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Name
+                </div>
+                <div className="font-medium">{viewTarget.name ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Email
+                </div>
+                <div>{viewTarget.email}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded border p-3">
+                  <div className="text-xs text-muted-foreground">
+                    Assigned Sites
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {viewTarget.sites.length}
+                  </div>
+                </div>
+                <div className="rounded border p-3">
+                  <div className="text-xs text-muted-foreground">Foremen</div>
+                  <div className="text-lg font-semibold">
+                    {viewTarget.foremen.length}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => !open && setEditTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Supervisor</DialogTitle>
+          </DialogHeader>
+          {editTarget ? (
+            <div className="space-y-3 text-sm">
+              <div>
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Name
+                </div>
+                <Input value={editTarget.name ?? ""} readOnly />
+              </div>
+              <div>
+                <div className="text-xs font-medium uppercase text-muted-foreground">
+                  Email
+                </div>
+                <Input value={editTarget.email} readOnly />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Editing is not wired yet. This modal is a placeholder for now.
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Close
+            </Button>
+            <Button onClick={() => setEditTarget(null)}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Supervisor</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Delete is not wired yet. No supervisor will be removed.
+          </p>
+          {deleteTarget ? (
+            <div className="rounded border bg-muted/30 p-3 text-sm font-medium">
+              {deleteTarget.name ?? deleteTarget.email}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => setDeleteTarget(null)}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

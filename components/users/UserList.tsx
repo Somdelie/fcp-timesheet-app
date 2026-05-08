@@ -81,12 +81,12 @@ const UserList: React.FC<UsersListProps> = ({ users, currentUserRole }) => {
       <div className="mb-3 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm px-5 py-3 shadow-sm transition-all hover:shadow-md dark:border-zinc-700/50 dark:bg-card/40">
         <div className="flex flex-col gap-4 sm:flex-row items-end sm:justify-between">
           <div className="flex-1 w-full">
-            <label
+            {/* <label
               htmlFor="search-users"
               className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2"
             >
               Search Users, Manage application users and their roles.
-            </label>
+            </label> */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
               <Input

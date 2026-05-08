@@ -178,18 +178,8 @@ export default function OvertimePricesPage() {
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Overtime Prices</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage hourly overtime rates. These prices are used when creating
-          overtime entries.
-        </p>
-      </div>
-
       {/* Create form */}
-      <div className="border rounded bg-card p-4">
-        <h3 className="text-sm font-semibold mb-3">Add New Price</h3>
+      <div className="border rounded bg-card p-4 mb-3">
         <div className="flex items-end gap-3 flex-wrap">
           <div className="flex-1 min-w-45">
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
