@@ -196,7 +196,7 @@ export async function POST(
       let newStatus = refreshed.status;
       if (!anyUsed) newStatus = "PENDING";
       else if (anyRemaining) newStatus = "PARTIALLY_APPLIED";
-      else newStatus = "APPLIED";
+      else newStatus = "DEDUCTED";
 
       if (newStatus !== refreshed.status) {
         await tx.productOrder.update({

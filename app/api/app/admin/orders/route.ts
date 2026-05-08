@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     const productIds = Array.from(new Set(data.items.map((i) => i.productId)));
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, price: true, isActive: true },
+      select: { id: true, price: true, isActive: true, category: true },
     });
 
     if (products.length !== productIds.length) {
@@ -135,17 +135,17 @@ export async function POST(req: NextRequest) {
       });
       items.push(createdItem);
 
-      // Deduct from product stock
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { stockQty: { decrement: item.quantity } },
-      });
-      // Deduct from variant stock if a matching variant exists
-      if (normalizedSize !== null || normalizedColor !== null) {
-        await prisma.stockItemVariant.updateMany({
-          where: { productId: item.productId, size: normalizedSize, color: normalizedColor },
-          data: { qty: { decrement: item.quantity } },
+      if (p.category === "PPE") {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stockQty: { decrement: item.quantity } },
         });
+        if (normalizedSize !== null || normalizedColor !== null) {
+          await prisma.stockItemVariant.updateMany({
+            where: { productId: item.productId, size: normalizedSize, color: normalizedColor },
+            data: { qty: { decrement: item.quantity } },
+          });
+        }
       }
     }
 
@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
     const where: any = {};
     if (foremanId) where.foremanId = foremanId;
     if (adminUserId) where.adminUserId = adminUserId;
-    if (status && ["PENDING", "PARTIALLY_APPLIED", "APPLIED", "CANCELLED"].includes(status)) {
+    if (status && ["PENDING", "COLLECTED", "DEDUCTED", "PARTIALLY_APPLIED", "APPLIED", "CANCELLED"].includes(status)) {
       where.status = status as any;
     }
 

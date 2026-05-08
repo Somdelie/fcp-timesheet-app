@@ -133,7 +133,10 @@ interface OrdersPageClientProps {
 
 function statusBadgeVariant(status: string) {
   switch (status) {
-    case "APPLIED": return "default" as const;
+    case "DEDUCTED":
+    case "APPLIED":
+    case "COLLECTED":
+      return "default" as const;
     case "PENDING": return "secondary" as const;
     case "PARTIALLY_APPLIED": return "outline" as const;
     case "CANCELLED": return "destructive" as const;
@@ -143,13 +146,23 @@ function statusBadgeVariant(status: string) {
 
 function statusLabel(status: string) {
   switch (status) {
-    case "APPLIED": return "Deducted";
+    case "DEDUCTED":
+    case "APPLIED":
+      return "Deducted";
+    case "COLLECTED": return "Collected";
     case "PENDING": return "Pending";
-    case "PARTIALLY_APPLIED": return "Partial";
+    case "PARTIALLY_APPLIED": return "Partial Deduction";
     case "CANCELLED": return "Cancelled";
     default: return status;
   }
 }
+
+const ORDER_STATUS_OPTIONS = [
+  { value: "PENDING", label: "Pending" },
+  { value: "COLLECTED", label: "Collected" },
+  { value: "DEDUCTED", label: "Deducted" },
+  { value: "CANCELLED", label: "Cancelled" },
+] as const;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -928,7 +941,10 @@ export default function OrdersPageClient({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [updatingStatusOrderId, setUpdatingStatusOrderId] = useState<string | null>(null);
   const [cancelDialogOrderId, setCancelDialogOrderId] = useState<string | null>(null);
+  const [deleteDialogOrderId, setDeleteDialogOrderId] = useState<string | null>(null);
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
   const [deductionDialogOrder, setDeductionDialogOrder] = useState<Order | null>(null);
   const [editSheetOrder, setEditSheetOrder] = useState<Order | null>(null);
@@ -961,11 +977,44 @@ export default function OrdersPageClient({
     [orders],
   );
 
+  const updateOrderStatus = useCallback(
+    async (orderId: string, status: string) => {
+      setUpdatingStatusOrderId(orderId);
+      try {
+        const res = await fetch(`/api/app/admin/orders/${orderId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.error ?? "Failed to update order status");
+        toast.success(`Order marked ${statusLabel(status).toLowerCase()}`);
+        loadOrders();
+      } catch (e: any) {
+        toast.error(e?.message ?? "Failed to update order status");
+      } finally {
+        setUpdatingStatusOrderId(null);
+      }
+    },
+    [loadOrders],
+  );
+
   const cancelOrder = useCallback(
     async (orderId: string) => {
       setCancellingOrderId(orderId);
-      const wasAlreadyCancelled =
-        orders.find((o) => o.id === orderId)?.status === "CANCELLED";
+      try {
+        await updateOrderStatus(orderId, "CANCELLED");
+      } finally {
+        setCancellingOrderId(null);
+      }
+    },
+    [updateOrderStatus],
+  );
+
+  const deleteOrder = useCallback(
+    async (orderId: string) => {
+      setDeletingOrderId(orderId);
       try {
         const res = await fetch(`/api/app/admin/orders/${orderId}`, {
           method: "DELETE",
@@ -974,15 +1023,15 @@ export default function OrdersPageClient({
         });
         const data = await res.json().catch(() => null);
         if (!res.ok) throw new Error(data?.error ?? "Failed to delete order");
-        toast.success(wasAlreadyCancelled ? "Order deleted" : "Order cancelled");
+        toast.success("Order deleted");
         loadOrders();
       } catch (e: any) {
         toast.error(e?.message ?? "Failed to delete order");
       } finally {
-        setCancellingOrderId(null);
+        setDeletingOrderId(null);
       }
     },
-    [loadOrders, orders],
+    [loadOrders],
   );
 
   const printOrder = useCallback(async (order: Order) => {
@@ -1098,8 +1147,9 @@ export default function OrdersPageClient({
                       const isExpanded = expandedOrderId === order.id;
                       const isCancelled = order.status === "CANCELLED";
                       const isPending = order.status === "PENDING";
-                      const isDeducted = order.status === "APPLIED";
+                      const isDeducted = order.status === "DEDUCTED" || order.status === "APPLIED";
                       const isPrinting = printingOrderId === order.id;
+                      const isUpdatingStatus = updatingStatusOrderId === order.id;
 
                       return (
                         <React.Fragment key={order.id}>
@@ -1125,8 +1175,32 @@ export default function OrdersPageClient({
                               {formatCurrency(orderTotal(order.items))}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1.5">
-                                <Badge variant={statusBadgeVariant(order.status)}>
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={order.status}
+                                  onValueChange={(status) => updateOrderStatus(order.id, status)}
+                                  disabled={isUpdatingStatus}
+                                >
+                                  <SelectTrigger className="h-8 w-36 text-xs" onClick={(e) => e.stopPropagation()}>
+                                    <SelectValue>
+                                      {isUpdatingStatus ? "Updating..." : statusLabel(order.status)}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ORDER_STATUS_OPTIONS.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                    {order.status === "PARTIALLY_APPLIED" && (
+                                      <SelectItem value="PARTIALLY_APPLIED">Partial Deduction</SelectItem>
+                                    )}
+                                    {order.status === "APPLIED" && (
+                                      <SelectItem value="APPLIED">Deducted</SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                <Badge variant={statusBadgeVariant(order.status)} className="hidden xl:inline-flex">
                                   {statusLabel(order.status)}
                                 </Badge>
                                 {isDeducted && (
@@ -1178,14 +1252,26 @@ export default function OrdersPageClient({
                                   </Button>
                                 )}
 
-                                {/* Cancel / Delete */}
+                                {!isCancelled && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    disabled={cancellingOrderId === order.id}
+                                    title="Cancel order"
+                                    onClick={() => setCancelDialogOrderId(order.id)}
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                  disabled={cancellingOrderId === order.id}
-                                  title={isCancelled ? "Permanently delete order" : "Cancel order"}
-                                  onClick={() => setCancelDialogOrderId(order.id)}
+                                  disabled={deletingOrderId === order.id}
+                                  title="Delete order"
+                                  onClick={() => setDeleteDialogOrderId(order.id)}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -1306,16 +1392,8 @@ export default function OrdersPageClient({
       <ConfirmationDialog
         open={cancelDialogOrderId !== null}
         onOpenChange={(open) => { if (!open) setCancelDialogOrderId(null); }}
-        title={
-          orders.find((o) => o.id === cancelDialogOrderId)?.status === "CANCELLED"
-            ? "Delete Order?"
-            : "Cancel Order?"
-        }
-        description={
-          orders.find((o) => o.id === cancelDialogOrderId)?.status === "CANCELLED"
-            ? "This will permanently delete the order record. This action cannot be undone."
-            : "This will cancel the order, remove any linked deductions, and restore stock quantities. This action cannot be undone."
-        }
+        title="Cancel Order?"
+        description="This will mark the order as cancelled, remove any linked unpaid deductions, and restore PPE stock quantities."
         onConfirm={() => {
           if (cancelDialogOrderId) {
             cancelOrder(cancelDialogOrderId);
@@ -1323,11 +1401,23 @@ export default function OrdersPageClient({
           }
         }}
         isLoading={cancellingOrderId !== null}
-        confirmText={
-          orders.find((o) => o.id === cancelDialogOrderId)?.status === "CANCELLED"
-            ? "Delete"
-            : "Cancel Order"
-        }
+        confirmText="Cancel Order"
+        variant="destructive"
+      />
+
+      <ConfirmationDialog
+        open={deleteDialogOrderId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteDialogOrderId(null); }}
+        title="Delete Order?"
+        description="This will permanently delete the order record. If it is not already cancelled, PPE stock will be restored first."
+        onConfirm={() => {
+          if (deleteDialogOrderId) {
+            deleteOrder(deleteDialogOrderId);
+            setDeleteDialogOrderId(null);
+          }
+        }}
+        isLoading={deletingOrderId !== null}
+        confirmText="Delete"
         variant="destructive"
       />
     </div>

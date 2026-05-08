@@ -1098,6 +1098,8 @@ enum DeductionApplyTo {
 
 enum ProductOrderStatus {
   PENDING
+  COLLECTED
+  DEDUCTED
   PARTIALLY_APPLIED
   APPLIED
   CANCELLED

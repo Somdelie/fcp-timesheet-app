@@ -118,17 +118,37 @@ export async function GET(req: Request) {
             },
           },
           variantStocks: { select: { id: true, size: true, color: true, qty: true } },
-          _count: { select: { orderItems: true, supplierPrices: true } },
+          _count: { select: { orderItems: true, supplierPrices: true, plantAssignments: true } },
         },
       }),
     ]);
 
     const hasMore = skip + products.length < total;
 
+    // For plant items, compute the total deployed quantity per product
+    let deployedQtyMap = new Map<string, number>();
+    if (productType === "PLANT" && products.length > 0) {
+      const productIds = products.map((p) => p.id);
+      const deployedSums = await prisma.sitePlantAssignment.groupBy({
+        by: ["productId"],
+        where: {
+          productId: { in: productIds },
+          status: { in: ["DEPLOYED", "REPAIR"] },
+        },
+        _sum: { quantity: true },
+      });
+      deployedQtyMap = new Map(
+        deployedSums.map((d) => [d.productId, d._sum.quantity ?? 0]),
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
-        data: products.map(serialise),
+        data: products.map((p) => ({
+          ...serialise(p),
+          deployedQty: deployedQtyMap.get(p.id) ?? 0,
+        })),
         page,
         limit,
         total,

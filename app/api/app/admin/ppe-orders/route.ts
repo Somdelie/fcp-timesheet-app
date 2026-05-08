@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { PpeOrderStatus } from "@/generated/prisma/client";
+import type { PpeOrderStatus, Prisma } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
 async function getAuth(req: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
-  if (session?.user && (role === "ADMIN" || role === "OFFICE" || role === "SUPERVISOR"))
+  if (
+    session?.user &&
+    (role === "ADMIN" || role === "OFFICE" || role === "SUPERVISOR")
+  )
     return { id: (session.user as any).id as string, role };
   return null;
 }
@@ -40,11 +43,93 @@ const orderInclude = {
   items: { include: itemInclude },
 };
 
+function normalizeName(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+async function findLegacyProductForProcurementProduct(
+  tx: Prisma.TransactionClient,
+  procurementProductId: string,
+) {
+  const procurementProduct = await tx.procurementProduct.findUnique({
+    where: { id: procurementProductId },
+    select: { name: true, sku: true, normalizedName: true },
+  });
+
+  if (!procurementProduct) return null;
+
+  const sku = procurementProduct.sku?.trim();
+  if (sku) {
+    const bySku = await tx.product.findFirst({
+      where: { sku },
+      select: { id: true, category: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (bySku) return bySku;
+  }
+
+  const normalizedName = normalizeName(
+    procurementProduct.normalizedName ?? procurementProduct.name,
+  );
+  if (!normalizedName) return null;
+
+  return tx.product.findFirst({
+    where: {
+      OR: [
+        { normalizedName },
+        { name: { equals: procurementProduct.name, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, category: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+async function adjustLegacyOrderStock(
+  tx: Prisma.TransactionClient,
+  item: {
+    productId: string;
+    quantity: number;
+    size?: string | null;
+    color?: string | null;
+  },
+  direction: "deduct" | "restore",
+) {
+  const legacyProduct = await findLegacyProductForProcurementProduct(
+    tx,
+    item.productId,
+  );
+  if (!legacyProduct) return;
+  if (legacyProduct.category !== "PPE") return;
+
+  const quantityChange =
+    direction === "deduct"
+      ? { decrement: item.quantity }
+      : { increment: item.quantity };
+
+  await tx.product.update({
+    where: { id: legacyProduct.id },
+    data: { stockQty: quantityChange },
+  });
+
+  const size = item.size?.trim() || null;
+  const color = item.color?.trim() || null;
+  if (size || color) {
+    await tx.stockItemVariant.updateMany({
+      where: { productId: legacyProduct.id, size, color },
+      data: { qty: quantityChange },
+    });
+  }
+}
+
 /** GET /api/app/admin/ppe-orders?foremanId=&siteId=&status= */
 export async function GET(req: Request) {
   try {
     const auth = await getAuth(req);
-    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!auth)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const url = new URL(req.url);
     const foremanId = url.searchParams.get("foremanId");
@@ -73,7 +158,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const auth = await getAuth(req);
-    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!auth)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
     const { foremanId, siteId, note, chargeToSite, items } = body as {
@@ -81,11 +167,26 @@ export async function POST(req: Request) {
       siteId?: string;
       note?: string;
       chargeToSite?: boolean;
-      items: { productId: string; quantity: number; size?: string; color?: string; note?: string; unitPriceAtOrder?: number | null }[];
+      items: {
+        productId: string;
+        quantity: number;
+        size?: string;
+        color?: string;
+        note?: string;
+        unitPriceAtOrder?: number | null;
+      }[];
     };
 
-    if (!foremanId) return NextResponse.json({ error: "foremanId is required" }, { status: 400 });
-    if (!items?.length) return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
+    if (!foremanId)
+      return NextResponse.json(
+        { error: "foremanId is required" },
+        { status: 400 },
+      );
+    if (!items?.length)
+      return NextResponse.json(
+        { error: "At least one item is required" },
+        { status: 400 },
+      );
 
     // Pre-fetch active supplier prices for all products in one query
     const productIds = [...new Set(items.map((i) => i.productId))];
@@ -96,29 +197,66 @@ export async function POST(req: Request) {
     });
     const priceMap = new Map<string, number>();
     for (const sp of supplierPrices) {
-      if (!priceMap.has(sp.productId)) priceMap.set(sp.productId, Number(sp.price));
+      if (!priceMap.has(sp.productId))
+        priceMap.set(sp.productId, Number(sp.price));
     }
 
-    const order = await prisma.foremanPpeOrder.create({
-      data: {
-        foremanId,
-        siteId: siteId || null,
-        note: note?.trim() || null,
-        createdByUserId: auth.id,
-        status: "PENDING",
-        chargeToSite: chargeToSite ?? false,
-        items: {
-          create: items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            size: i.size?.trim() || null,
-            color: i.color?.trim() || null,
-            note: i.note?.trim() || null,
-            unitPriceAtOrder: i.unitPriceAtOrder != null ? i.unitPriceAtOrder : (priceMap.get(i.productId) ?? null),
-          })),
+    const order = await prisma.$transaction(async (tx) => {
+      const created = await tx.foremanPpeOrder.create({
+        data: {
+          foremanId,
+          siteId: siteId || null,
+          note: note?.trim() || null,
+          createdByUserId: auth.id,
+          status: "PENDING",
+          chargeToSite: chargeToSite ?? false,
+          items: {
+            create: items.map((i) => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              size: i.size?.trim() || null,
+              color: i.color?.trim() || null,
+              note: i.note?.trim() || null,
+              unitPriceAtOrder:
+                i.unitPriceAtOrder != null
+                  ? i.unitPriceAtOrder
+                  : (priceMap.get(i.productId) ?? null),
+            })),
+          },
         },
-      },
-      include: orderInclude,
+        include: orderInclude,
+      });
+
+      // Deduct stock for each item
+      for (const i of items) {
+        const size = i.size?.trim() || null;
+        const color = i.color?.trim() || null;
+
+        // Deduct variant stock if a size and color are both selected
+        if (size && color) {
+          await tx.productVariantStock.upsert({
+            where: {
+              productId_size_color: { productId: i.productId, size, color },
+            },
+            update: { qty: { decrement: i.quantity } },
+            create: { productId: i.productId, size, color, qty: -i.quantity },
+          });
+        }
+
+        // Always deduct from master stockQty
+        await tx.procurementProduct.update({
+          where: { id: i.productId },
+          data: { stockQty: { decrement: i.quantity } },
+        });
+
+        await adjustLegacyOrderStock(
+          tx,
+          { productId: i.productId, quantity: i.quantity, size, color },
+          "deduct",
+        );
+      }
+
+      return created;
     });
 
     return NextResponse.json({ ok: true, data: order }, { status: 201 });

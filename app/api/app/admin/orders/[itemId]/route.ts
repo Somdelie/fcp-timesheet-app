@@ -48,6 +48,12 @@ async function restoreStock(
   items: { productId: string; quantity: number; size: string | null; color: string | null }[],
 ) {
   for (const item of items) {
+    const product = await prisma.product.findUnique({
+      where: { id: item.productId },
+      select: { category: true },
+    });
+    if (product?.category !== "PPE") continue;
+
     await prisma.product.update({
       where: { id: item.productId },
       data: { stockQty: { increment: item.quantity } },
@@ -61,10 +67,34 @@ async function restoreStock(
   }
 }
 
+/** Deduct stockQty on Product and StockItemVariant for PPE order items only */
+async function deductStock(
+  items: { productId: string; quantity: number; size: string | null; color: string | null }[],
+) {
+  for (const item of items) {
+    const product = await prisma.product.findUnique({
+      where: { id: item.productId },
+      select: { category: true },
+    });
+    if (product?.category !== "PPE") continue;
+
+    await prisma.product.update({
+      where: { id: item.productId },
+      data: { stockQty: { decrement: item.quantity } },
+    });
+    if (item.size !== null || item.color !== null) {
+      await prisma.stockItemVariant.updateMany({
+        where: { productId: item.productId, size: item.size, color: item.color },
+        data: { qty: { decrement: item.quantity } },
+      });
+    }
+  }
+}
+
 /**
  * DELETE /api/app/admin/orders/:itemId
- * Cancel an order. If the order was APPLIED, also delete linked deductions
- * (only if the related timesheet is not PAID). Restores stock quantities.
+ * Permanently delete an order. If it was not already cancelled, restore
+ * PPE stock first. Linked deductions are removed unless any are paid.
  */
 export async function DELETE(
   req: NextRequest,
@@ -109,16 +139,6 @@ export async function DELETE(
       );
     }
 
-    // Already-cancelled orders: hard delete immediately (stock already restored at cancel time)
-    if (order.status === "CANCELLED") {
-      await prisma.productOrder.delete({ where: { id: itemId } });
-      return NextResponse.json(
-        { ok: true, deleted: true },
-        { headers: CORS_HEADERS },
-      );
-    }
-
-    // Active orders: check for paid deductions before cancelling
     const linkedDeductions = order.items.flatMap((i) => i.deductions);
     const hasPaidDeduction = linkedDeductions.some(
       (d) => d.timesheet?.status === "PAID",
@@ -131,30 +151,27 @@ export async function DELETE(
       );
     }
 
-    // Delete linked deductions then soft-cancel and restore stock
     if (linkedDeductions.length > 0) {
       await prisma.deduction.deleteMany({
         where: { id: { in: linkedDeductions.map((d) => d.id) } },
       });
     }
 
-    await prisma.productOrder.update({
-      where: { id: itemId },
-      data: { status: "CANCELLED" },
-    });
+    if (order.status !== "CANCELLED") {
+      await restoreStock(
+        order.items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          size: i.size,
+          color: i.color,
+        })),
+      );
+    }
 
-    // Restore stock for all items in this order
-    await restoreStock(
-      order.items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        size: i.size,
-        color: i.color,
-      })),
-    );
+    await prisma.productOrder.delete({ where: { id: itemId } });
 
     return NextResponse.json(
-      { ok: true, cancelled: true },
+      { ok: true, deleted: true },
       { headers: CORS_HEADERS },
     );
   } catch (e: any) {
@@ -166,19 +183,34 @@ export async function DELETE(
   }
 }
 
-const PatchOrderSchema = z.object({
-  items: z
-    .array(
-      z.object({
-        productId: z.string().min(1),
-        quantity: z.number().int().positive(),
-        size: z.string().max(100).optional(),
-        color: z.string().max(100).optional(),
-        note: z.string().max(2000).optional(),
-      }),
-    )
-    .min(1),
-});
+const OrderStatusSchema = z.enum([
+  "PENDING",
+  "COLLECTED",
+  "DEDUCTED",
+  "PARTIALLY_APPLIED",
+  "APPLIED",
+  "CANCELLED",
+]);
+
+const PatchOrderSchema = z
+  .object({
+    status: OrderStatusSchema.optional(),
+    items: z
+      .array(
+        z.object({
+          productId: z.string().min(1),
+          quantity: z.number().int().positive(),
+          size: z.string().max(100).optional(),
+          color: z.string().max(100).optional(),
+          note: z.string().max(2000).optional(),
+        }),
+      )
+      .min(1)
+      .optional(),
+  })
+  .refine((data) => data.status !== undefined || data.items !== undefined, {
+    message: "Status or items are required",
+  });
 
 /**
  * PATCH /api/app/admin/orders/:itemId
@@ -225,6 +257,58 @@ export async function PATCH(
       );
     }
 
+    if (body.data.status !== undefined) {
+      const linkedDeductions = await prisma.deduction.findMany({
+        where: { orderItem: { orderId: itemId } },
+        select: { id: true, timesheet: { select: { status: true } } },
+      });
+      const hasPaidDeduction = linkedDeductions.some((d) => d.timesheet?.status === "PAID");
+
+      if (body.data.status === "CANCELLED" && hasPaidDeduction) {
+        return NextResponse.json(
+          { error: "Cannot cancel order - some deductions are on a paid timesheet" },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+
+      if (order.status !== "CANCELLED" && body.data.status === "CANCELLED") {
+        if (linkedDeductions.length > 0) {
+          await prisma.deduction.deleteMany({
+            where: { id: { in: linkedDeductions.map((d) => d.id) } },
+          });
+        }
+        await restoreStock(
+          order.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            size: i.size,
+            color: i.color,
+          })),
+        );
+      }
+
+      if (order.status === "CANCELLED" && body.data.status !== "CANCELLED") {
+        await deductStock(
+          order.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            size: i.size,
+            color: i.color,
+          })),
+        );
+      }
+
+      const updated = await prisma.productOrder.update({
+        where: { id: itemId },
+        data: { status: body.data.status },
+        select: { id: true, status: true },
+      });
+
+      return NextResponse.json({ ok: true, order: updated }, { headers: CORS_HEADERS });
+    }
+
+    const nextItems = body.data.items ?? [];
+
     if (order.status !== "PENDING") {
       return NextResponse.json(
         { error: "Only PENDING orders can be edited" },
@@ -232,10 +316,10 @@ export async function PATCH(
       );
     }
 
-    const productIds = Array.from(new Set(body.data.items.map((i) => i.productId)));
+    const productIds = Array.from(new Set(nextItems.map((i) => i.productId)));
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, price: true, isActive: true },
+      select: { id: true, price: true, isActive: true, category: true },
     });
 
     if (products.length !== productIds.length) {
@@ -262,7 +346,7 @@ export async function PATCH(
 
     // Create new items and deduct stock
     const newItems = [];
-    for (const item of body.data.items) {
+    for (const item of nextItems) {
       const p = productsById.get(item.productId)!;
       const priceNum = Number((p.price as any).toString?.() ?? p.price);
       const normalizedSize = item.size?.trim() || null;
@@ -282,15 +366,17 @@ export async function PATCH(
       });
       newItems.push(created);
 
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { stockQty: { decrement: item.quantity } },
-      });
-      if (normalizedSize !== null || normalizedColor !== null) {
-        await prisma.stockItemVariant.updateMany({
-          where: { productId: item.productId, size: normalizedSize, color: normalizedColor },
-          data: { qty: { decrement: item.quantity } },
+      if (p.category === "PPE") {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stockQty: { decrement: item.quantity } },
         });
+        if (normalizedSize !== null || normalizedColor !== null) {
+          await prisma.stockItemVariant.updateMany({
+            where: { productId: item.productId, size: normalizedSize, color: normalizedColor },
+            data: { qty: { decrement: item.quantity } },
+          });
+        }
       }
     }
 

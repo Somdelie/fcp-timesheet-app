@@ -1974,91 +1974,205 @@ export default function TimesheetsListClient({ mode }: Props) {
     analyticsSearchDebounced,
   ]);
 
-  const downloadAnalyticsBreakdown = useCallback(() => {
-    if (!analyticsRowsFiltered.length) {
-      toast.info("No analytics rows to download");
+  const handleDownloadBreakdownPdf = useCallback(async () => {
+    if (!currentPeriod) {
+      toast.error("No period selected");
       return;
     }
 
-    const lines: string[] = [];
-    lines.push(
-      [
-        "Fortnight",
-        "Start",
-        "End",
-        "Month",
-        "Supervisor",
-        "Foreman",
-        "Site Code",
-        "Site Name",
-        "Status",
-        "Worker Days",
-        "Wages",
-      ].join(","),
-    );
-
-    for (const r of analyticsRowsFiltered) {
-      lines.push(
-        [
-          csvEsc(r.periodLabel),
-          csvEsc(r.startISO),
-          csvEsc(r.endISO),
-          csvEsc(r.monthLabel),
-          csvEsc(r.supervisorName),
-          csvEsc(r.foremanName),
-          csvEsc(r.siteCode),
-          csvEsc(r.siteName),
-          csvEsc(r.status),
-          csvEsc(r.days),
-          csvEsc(r.wages.toFixed(2)),
-        ].join(","),
-      );
+    if (foremanTotals.length === 0) {
+      toast.info("No foreman data to export");
+      return;
     }
 
-    lines.push("");
-    lines.push("Monthly Analytics");
-    lines.push("Month,Total Wages,Percentage");
-    for (const m of analyticsMonthlyBreakdown) {
-      lines.push(
-        [
-          csvEsc(m.label),
-          csvEsc(m.total.toFixed(2)),
-          csvEsc(`${m.pct.toFixed(2)}%`),
-        ].join(","),
-      );
-    }
+    try {
+      setPrintingAllSummaries(true);
 
-    lines.push("");
-    lines.push("Top Site by Fortnight");
-    lines.push("Fortnight,Top Site,Top Site Wages");
-    for (const item of analyticsTopSiteByFortnight) {
-      const siteDisplay = item.siteCode
-        ? `${item.siteCode} — ${item.siteName}`
-        : item.siteName;
-      lines.push(
-        [
-          csvEsc(item.periodLabel),
-          csvEsc(siteDisplay),
-          csvEsc(item.wages.toFixed(2)),
-        ].join(","),
-      );
-    }
+      const supervisorMap = new Map<
+        string,
+        {
+          supervisorName: string;
+          rows: Array<{
+            foremanName: string;
+            siteName: string;
+            siteCode?: string | null;
+            foremanDays: number;
+            teamDays: number;
+            foremanWages: number;
+            teamWages: number;
+            total: number;
+          }>;
+        }
+      >();
 
-    const csv = `${lines.join("\n")}\n`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wage-cost-breakdown-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [
-    analyticsRowsFiltered,
-    analyticsMonthlyBreakdown,
-    analyticsTopSiteByFortnight,
-  ]);
+      for (const row of rowsAdmin) {
+        const supName = row.supervisor?.name ?? "No Supervisor";
+
+        if (!supervisorMap.has(supName)) {
+          supervisorMap.set(supName, {
+            supervisorName: supName,
+            rows: [],
+          });
+        }
+
+        const group = supervisorMap.get(supName)!;
+
+        for (const site of row.sites ?? []) {
+          group.rows.push({
+            foremanName: row.foreman?.name ?? "Unknown",
+            siteName: site.name,
+            siteCode: site.code ?? null,
+            foremanDays: Number(row.foremanDays ?? 0),
+            teamDays: Number(row.teamDays ?? 0),
+            foremanWages: Number(row.foremanWages ?? 0),
+            teamWages: Number(row.teamWages ?? 0),
+            total: Number(row.totalWorkerWages ?? 0),
+          });
+        }
+      }
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<style>
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #111;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.period {
+  margin-bottom: 20px;
+}
+
+.supervisor {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  border: 1px solid #222;
+  background: #efefef;
+  padding: 6px;
+  text-align: left;
+}
+
+td {
+  border: 1px solid #bbb;
+  padding: 6px;
+}
+
+.right {
+  text-align: right;
+}
+</style>
+</head>
+
+<body>
+
+<div class="title">
+  FOREMAN BREAKDOWN REPORT
+</div>
+
+<div class="period">
+  ${currentPeriod.startISO} → ${currentPeriod.endISO}
+</div>
+
+${Array.from(supervisorMap.values())
+  .map(
+    (group) => `
+<div class="supervisor">
+  ${group.supervisorName}
+</div>
+
+<table>
+<thead>
+<tr>
+  <th>Foreman</th>
+  <th>Site</th>
+  <th>F/Days</th>
+  <th>Team Days</th>
+  <th>F/Wages</th>
+  <th>Team Wages</th>
+  <th>Total</th>
+</tr>
+</thead>
+
+<tbody>
+${group.rows
+  .map(
+    (r) => `
+<tr>
+  <td>${r.foremanName}</td>
+
+  <td>
+    ${r.siteCode ? `${r.siteCode} · ` : ""}
+    ${r.siteName}
+  </td>
+
+  <td class="right">${r.foremanDays}</td>
+  <td class="right">${r.teamDays}</td>
+  <td class="right">${money(r.foremanWages)}</td>
+  <td class="right">${money(r.teamWages)}</td>
+  <td class="right">${money(r.total)}</td>
+</tr>
+`,
+  )
+  .join("")}
+</tbody>
+</table>
+`,
+  )
+  .join("")}
+
+</body>
+</html>
+`;
+
+      const win = window.open("", "_blank");
+
+      if (!win) {
+        toast.error("Failed to open print window");
+        return;
+      }
+
+      win.document.write(html);
+      win.document.close();
+
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 300);
+
+      toast.success("Breakdown PDF ready");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message ?? "Failed to generate breakdown PDF");
+    } finally {
+      setPrintingAllSummaries(false);
+    }
+  }, [currentPeriod, foremanTotals, rowsAdmin]);
 
   const openDetail = useCallback(
     async (id: string, siteId?: string | null) => {
@@ -3065,7 +3179,7 @@ export default function TimesheetsListClient({ mode }: Props) {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={downloadAnalyticsBreakdown}
+                    onClick={handleDownloadBreakdownPdf}
                     disabled={analyticsLoading || !analyticsRowsFiltered.length}
                   >
                     <Download className="mr-2 h-4 w-4" />

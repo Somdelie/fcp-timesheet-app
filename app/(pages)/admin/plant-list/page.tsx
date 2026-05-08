@@ -73,6 +73,7 @@ type PlantItem = {
   colors: string[];
   sizes: string[];
   stockQty: number;
+  deployedQty: number;
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
   _count: { orderItems: number; plantAssignments: number };
@@ -424,23 +425,42 @@ export default function PlantListPage() {
     },
     {
       id: "stockQty",
-      header: () => <span>In Stock</span>,
+      header: () => <span>Total Owned</span>,
       cell: ({ row }) => (
         <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>
       ),
       enableSorting: false,
     },
     {
-      id: "deployed",
-      header: () => <span>In Use</span>,
+      id: "deployedQty",
+      header: () => <span>Deployed</span>,
       cell: ({ row }) => {
-        const count = row.original._count?.plantAssignments ?? 0;
-        return count > 0 ? (
-          <Badge variant="outline">
-            {count} site{count !== 1 ? "s" : ""}
-          </Badge>
+        const qty = row.original.deployedQty ?? 0;
+        return qty > 0 ? (
+          <Badge variant="outline">{qty}</Badge>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
+        );
+      },
+      enableSorting: false,
+    },
+    {
+      id: "atOffice",
+      header: () => <span>At Office</span>,
+      cell: ({ row }) => {
+        const total = row.original.stockQty ?? 0;
+        const deployed = row.original.deployedQty ?? 0;
+        const atOffice = total - deployed;
+        if (atOffice < 0)
+          return (
+            <span className="text-xs font-medium text-destructive">{atOffice}</span>
+          );
+        if (atOffice === 0)
+          return <span className="text-xs text-muted-foreground">0</span>;
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300 border-0">
+            {atOffice}
+          </Badge>
         );
       },
       enableSorting: false,
@@ -901,7 +921,10 @@ export default function PlantListPage() {
 
             {/* Description */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">Stock Quantity</label>
+              <label className="text-sm font-medium">Total Quantity Owned</label>
+              <p className="text-xs text-muted-foreground">
+                Enter the full company total — deployed units + units at the office combined.
+              </p>
               <Input
                 type="number"
                 min={0}

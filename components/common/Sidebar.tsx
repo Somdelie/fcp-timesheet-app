@@ -38,6 +38,7 @@ import {
   Hammer,
   Archive,
   BadgeMinus,
+  FileText,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -309,7 +310,7 @@ const menuGroups: {
     group: "PPE & Tools",
     items: [
       {
-        href: "/products",
+        href: "/ppe-tools",
         label: "Catalogue",
         icon: Archive,
         roles: ["ADMIN", "OFFICE"],
@@ -335,6 +336,12 @@ const menuGroups: {
         href: "/settings",
         label: "Settings",
         icon: Settings,
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/merge-pdfs",
+        label: "Merge PDFs",
+        icon: FileText,
         roles: ["ADMIN"],
       },
     ],
