@@ -42,10 +42,10 @@ export async function GET(req: Request) {
 
   const now = new Date();
 
-  // Default to last 7 days
+  // Default to last 7 days of workDate (inclusive of today)
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
-  const sevenDaysAgo = addDaysUTC(todayStart, -7);
+  const sevenDaysAgo = addDaysUTC(todayStart, -6);
 
   // ── Resolve supervisor → site IDs at DB level ──────────────────────
   let supervisorSiteIds: string[] | null = null;
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
 
   // ── Build DB where clause ───────────────────────────────────────────
   const whereClause: any = {
-    scannedAt: { gte: sevenDaysAgo },
+    workDate: { gte: sevenDaysAgo, lt: addDaysUTC(todayStart, 1) },
   };
 
   if (dateStr) {
@@ -162,7 +162,11 @@ export async function GET(req: Request) {
   });
 
   // ── If explicit siteId + supervisorId: validate the site belongs to supervisor ─
-  if (siteId && supervisorSiteIds !== null && !supervisorSiteIds.includes(siteId)) {
+  if (
+    siteId &&
+    supervisorSiteIds !== null &&
+    !supervisorSiteIds.includes(siteId)
+  ) {
     result = [];
   }
 
@@ -179,9 +183,17 @@ export async function GET(req: Request) {
     }
   }
 
-  const sites = Array.from(sitesMap.entries()).map(([id, name]) => ({ id, name }));
-  const foremen = Array.from(foremenMap.entries()).map(([id, name]) => ({ id, name }));
-  const supervisors = Array.from(supervisorsMap.entries()).map(([id, name]) => ({ id, name }));
+  const sites = Array.from(sitesMap.entries()).map(([id, name]) => ({
+    id,
+    name,
+  }));
+  const foremen = Array.from(foremenMap.entries()).map(([id, name]) => ({
+    id,
+    name,
+  }));
+  const supervisors = Array.from(supervisorsMap.entries()).map(
+    ([id, name]) => ({ id, name }),
+  );
 
   return NextResponse.json(
     { scans: result, sites, foremen, supervisors },

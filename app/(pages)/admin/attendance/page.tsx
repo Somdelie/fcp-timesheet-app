@@ -26,13 +26,6 @@ export default async function AdminAttendancePage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Attendance</h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-          Manage attendance scans, manual scan corrections and photo verification.
-        </p>
-      </div>
-
       <div className="rounded border border-muted/50 bg-card p-4">
         <div className="flex flex-wrap gap-1 border-b border-border">
           {TABS.map((tab) => (

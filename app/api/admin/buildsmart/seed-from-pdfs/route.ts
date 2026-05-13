@@ -22,6 +22,13 @@ import {
   normalizeImportedProductName,
   shouldCreateNewProduct,
 } from "@/lib/procurement/buildsmartProductMatcher";
+import {
+  inferBuildSmartProductCode,
+  isNumericCostCode,
+  normalizeSkuKey,
+} from "@/lib/procurement/buildsmartProductCodes";
+import { parseBuildSmartProduct } from "@/lib/product-color-parser";
+import { matchStockProduct } from "@/lib/stock/stockProductMatcher";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,7 +112,7 @@ export async function POST(req: NextRequest) {
   // Build a SKU → product lookup
   const skuLookup = new Map<string, (typeof allProducts)[number]>();
   for (const p of allProducts) {
-    if (p.sku) skuLookup.set(p.sku, p);
+    if (p.sku) skuLookup.set(normalizeSkuKey(p.sku), p);
   }
 
   // Build a supplier name → id lookup (case-insensitive) for normalized matching
@@ -148,6 +155,166 @@ export async function POST(req: NextRequest) {
     if (s.code) siteCodeLookup.set(s.code, s.id);
   }
 
+  // ── Separate STOCK orders from site product orders ──
+  const isStockOrder = (o: ParsedOrder) =>
+    o.subject?.toUpperCase().startsWith("STOCK") ?? false;
+
+  const stockParsed = parsedOrders.filter(isStockOrder);
+  const siteParsed = parsedOrders.filter((o) => !isStockOrder(o));
+
+  // ── Process STOCK orders → ProductOrder + ProductOrderItem ──
+  type StockOrderResult = {
+    orderNumber: string;
+    foremanName: string | null;
+    createdAt: string;
+    itemsCreated: number;
+    status: "created" | "skipped" | "duplicate";
+    reason?: string;
+  };
+
+  const stockResults: StockOrderResult[] = [];
+
+  if (stockParsed.length > 0) {
+    const legacyProducts = await prisma.product.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        normalizedName: true,
+        sku: true,
+        category: true,
+        price: true,
+      },
+    });
+
+    const allForemen = await prisma.foreman.findMany({
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    function suggestForemanId(hint: string | null): string | null {
+      if (!hint) return null;
+      const h = hint
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, " ")
+        .trim();
+      const hTokens = h.split(" ").filter((t) => t.length > 1);
+      let best: { id: string; score: number } | null = null;
+      for (const f of allForemen) {
+        const n = (f.user?.name ?? "")
+          .toLowerCase()
+          .replace(/[^a-z\s]/g, " ")
+          .trim();
+        if (!n) continue;
+        if (n === h) return f.id;
+        const nTokens = n.split(" ").filter((t) => t.length > 1);
+        const setN = new Set(nTokens);
+        const common = hTokens.filter((t) => setN.has(t));
+        const union = new Set([...hTokens, ...nTokens]);
+        const score = union.size === 0 ? 0 : common.length / union.size;
+        if (score > 0 && (!best || score > best.score))
+          best = { id: f.id, score };
+      }
+      return best && best.score >= 0.4 ? best.id : null;
+    }
+
+    for (const order of stockParsed) {
+      const foremanId = suggestForemanId(order.foremanNameHint);
+      const foremanRecord = allForemen.find((f) => f.id === foremanId);
+      const foremanName =
+        foremanRecord?.user?.name ?? order.foremanNameHint ?? null;
+
+      if (!foremanId) {
+        stockResults.push({
+          orderNumber: order.orderNumber,
+          foremanName,
+          createdAt: order.createdDate ?? new Date().toISOString(),
+          itemsCreated: 0,
+          status: "skipped",
+          reason: `No foreman matched for "${order.foremanNameHint ?? "unknown"}"`,
+        });
+        continue;
+      }
+
+      // Check duplicate
+      const existing = await prisma.productOrder.findFirst({
+        where: {
+          foreman: { id: foremanId },
+          createdAt: order.createdDate
+            ? {
+                gte: new Date(order.createdDate + "T00:00:00Z"),
+                lte: new Date(order.createdDate + "T23:59:59Z"),
+              }
+            : undefined,
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        stockResults.push({
+          orderNumber: order.orderNumber,
+          foremanName,
+          createdAt: order.createdDate ?? new Date().toISOString(),
+          itemsCreated: 0,
+          status: "duplicate",
+        });
+        continue;
+      }
+
+      const matchedItems: { productId: string; quantity: number }[] = [];
+      for (const item of order.items) {
+        const match = matchStockProduct(item.rawDescription, legacyProducts);
+        if (match.matched && match.product) {
+          matchedItems.push({
+            productId: match.product.id,
+            quantity: item.quantity,
+          });
+        }
+      }
+
+      if (matchedItems.length === 0) {
+        stockResults.push({
+          orderNumber: order.orderNumber,
+          foremanName,
+          createdAt: order.createdDate ?? new Date().toISOString(),
+          itemsCreated: 0,
+          status: "skipped",
+          reason: "No products matched",
+        });
+        continue;
+      }
+
+      const adminUserId = (session!.user as any).id as string;
+      await prisma.productOrder.create({
+        data: {
+          foreman: { connect: { id: foremanId } },
+          createdByUser: { connect: { id: adminUserId } },
+          status: "PENDING",
+          ...(order.createdDate
+            ? { createdAt: new Date(order.createdDate) }
+            : {}),
+          items: {
+            create: matchedItems.map((m) => {
+              const p = legacyProducts.find((lp) => lp.id === m.productId);
+              return {
+                product: { connect: { id: m.productId } },
+                quantity: m.quantity,
+                unitPrice: p?.price ?? 0,
+              };
+            }),
+          },
+        },
+        select: { id: true },
+      });
+
+      stockResults.push({
+        orderNumber: order.orderNumber,
+        foremanName,
+        createdAt: order.createdDate ?? new Date().toISOString(),
+        itemsCreated: matchedItems.length,
+        status: "created",
+      });
+    }
+  }
+
   // ── Match parsed items to DB products and build seed orders ──
   type MatchedItem = SeedOrderItem & { productId: string };
   type MatchedOrder = SeedOrder & {
@@ -160,7 +327,7 @@ export async function POST(req: NextRequest) {
   const skippedOrderNumbers: string[] = [];
   const skipReasons: Record<string, string[]> = {};
 
-  for (const order of parsedOrders) {
+  for (const order of siteParsed) {
     const reasons: string[] = [];
     const matchedItems: MatchedItem[] = [];
     const unmatchedItems: typeof order.items = [];
@@ -172,7 +339,8 @@ export async function POST(req: NextRequest) {
       const match = findMatchedProduct(item.rawDescription, {
         supplierName: order.vendorName ?? null,
         mappedCanonicalName,
-        trustedCode: item.candidateSku ?? null,
+        trustedCode:
+          item.candidateSku ?? inferBuildSmartProductCode(item.rawDescription, item.unit),
       });
       const product = match.matched ? (match.product as Product) : undefined;
 
@@ -261,16 +429,22 @@ export async function POST(req: NextRequest) {
         derivedUnitSize = 1;
       }
 
+      const parsedProduct = parseBuildSmartProduct(item.rawDescription.trim());
       const name =
-        item.rawDescription.trim() || `BuildSmart item ${item.costCode}`;
-      const sku = item.candidateSku ?? null;
+        parsedProduct.cleanName ||
+        item.rawDescription.trim() ||
+        `BuildSmart item ${item.costCode}`;
+      const sku =
+        item.candidateSku ??
+        parsedProduct.sku ??
+        inferBuildSmartProductCode(item.rawDescription, item.unit);
       const mappedCanonicalName = mapDescriptionToProduct(item.rawDescription);
 
       let product: Product | undefined;
       const match = findMatchedProduct(name, {
         supplierName: order.vendorName ?? null,
         mappedCanonicalName,
-        trustedCode: sku,
+        trustedCode: sku && !isNumericCostCode(sku) ? sku : null,
       });
 
       if (match.matched) {
@@ -295,7 +469,7 @@ export async function POST(req: NextRequest) {
             data: {
               name,
               normalizedName: normalizeImportedProductName(name).toLowerCase(),
-              sku,
+              sku: sku && !isNumericCostCode(sku) ? sku : null,
               uom: derivedUom as any,
               unitSize: derivedUnitSize ?? undefined,
               description: `BuildSmart import (PO ${order.orderNumber})`,
@@ -316,7 +490,9 @@ export async function POST(req: NextRequest) {
 
           // Keep in-memory lookups in sync so subsequent items can match this product
           allProducts.push(product as any);
-          if (sku) skuLookup.set(sku, product as any);
+          if (sku && !isNumericCostCode(sku)) {
+            skuLookup.set(normalizeSkuKey(sku), product as any);
+          }
         }
       }
 
@@ -498,8 +674,12 @@ export async function POST(req: NextRequest) {
       savedToDb: savedOrderIds.length,
       duplicates: duplicateRefs.length,
       skippedOrders: skippedOrderNumbers.length,
+      stockOrdersDetected: stockParsed.length,
+      stockOrdersCreated: stockResults.filter((r) => r.status === "created")
+        .length,
     },
     orders: siteProductOrders,
+    stockOrders: stockResults,
     savedOrderIds,
     duplicateRefs,
     skippedOrderNumbers,
@@ -523,7 +703,8 @@ export async function POST(req: NextRequest) {
           const match = findMatchedProduct(i.rawDescription, {
             supplierName: o.vendorName ?? null,
             mappedCanonicalName,
-            trustedCode: i.candidateSku ?? null,
+            trustedCode:
+              i.candidateSku ?? inferBuildSmartProductCode(i.rawDescription, i.unit),
           });
           const product = match.matched ? (match.product as Product) : null;
           return product

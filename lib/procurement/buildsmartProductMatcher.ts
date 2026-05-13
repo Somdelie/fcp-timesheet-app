@@ -1,3 +1,5 @@
+import { normalizeSkuKey } from "@/lib/procurement/buildsmartProductCodes";
+
 export type ProductMode = "CANONICAL_FAMILY" | "SHOP_ITEM";
 
 export type MatchableProcurementProduct = {
@@ -619,14 +621,12 @@ export function matchBuildSmartProduct(
   input: MatchInput,
   existingProducts: MatchableProcurementProduct[],
 ): ProductMatch {
-  const trustedCode = cleanWhitespace(
-    String(input.trustedCode ?? ""),
-  ).toUpperCase();
+  const trustedCode = cleanWhitespace(String(input.trustedCode ?? "")).toUpperCase();
+  const trustedCodeKey = normalizeSkuKey(trustedCode);
   if (trustedCode) {
     const codeMatch = existingProducts.find(
       (product) =>
-        cleanWhitespace(String(product.sku ?? "")).toUpperCase() ===
-        trustedCode,
+        normalizeSkuKey(product.sku) === trustedCodeKey,
     );
     if (codeMatch) {
       return {

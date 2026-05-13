@@ -58,6 +58,7 @@ export interface AdminForemanDto {
 interface OrdersPOSProps {
   foremen: AdminForemanDto[];
   products: AdminProductDto[];
+  requireReference?: boolean;
   onOrderCreated?: () => void;
 }
 
@@ -206,14 +207,15 @@ function VariantPickerDialog({
 export default function OrdersPOS({
   foremen,
   products,
+  requireReference = false,
   onOrderCreated,
 }: OrdersPOSProps) {
-  const [selectedForemanId, setSelectedForemanId] = React.useState<string>(
-    foremen[0]?.id ?? "",
-  );
+  const [selectedForemanIds, setSelectedForemanIds] = React.useState<string[]>([]);
   const [foremanOpen, setForemanOpen] = React.useState(false);
+  const [bulkProgress, setBulkProgress] = React.useState<{ done: number; total: number } | null>(null);
   const [productSearch, setProductSearch] = React.useState("");
   const [cart, setCart] = React.useState<CartItem[]>([]);
+  const [reference, setReference] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
 
@@ -300,11 +302,19 @@ export default function OrdersPOS({
     return cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   }, [cart]);
 
+  function toggleForeman(id: string) {
+    setSelectedForemanIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
   async function handlePrintVoucher() {
+    const selectedForemanId = selectedForemanIds[0];
     if (!selectedForemanId || cart.length === 0) return;
     const pad = (n: number) => String(n).padStart(2, "0");
     const now = new Date();
-    const orderNumber = `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const orderNumber = reference.trim() ||
+      `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const issuedDate = now.toLocaleDateString("en-ZA", {
       day: "2-digit",
       month: "short",
@@ -346,17 +356,18 @@ export default function OrdersPOS({
   }
 
   async function handleCreateOrder() {
-    if (!selectedForemanId) {
-      toast.error("Please select a foreman or admin");
+    if (requireReference && !reference.trim()) {
+      toast.error("Order number is required");
+      return;
+    }
+    if (selectedForemanIds.length === 0) {
+      toast.error("Please select at least one recipient");
       return;
     }
     if (cart.length === 0) {
       toast.error("Add at least one product to the order");
       return;
     }
-
-    const selected = foremen.find((f) => f.id === selectedForemanId);
-    const isAdmin = selected?.type === "admin";
 
     const itemsPayload = cart.map((item) => ({
       productId: item.productId,
@@ -368,45 +379,53 @@ export default function OrdersPOS({
 
     try {
       setSubmitting(true);
-      const res = await fetch("/api/app/admin/orders", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          accept: "application/json",
-        },
-        body: JSON.stringify({
-          ...(isAdmin
-            ? { adminUserId: selectedForemanId }
-            : { foremanId: selectedForemanId }),
-          items: itemsPayload,
-        }),
-      });
-      const json = await res.json().catch(() => null as any);
-      if (!res.ok) {
-        const msg =
-          json?.error ||
-          json?.message ||
-          `Failed to create order (${res.status})`;
-        throw new Error(msg);
+      setBulkProgress({ done: 0, total: selectedForemanIds.length });
+      let failed = 0;
+
+      for (let i = 0; i < selectedForemanIds.length; i++) {
+        const id = selectedForemanIds[i];
+        const recipient = foremen.find((f) => f.id === id);
+        const isAdmin = recipient?.type === "admin";
+
+        const res = await fetch("/api/app/admin/orders", {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({
+            ...(isAdmin ? { adminUserId: id } : { foremanId: id }),
+            ...(reference.trim() ? { reference: reference.trim() } : {}),
+            items: itemsPayload,
+          }),
+        });
+        const json = await res.json().catch(() => null as any);
+        if (!res.ok) {
+          const name = recipient?.name || recipient?.email || id;
+          const msg = res.status === 409
+            ? `Order "${reference.trim()}" already exists`
+            : `Failed for ${name}: ${json?.error ?? res.status}`;
+          toast.error(msg);
+          failed++;
+        }
+        setBulkProgress({ done: i + 1, total: selectedForemanIds.length });
       }
 
-      toast.success("Order created");
-      setCart([]);
-      onOrderCreated?.();
-    } catch (err) {
-      console.error(err);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create order",
-      );
+      if (failed === 0) {
+        const count = selectedForemanIds.length;
+        toast.success(count === 1 ? "Order created" : `${count} orders created`);
+        setCart([]);
+        setSelectedForemanIds([]);
+        setReference("");
+        onOrderCreated?.();
+      }
     } finally {
       setSubmitting(false);
+      setBulkProgress(null);
     }
   }
 
-  const selectedForeman = React.useMemo(
-    () => foremen.find((f) => f.id === selectedForemanId) ?? null,
-    [foremen, selectedForemanId],
+  const selectedForemen = React.useMemo(
+    () => foremen.filter((f) => selectedForemanIds.includes(f.id)),
+    [foremen, selectedForemanIds],
   );
 
   return (
@@ -442,15 +461,37 @@ export default function OrdersPOS({
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-0 border border-border rounded-md overflow-hidden">
           {/* LEFT PANEL */}
           <div className="border-r border-border">
+            {/* Order reference */}
+            <div className="border-b border-border p-5 bg-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                  Order Number
+                </span>
+                {requireReference && (
+                  <span className="text-[10px] font-bold text-destructive uppercase tracking-wide">required</span>
+                )}
+              </div>
+              <Input
+                placeholder={requireReference ? "e.g. 68090 (BuildSmart PO #)" : "e.g. 68090 (optional)"}
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className={`h-10 text-sm font-medium ${requireReference && !reference.trim() ? "border-destructive/50" : ""}`}
+              />
+            </div>
+
             {/* Foreman / Admin selector */}
             <div className="border-b border-border p-5 bg-card">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  {selectedForeman?.type === "admin"
-                    ? "Assign Admin"
-                    : "Assign Foreman / Admin"}
+                  Assign Recipients
                 </span>
+                {selectedForemanIds.length > 0 && (
+                  <span className="text-[10px] font-bold tabular-nums bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                    {selectedForemanIds.length}
+                  </span>
+                )}
               </div>
               <Popover open={foremanOpen} onOpenChange={setForemanOpen}>
                 <PopoverTrigger asChild>
@@ -460,21 +501,10 @@ export default function OrdersPOS({
                     aria-expanded={foremanOpen}
                     className="w-full justify-between h-10 text-sm font-medium"
                   >
-                    <span className="truncate flex items-center gap-2">
-                      {selectedForemanId ? (
-                        <>
-                          {selectedForeman?.type === "admin" && (
-                            <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
-                              Admin
-                            </span>
-                          )}
-                          {selectedForeman?.name ||
-                            selectedForeman?.email ||
-                            "Select…"}
-                        </>
-                      ) : (
-                        "Select foreman or admin"
-                      )}
+                    <span className="truncate text-muted-foreground">
+                      {selectedForemanIds.length === 0
+                        ? "Select foremen or admins…"
+                        : `${selectedForemanIds.length} recipient${selectedForemanIds.length !== 1 ? "s" : ""} selected`}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -491,16 +521,13 @@ export default function OrdersPOS({
                             <CommandItem
                               key={f.id}
                               value={`foreman ${f.name || f.email}`}
-                              onSelect={() => {
-                                setSelectedForemanId(f.id);
-                                setForemanOpen(false);
-                              }}
+                              onSelect={() => toggleForeman(f.id)}
                               className="text-sm"
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  selectedForemanId === f.id
+                                  selectedForemanIds.includes(f.id)
                                     ? "opacity-100"
                                     : "opacity-0",
                                 )}
@@ -516,16 +543,13 @@ export default function OrdersPOS({
                             <CommandItem
                               key={f.id}
                               value={`admin ${f.name || f.email}`}
-                              onSelect={() => {
-                                setSelectedForemanId(f.id);
-                                setForemanOpen(false);
-                              }}
+                              onSelect={() => toggleForeman(f.id)}
                               className="text-sm"
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  selectedForemanId === f.id
+                                  selectedForemanIds.includes(f.id)
                                     ? "opacity-100"
                                     : "opacity-0",
                                 )}
@@ -541,20 +565,31 @@ export default function OrdersPOS({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {selectedForeman && (
-                <div className="mt-2.5 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <p className="text-[11px] text-muted-foreground tracking-wide">
-                    Order assigned to{" "}
-                    <span className="font-bold text-foreground">
-                      {selectedForeman.name || selectedForeman.email}
+
+              {/* Selected recipient badges */}
+              {selectedForemen.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {selectedForemen.map((f) => (
+                    <span
+                      key={f.id}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium bg-muted border border-border px-2 py-1 rounded-full"
+                    >
+                      {f.type === "admin" && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1 rounded">
+                          Admin
+                        </span>
+                      )}
+                      {f.name || f.email}
+                      <button
+                        type="button"
+                        onClick={() => toggleForeman(f.id)}
+                        className="ml-0.5 text-muted-foreground hover:text-destructive leading-none"
+                        aria-label={`Remove ${f.name}`}
+                      >
+                        ×
+                      </button>
                     </span>
-                    {selectedForeman.type === "admin" && (
-                      <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
-                        Admin
-                      </span>
-                    )}
-                  </p>
+                  ))}
                 </div>
               )}
             </div>
@@ -691,7 +726,16 @@ export default function OrdersPOS({
             {/* Submit bar */}
             <div className="border-t border-border p-4 bg-primary flex items-center justify-between gap-4">
               <div className="text-primary-foreground">
-                {cart.length > 0 ? (
+                {bulkProgress ? (
+                  <div>
+                    <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
+                      Creating Orders
+                    </div>
+                    <div className="text-xl font-bold tabular-nums">
+                      {bulkProgress.done} / {bulkProgress.total}
+                    </div>
+                  </div>
+                ) : cart.length > 0 ? (
                   <div>
                     <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
                       Order Total
@@ -707,7 +751,7 @@ export default function OrdersPOS({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {cart.length > 0 && selectedForemanId && (
+                {cart.length > 0 && selectedForemanIds.length === 1 && (
                   <button
                     onClick={handlePrintVoucher}
                     disabled={printing}
@@ -723,19 +767,23 @@ export default function OrdersPOS({
                 )}
                 <button
                   onClick={handleCreateOrder}
-                  disabled={
-                    submitting || !selectedForemanId || cart.length === 0
-                  }
+                  disabled={submitting || selectedForemanIds.length === 0 || cart.length === 0}
                   className={`
                     px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
                     ${
-                      submitting || !selectedForemanId || cart.length === 0
+                      submitting || selectedForemanIds.length === 0 || cart.length === 0
                         ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
                         : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
                     }
                   `}
                 >
-                  {submitting ? "Saving…" : "Confirm Order →"}
+                  {submitting
+                    ? bulkProgress
+                      ? `Creating ${bulkProgress.done + 1} of ${bulkProgress.total}…`
+                      : "Saving…"
+                    : selectedForemanIds.length > 1
+                      ? `Confirm ${selectedForemanIds.length} Orders →`
+                      : "Confirm Order →"}
                 </button>
               </div>
             </div>

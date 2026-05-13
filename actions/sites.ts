@@ -215,7 +215,41 @@ export async function listSites(input?: {
     },
   });
 
-  return { ok: true as const, sites: sites.map(serializeSite) };
+  // ── Historical costs from BuildSmart (grouped by site) ──
+  const siteIds = sites.map((s) => s.id);
+  const histDateWhere = hasDateFilter ? { transactionDate: dateFilter } : {};
+
+  const [histWages, histMaterial] = await Promise.all([
+    prisma.historicalSiteCost.groupBy({
+      by: ["siteId"],
+      where: { siteId: { in: siteIds }, category: "LABOUR", ...histDateWhere },
+      _sum: { amount: true },
+    }),
+    prisma.historicalSiteCost.groupBy({
+      by: ["siteId"],
+      where: { siteId: { in: siteIds }, category: { not: "LABOUR" }, ...histDateWhere },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const histWagesMap = new Map(
+    histWages.map((r) => [r.siteId, Number(r._sum.amount ?? 0)]),
+  );
+  const histMaterialMap = new Map(
+    histMaterial.map((r) => [r.siteId, Number(r._sum.amount ?? 0)]),
+  );
+
+  return {
+    ok: true as const,
+    sites: sites.map((s) => {
+      const row = serializeSite(s);
+      return {
+        ...row,
+        totalWages: row.totalWages + (histWagesMap.get(s.id) ?? 0),
+        totalMaterialCost: row.totalMaterialCost + (histMaterialMap.get(s.id) ?? 0),
+      };
+    }),
+  };
 }
 
 export type SiteRow =

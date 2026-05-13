@@ -47,11 +47,60 @@ const styles = StyleSheet.create({
   page: {
     fontSize: 9,
     fontFamily: "Helvetica",
-    paddingTop: 24,
-    paddingBottom: 52,
-    paddingHorizontal: 28,
+    paddingTop: 52,
+    paddingBottom: 68,
+    paddingHorizontal: 42,
     color: "#111111",
     lineHeight: 1.25,
+    position: "relative",
+  },
+  pageBorderOuter: {
+    position: "absolute",
+    top: 18,
+    left: 20,
+    right: 20,
+    bottom: 18,
+    border: "1 solid #2F3B59",
+  },
+  pageBorderMiddle: {
+    position: "absolute",
+    top: 22,
+    left: 24,
+    right: 24,
+    bottom: 22,
+    border: "3 solid #2F3B59",
+  },
+  pageBorderInner: {
+    position: "absolute",
+    top: 28,
+    left: 30,
+    right: 30,
+    bottom: 28,
+    border: "1 solid #2F3B59",
+  },
+  box: {
+    flex: 1,
+    paddingTop: 14,
+    paddingBottom: 50,
+    paddingHorizontal: 10,
+  },
+  watermark: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    transform: "rotate(-35deg)",
+  },
+  watermarkText: {
+    fontSize: 88,
+    fontFamily: "Helvetica-Bold",
+    color: "#2F3B59",
+    opacity: 0.07,
+    letterSpacing: 8,
+    textTransform: "uppercase",
   },
 
   /* ---- Header ---- */
@@ -186,9 +235,9 @@ const styles = StyleSheet.create({
   /* ---- Footer ---- */
   footer: {
     position: "absolute",
-    left: 28,
-    right: 28,
-    bottom: 14,
+    left: 40,
+    right: 40,
+    bottom: 28,
     flexDirection: "row",
     justifyContent: "space-between",
     fontSize: 7,
@@ -268,6 +317,13 @@ export function PlantIssueVoucherDocument({ data }: { data: PlantIssueVoucherDat
   return (
     <Document title={`Plant Issue Order ${data.orderNumber}`}>
       <Page size="A4" style={styles.page}>
+        <View style={styles.pageBorderOuter} fixed />
+        <View style={styles.pageBorderMiddle} fixed />
+        <View style={styles.pageBorderInner} fixed />
+        <View style={styles.watermark} fixed>
+          <Text style={styles.watermarkText}>{data.supervisorName}</Text>
+        </View>
+        <View style={styles.box}>
         {/* ---- Header ---- */}
         <View style={styles.topRow}>
           <View style={styles.brandBox}>
@@ -411,6 +467,8 @@ export function PlantIssueVoucherDocument({ data }: { data: PlantIssueVoucherDat
             </View>
           </View>
         </View>
+
+        </View>{/* /box */}
 
         {/* ---- Footer ---- */}
         <View style={styles.footer} fixed>

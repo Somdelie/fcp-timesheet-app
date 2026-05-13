@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { siteId, productId, quantity, note, deployedOn, unitPrice, chargeToSite } = body as {
+    const { siteId, productId, quantity, note, deployedOn, unitPrice, chargeToSite, reference, supervisorName } = body as {
       siteId: string;
       productId: string;
       quantity?: number;
@@ -94,17 +94,35 @@ export async function POST(req: Request) {
       deployedOn?: string;
       unitPrice?: number | null;
       chargeToSite?: boolean;
+      reference?: string | null;
+      supervisorName?: string | null;
     };
 
     if (!siteId || !productId)
       return NextResponse.json({ error: "siteId and productId are required" }, { status: 400 });
 
+    // Duplicate reference check — block if any assignment with this reference already exists
+    if (reference?.trim()) {
+      const existing = await prisma.sitePlantAssignment.findFirst({
+        where: { reference: reference.trim() },
+        select: { id: true },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: `Deployment "${reference.trim()}" already exists` },
+          { status: 409, headers: CORS },
+        );
+      }
+    }
+
     const row = await prisma.sitePlantAssignment.create({
       data: {
+        reference: reference?.trim() || null,
         siteId,
         productId,
         quantity: quantity ?? 1,
         note: note?.trim() || null,
+        supervisorName: supervisorName?.trim() || null,
         deployedOn: deployedOn ? new Date(deployedOn) : new Date(),
         status: "DEPLOYED",
         assignedByUserId: auth.id,

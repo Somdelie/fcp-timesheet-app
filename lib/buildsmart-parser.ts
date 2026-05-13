@@ -1,8 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdf = require("pdf-parse/lib/pdf-parse");
+import pdf from "pdf-parse";
+import { normalizeBuildSmartProductCode } from "@/lib/procurement/buildsmartProductCodes";
 
 // ── Types ──
-
 export type ParsedItem = {
   costCode: string;
   productCode: string;
@@ -23,6 +22,7 @@ export type ParsedOrder = {
   siteCode: string | null;
   siteName: string | null;
   createdDate: string | null;
+  subject: string | null;
   foremanNameHint: string | null;
   items: ParsedItem[];
   rawText?: string;
@@ -104,36 +104,7 @@ export function extractCreatedDate(text: string): string | null {
 // ── PDF product code → DB SKU conversion ──
 
 export function pdfCodeToSku(code: string, unit: string): string | null {
-  const cleaned = code.replace(/\s/g, "");
-  const prefixMatch = cleaned.match(/^([A-Z]+)/i);
-  if (!prefixMatch) return null;
-
-  const prefix = prefixMatch[1].toUpperCase();
-  let digits = cleaned.slice(prefix.length);
-
-  if (/^each$/i.test(unit)) return null;
-
-  const unitMatch = unit.match(/^(\d+)([A-Z]+)?$/i);
-  if (!unitMatch) return null;
-
-  const sizeStr = unitMatch[1];
-  const unitLetter = (unitMatch[2] || "").toUpperCase();
-
-  // Strip size+unit suffix from the digit portion if present
-  const suffix1 = sizeStr + unitLetter;
-  const suffix2 = sizeStr;
-
-  if (suffix1 && digits.toUpperCase().endsWith(suffix1)) {
-    digits = digits.slice(0, -suffix1.length);
-  } else if (suffix2 && digits.endsWith(suffix2)) {
-    digits = digits.slice(0, -suffix2.length);
-  }
-
-  digits = digits.replace(/[A-Za-z]+$/, "");
-  digits = digits.padStart(6, "0");
-
-  const sizePadded = sizeStr.padStart(4, "0");
-  return `${prefix}${digits}-${sizePadded}`;
+  return normalizeBuildSmartProductCode(code, unit);
 }
 
 // ── Extract items from the PDF text ──
@@ -193,8 +164,6 @@ function getSection(text: string, match: RegExpMatchArray): string {
   return text.slice(startIdx, endIdx).trim();
 }
 
-
-
 type AdminProductDto = {
   id: string;
   name: string;
@@ -206,10 +175,11 @@ type AdminProductDto = {
 /* ------------------------------------------------------------ */
 function normalizePdfText(section: string): string {
   return section
-    .replace(/\u00A0/g, " ")                 // fix NBSP
-    .replace(/(\d{6}[A-Z0-9]+)/g, "\n$1")    // split merged rows
-    .replace(/\s+/g, " ")                    // collapse spaces
-    .replace(/\n\s+/g, "\n")                 // trim line starts
+    .replace(/\u00A0/g, " ") // fix NBSP
+    .replace(/(\d{6}[A-Z0-9]+)/g, "\n$1") // split merged rows
+    .replace(/[ \t]+/g, " ") // collapse horizontal spaces only (preserve newlines)
+    .replace(/\n[ \t]*/g, "\n") // trim line starts
+    .replace(/\n{2,}/g, "\n") // collapse blank lines
     .trim();
 }
 
@@ -218,7 +188,7 @@ function normalizePdfText(section: string): string {
 /* ------------------------------------------------------------ */
 function matchProduct(
   item: ParsedItem,
-  products: AdminProductDto[]
+  products: AdminProductDto[],
 ): {
   productId: string | null;
   productName: string | null;
@@ -229,7 +199,7 @@ function matchProduct(
   // 1. SKU match (strongest)
   if (item.candidateSku) {
     const skuMatch = products.find(
-      (p) => p.sku?.toLowerCase() === item.candidateSku?.toLowerCase()
+      (p) => p.sku?.toLowerCase() === item.candidateSku?.toLowerCase(),
     );
     if (skuMatch) {
       return {
@@ -243,7 +213,7 @@ function matchProduct(
   // 2. Product code match
   if (item.productCode) {
     const codeMatch = products.find((p) =>
-      p.name.toLowerCase().includes(item.productCode.toLowerCase())
+      p.name.toLowerCase().includes(item.productCode.toLowerCase()),
     );
     if (codeMatch) {
       return {
@@ -255,9 +225,7 @@ function matchProduct(
   }
 
   // 3. Description match
-  const descMatch = products.find((p) =>
-    desc.includes(p.name.toLowerCase())
-  );
+  const descMatch = products.find((p) => desc.includes(p.name.toLowerCase()));
   if (descMatch) {
     return {
       productId: descMatch.id,
@@ -278,7 +246,7 @@ function matchProduct(
 /* ------------------------------------------------------------ */
 export function extractBalanceSheetItems(
   section: string,
-  products: AdminProductDto[]
+  products: AdminProductDto[],
 ): ParsedItem[] {
   const items: ParsedItem[] = [];
 
@@ -301,43 +269,55 @@ export function extractBalanceSheetItems(
     let unit = "";
 
     /* ----------------------------- */
-    /* FORMAT 1: Proper spaced PDF   */
-    /* 1 080110 F0203 Brush ... 1 each */
+    /* FORMAT 1a: With product code  */
+    /* 1 080110 F0203 Brush ... 4 each */
     /* ----------------------------- */
-    let m = line.match(
-      /^\d+\s+(\d{6})\s+([A-Z0-9]+)\s+(.+?)\s+(\d+)\s+(each|[A-Za-z]+)/i
+    const m1a = line.match(
+      /^\d+\s+(\d{6})\s+([A-Z]{1,4}\d[A-Z0-9]*)\s+(.+?)\s+(\d+)\s+(each|[A-Za-z]+)/i,
     );
 
-    if (m) {
-      costCode = m[1];
-      productCode = m[2];
-      description = m[3];
-      quantity = Number(m[4]);
-      unit = m[5];
+    /* ----------------------------- */
+    /* FORMAT 1b: No product code    */
+    /* 3 080110 CLASSIC REFILL 4 each */
+    /* ----------------------------- */
+    const m1b = !m1a
+      ? line.match(/^\d+\s+(\d{6})\s+(.+?)\s+(\d+)\s+(each|[A-Za-z]+)/i)
+      : null;
+
+    if (m1a) {
+      costCode = m1a[1];
+      productCode = m1a[2];
+      description = m1a[3];
+      quantity = Number(m1a[4]);
+      unit = m1a[5];
+    } else if (m1b) {
+      costCode = m1b[1];
+      productCode = "";
+      description = m1b[2];
+      quantity = Number(m1b[3]);
+      unit = m1b[4];
     } else {
       /* ----------------------------- */
       /* FORMAT 2: Collapsed PDF       */
       /* 080110F0203 Brush ...each 11  */
       /* ----------------------------- */
-      m = line.match(
-        /^(\d{6})([A-Z0-9]+)\s+(.+?)(each|[A-Za-z]+)\s+(\d+)$/i
+      const m2 = line.match(
+        /^(\d{6})([A-Z0-9]+)\s+(.+?)(each|[A-Za-z]+)\s+(\d+)$/i,
       );
 
-      if (!m) continue;
+      if (!m2) continue;
 
-      costCode = m[1];
-      productCode = m[2];
-      description = m[3];
-      unit = m[4];
+      costCode = m2[1];
+      productCode = m2[2];
+      description = m2[3];
+      unit = m2[4];
 
-      const qtyAndRow = m[5];
+      const qtyAndRow = m2[5];
 
       // remove row number suffix
       const rowLen = String(idx + 1).length;
       const qtyStr =
-        qtyAndRow.length > rowLen
-          ? qtyAndRow.slice(0, -rowLen)
-          : qtyAndRow;
+        qtyAndRow.length > rowLen ? qtyAndRow.slice(0, -rowLen) : qtyAndRow;
 
       quantity = Number(qtyStr);
     }
@@ -347,9 +327,7 @@ export function extractBalanceSheetItems(
     const unitClean = unit.toLowerCase().replace(/\s/g, "");
 
     const candidateSku =
-      productCode && unitClean
-        ? pdfCodeToSku(productCode, unitClean)
-        : null;
+      productCode && unitClean ? pdfCodeToSku(productCode, unitClean) : null;
 
     const baseItem: ParsedItem = {
       costCode,
@@ -448,7 +426,8 @@ export async function parsePdfBuffer(
   const { siteCode, siteName } = extractContract(text);
   const createdDate = extractCreatedDate(text);
   const items = extractItems(text, siteCode);
-  const foremanNameHint = extractForemanNameFromSubject(extractSubject(text));
+  const subject = extractSubject(text);
+  const foremanNameHint = extractForemanNameFromSubject(subject);
 
   return {
     orderNumber,
@@ -457,6 +436,7 @@ export async function parsePdfBuffer(
     siteCode,
     siteName,
     createdDate,
+    subject,
     foremanNameHint,
     items,
     rawText: text,

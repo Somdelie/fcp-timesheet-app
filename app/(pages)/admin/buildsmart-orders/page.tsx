@@ -11,6 +11,9 @@ import {
   Loader2,
   Download,
   FolderOpen,
+  History,
+  TriangleAlert,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Card,
@@ -24,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 type UploadFile = {
@@ -48,6 +52,15 @@ type SeedOrder = {
   items: SeedItem[];
 };
 
+type StockOrderResult = {
+  orderNumber: string;
+  foremanName: string | null;
+  createdAt: string;
+  itemsCreated: number;
+  status: "created" | "skipped" | "duplicate";
+  reason?: string;
+};
+
 type SeedResponse = {
   summary: {
     totalFiles: number;
@@ -56,13 +69,23 @@ type SeedResponse = {
     savedToDb: number;
     duplicates: number;
     skippedOrders: number;
+    stockOrdersDetected?: number;
+    stockOrdersCreated?: number;
   };
   orders: SeedOrder[];
+  stockOrders?: StockOrderResult[];
   savedOrderIds?: string[];
   duplicateRefs?: string[];
   skippedOrderNumbers: string[];
   skipReasons?: Record<string, string[]>;
   prismaSeedCode?: string;
+};
+
+type PdfOrdersTabProps = {
+  title: string;
+  description: string;
+  badgeText: string;
+  apiUrlDefault: string;
 };
 
 const ACCEPTED_TYPES = ["application/pdf"];
@@ -91,12 +114,56 @@ function downloadText(filename: string, content: string) {
 }
 
 export default function BuildsmartPdfSeedPage() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Tabs defaultValue="orders" className="w-full">
+        <TabsList className="mb-4 rounded border bg-muted/40 p-1">
+          <TabsTrigger value="orders" className="rounded">
+            <FileText className="mr-2 h-4 w-4" />
+            PDF Orders
+          </TabsTrigger>
+          <TabsTrigger value="materials" className="rounded">
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Historical Materials
+          </TabsTrigger>
+          <TabsTrigger value="historical" className="rounded">
+            <History className="mr-2 h-4 w-4" />
+            Historical Costs
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="orders">
+          <PdfOrdersTab
+            title="BuildSmart PDF Seeder"
+            description="Drop all order PDFs here, then generate seed-ready order payloads in one run."
+            badgeText="PDF batch import"
+            apiUrlDefault="/api/admin/buildsmart/seed-from-pdfs"
+          />
+        </TabsContent>
+        <TabsContent value="materials">
+          <HistoricalMaterialsTab />
+        </TabsContent>
+        <TabsContent value="historical">
+          <HistoricalCostsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ─── PDF Orders tab (original content) ───────────────────────────────────────
+
+function PdfOrdersTab({
+  title,
+  description,
+  badgeText,
+  apiUrlDefault,
+}: PdfOrdersTabProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SeedResponse | null>(null);
-  const [apiUrl, setApiUrl] = useState("/api/admin/buildsmart/seed-from-pdfs");
+  const [apiUrl, setApiUrl] = useState(apiUrlDefault);
 
   const sortedFiles = useMemo(
     () =>
@@ -195,383 +262,448 @@ export default function BuildsmartPdfSeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <Card className="rounded border shadow-sm">
-            <CardHeader className="space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <CardTitle className="text-2xl font-semibold tracking-tight">
-                    BuildSmart PDF Seeder
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-sm">
-                    Drop all order PDFs here, then generate seed-ready order
-                    payloads in one run.
-                  </CardDescription>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="rounded-full px-3 py-1 text-xs"
-                >
-                  PDF batch import
-                </Badge>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded border shadow-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl font-semibold tracking-tight">
+                  {title}
+                </CardTitle>
+                <CardDescription className="mt-1 text-sm">
+                  {description}
+                </CardDescription>
               </div>
-            </CardHeader>
-
-            <CardContent className="space-y-5">
-              <div
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setDragActive(true);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setDragActive(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setDragActive(false);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setDragActive(false);
-                  if (e.dataTransfer.files?.length)
-                    addFiles(e.dataTransfer.files);
-                }}
-                className={cn(
-                  "group rounded border-2 border-dashed p-8 transition",
-                  dragActive
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
-                )}
+              <Badge
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-xs"
               >
-                <div className="flex flex-col items-center justify-center text-center">
-                  <div className="mb-4 rounded border bg-background p-4 shadow-sm">
-                    <Upload className="h-8 w-8" />
-                  </div>
-                  <h3 className="text-lg font-medium">Drop PDFs here</h3>
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Supports multiple BuildSmart order PDFs at once. Filenames
-                    like{" "}
-                    <span className="font-medium text-foreground">
-                      ORDER 66681.pdf
-                    </span>{" "}
-                    are picked up automatically.
-                  </p>
-                  <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                    <Button
-                      onClick={() => inputRef.current?.click()}
-                      className="rounded"
-                    >
-                      <FolderOpen className="mr-2 h-4 w-4" />
-                      Choose PDFs
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={clearAll}
-                      disabled={!files.length}
-                      className="rounded"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Clear list
-                    </Button>
-                  </div>
-                  <Input
-                    ref={inputRef}
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.length) addFiles(e.target.files);
-                      e.currentTarget.value = "";
-                    }}
-                  />
+                {badgeText}
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                if (e.dataTransfer.files?.length)
+                  addFiles(e.dataTransfer.files);
+              }}
+              className={cn(
+                "group rounded border-2 border-dashed p-8 transition",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+              )}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="mb-4 rounded border bg-background p-4 shadow-sm">
+                  <Upload className="h-8 w-8" />
                 </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="rounded border bg-muted/20 shadow-none">
-                  <CardContent className="p-4">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Queued PDFs
-                    </div>
-                    <div className="mt-2 text-3xl font-semibold">
-                      {files.length}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="rounded border bg-muted/20 shadow-none">
-                  <CardContent className="p-4">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Detected orders
-                    </div>
-                    <div className="mt-2 text-3xl font-semibold">
-                      {files.filter((f) => f.orderNumber !== "Unknown").length}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="rounded border bg-muted/20 shadow-none">
-                  <CardContent className="p-4">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                      API endpoint
-                    </div>
-                    <div className="mt-2 truncate text-sm font-medium">
-                      {apiUrl}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Process endpoint</label>
+                <h3 className="text-lg font-medium">Drop PDFs here</h3>
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                  Supports multiple BuildSmart purchase-order PDFs at once.
+                  Filenames like{" "}
+                  <span className="font-medium text-foreground">
+                    ORDER 66681.pdf
+                  </span>{" "}
+                  are picked up automatically and seeded as material orders.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <Button
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded"
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Choose PDFs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={clearAll}
+                    disabled={!files.length}
+                    className="rounded"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear list
+                  </Button>
+                </div>
                 <Input
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  className="rounded"
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
                 />
               </div>
+            </div>
 
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!files.length || isSubmitting}
-                  size="lg"
-                  className="rounded px-6"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="mr-2 h-4 w-4" />
-                  )}
-                  {isSubmitting ? "Processing PDFs..." : "Generate seed output"}
-                </Button>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="rounded border bg-muted/20 shadow-none">
+                <CardContent className="p-4">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Queued PDFs
+                  </div>
+                  <div className="mt-2 text-3xl font-semibold">
+                    {files.length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="rounded border bg-muted/20 shadow-none">
+                <CardContent className="p-4">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Detected orders
+                  </div>
+                  <div className="mt-2 text-3xl font-semibold">
+                    {files.filter((f) => f.orderNumber !== "Unknown").length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="rounded border bg-muted/20 shadow-none">
+                <CardContent className="p-4">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    API endpoint
+                  </div>
+                  <div className="mt-2 truncate text-sm font-medium">
+                    {apiUrl}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                <Button
-                  variant="outline"
-                  disabled={!result?.prismaSeedCode}
-                  onClick={() =>
-                    result?.prismaSeedCode &&
-                    downloadText(
-                      "site-product-orders.seed.ts",
-                      result.prismaSeedCode,
-                    )
-                  }
-                  className="rounded"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download seed file
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Process endpoint</label>
+              <Input
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                className="rounded"
+              />
+            </div>
 
-          <Card className="rounded border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Upload queue</CardTitle>
-              <CardDescription>
-                Review each PDF before processing.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-155 pr-3">
-                <div className="space-y-3">
-                  {!sortedFiles.length ? (
-                    <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
-                      No PDFs added yet.
-                    </div>
-                  ) : (
-                    sortedFiles.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="rounded border bg-card p-4 shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-3">
-                              <div className="rounded border bg-muted p-2">
-                                <FileText className="h-4 w-4" />
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={handleSubmit}
+                disabled={!files.length || isSubmitting}
+                size="lg"
+                className="rounded px-6"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                {isSubmitting ? "Processing PDFs..." : "Generate seed output"}
+              </Button>
+
+              <Button
+                variant="outline"
+                disabled={!result?.prismaSeedCode}
+                onClick={() =>
+                  result?.prismaSeedCode &&
+                  downloadText(
+                    "site-product-orders.seed.ts",
+                    result.prismaSeedCode,
+                  )
+                }
+                className="rounded"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download seed file
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Upload queue</CardTitle>
+            <CardDescription>
+              Review each PDF before processing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-155 pr-3">
+              <div className="space-y-3">
+                {!sortedFiles.length ? (
+                  <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No PDFs added yet.
+                  </div>
+                ) : (
+                  sortedFiles.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded border bg-card p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded border bg-muted p-2">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium">
+                                {entry.file.name}
                               </div>
-                              <div className="min-w-0">
-                                <div className="truncate text-sm font-medium">
-                                  {entry.file.name}
-                                </div>
-                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                  <span>Order {entry.orderNumber}</span>
-                                  <span>&bull;</span>
-                                  <span>{fileSizeLabel(entry.file.size)}</span>
-                                </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span>Order {entry.orderNumber}</span>
+                                <span>&bull;</span>
+                                <span>{fileSizeLabel(entry.file.size)}</span>
                               </div>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2">
-                            {entry.status === "queued" && (
-                              <Badge variant="secondary">Queued</Badge>
-                            )}
-                            {entry.status === "uploading" && (
-                              <Badge>Processing</Badge>
-                            )}
-                            {entry.status === "done" && (
-                              <Badge className="gap-1 rounded-full">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Done
-                              </Badge>
-                            )}
-                            {entry.status === "error" && (
-                              <Badge
-                                variant="destructive"
-                                className="gap-1 rounded-full"
-                              >
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                                Skipped
-                              </Badge>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="rounded"
-                              onClick={() => removeFile(entry.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
                         </div>
-                        {entry.message ? (
-                          <p className="mt-3 text-xs text-muted-foreground">
-                            {entry.message}
-                          </p>
-                        ) : null}
+
+                        <div className="flex items-center gap-2">
+                          {entry.status === "queued" && (
+                            <Badge variant="secondary">Queued</Badge>
+                          )}
+                          {entry.status === "uploading" && (
+                            <Badge>Processing</Badge>
+                          )}
+                          {entry.status === "done" && (
+                            <Badge className="gap-1 rounded-full">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Done
+                            </Badge>
+                          )}
+                          {entry.status === "error" && (
+                            <Badge
+                              variant="destructive"
+                              className="gap-1 rounded-full"
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              Skipped
+                            </Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded"
+                            onClick={() => removeFile(entry.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    ))
+                      {entry.message ? (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          {entry.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Run summary</CardTitle>
+            <CardDescription>
+              What happened after processing the uploaded PDFs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!result ? (
+              <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                No output yet.
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <MetricCard label="Files" value={result.summary.totalFiles} />
+                  <MetricCard
+                    label="Matched"
+                    value={result.summary.seededOrders}
+                  />
+                  <MetricCard
+                    label="Saved to DB"
+                    value={result.summary.savedToDb}
+                  />
+                  <MetricCard
+                    label="Duplicates"
+                    value={result.summary.duplicates}
+                  />
+                  <MetricCard
+                    label="Skipped"
+                    value={result.summary.skippedOrders}
+                  />
+                  {(result.summary.stockOrdersDetected ?? 0) > 0 && (
+                    <>
+                      <MetricCard
+                        label="STOCK detected"
+                        value={result.summary.stockOrdersDetected ?? 0}
+                      />
+                      <MetricCard
+                        label="STOCK created"
+                        value={result.summary.stockOrdersCreated ?? 0}
+                      />
+                    </>
                   )}
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
 
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <Card className="rounded border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Run summary</CardTitle>
-              <CardDescription>
-                What happened after processing the uploaded PDFs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!result ? (
-                <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No output yet.
-                </div>
-              ) : (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <MetricCard
-                      label="Files"
-                      value={result.summary.totalFiles}
-                    />
-                    <MetricCard
-                      label="Matched"
-                      value={result.summary.seededOrders}
-                    />
-                    <MetricCard
-                      label="Saved to DB"
-                      value={result.summary.savedToDb}
-                    />
-                    <MetricCard
-                      label="Duplicates"
-                      value={result.summary.duplicates}
-                    />
-                    <MetricCard
-                      label="Skipped"
-                      value={result.summary.skippedOrders}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-3">
-                    <div className="text-sm font-medium">
-                      Skipped order numbers
-                    </div>
-                    {result.skippedOrderNumbers.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {result.skippedOrderNumbers.map((orderNumber) => (
-                          <Badge
-                            key={orderNumber}
-                            variant="destructive"
-                            className="rounded-full px-3 py-1"
+                {result.stockOrders && result.stockOrders.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        Stock Orders
+                        <Badge
+                          variant="secondary"
+                          className="rounded-full px-2 py-0.5 text-xs"
+                        >
+                          {result.stockOrders.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {result.stockOrders.map((o) => (
+                          <div
+                            key={o.orderNumber}
+                            className={`rounded border p-3 flex items-center justify-between gap-3 ${
+                              o.status === "created"
+                                ? "bg-green-50 border-green-200"
+                                : o.status === "duplicate"
+                                  ? "bg-muted/30"
+                                  : "bg-amber-50 border-amber-200"
+                            }`}
                           >
-                            {orderNumber}
-                          </Badge>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium">
+                                PO #{o.orderNumber}
+                                {o.foremanName && (
+                                  <span className="ml-2 text-muted-foreground font-normal">
+                                    → {o.foremanName}
+                                  </span>
+                                )}
+                              </div>
+                              {o.reason && (
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  {o.reason}
+                                </div>
+                              )}
+                            </div>
+                            <Badge
+                              variant={
+                                o.status === "created" ? "default" : "secondary"
+                              }
+                              className="shrink-0 rounded-full"
+                            >
+                              {o.status === "created"
+                                ? `${o.itemsCreated} items`
+                                : o.status === "duplicate"
+                                  ? "Duplicate"
+                                  : "Skipped"}
+                            </Badge>
+                          </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        No skipped orders.
-                      </div>
-                    )}
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">
+                    Skipped order numbers
                   </div>
-
-                  {!!result.skipReasons &&
-                    Object.keys(result.skipReasons).length > 0 && (
-                      <div className="space-y-3">
-                        <div className="text-sm font-medium">Skip reasons</div>
-                        <div className="space-y-3">
-                          {Object.entries(result.skipReasons).map(
-                            ([orderNumber, reasons]) => (
-                              <div
-                                key={orderNumber}
-                                className="rounded border bg-muted/20 p-4"
-                              >
-                                <div className="text-sm font-semibold">
-                                  Order {orderNumber}
-                                </div>
-                                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                  {reasons.map((reason) => (
-                                    <li key={reason}>&bull; {reason}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="rounded border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Generated seed payload</CardTitle>
-              <CardDescription>
-                Preview of the returned orders before you write them to the
-                database.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!result ? (
-                <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  Process PDFs to preview generated orders.
+                  {result.skippedOrderNumbers.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {result.skippedOrderNumbers.map((orderNumber) => (
+                        <Badge
+                          key={orderNumber}
+                          variant="destructive"
+                          className="rounded-full px-3 py-1"
+                        >
+                          {orderNumber}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No skipped orders.
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <ScrollArea className="h-140 rounded border bg-muted/20 p-4">
-                  <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-                    {JSON.stringify(result.orders, null, 2)}
-                  </pre>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+
+                {!!result.skipReasons &&
+                  Object.keys(result.skipReasons).length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium">Skip reasons</div>
+                      <div className="space-y-3">
+                        {Object.entries(result.skipReasons).map(
+                          ([orderNumber, reasons]) => (
+                            <div
+                              key={orderNumber}
+                              className="rounded border bg-muted/20 p-4"
+                            >
+                              <div className="text-sm font-semibold">
+                                Order {orderNumber}
+                              </div>
+                              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                                {reasons.map((reason) => (
+                                  <li key={reason}>&bull; {reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Generated seed payload</CardTitle>
+            <CardDescription>
+              Preview of the returned orders before you write them to the
+              database.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!result ? (
+              <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                Process PDFs to preview generated orders.
+              </div>
+            ) : (
+              <ScrollArea className="h-140 rounded border bg-muted/20 p-4">
+                <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                  {JSON.stringify(result.orders, null, 2)}
+                </pre>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -584,6 +716,1040 @@ function MetricCard({ label, value }: { label: string; value: number }) {
         {label}
       </div>
       <div className="mt-2 text-2xl font-semibold">{value}</div>
+    </div>
+  );
+}
+
+// ─── Historical Materials tab ─────────────────────────────────────────────────
+
+type MatOrderLine = {
+  description: string;
+  quantity: number | null;
+  unit: string | null;
+  unitPrice: string | null;
+  totalAmount: string;
+  ledgerCode: string;
+  batchRef: string;
+};
+
+type MatOrderPreview = {
+  fileName: string;
+  orderNumber: string | null;
+  siteCode: string;
+  siteName: string | null;
+  transactionDate: string;
+  totalAmount: string;
+  lineCount: number;
+  lines: MatOrderLine[];
+};
+
+type MatParseResponse = {
+  action: "parse";
+  totalOrders: number;
+  totalLines: number;
+  parseWarnings: string[];
+  orders: MatOrderPreview[];
+};
+
+type MatImportResult = {
+  orderNumber: string | null;
+  siteCode: string;
+  siteName: string | null;
+  transactionDate: string;
+  totalAmount: string;
+  linesCreated: number;
+  status: string;
+  reason?: string;
+};
+
+type MatImportResponse = {
+  action: "import";
+  summary: Record<string, number>;
+  totalProcessed: number;
+  parseWarnings: string[];
+  results: MatImportResult[];
+};
+
+const MAT_STATUS_BADGE: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  CREATED: { label: "Created", variant: "default" },
+  DUPLICATE: { label: "Already imported", variant: "secondary" },
+  MISSING_SITE: { label: "Missing site", variant: "destructive" },
+  NO_ORDER_NUMBER: { label: "No order number", variant: "outline" },
+  ERROR: { label: "Error", variant: "destructive" },
+};
+
+function HistoricalMaterialsTab() {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [siteCodeOverride, setSiteCodeOverride] = useState("");
+  const [isBusy, setIsBusy] = useState(false);
+  const [preview, setPreview] = useState<MatParseResponse | null>(null);
+  const [importResult, setImportResult] = useState<MatImportResponse | null>(null);
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null);
+
+  function addFiles(list: FileList | File[]) {
+    const incoming = Array.from(list).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    setFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      return [...prev, ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`))];
+    });
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  async function callApi(action: "parse" | "import") {
+    if (!files.length || isBusy) return;
+    setIsBusy(true);
+    if (action === "parse") setImportResult(null);
+    setImportProgress(null);
+
+    try {
+      const fd = new FormData();
+      fd.append("action", action);
+      if (siteCodeOverride.trim()) fd.append("siteCode", siteCodeOverride.trim());
+      for (const f of files) fd.append("pdfs", f, f.name);
+
+      const res = await fetch("/api/admin/buildsmart/seed-material-orders", {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any).error ?? "Request failed");
+      }
+
+      if (action === "parse") {
+        const data = await res.json();
+        setPreview(data as MatParseResponse);
+      } else {
+        // Stream NDJSON progress events
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const streamedResults: MatImportResult[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop()!;
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const event = JSON.parse(line) as
+              | { type: "progress"; total: number; done: number; result: MatImportResult }
+              | { type: "done"; summary: Record<string, number>; totalProcessed: number; parseWarnings: string[] }
+              | { type: "error"; error: string };
+
+            if (event.type === "progress") {
+              setImportProgress({ done: event.done, total: event.total });
+              streamedResults.push(event.result);
+            } else if (event.type === "done") {
+              setImportResult({
+                action: "import",
+                summary: event.summary,
+                totalProcessed: event.totalProcessed,
+                parseWarnings: event.parseWarnings,
+                results: streamedResults,
+              });
+              setImportProgress(null);
+            } else if (event.type === "error") {
+              throw new Error(event.error);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsBusy(false);
+      setImportProgress(null);
+    }
+  }
+
+  const orders = preview?.orders ?? [];
+  const results = importResult?.results ?? [];
+  const warnings = importResult?.parseWarnings ?? preview?.parseWarnings ?? [];
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded border shadow-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl font-semibold tracking-tight">
+                  Historical Material Orders
+                </CardTitle>
+                <CardDescription className="mt-1 text-sm">
+                  Upload BuildSmart cost-report PDFs to seed past supplier orders
+                  (DEL-batch lines). Each unique order number becomes one
+                  SiteProductOrder with the original order date preserved.
+                </CardDescription>
+              </div>
+              <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+                Historical orders
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div
+              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
+              onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
+              onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files); }}
+              className={cn(
+                "group rounded border-2 border-dashed p-8 transition",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+              )}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="mb-4 rounded border bg-background p-4 shadow-sm">
+                  <ShoppingCart className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-medium">Drop cost-report PDFs here</h3>
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                  Only{" "}
+                  <span className="font-medium text-foreground">DEL-batch lines</span>{" "}
+                  are extracted — these are historical supplier purchase orders.
+                  Use the{" "}
+                  <span className="font-medium text-foreground">PDF Orders</span>{" "}
+                  tab for ongoing orders instead.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <Button onClick={() => inputRef.current?.click()} className="rounded">
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Choose PDFs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setFiles([]); setPreview(null); setImportResult(null); }}
+                    disabled={!files.length}
+                    className="rounded"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files?.length) addFiles(e.target.files); e.currentTarget.value = ""; }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Site code override{" "}
+                <span className="font-normal text-muted-foreground">
+                  (only needed when the PDF has no contract header)
+                </span>
+              </label>
+              <Input
+                placeholder="e.g. 6537"
+                value={siteCodeOverride}
+                onChange={(e) => setSiteCodeOverride(e.target.value)}
+                className="max-w-xs rounded"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => callApi("parse")}
+                disabled={!files.length || isBusy}
+                variant="outline"
+                size="lg"
+                className="rounded px-6"
+              >
+                {isBusy && !importProgress ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                Preview orders
+              </Button>
+              <Button
+                onClick={() => callApi("import")}
+                disabled={!files.length || isBusy || !preview}
+                size="lg"
+                className="rounded px-6"
+              >
+                {importProgress ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                Import to database
+              </Button>
+            </div>
+
+            {/* Import progress bar */}
+            {importProgress && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {"Importing orders…"}
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {importProgress.done}{" / "}{importProgress.total}
+                    <span className="ml-2 text-primary">
+                      {Math.round((importProgress.done / importProgress.total) * 100)}{"%"}
+                    </span>
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-150"
+                    style={{
+                      width: `${Math.round((importProgress.done / importProgress.total) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* File queue */}
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Upload queue</CardTitle>
+            <CardDescription>Cost-report PDFs staged for material order seeding.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-96 pr-3">
+              <div className="space-y-3">
+                {!files.length ? (
+                  <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No PDFs added yet.
+                  </div>
+                ) : (
+                  files.map((f) => (
+                    <div key={`${f.name}-${f.size}`} className="rounded border bg-card p-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="rounded border bg-muted p-2 shrink-0">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">{f.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {(f.size / 1024).toFixed(1)} KB
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 rounded"
+                          onClick={() => removeFile(f.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Import summary */}
+      {importResult && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Import summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {Object.entries(importResult.summary).map(([k, v]) => (
+                <MetricCard key={k} label={k.replace(/_/g, " ")} value={v} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <Card className="rounded border border-amber-200 bg-amber-50 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-800">
+              <TriangleAlert className="h-4 w-4" />
+              Parse warnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm text-amber-700">
+              {warnings.map((w, i) => (
+                <li key={i}>&bull; {w}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Preview: grouped by order */}
+      {orders.length > 0 && !importResult && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Preview{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {orders.length} orders · {preview?.totalLines ?? 0} lines
+              </span>
+            </CardTitle>
+            <CardDescription>
+              Review detected orders before importing. Click{" "}
+              <span className="font-medium text-foreground">Import to database</span> when ready.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Order No.</th>
+                    <th className="px-4 py-2 text-left font-medium">Site</th>
+                    <th className="px-4 py-2 text-left font-medium">Order Date</th>
+                    <th className="px-4 py-2 text-right font-medium">Lines</th>
+                    <th className="px-4 py-2 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {orders.map((o, i) => (
+                    <tr key={i} className="transition-colors hover:bg-muted/20">
+                      <td className="px-4 py-2 font-mono text-xs font-semibold">
+                        {o.orderNumber ?? <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-2 text-xs">
+                        <span className="font-mono">{o.siteCode}</span>
+                        {o.siteName && (
+                          <div className="text-muted-foreground">{o.siteName}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-xs">
+                        {new Date(o.transactionDate).toLocaleDateString("en-ZA")}
+                      </td>
+                      <td className="px-4 py-2 text-right text-xs">{o.lineCount}</td>
+                      <td className="px-4 py-2 text-right font-mono text-xs">
+                        R{Number(o.totalAmount).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Import results */}
+      {results.length > 0 && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Import results{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {results.length} orders
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Order No.</th>
+                    <th className="px-4 py-2 text-left font-medium">Site</th>
+                    <th className="px-4 py-2 text-left font-medium">Order Date</th>
+                    <th className="px-4 py-2 text-right font-medium">Lines</th>
+                    <th className="px-4 py-2 text-right font-medium">Total</th>
+                    <th className="px-4 py-2 text-left font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {results.map((r, i) => {
+                    const statusInfo = MAT_STATUS_BADGE[r.status] ?? { label: r.status, variant: "secondary" as const };
+                    return (
+                      <tr
+                        key={i}
+                        className={cn(
+                          "transition-colors",
+                          r.status === "CREATED" && "bg-green-50/50",
+                          r.status === "DUPLICATE" && "bg-muted/30",
+                          (r.status === "MISSING_SITE" || r.status === "ERROR") && "bg-red-50/40",
+                        )}
+                      >
+                        <td className="px-4 py-2 font-mono text-xs font-semibold">
+                          {r.orderNumber ?? <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          <span className="font-mono">{r.siteCode}</span>
+                          {r.siteName && (
+                            <div className="text-muted-foreground">{r.siteName}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {new Date(r.transactionDate).toLocaleDateString("en-ZA")}
+                        </td>
+                        <td className="px-4 py-2 text-right text-xs">{r.linesCreated}</td>
+                        <td className="px-4 py-2 text-right font-mono text-xs">
+                          R{Number(r.totalAmount).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-2">
+                          <Badge variant={statusInfo.variant} className="rounded-full text-xs">
+                            {statusInfo.label}
+                          </Badge>
+                          {r.reason && (
+                            <div className="mt-0.5 text-xs text-muted-foreground">{r.reason}</div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Historical Costs tab ─────────────────────────────────────────────────────
+
+type CostPreviewRow = {
+  fileName: string;
+  siteCode: string;
+  siteName: string | null;
+  ledgerCode: string;
+  category: string;
+  description: string | null;
+  transactionDate: string;
+  externalRef: string | null;
+  amount: string;
+  parseWarning?: string;
+};
+
+type CostImportResult = {
+  siteCode: string;
+  ledgerCode: string;
+  category: string;
+  description: string | null;
+  transactionDate: string;
+  amount: string;
+  status: string;
+  reason?: string;
+};
+
+type ParseResponse = {
+  action: "parse";
+  totalRows: number;
+  parseWarnings: string[];
+  rows: CostPreviewRow[];
+};
+
+type ImportResponse = {
+  action: "import";
+  summary: Record<string, number>;
+  totalProcessed: number;
+  parseWarnings: string[];
+  results: CostImportResult[];
+};
+
+const STATUS_BADGE: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  NEW_HISTORICAL: { label: "Imported", variant: "default" },
+  DUPLICATE_IMPORTED: { label: "Already imported", variant: "secondary" },
+  DUPLICATE_EXISTING_APP: { label: "App duplicate", variant: "outline" },
+  MISSING_SITE: { label: "Missing site", variant: "destructive" },
+  INVALID_ROW: { label: "Invalid", variant: "destructive" },
+};
+
+const CATEGORY_COLOURS: Record<string, string> = {
+  LABOUR: "bg-blue-100 text-blue-800",
+  MATERIAL: "bg-green-100 text-green-800",
+  CONSUMABLE: "bg-teal-100 text-teal-800",
+  PLANT: "bg-orange-100 text-orange-800",
+  TOOLS: "bg-amber-100 text-amber-800",
+  SAFETY: "bg-red-100 text-red-800",
+  SCAFFOLDING: "bg-purple-100 text-purple-800",
+  SUBCONTRACT: "bg-pink-100 text-pink-800",
+  OTHER: "bg-gray-100 text-gray-700",
+};
+
+function HistoricalCostsTab() {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [siteCodeOverride, setSiteCodeOverride] = useState("");
+  const [isBusy, setIsBusy] = useState(false);
+  const [preview, setPreview] = useState<ParseResponse | null>(null);
+  const [importResult, setImportResult] = useState<ImportResponse | null>(null);
+
+  function addFiles(list: FileList | File[]) {
+    const incoming = Array.from(list).filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    setFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      return [
+        ...prev,
+        ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`)),
+      ];
+    });
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  async function callApi(action: "parse" | "import") {
+    if (!files.length || isBusy) return;
+    setIsBusy(true);
+    if (action === "parse") setImportResult(null);
+
+    try {
+      const fd = new FormData();
+      fd.append("action", action);
+      if (siteCodeOverride.trim())
+        fd.append("siteCode", siteCodeOverride.trim());
+      for (const f of files) fd.append("pdfs", f, f.name);
+
+      const res = await fetch("/api/admin/buildsmart/seed-historical-costs", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Request failed");
+
+      if (action === "parse") setPreview(data as ParseResponse);
+      else setImportResult(data as ImportResponse);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  const rows = importResult?.results ?? preview?.rows ?? [];
+  const warnings = importResult?.parseWarnings ?? preview?.parseWarnings ?? [];
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      {/* Upload card */}
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded border shadow-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl font-semibold tracking-tight">
+                  Historical Cost Import
+                </CardTitle>
+                <CardDescription className="mt-1 text-sm">
+                  Upload BuildSmart cost-report PDFs to import historical
+                  labour, materials, plant and other site costs.
+                </CardDescription>
+              </div>
+              <Badge
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-xs"
+              >
+                Historical costs
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            {/* Drop zone */}
+            <div
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                if (e.dataTransfer.files?.length)
+                  addFiles(e.dataTransfer.files);
+              }}
+              className={cn(
+                "group rounded border-2 border-dashed p-8 transition",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+              )}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="mb-4 rounded border bg-background p-4 shadow-sm">
+                  <History className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-medium">
+                  Drop cost-report PDFs here
+                </h3>
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                  Accepts BuildSmart{" "}
+                  <span className="font-medium text-foreground">
+                    Contract Cost Analysis
+                  </span>{" "}
+                  or{" "}
+                  <span className="font-medium text-foreground">
+                    Ledger Posting
+                  </span>{" "}
+                  reports. Not purchase-order PDFs.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <Button
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded"
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Choose PDFs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFiles([]);
+                      setPreview(null);
+                      setImportResult(null);
+                    }}
+                    disabled={!files.length}
+                    className="rounded"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Site code override */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Site code override{" "}
+                <span className="font-normal text-muted-foreground">
+                  (only needed when the PDF has no contract header)
+                </span>
+              </label>
+              <Input
+                placeholder="e.g. 6537"
+                value={siteCodeOverride}
+                onChange={(e) => setSiteCodeOverride(e.target.value)}
+                className="max-w-xs rounded"
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => callApi("parse")}
+                disabled={!files.length || isBusy}
+                variant="outline"
+                size="lg"
+                className="rounded px-6"
+              >
+                {isBusy && !importResult ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                Preview rows
+              </Button>
+              <Button
+                onClick={() => callApi("import")}
+                disabled={!files.length || isBusy || !preview}
+                size="lg"
+                className="rounded px-6"
+              >
+                {isBusy && !!importResult ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                Import to database
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* File queue */}
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Upload queue</CardTitle>
+            <CardDescription>PDFs staged for import.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-96 pr-3">
+              <div className="space-y-3">
+                {!files.length ? (
+                  <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No PDFs added yet.
+                  </div>
+                ) : (
+                  files.map((f) => (
+                    <div
+                      key={`${f.name}-${f.size}`}
+                      className="rounded border bg-card p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="rounded border bg-muted p-2 shrink-0">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {f.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {(f.size / 1024).toFixed(1)} KB
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 rounded"
+                          onClick={() => removeFile(f.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Import summary (shown after import) */}
+      {importResult && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Import summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {Object.entries(importResult.summary).map(([k, v]) => (
+                <MetricCard key={k} label={k.replace(/_/g, " ")} value={v} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Parse warnings */}
+      {warnings.length > 0 && (
+        <Card className="rounded border border-amber-200 bg-amber-50 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-800">
+              <TriangleAlert className="h-4 w-4" />
+              Parse warnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm text-amber-700">
+              {warnings.map((w, i) => (
+                <li key={i}>&bull; {w}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Row table */}
+      {rows.length > 0 && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {importResult ? "Import results" : "Preview"}{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {rows.length} rows
+              </span>
+            </CardTitle>
+            {!importResult && (
+              <CardDescription>
+                Review parsed rows before importing. Click{" "}
+                <span className="font-medium text-foreground">
+                  Import to database
+                </span>{" "}
+                when ready.
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Site</th>
+                    <th className="px-4 py-2 text-left font-medium">Ledger</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Category
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Description
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">Date</th>
+                    <th className="px-4 py-2 text-right font-medium">Amount</th>
+                    {importResult && (
+                      <th className="px-4 py-2 text-left font-medium">
+                        Status
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {rows.map((r, i) => {
+                    const isResult = importResult !== null;
+                    const row = r as CostPreviewRow & Partial<CostImportResult>;
+                    const statusInfo = isResult
+                      ? (STATUS_BADGE[row.status ?? ""] ?? {
+                          label: row.status ?? "",
+                          variant: "secondary" as const,
+                        })
+                      : null;
+                    return (
+                      <tr
+                        key={i}
+                        className={cn(
+                          "transition-colors",
+                          isResult &&
+                            row.status === "NEW_HISTORICAL" &&
+                            "bg-green-50/50",
+                          isResult &&
+                            row.status === "DUPLICATE_IMPORTED" &&
+                            "bg-muted/30",
+                          isResult &&
+                            (row.status === "MISSING_SITE" ||
+                              row.status === "INVALID_ROW") &&
+                            "bg-red-50/40",
+                        )}
+                      >
+                        <td className="px-4 py-2 font-mono text-xs">
+                          {row.siteCode}
+                          {row.siteName && (
+                            <div className="text-muted-foreground">
+                              {row.siteName}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 font-mono text-xs">
+                          {row.ledgerCode}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={cn(
+                              "inline-block rounded px-2 py-0.5 text-xs font-medium",
+                              CATEGORY_COLOURS[row.category] ??
+                                "bg-gray-100 text-gray-700",
+                            )}
+                          >
+                            {row.category}
+                          </span>
+                        </td>
+                        <td className="max-w-[200px] truncate px-4 py-2 text-xs text-muted-foreground">
+                          {row.description ?? "—"}
+                          {row.parseWarning && (
+                            <div className="text-amber-600">
+                              {row.parseWarning}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {row.transactionDate
+                            ? new Date(row.transactionDate).toLocaleDateString(
+                                "en-ZA",
+                              )
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-xs">
+                          R
+                          {Number(row.amount).toLocaleString("en-ZA", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </td>
+                        {isResult && (
+                          <td className="px-4 py-2">
+                            <Badge
+                              variant={statusInfo?.variant}
+                              className="rounded-full text-xs"
+                            >
+                              {statusInfo?.label}
+                            </Badge>
+                            {row.reason && (
+                              <div className="mt-0.5 text-xs text-muted-foreground">
+                                {row.reason}
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

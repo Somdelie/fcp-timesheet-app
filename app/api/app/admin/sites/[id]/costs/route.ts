@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { verifyApiToken } from "@/lib/jwt";
 import { calcSiteCosts } from "@/lib/procurement";
 import { startOfDayUTC, addDaysUTC } from "@/lib/dateUtc";
-import { currentFortnightSatFri } from "@/lib/fortnight";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,10 +66,10 @@ export async function GET(
     const fromParam = url.searchParams.get("from");
     const toParam = url.searchParams.get("to");
 
-    let start: Date;
-    let endExclusive: Date;
-    let startISO: string;
-    let endISO: string;
+    let start: Date | undefined;
+    let endExclusive: Date | undefined;
+    let startISO: string | null = null;
+    let endISO: string | null = null;
 
     if (fromParam && toParam) {
       start = startOfDayUTC(fromParam);
@@ -78,14 +77,8 @@ export async function GET(
       endExclusive = addDaysUTC(end, 1);
       startISO = fromParam;
       endISO = toParam;
-    } else {
-      const ft = currentFortnightSatFri(new Date());
-      start = startOfDayUTC(ft.startISO);
-      const end = startOfDayUTC(ft.endISO);
-      endExclusive = addDaysUTC(end, 1);
-      startISO = ft.startISO;
-      endISO = ft.endISO;
     }
+    // No from/to → all-time (no date filter)
 
     const result = await calcSiteCosts(start, endExclusive, [siteId]);
     const row = result.rows.find((r) => r.siteId === siteId) ?? {

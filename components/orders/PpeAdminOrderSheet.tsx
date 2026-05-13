@@ -105,7 +105,14 @@ export function PpeAdminOrderSheet({
     [selectedSupervisor, foremanCarts],
   );
 
-  const activeCart = foremanCarts.find((fc) => fc.foremanId === activeForemanId) ?? null;
+  const activeCart =
+    foremanCarts.find((fc) => fc.foremanId === activeForemanId) ?? null;
+
+  React.useEffect(() => {
+    if (!activeForemanId && foremanCarts.length > 0) {
+      setActiveForemanId(foremanCarts[0].foremanId);
+    }
+  }, [activeForemanId, foremanCarts]);
 
   const filteredProducts = React.useMemo(() => {
     const q = productSearch.trim().toLowerCase();
@@ -144,7 +151,8 @@ export function PpeAdminOrderSheet({
   function removeForeman(foremanId: string) {
     setForemanCarts((prev) => {
       const next = prev.filter((fc) => fc.foremanId !== foremanId);
-      if (activeForemanId === foremanId) setActiveForemanId(next[0]?.foremanId ?? "");
+      if (activeForemanId === foremanId)
+        setActiveForemanId(next[0]?.foremanId ?? "");
       return next;
     });
   }
@@ -167,9 +175,14 @@ export function PpeAdminOrderSheet({
     );
   }
 
-  function updateCart(foremanId: string, updater: (items: PpeCartItem[]) => PpeCartItem[]) {
+  function updateCart(
+    foremanId: string,
+    updater: (items: PpeCartItem[]) => PpeCartItem[],
+  ) {
     setForemanCarts((prev) =>
-      prev.map((fc) => (fc.foremanId !== foremanId ? fc : { ...fc, items: updater(fc.items) })),
+      prev.map((fc) =>
+        fc.foremanId !== foremanId ? fc : { ...fc, items: updater(fc.items) },
+      ),
     );
   }
 
@@ -196,7 +209,9 @@ export function PpeAdminOrderSheet({
 
   function updateRow(
     rowId: string,
-    fields: Partial<Pick<PpeCartItem, "size" | "color" | "quantity" | "unitPrice">>,
+    fields: Partial<
+      Pick<PpeCartItem, "size" | "color" | "quantity" | "unitPrice">
+    >,
   ) {
     if (!activeForemanId) return;
     updateCart(activeForemanId, (items) =>
@@ -206,25 +221,41 @@ export function PpeAdminOrderSheet({
 
   function toggleForemanChargeToSite(foremanId: string) {
     setForemanCarts((prev) =>
-      prev.map((fc) => (fc.foremanId !== foremanId ? fc : { ...fc, chargeToSite: !fc.chargeToSite })),
+      prev.map((fc) =>
+        fc.foremanId !== foremanId
+          ? fc
+          : { ...fc, chargeToSite: !fc.chargeToSite },
+      ),
     );
   }
 
   function removeRow(rowId: string) {
     if (!activeForemanId) return;
-    updateCart(activeForemanId, (items) => items.filter((i) => i.rowId !== rowId));
+    updateCart(activeForemanId, (items) =>
+      items.filter((i) => i.rowId !== rowId),
+    );
   }
 
-  const totalForemanItems = foremanCarts.reduce((sum, fc) => sum + fc.items.length, 0);
+  const totalForemanItems = foremanCarts.reduce(
+    (sum, fc) => sum + fc.items.length,
+    0,
+  );
   const totalCharged = foremanCarts
     .filter((fc) => fc.chargeToSite)
     .reduce(
       (sum, fc) =>
-        sum + fc.items.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0),
+        sum +
+        fc.items.reduce(
+          (s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0),
+          0,
+        ),
       0,
     );
   const activeCartCharged = activeCart?.chargeToSite
-    ? (activeCart.items.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0))
+    ? activeCart.items.reduce(
+        (s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0),
+        0,
+      )
     : 0;
   const canSubmit =
     !!selectedSupervisorId &&
@@ -249,13 +280,15 @@ export function PpeAdminOrderSheet({
     return {
       orderNumber,
       issuedDate,
-      supervisorName: selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
+      supervisorName:
+        selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
       orders: foremanCarts
         .filter((fc) => fc.items.length > 0)
         .map((fc) => ({
           foremanName: fc.foremanName,
           siteName: fc.siteName || null,
           siteCode: fc.siteCode,
+          chargeToSite: fc.chargeToSite ?? false,
           items: fc.items.map((i) => ({
             productName: i.productName,
             size: i.size || null,
@@ -294,7 +327,8 @@ export function PpeAdminOrderSheet({
               }),
             }).then(async (res) => {
               const json = await res.json().catch(() => null);
-              if (!res.ok) throw new Error(json?.error || `Failed for ${fc.foremanName}`);
+              if (!res.ok)
+                throw new Error(json?.error || `Failed for ${fc.foremanName}`);
               return json;
             }),
           ),
@@ -307,13 +341,17 @@ export function PpeAdminOrderSheet({
         );
         onCreated?.();
       } else if (failed.length < results.length) {
-        toast.warning(`${results.length - failed.length} of ${results.length} orders created. Some failed.`);
+        toast.warning(
+          `${results.length - failed.length} of ${results.length} orders created. Some failed.`,
+        );
         onCreated?.();
       } else {
         toast.error("All orders failed. Please try again.");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create orders");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create orders",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -323,7 +361,10 @@ export function PpeAdminOrderSheet({
     if (!canSubmit) return;
     setPrinting(true);
     try {
-      const voucherData = buildBatchPdfData(makeOrderNumber(), makeIssuedDate());
+      const voucherData = buildBatchPdfData(
+        makeOrderNumber(),
+        makeIssuedDate(),
+      );
       const res = await fetch("/api/app/admin/ppe-order/batch-pdf", {
         method: "POST",
         credentials: "include",
@@ -351,13 +392,18 @@ export function PpeAdminOrderSheet({
             Admin
           </span>
           <span className="text-primary-foreground/40">/</span>
-          <span className="text-sm font-bold tracking-wide uppercase">PPE Order Creation</span>
+          <span className="text-sm font-bold tracking-wide uppercase">
+            PPE Order Creation
+          </span>
         </div>
         {totalForemanItems > 0 && (
           <span className="text-[10px] tracking-widest text-primary-foreground/70 uppercase">
             {totalForemanItems} line{totalForemanItems !== 1 ? "s" : ""} across{" "}
-            {foremanCarts.filter((fc) => fc.items.length > 0).length} foreman order
-            {foremanCarts.filter((fc) => fc.items.length > 0).length !== 1 ? "s" : ""}
+            {foremanCarts.filter((fc) => fc.items.length > 0).length} foreman
+            order
+            {foremanCarts.filter((fc) => fc.items.length > 0).length !== 1
+              ? "s"
+              : ""}
           </span>
         )}
       </div>
@@ -365,7 +411,8 @@ export function PpeAdminOrderSheet({
       <div className="max-w-350 mx-auto p-6">
         <div className="border-b border-border pb-4 mb-6">
           <p className="text-[11px] tracking-[0.15em] text-muted-foreground uppercase mb-1">
-            Create PPE orders for one or more foremen — one PDF document, one supervisor collects
+            Create PPE orders for one or more foremen — one PDF document, one
+            supervisor collects
           </p>
         </div>
 
@@ -400,7 +447,10 @@ export function PpeAdminOrderSheet({
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
-                    <CommandInput placeholder="Search supervisor…" className="text-sm" />
+                    <CommandInput
+                      placeholder="Search supervisor…"
+                      className="text-sm"
+                    />
                     <CommandList>
                       <CommandEmpty>No supervisor found.</CommandEmpty>
                       <CommandGroup>
@@ -414,10 +464,14 @@ export function PpeAdminOrderSheet({
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedSupervisorId === sv.id ? "opacity-100" : "opacity-0",
+                                selectedSupervisorId === sv.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
-                            <span className="flex-1">{sv.name ?? sv.email}</span>
+                            <span className="flex-1">
+                              {sv.name ?? sv.email}
+                            </span>
                             <span className="text-xs text-muted-foreground ml-2">
                               {sv.foremen.length} foreman
                               {sv.foremen.length !== 1 ? "en" : ""}
@@ -455,15 +509,25 @@ export function PpeAdminOrderSheet({
                   )}
                 </div>
                 {selectedSupervisorId && availableForemenToAdd.length > 0 && (
-                  <Popover open={addForemanOpen} onOpenChange={setAddForemanOpen}>
+                  <Popover
+                    open={addForemanOpen}
+                    onOpenChange={setAddForemanOpen}
+                  >
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                      >
                         <Plus className="h-3 w-3" /> Add Foreman
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-72 p-0" align="end">
                       <Command>
-                        <CommandInput placeholder="Search foreman…" className="text-sm" />
+                        <CommandInput
+                          placeholder="Search foreman…"
+                          className="text-sm"
+                        />
                         <CommandList>
                           <CommandEmpty>No more foremen to add.</CommandEmpty>
                           <CommandGroup>
@@ -549,7 +613,9 @@ export function PpeAdminOrderSheet({
                   <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
                     Site for {activeCart.foremanName}
                   </span>
-                  <span className="text-[10px] text-muted-foreground/60">(optional)</span>
+                  <span className="text-[10px] text-muted-foreground/60">
+                    (optional)
+                  </span>
                 </div>
                 <ForemanSiteSelect
                   sites={selectedSupervisor?.sites ?? []}
@@ -564,7 +630,9 @@ export function PpeAdminOrderSheet({
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground truncate">
-                  {activeCart ? `Items — ${activeCart.foremanName}` : "PPE Items"}
+                  {activeCart
+                    ? `Items — ${activeCart.foremanName}`
+                    : "PPE Items"}
                 </span>
               </div>
               <div className="flex items-center gap-4 shrink-0">
@@ -578,22 +646,29 @@ export function PpeAdminOrderSheet({
                         : "border-border text-muted-foreground hover:border-primary/40",
                     )}
                   >
-                    <span className={cn(
-                      "w-2.5 h-2.5 rounded-sm border flex items-center justify-center",
-                      activeCart?.chargeToSite ? "bg-primary-foreground border-primary-foreground" : "border-current",
-                    )}>
+                    <span
+                      className={cn(
+                        "w-2.5 h-2.5 rounded-sm border flex items-center justify-center",
+                        activeCart?.chargeToSite
+                          ? "bg-primary-foreground border-primary-foreground"
+                          : "border-current",
+                      )}
+                    >
                       {activeCart?.chargeToSite && (
                         <span className="block w-1.5 h-1 border-b-2 border-l-2 border-primary -rotate-45 -translate-y-px" />
                       )}
                     </span>
                     Charge to Site
                     {activeCart?.chargeToSite && activeCartCharged > 0 && (
-                      <span className="ml-0.5 opacity-80">R{activeCartCharged.toFixed(2)}</span>
+                      <span className="ml-0.5 opacity-80">
+                        R{activeCartCharged.toFixed(2)}
+                      </span>
                     )}
                   </button>
                 )}
                 <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
-                  {activeCart?.items.length ?? 0} line{(activeCart?.items.length ?? 0) !== 1 ? "s" : ""}
+                  {activeCart?.items.length ?? 0} line
+                  {(activeCart?.items.length ?? 0) !== 1 ? "s" : ""}
                 </span>
               </div>
             </div>
@@ -657,7 +732,9 @@ export function PpeAdminOrderSheet({
                         <TableCell className="py-2 pr-1">
                           <Input
                             value={item.size}
-                            onChange={(e) => updateRow(item.rowId, { size: e.target.value })}
+                            onChange={(e) =>
+                              updateRow(item.rowId, { size: e.target.value })
+                            }
                             placeholder="—"
                             className="h-7 text-xs px-2 w-16"
                           />
@@ -665,7 +742,9 @@ export function PpeAdminOrderSheet({
                         <TableCell className="py-2 pr-1">
                           <Input
                             value={item.color}
-                            onChange={(e) => updateRow(item.rowId, { color: e.target.value })}
+                            onChange={(e) =>
+                              updateRow(item.rowId, { color: e.target.value })
+                            }
                             placeholder="—"
                             className="h-7 text-xs px-2 w-16"
                           />
@@ -677,7 +756,10 @@ export function PpeAdminOrderSheet({
                             value={item.quantity}
                             onChange={(e) => {
                               const n = Number(e.target.value);
-                              if (Number.isFinite(n) && n > 0) updateRow(item.rowId, { quantity: Math.floor(n) });
+                              if (Number.isFinite(n) && n > 0)
+                                updateRow(item.rowId, {
+                                  quantity: Math.floor(n),
+                                });
                             }}
                             className="h-7 w-14 text-sm text-right tabular-nums px-2"
                           />
@@ -691,7 +773,8 @@ export function PpeAdminOrderSheet({
                             onChange={(e) => {
                               const val = e.target.value;
                               updateRow(item.rowId, {
-                                unitPrice: val === "" ? null : Math.max(0, Number(val)),
+                                unitPrice:
+                                  val === "" ? null : Math.max(0, Number(val)),
                               });
                             }}
                             placeholder="—"
@@ -724,8 +807,15 @@ export function PpeAdminOrderSheet({
                     </div>
                     <div className="flex items-baseline gap-3">
                       <div className="text-sm font-bold">
-                        {foremanCarts.filter((fc) => fc.items.length > 0).length} order
-                        {foremanCarts.filter((fc) => fc.items.length > 0).length !== 1 ? "s" : ""}
+                        {
+                          foremanCarts.filter((fc) => fc.items.length > 0)
+                            .length
+                        }{" "}
+                        order
+                        {foremanCarts.filter((fc) => fc.items.length > 0)
+                          .length !== 1
+                          ? "s"
+                          : ""}
                       </div>
                       {totalCharged > 0 && (
                         <div className="text-xs font-semibold tabular-nums text-primary-foreground/80">
@@ -792,7 +882,10 @@ export function PpeAdminOrderSheet({
               </div>
             </div>
 
-            <div className="overflow-auto flex-1 bg-card" style={{ maxHeight: "520px" }}>
+            <div
+              className="overflow-auto flex-1 bg-card"
+              style={{ maxHeight: "520px" }}
+            >
               {filteredProducts.length === 0 ? (
                 <div className="py-16 flex flex-col items-center gap-2">
                   <p className="text-xs text-muted-foreground tracking-widest uppercase">
@@ -817,7 +910,8 @@ export function PpeAdminOrderSheet({
                   <TableBody>
                     {filteredProducts.map((p, idx) => {
                       const inActiveCart = activeForemanId
-                        ? activeCart?.items.filter((i) => i.productId === p.id).length ?? 0
+                        ? (activeCart?.items.filter((i) => i.productId === p.id)
+                            .length ?? 0)
                         : 0;
                       const inAnyCart = foremanCarts.some((fc) =>
                         fc.items.some((i) => i.productId === p.id),
@@ -839,9 +933,13 @@ export function PpeAdminOrderSheet({
                                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                               )}
                               <div>
-                                <span className="text-sm font-medium">{p.name}</span>
+                                <span className="text-sm font-medium">
+                                  {p.name}
+                                </span>
                                 {p.sku && (
-                                  <div className="text-xs text-muted-foreground">{p.sku}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {p.sku}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -858,6 +956,11 @@ export function PpeAdminOrderSheet({
                           </TableCell>
                           <TableCell className="py-3 text-right pr-5">
                             <button
+                              title={
+                                activeCart
+                                  ? `Add to ${activeCart.foremanName}`
+                                  : "Select a foreman tab first"
+                              }
                               onClick={() => addProductToCart(p)}
                               disabled={!activeForemanId}
                               className={`text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -907,7 +1010,9 @@ function ForemanSiteSelect({
 }: {
   sites: { id: string; name: string; code: string | null }[];
   selectedSiteId: string;
-  onSelect: (site: { id: string; name: string; code: string | null } | null) => void;
+  onSelect: (
+    site: { id: string; name: string; code: string | null } | null,
+  ) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const selected = sites.find((s) => s.id === selectedSiteId) ?? null;
@@ -946,20 +1051,44 @@ function ForemanSiteSelect({
             <CommandList>
               <CommandEmpty>No site found.</CommandEmpty>
               <CommandGroup>
-                <CommandItem value="__none__" onSelect={() => { onSelect(null); setOpen(false); }} className="text-sm text-muted-foreground">
-                  <Check className={cn("mr-2 h-4 w-4", !selectedSiteId ? "opacity-100" : "opacity-0")} />
+                <CommandItem
+                  value="__none__"
+                  onSelect={() => {
+                    onSelect(null);
+                    setOpen(false);
+                  }}
+                  className="text-sm text-muted-foreground"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      !selectedSiteId ? "opacity-100" : "opacity-0",
+                    )}
+                  />
                   No site
                 </CommandItem>
                 {sites.map((s) => (
                   <CommandItem
                     key={s.id}
                     value={s.code ? `${s.code} ${s.name}` : s.name}
-                    onSelect={() => { onSelect(s); setOpen(false); }}
+                    onSelect={() => {
+                      onSelect(s);
+                      setOpen(false);
+                    }}
                     className="text-sm"
                   >
-                    <Check className={cn("mr-2 h-4 w-4", selectedSiteId === s.id ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedSiteId === s.id ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                     <span className="flex-1">{s.name}</span>
-                    {s.code && <span className="text-xs text-muted-foreground ml-2">{s.code}</span>}
+                    {s.code && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {s.code}
+                      </span>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>

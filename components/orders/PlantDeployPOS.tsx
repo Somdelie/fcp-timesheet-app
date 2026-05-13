@@ -52,6 +52,7 @@ export interface PlantItemDto {
 interface PlantDeployPOSProps {
   supervisors: PlantSupervisorDto[];
   items: PlantItemDto[];
+  allSites?: PlantSiteDto[];
   onDeployed?: () => void;
 }
 
@@ -81,6 +82,7 @@ type LastOrder = {
 export default function PlantDeployPOS({
   supervisors,
   items,
+  allSites,
   onDeployed,
 }: PlantDeployPOSProps) {
   const [selectedSupervisorId, setSelectedSupervisorId] = React.useState<string>("");
@@ -89,6 +91,7 @@ export default function PlantDeployPOS({
   const [activeSiteId, setActiveSiteId] = React.useState<string>("");
   const [addSiteOpen, setAddSiteOpen] = React.useState(false);
   const [productSearch, setProductSearch] = React.useState("");
+  const [reference, setReference] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
   const [lastOrder, setLastOrder] = React.useState<LastOrder | null>(null);
@@ -98,13 +101,11 @@ export default function PlantDeployPOS({
     [supervisors, selectedSupervisorId],
   );
 
-  const availableSitesToAdd = React.useMemo(
-    () =>
-      (selectedSupervisor?.sites ?? []).filter(
-        (s) => !sitesCarts.some((sc) => sc.siteId === s.id),
-      ),
-    [selectedSupervisor, sitesCarts],
-  );
+  const availableSitesToAdd = React.useMemo(() => {
+    const supervisorSites = selectedSupervisor?.sites ?? [];
+    const sourceSites = supervisorSites.length > 0 ? supervisorSites : (allSites ?? []);
+    return sourceSites.filter((s) => !sitesCarts.some((sc) => sc.siteId === s.id));
+  }, [selectedSupervisor, sitesCarts, allSites]);
 
   const activeSiteCart = sitesCarts.find((sc) => sc.siteId === activeSiteId) ?? null;
   const activeCart = activeSiteCart?.items ?? [];
@@ -233,7 +234,8 @@ export default function PlantDeployPOS({
   function makeOrderMeta() {
     const pad = (n: number) => String(n).padStart(2, "0");
     const now = new Date();
-    const orderNumber = `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const orderNumber = reference.trim() ||
+      `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const issuedDate = now.toLocaleDateString("en-ZA", {
       day: "2-digit",
       month: "short",
@@ -243,6 +245,7 @@ export default function PlantDeployPOS({
   }
 
   async function handleDeploy() {
+    if (!reference.trim()) { toast.error("Order number is required"); return; }
     if (!selectedSupervisorId) { toast.error("Please select a supervisor"); return; }
     if (sitesCarts.length === 0) { toast.error("Add at least one site"); return; }
     if (totalUnits === 0) { toast.error("Add at least one item to deploy"); return; }
@@ -256,6 +259,8 @@ export default function PlantDeployPOS({
             credentials: "include",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
+              reference: reference.trim(),
+              supervisorName: selectedSupervisor?.name ?? selectedSupervisor?.email ?? null,
               siteId: siteCart.siteId,
               productId: item.productId,
               quantity: item.quantity,
@@ -265,6 +270,8 @@ export default function PlantDeployPOS({
             }),
           }).then(async (res) => {
             const json = await res.json().catch(() => null);
+            if (res.status === 409)
+              throw new Error(`Deployment "${reference.trim()}" already exists`);
             if (!res.ok)
               throw new Error(json?.error || `Failed to deploy ${item.productName}`);
             return json;
@@ -285,6 +292,7 @@ export default function PlantDeployPOS({
         setLastOrder(buildVoucherData(orderNumber, issuedDate));
         setSitesCarts([]);
         setActiveSiteId("");
+        setReference("");
         onDeployed?.();
       } else if (failed.length < allRequests.length) {
         toast.warning(
@@ -368,6 +376,23 @@ export default function PlantDeployPOS({
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border border-border rounded-md overflow-hidden">
           {/* LEFT PANEL */}
           <div className="border-r border-border flex flex-col">
+            {/* Order Number */}
+            <div className="border-b border-border p-5 bg-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                  Order Number
+                </span>
+                <span className="text-[10px] font-bold text-destructive uppercase tracking-wide">required</span>
+              </div>
+              <Input
+                placeholder="e.g. 68090 (BuildSmart PO #)"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className={`h-10 text-sm font-medium ${!reference.trim() ? "border-destructive/50" : ""}`}
+              />
+            </div>
+
             {/* Step 1 — Supervisor selector */}
             <div className="border-b border-border p-5 bg-card">
               <div className="flex items-center gap-2 mb-3">

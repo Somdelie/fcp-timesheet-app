@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { updateSchedulerTaskColumn } from "@/actions/scheduler";
 import type { Task } from "@/lib/types";
+import { getStoredTasks, patchStoredTask } from "@/lib/scheduler-storage";
 
 /* ------------------------------------------------------------------ */
 /*  Module-level session tracking — survives client-side navigation    */
@@ -73,32 +74,24 @@ export function SchedulerAlertProvider() {
   const [current, setCurrent] = useState<Task | null>(null);
   const [isMarkingDone, setIsMarkingDone] = useState(false);
 
-  async function fetchAndCheck() {
-    try {
-      const res = await fetch("/api/app/scheduler", {
-        credentials: "include",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const tasks: Task[] = data.tasks ?? [];
+  function checkAndAlert() {
+    const tasks = getStoredTasks();
+    const overdue = tasks.filter(
+      (t) => isOverdue(t) && !alertedThisSession.has(t.id),
+    );
+    if (overdue.length === 0) return;
 
-      const overdue = tasks.filter(
-        (t) => isOverdue(t) && !alertedThisSession.has(t.id),
-      );
-      if (overdue.length === 0) return;
-
-      overdue.forEach((t) => alertedThisSession.add(t.id));
-      setQueue((prev) => {
-        const existing = new Set(prev.map((t) => t.id));
-        return [...prev, ...overdue.filter((t) => !existing.has(t.id))];
-      });
-    } catch {}
+    overdue.forEach((t) => alertedThisSession.add(t.id));
+    setQueue((prev) => {
+      const existing = new Set(prev.map((t) => t.id));
+      return [...prev, ...overdue.filter((t) => !existing.has(t.id))];
+    });
   }
 
-  /* On mount: fetch immediately then every 60 s */
+  /* On mount: check immediately then every 60 s (no network request) */
   useEffect(() => {
-    fetchAndCheck();
-    const interval = setInterval(fetchAndCheck, 60_000);
+    checkAndAlert();
+    const interval = setInterval(checkAndAlert, 60_000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -117,6 +110,7 @@ export function SchedulerAlertProvider() {
     setIsMarkingDone(true);
     try {
       await updateSchedulerTaskColumn(current.id, "done");
+      patchStoredTask(current.id, { column: "done" });
     } finally {
       setIsMarkingDone(false);
       setCurrent(null);

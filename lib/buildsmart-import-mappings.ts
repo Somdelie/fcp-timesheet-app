@@ -5,6 +5,7 @@
  * importer can resolve them to existing procurement products/suppliers
  * even when the PDF text doesn't exactly match our DB records.
  */
+import type { ProductUom } from "@/generated/prisma/client";
 
 // ── Supplier name aliases ────────────────────────────────────────────────────
 // Map variations found in BuildSmart PDFs → canonical supplier name in our DB.
@@ -32,6 +33,16 @@ const SUPPLIER_ALIASES: Record<string, string> = {
 
   // Generic Savoy catch-all
   "diy savoy": "DIY Savoy",
+
+  // Marmoran
+  marmoran: "Marmoran",
+  "marmoran (pty) ltd": "Marmoran",
+  "marmoran sa": "Marmoran",
+
+  // Urochem
+  "urochem trading": "Urochem Trading (Pty) Ltd",
+  "urochem trading (pty) ltd": "Urochem Trading (Pty) Ltd",
+  urochem: "Urochem Trading (Pty) Ltd",
 };
 
 /**
@@ -177,4 +188,112 @@ export function stripColorTokens(description: string): string {
     .join(" ")
     .replace(/\s{2,}/g, " ")
     .trim();
+}
+
+// ── Product name parser ───────────────────────────────────────────────────────
+// BuildSmart product descriptions often embed a numeric/alphanumeric SKU at the
+// front and trailing size + pack suffixes that are irrelevant to the base name.
+//
+// Examples:
+//   "1010022251 Polycell Polyfilla Interior 12KG Pack 1"
+//     → { cleanName: "Polycell Polyfilla Interior", sku: "1010022251" }
+//   "10MM BACKING CORDPack 1"
+//     → { cleanName: "10MM BACKING CORD", sku: null }
+
+export function parseProductName(rawName: string): {
+  cleanName: string;
+  sku: string | null;
+} {
+  let name = rawName.trim();
+  let sku: string | null = null;
+
+  // Extract numeric SKU
+  const numericSkuMatch = name.match(/^(\d{7,})\s+(.+)$/);
+
+  if (numericSkuMatch) {
+    sku = numericSkuMatch[1];
+    name = numericSkuMatch[2].trim();
+  } else {
+    // Extract alpha-numeric SKU
+    const alphaSkuMatch = name.match(/^([A-Z]{2,}\d{4,})\s+(.+)$/i);
+
+    if (alphaSkuMatch) {
+      sku = alphaSkuMatch[1];
+      name = alphaSkuMatch[2].trim();
+    }
+  }
+
+  // Remove trailing price only
+  name = name.replace(/\s+R\s?\d+[.,]?\d*$/i, "");
+
+  // Remove ONLY explicit "Pack N" at the very end
+  name = name.replace(/\bPack\s+\d+\s*$/i, "").trim();
+
+  // Remove ONLY isolated size suffixes at the very end
+  // but preserve names like "Mix Masala 500ML"
+  const protectedWords = ["mix masala", "masala mix"];
+
+  const lower = name.toLowerCase();
+
+  const isProtected = protectedWords.some((w) => lower.includes(w));
+
+  if (!isProtected) {
+    name = name.replace(
+      /\s+\d+(?:\.\d+)?\s*(KG|G|L|ML|LTR|M2|M3|MM|CM|M)\s*$/i,
+      "",
+    );
+  }
+
+  // cleanup spaces
+  name = name.replace(/\s{2,}/g, " ").trim();
+
+  return {
+    cleanName: name || rawName.trim(),
+    sku,
+  };
+}
+
+// ── Unit token parser ─────────────────────────────────────────────────────────
+// Converts a size/unit token extracted from a BuildSmart line (e.g. "20L", "25L",
+// "5L", "kg") into the structured uom + size fields on SiteProductOrderItem.
+//
+// "20L" → { uomAtOrder: "L", unitSizeAtOrder: 20 }
+// "kg"  → { uomAtOrder: "KG", unitSizeAtOrder: null }
+
+const UOM_ALIASES: Record<string, ProductUom> = {
+  l: "L",
+  ltr: "L",
+  ml: "ML",
+  g: "G",
+  kg: "KG",
+  m: "M",
+  m2: "M2",
+  m3: "M3",
+  mm: "MM",
+  cm: "CM",
+  each: "EACH",
+  ea: "EACH",
+  pc: "PIECE",
+  pcs: "PIECE",
+  bag: "BAG",
+  bags: "BAG",
+};
+
+export function parseUnitToken(unit: string | null): {
+  uomAtOrder: ProductUom | null;
+  unitSizeAtOrder: number | null;
+} {
+  if (!unit) return { uomAtOrder: null, unitSizeAtOrder: null };
+
+  // Combined size+uom token: "20L", "5L", "25KG", "500ML"
+  const combined = unit.match(/^(\d+(?:\.\d+)?)(L|ML|KG|G|M2|M3|MM|CM|M)$/i);
+  if (combined) {
+    const uomKey = combined[2].toLowerCase();
+    const uom = UOM_ALIASES[uomKey] ?? null;
+    return { uomAtOrder: uom, unitSizeAtOrder: parseFloat(combined[1]) };
+  }
+
+  // Standalone unit word: "kg", "each", "bag"
+  const uom = UOM_ALIASES[unit.toLowerCase()] ?? null;
+  return { uomAtOrder: uom, unitSizeAtOrder: null };
 }

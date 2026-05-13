@@ -19,6 +19,10 @@ import {
   Pencil,
   BadgeCheck,
   Receipt,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -95,6 +99,7 @@ type OrderItem = {
 
 type Order = {
   id: string;
+  reference: string | null;
   foremanId: string | null;
   adminUserId: string | null;
   isAdminOrder: boolean;
@@ -121,6 +126,8 @@ type ParseResult = {
   vendorName: string | null;
   foremanNameHint: string | null;
   suggestedForemanId: string | null;
+  createdDate: string | null;
+  isStockOrder: boolean;
   items: ParsedItem[];
 };
 
@@ -135,6 +142,9 @@ type CreateOrderMode = "choose" | "manual" | "buildsmart";
 interface OrdersPageClientProps {
   foremen: AdminForemanDto[];
   products: AdminProductDto[];
+  category?: "PPE" | "TOOL";
+  createTrigger?: number;
+  hideHeader?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -741,16 +751,11 @@ function BuildSmartImportTab({
   const [foremanId, setForemanId] = useState("");
   const [doneForemanName, setDoneForemanName] = useState("");
   const [doneCount, setDoneCount] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const file = fileRef.current?.files?.[0];
-    if (!file) {
-      toast.error("Select a PDF first");
-      return;
-    }
-
+  async function parseFile(file: File) {
     setIsParsing(true);
     try {
       const fd = new FormData();
@@ -771,14 +776,21 @@ function BuildSmartImportTab({
         })),
       );
       if (result.suggestedForemanId) setForemanId(result.suggestedForemanId);
-      if ((json as any).rawText)
-        console.log("[BuildSmart rawText]", (json as any).rawText);
       setStep("review");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to parse PDF");
     } finally {
       setIsParsing(false);
     }
+  }
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      toast.error("Select or drop a PDF first");
+      return;
+    }
+    await parseFile(selectedFile);
   };
 
   const handleConfirm = async () => {
@@ -801,9 +813,19 @@ function BuildSmartImportTab({
       const res = await fetch("/api/app/admin/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ foremanId, items }),
+        body: JSON.stringify({
+          foremanId,
+          reference: parsed?.orderNumber ?? undefined,
+          items,
+          ...(parsed?.createdDate
+            ? { createdAt: new Date(parsed.createdDate).toISOString() }
+            : {}),
+        }),
       });
       const json = await res.json();
+      if (res.status === 409) {
+        throw new Error(`PO #${parsed?.orderNumber} has already been imported`);
+      }
       if (!res.ok) throw new Error(json.error || "Failed to create order");
 
       const fm = foremen.find((f) => f.id === foremanId);
@@ -826,6 +848,7 @@ function BuildSmartImportTab({
     setParsed(null);
     setRows([]);
     setForemanId("");
+    setSelectedFile(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -859,6 +882,16 @@ function BuildSmartImportTab({
             </p>
             <p className="text-sm text-muted-foreground">
               {parsed.items.length} line items parsed
+              {parsed.createdDate && (
+                <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded font-medium text-foreground">
+                  PO date: {new Date(parsed.createdDate).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
+                </span>
+              )}
+              {parsed.isStockOrder && (
+                <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                  STOCK order
+                </span>
+              )}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={reset}>
@@ -1044,17 +1077,56 @@ function BuildSmartImportTab({
         catalogue and added as a pending foreman order ready for deduction.
       </p>
       <form onSubmit={handleUpload} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="bs-pdf-upload">BuildSmart PO PDF</Label>
-          <Input
-            id="bs-pdf-upload"
+        <div
+          onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"))) {
+              setSelectedFile(file);
+            } else if (file) {
+              toast.error("Only PDF files are supported");
+            }
+          }}
+          onClick={() => fileRef.current?.click()}
+          className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+            isDragging
+              ? "border-primary bg-primary/5"
+              : selectedFile
+                ? "border-green-500 bg-green-500/5"
+                : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50"
+          }`}
+        >
+          <Upload className={`mx-auto h-8 w-8 mb-3 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+          {selectedFile ? (
+            <div>
+              <p className="text-sm font-medium text-green-700">{selectedFile.name}</p>
+              <p className="text-xs text-muted-foreground mt-1">Click to change file</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-medium">
+                {isDragging ? "Drop PDF here" : "Drag & drop a PDF or click to browse"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">BuildSmart PO PDF only</p>
+            </div>
+          )}
+          <input
+            ref={fileRef}
             type="file"
             accept=".pdf,application/pdf"
-            ref={fileRef}
-            className="cursor-pointer"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) setSelectedFile(file);
+              e.currentTarget.value = "";
+            }}
           />
         </div>
-        <Button type="submit" disabled={isParsing}>
+        <Button type="submit" disabled={isParsing || !selectedFile}>
           {isParsing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -1074,9 +1146,14 @@ function BuildSmartImportTab({
 export default function OrdersPageClient({
   foremen,
   products,
+  category,
+  createTrigger,
+  hideHeader = false,
 }: OrdersPageClientProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [createOrderMode, setCreateOrderMode] =
     useState<CreateOrderMode>("choose");
@@ -1102,7 +1179,10 @@ export default function OrdersPageClient({
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/app/admin/orders", {
+      const url = category
+        ? `/api/app/admin/orders?category=${category}`
+        : "/api/app/admin/orders";
+      const res = await fetch(url, {
         cache: "no-store",
         credentials: "include",
         headers: { accept: "application/json" },
@@ -1110,17 +1190,22 @@ export default function OrdersPageClient({
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Failed to load orders");
       setOrders(Array.isArray(data?.orders) ? data.orders : []);
+      setPageIndex(0);
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to load orders");
       setOrders([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [category]);
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  useEffect(() => {
+    if (createTrigger) openCreateOrder();
+  }, [createTrigger]);
 
   const totalOrderValue = useMemo(
     () => orders.reduce((sum, o) => sum + orderTotal(o.items), 0),
@@ -1195,7 +1280,7 @@ export default function OrdersPageClient({
         year: "numeric",
       });
       const voucherData = {
-        orderNumber: buildOrderNumber(order),
+        orderNumber: order.reference ?? buildOrderNumber(order),
         issuedDate,
         recipientName: order.foremanName,
         recipientType: order.isAdminOrder ? "admin" : "foreman",
@@ -1243,46 +1328,30 @@ export default function OrdersPageClient({
   }, []);
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage order records from one clean creation flow.
-          </p>
+    <div className="">
+      {!hideHeader && (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage order records from one clean creation flow.
+            </p>
+          </div>
+          <Button onClick={openCreateOrder}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Order
+          </Button>
         </div>
-        <Button onClick={openCreateOrder}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Order
-        </Button>
-      </div>
+      )}
 
       {/* ── Foreman Orders Tab ── */}
       <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-4 flex-wrap">
-            <div className="border rounded px-4 py-3 bg-card">
-              <div className="text-xs text-muted-foreground font-medium">
-                Total Orders
-              </div>
-              <div className="text-2xl font-bold mt-1">{orders.length}</div>
-            </div>
-            <div className="border rounded px-4 py-3 bg-card">
-              <div className="text-xs text-muted-foreground font-medium">
-                Total Value
-              </div>
-              <div className="text-2xl font-bold mt-1">
-                {formatCurrency(totalOrderValue)}
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="border rounded bg-card">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="text-xs font-semibold">Order #</TableHead>
                   <TableHead className="text-xs font-semibold">Date</TableHead>
                   <TableHead className="text-xs font-semibold">
                     Foreman
@@ -1302,7 +1371,7 @@ export default function OrdersPageClient({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       <span className="text-muted-foreground text-sm">
                         Loading orders…
                       </span>
@@ -1310,14 +1379,16 @@ export default function OrdersPageClient({
                   </TableRow>
                 ) : orders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       <span className="text-muted-foreground text-sm">
                         No orders yet
                       </span>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  orders.map((order) => {
+                  orders
+                    .slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)
+                    .map((order) => {
                     const isExpanded = expandedOrderId === order.id;
                     const isCancelled = order.status === "CANCELLED";
                     const isPending = order.status === "PENDING";
@@ -1334,6 +1405,15 @@ export default function OrdersPageClient({
                             setExpandedOrderId(isExpanded ? null : order.id)
                           }
                         >
+                          <TableCell className="text-sm">
+                            {order.reference ? (
+                              <span className="font-semibold text-foreground">
+                                #{order.reference}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-sm">
                             {formatDate(order.createdAt)}
                           </TableCell>
@@ -1481,7 +1561,7 @@ export default function OrdersPageClient({
                         </TableRow>
                         {isExpanded && (
                           <TableRow className="bg-muted/30">
-                            <TableCell colSpan={6} className="p-0">
+                            <TableCell colSpan={7} className="p-0">
                               <div className="px-6 py-3 space-y-2">
                                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                   Order Items
@@ -1584,6 +1664,86 @@ export default function OrdersPageClient({
         </div>
       </div>
 
+      {/* Pagination */}
+      {orders.length > 0 && (
+        <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/60">
+          <div className="text-muted-foreground hidden text-sm lg:flex">
+            Showing{" "}
+            {pageIndex * pageSize + 1} to{" "}
+            {Math.min((pageIndex + 1) * pageSize, orders.length)} of{" "}
+            {orders.length} orders
+          </div>
+          <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
+            <div className="hidden items-center gap-2 lg:flex">
+              <span className="text-sm font-medium">Rows per page</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPageIndex(0);
+                }}
+              >
+                <SelectTrigger className="h-8 w-20">
+                  <SelectValue placeholder={pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[5, 10, 25, 50, 100].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex w-fit items-center justify-center text-sm font-medium">
+              Page {pageIndex + 1} of {Math.max(1, Math.ceil(orders.length / pageSize))}
+            </div>
+            <div className="ml-auto flex items-center gap-2 lg:ml-0">
+              <Button
+                variant="outline"
+                size="icon"
+                className="hidden h-8 w-8 lg:flex"
+                onClick={() => setPageIndex(0)}
+                disabled={pageIndex === 0}
+              >
+                <span className="sr-only">Go to first page</span>
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPageIndex((i) => i - 1)}
+                disabled={pageIndex === 0}
+              >
+                <span className="sr-only">Go to previous page</span>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPageIndex((i) => i + 1)}
+                disabled={(pageIndex + 1) * pageSize >= orders.length}
+              >
+                <span className="sr-only">Go to next page</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="hidden h-8 w-8 lg:flex"
+                onClick={() => setPageIndex(Math.ceil(orders.length / pageSize) - 1)}
+                disabled={(pageIndex + 1) * pageSize >= orders.length}
+              >
+                <span className="sr-only">Go to last page</span>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New Order Sheet */}
       <Sheet open={sheetOpen} onOpenChange={closeCreateOrder}>
         <SheetContent
@@ -1652,6 +1812,7 @@ export default function OrdersPageClient({
             <OrdersPOS
               foremen={foremen}
               products={products}
+              requireReference={category === "TOOL"}
               onOrderCreated={handleOrderCreated}
             />
           ) : (

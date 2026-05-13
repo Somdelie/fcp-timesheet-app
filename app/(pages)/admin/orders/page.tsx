@@ -1,24 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, Plus, RotateCw } from "lucide-react";
+import { Plus } from "lucide-react";
+import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { PpeOrdersTab } from "@/components/orders/PpeOrdersTab";
+import OrdersPageClient from "@/components/orders/OrdersPageClient";
+import { type AdminForemanDto } from "@/components/orders/OrdersPOS";
+import type { AdminProductDto } from "@/components/products/ProductsList";
 import MaterialOrdersPage from "../material-orders/page";
 import { PlantAssignmentsTab } from "../plant-assignments/page";
 
@@ -29,20 +23,11 @@ const TABS = [
   { value: "plant-orders", label: "Plant Orders" },
 ];
 
-type OrderItem = {
-  id: string;
-  productName: string;
-  productCategory: "PPE" | "TOOL" | null;
-  quantity: number;
-  unitPrice: string;
-};
-
-type ToolOrder = {
-  id: string;
-  foremanName: string;
-  status: string;
-  createdAt: string;
-  items: OrderItem[];
+type AdminForemanApiDto = {
+  foremanId: string;
+  userId: string;
+  name?: string | null;
+  email?: string | null;
 };
 
 export default function OrdersPage() {
@@ -50,9 +35,11 @@ export default function OrdersPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [ppeCreateTrigger, setPpeCreateTrigger] = useState(0);
   const [paintCreateTrigger, setPaintCreateTrigger] = useState(0);
+  const [plantCreateTrigger, setPlantCreateTrigger] = useState(0);
+  const [toolsCreateTrigger, setToolsCreateTrigger] = useState(0);
 
   function createOrder(
-    type: "ppe-orders" | "material-orders" | "plant-orders",
+    type: "ppe-orders" | "material-orders" | "plant-orders" | "tools-orders",
   ) {
     setActiveTab(type);
     setCreateDialogOpen(false);
@@ -60,14 +47,17 @@ export default function OrdersPage() {
       setPpeCreateTrigger((value) => value + 1);
     } else if (type === "material-orders") {
       setPaintCreateTrigger((value) => value + 1);
+    } else if (type === "plant-orders") {
+      setPlantCreateTrigger((value) => value + 1);
+    } else if (type === "tools-orders") {
+      setToolsCreateTrigger((value) => value + 1);
     }
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
+    <div className="mx-auto w-full max-w-7xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
             Centralised order management for PPE, paints, tools and plant
             orders.
@@ -79,7 +69,7 @@ export default function OrdersPage() {
         </Button>
       </div>
 
-      <div className="rounded border border-muted/50 bg-card p-4">
+      <div className="rounded border border-muted/50 bg-card">
         <div className="flex gap-1 border-b border-border">
           {TABS.map((tab) => (
             <button
@@ -99,7 +89,7 @@ export default function OrdersPage() {
 
         <div className="mt-4 space-y-6">
           {activeTab === "ppe-orders" ? (
-            <PpeOrdersTab createTrigger={ppeCreateTrigger} hideCreateButton />
+            <PpeOrdersWrapper createTrigger={ppeCreateTrigger} />
           ) : null}
           {activeTab === "material-orders" ? (
             <MaterialOrdersPage
@@ -107,8 +97,12 @@ export default function OrdersPage() {
               hideCreateButton
             />
           ) : null}
-          {activeTab === "tools-orders" ? <ToolsOrdersTab /> : null}
-          {activeTab === "plant-orders" ? <PlantAssignmentsTab /> : null}
+          {activeTab === "tools-orders" ? (
+            <ToolsOrdersWrapper createTrigger={toolsCreateTrigger} />
+          ) : null}
+          {activeTab === "plant-orders" ? (
+            <PlantAssignmentsTab createTrigger={plantCreateTrigger} />
+          ) : null}
         </div>
       </div>
 
@@ -140,15 +134,12 @@ export default function OrdersPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setActiveTab("tools-orders");
-                setCreateDialogOpen(false);
-              }}
+              onClick={() => createOrder("tools-orders")}
               className="rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-muted/40"
             >
               <div className="font-semibold">Tools Order</div>
               <div className="mt-1 text-sm text-muted-foreground">
-                View and manage tool orders from the tools tab.
+                Create a tool order for a foreman.
               </div>
             </button>
             <button
@@ -168,109 +159,80 @@ export default function OrdersPage() {
   );
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-ZA", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatMoney(value: string) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return "R 0.00";
-  return new Intl.NumberFormat("en-ZA", {
-    style: "currency",
-    currency: "ZAR",
-  }).format(amount);
-}
-
-function ToolsOrdersTab() {
-  const [orders, setOrders] = useState<ToolOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/app/admin/orders?category=TOOL", {
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok)
-        throw new Error(json?.error ?? "Failed to load tools orders");
-      setOrders(json.orders ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }
+function PpeOrdersWrapper({ createTrigger }: { createTrigger?: number }) {
+  const [foremen, setForemen] = useState<AdminForemanDto[]>([]);
+  const [products, setProducts] = useState<AdminProductDto[]>([]);
 
   useEffect(() => {
-    load();
+    Promise.all([
+      fetch("/api/app/admin/foremen", { credentials: "include" }).then((r) =>
+        r.json(),
+      ),
+      fetch("/api/app/admin/products?category=PPE", {
+        credentials: "include",
+      }).then((r) => r.json()),
+    ])
+      .then(([fRes, pRes]) => {
+        setForemen(
+          ((fRes.foremen ?? []) as AdminForemanApiDto[]).map((f) => ({
+            id: f.foremanId,
+            userId: f.userId,
+            name: f.name ?? "",
+            email: f.email ?? "",
+            type: "foreman" as const,
+          })),
+        );
+        setProducts(pRes.products ?? []);
+      })
+      .catch(() => toast.error("Failed to load PPE order data"));
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button variant="ghost" size="icon" onClick={load}>
-          <RotateCw className="h-4 w-4" />
-        </Button>
-      </div>
+    <OrdersPageClient
+      foremen={foremen}
+      products={products}
+      category="PPE"
+      createTrigger={createTrigger}
+      hideHeader
+    />
+  );
+}
 
-      {loading ? (
-        <div className="rounded-lg border border-dashed p-12 text-center text-sm text-muted-foreground">
-          Loading tools orders…
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-12 text-center">
-          <FileText className="mx-auto h-8 w-8 mb-2 opacity-40" />
-          <p className="font-semibold">No tools orders found</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tool orders will appear here once orders contain tool items.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded border bg-card overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/60">
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Recipient</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => {
-                const toolItems = order.items.filter(
-                  (item) => item.productCategory === "TOOL",
-                );
-                const total = toolItems.reduce(
-                  (sum, item) => sum + Number(item.unitPrice) * item.quantity,
-                  0,
-                );
-                return (
-                  <TableRow key={order.id}>
-                    <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell className="font-medium">
-                      {order.foremanName}
-                    </TableCell>
-                    <TableCell>
-                      {toolItems.length} item{toolItems.length !== 1 ? "s" : ""}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{order.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatMoney(String(total))}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
+function ToolsOrdersWrapper({ createTrigger }: { createTrigger?: number }) {
+  const [foremen, setForemen] = useState<AdminForemanDto[]>([]);
+  const [products, setProducts] = useState<AdminProductDto[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/app/admin/foremen", { credentials: "include" }).then((r) =>
+        r.json(),
+      ),
+      fetch("/api/app/admin/products?category=TOOL", {
+        credentials: "include",
+      }).then((r) => r.json()),
+    ])
+      .then(([fRes, pRes]) => {
+        setForemen(
+          ((fRes.foremen ?? []) as AdminForemanApiDto[]).map((f) => ({
+            id: f.foremanId,
+            userId: f.userId,
+            name: f.name ?? "",
+            email: f.email ?? "",
+            type: "foreman" as const,
+          })),
+        );
+        setProducts(pRes.products ?? []);
+      })
+      .catch(() => toast.error("Failed to load tools order data"));
+  }, []);
+
+  return (
+    <OrdersPageClient
+      foremen={foremen}
+      products={products}
+      category="TOOL"
+      createTrigger={createTrigger}
+      hideHeader
+    />
   );
 }

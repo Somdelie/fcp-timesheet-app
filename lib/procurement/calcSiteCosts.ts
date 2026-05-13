@@ -44,14 +44,19 @@ export interface SiteCostSummary {
  * Revenue and profit fields are set to 0 for now.
  */
 export async function calcSiteCosts(
-  startDate: Date,
-  endDateExclusive: Date,
+  startDate?: Date,
+  endDateExclusive?: Date,
   siteIds?: string[],
 ): Promise<SiteCostSummary> {
+  const dateRange =
+    startDate && endDateExclusive
+      ? { gte: startDate, lt: endDateExclusive }
+      : undefined;
+
   // ── Material costs (via SiteProductOrderItem → SiteProductOrder) ──
   const materialWhere: Record<string, unknown> = {
     order: {
-      createdAt: { gte: startDate, lt: endDateExclusive },
+      ...(dateRange ? { createdAt: dateRange } : {}),
       ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
     },
   };
@@ -76,9 +81,31 @@ export async function calcSiteCosts(
     );
   }
 
+  // ── Historical non-labour costs imported from BuildSmart ──
+  // Covers MATERIAL, CONSUMABLE, TOOLS, PLANT, SAFETY, SCAFFOLDING, SUBCONTRACT, OTHER
+  const historicalMaterialRows = await prisma.historicalSiteCost.findMany({
+    where: {
+      ...(dateRange ? { transactionDate: dateRange } : {}),
+      category: { not: "LABOUR" },
+      ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
+    },
+    select: {
+      siteId: true,
+      amount: true,
+    },
+  });
+
+  for (const hist of historicalMaterialRows) {
+    const siteId = hist.siteId;
+    materialMap.set(
+      siteId,
+      (materialMap.get(siteId) ?? new Decimal(0)).add(hist.amount),
+    );
+  }
+
   // ── Wages costs (via AttendanceScan.dayRateAtScan) ──
   const wagesWhere: Record<string, unknown> = {
-    workDate: { gte: startDate, lt: endDateExclusive },
+    ...(dateRange ? { workDate: dateRange } : {}),
     ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
   };
 
@@ -94,13 +121,37 @@ export async function calcSiteCosts(
   const scanCountMap = new Map<string, number>();
   for (const scan of wageRows) {
     const siteId = scan.siteId;
-    wagesMap.set(siteId, (wagesMap.get(siteId) ?? new Decimal(0)).add(scan.dayRateAtScan));
+    wagesMap.set(
+      siteId,
+      (wagesMap.get(siteId) ?? new Decimal(0)).add(scan.dayRateAtScan),
+    );
     scanCountMap.set(siteId, (scanCountMap.get(siteId) ?? 0) + 1);
+  }
+
+  // ── Historical labour costs imported from BuildSmart ──
+  const historicalWageRows = await prisma.historicalSiteCost.findMany({
+    where: {
+      ...(dateRange ? { transactionDate: dateRange } : {}),
+      category: "LABOUR",
+      ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
+    },
+    select: {
+      siteId: true,
+      amount: true,
+    },
+  });
+
+  for (const hist of historicalWageRows) {
+    const siteId = hist.siteId;
+    wagesMap.set(
+      siteId,
+      (wagesMap.get(siteId) ?? new Decimal(0)).add(hist.amount),
+    );
   }
 
   // ── Overtime costs (via OvertimeEntry.totalCost) ──
   const overtimeWhere: Record<string, unknown> = {
-    workDate: { gte: startDate, lt: endDateExclusive },
+    ...(dateRange ? { workDate: dateRange } : {}),
     ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
   };
 

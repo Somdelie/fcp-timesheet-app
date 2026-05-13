@@ -96,6 +96,8 @@ export async function POST(req: NextRequest) {
     vendorName: parsed.vendorName,
     foremanNameHint: parsed.foremanNameHint,
     suggestedForemanId,
+    createdDate: parsed.createdDate,
+    isStockOrder: parsed.subject?.toUpperCase().startsWith("STOCK") ?? false,
     items,
     rawText: parsed.rawText,
   });

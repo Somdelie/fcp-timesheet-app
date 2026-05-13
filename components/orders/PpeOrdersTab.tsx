@@ -93,6 +93,7 @@ type PpeOrderItem = {
 
 type PpeOrder = {
   id: string;
+  isLegacy?: boolean;
   status: PpeOrderStatus;
   note: string | null;
   createdAt: string;
@@ -483,6 +484,7 @@ export function PpeOrdersTab({
       cell: ({ row }) => {
         const order = row.original;
         const canDeduct =
+          !order.isLegacy &&
           order.status !== "CANCELLED" &&
           order.status !== "FULFILLED" &&
           order.items.some((i) => i.product.isDeductible);
@@ -511,7 +513,7 @@ export function PpeOrdersTab({
               className="text-destructive"
               title="Delete"
               onClick={() => setDeleteTarget(order)}
-              disabled={order.status === "FULFILLED"}
+              disabled={order.isLegacy || order.status === "FULFILLED"}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

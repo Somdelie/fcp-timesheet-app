@@ -5,26 +5,15 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TrendingUp, Loader2, Calendar as CalendarIcon } from "lucide-react";
-import { getSiteWageTotals } from "@/actions/site-reports";
 
-interface WageData {
-  totals: {
-    totalDays: number;
-    totalWorkers: number;
-    totalWages: number;
-  };
-  daily: Array<{
-    date: string;
-    workers: number;
-    wages: number;
-  }>;
-  foremen: Array<{
-    foremanId: string;
-    name: string;
-    wages: number;
-    days: number;
-    workers: number;
-  }>;
+interface CostData {
+  siteId: string;
+  materialCost: number;
+  wagesCost: number;
+  overtimeCost: number;
+  projectCost: number;
+  materialPct: number | null;
+  wagesPct: number | null;
 }
 
 function Card({
@@ -59,36 +48,64 @@ function Card({
 }
 
 function formatCurrency(amount: number): string {
-  return `R ${amount.toFixed(2)}`;
+  return `R ${amount.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+async function fetchCosts(siteId: string, from?: string, to?: string): Promise<CostData> {
+  const params = new URLSearchParams();
+  if (from && to) {
+    params.set("from", from);
+    params.set("to", to);
+  }
+  const url = `/api/app/admin/sites/${siteId}/costs${params.size ? `?${params}` : ""}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to load costs");
+  const json = await res.json();
+  return json.data as CostData;
 }
 
 export default function SiteTotalsPanel({ siteId }: { siteId: string }) {
   const [from, setFrom] = React.useState("");
   const [to, setTo] = React.useState("");
-  const [data, setData] = React.useState<WageData | null>(null);
-  const [loading, setLoading] = React.useState(false);
+  const [data, setData] = React.useState<CostData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [label, setLabel] = React.useState("All time");
 
-  const handleGenerate = async () => {
-    if (!from.trim()) {
-      toast.error("Please select a start date");
+  // Load all-time on mount
+  React.useEffect(() => {
+    fetchCosts(siteId)
+      .then(setData)
+      .catch(() => toast.error("Failed to load site costs"))
+      .finally(() => setLoading(false));
+  }, [siteId]);
+
+  const handleFilter = async () => {
+    if (!from.trim() || !to.trim()) {
+      toast.error("Please select both start and end dates");
       return;
     }
-    if (!to.trim()) {
-      toast.error("Please select an end date");
-      return;
-    }
-
     setLoading(true);
     try {
-      const res = await getSiteWageTotals({ siteId, from, to });
+      const result = await fetchCosts(siteId, from, to);
+      setData(result);
+      setLabel(`${from} → ${to}`);
+    } catch {
+      toast.error("Failed to load costs");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (!res.ok) {
-        toast.error(res.error || "Failed to generate report");
-        return;
-      }
-
-      setData(res as WageData);
-      toast.success("Report generated successfully");
+  const handleClearFilter = async () => {
+    setFrom("");
+    setTo("");
+    setLoading(true);
+    try {
+      const result = await fetchCosts(siteId);
+      setData(result);
+      setLabel("All time");
+    } catch {
+      toast.error("Failed to load costs");
     } finally {
       setLoading(false);
     }
@@ -96,16 +113,16 @@ export default function SiteTotalsPanel({ siteId }: { siteId: string }) {
 
   return (
     <Card
-      title="Wage Totals"
-      description="Calculate site wages by date range"
+      title="Project Costs"
+      description={`Cost totals: ${label}`}
       icon={TrendingUp}
     >
       <div className="space-y-6">
-        {/* Date Range Selector */}
-        <div className="grid gap-3 md:grid-cols-3">
+        {/* Date Range Filter */}
+        <div className="grid gap-3 md:grid-cols-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
-              Start Date
+              From
             </label>
             <Input
               type="date"
@@ -117,7 +134,7 @@ export default function SiteTotalsPanel({ siteId }: { siteId: string }) {
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
-              End Date
+              To
             </label>
             <Input
               type="date"
@@ -127,147 +144,81 @@ export default function SiteTotalsPanel({ siteId }: { siteId: string }) {
               className="dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-white"
             />
           </div>
+          <div className="flex flex-col justify-end gap-2">
+            <Button onClick={handleFilter} disabled={loading} className="gap-2">
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CalendarIcon className="h-4 w-4" />
+              )}
+              Filter
+            </Button>
+          </div>
           <div className="flex flex-col justify-end">
             <Button
-              onClick={handleGenerate}
+              variant="outline"
+              onClick={handleClearFilter}
               disabled={loading}
-              className="gap-2"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">Generating...</span>
-                </>
-              ) : (
-                <>
-                  <CalendarIcon className="h-4 w-4" />
-                  Generate
-                </>
-              )}
+              All time
             </Button>
           </div>
         </div>
 
-        {/* Results */}
-        {!data ? (
-          <div className="rounded border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/20 p-8 text-center">
-            <CalendarIcon className="mx-auto h-8 w-8 text-slate-400 dark:text-slate-600 mb-2" />
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Select a date range and generate to see wage totals
-            </p>
+        {/* Cost Breakdown */}
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded border border-blue-200/30 dark:border-blue-500/20 bg-blue-50/40 dark:bg-blue-500/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
-                  Total Days
-                </p>
-                <p className="mt-2 text-2xl font-bold text-blue-900 dark:text-blue-200">
-                  {data.totals.totalDays}
-                </p>
-              </div>
-
-              <div className="rounded border border-emerald-200/30 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-500/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                  Worker Scans
-                </p>
-                <p className="mt-2 text-2xl font-bold text-emerald-900 dark:text-emerald-200">
-                  {data.totals.totalWorkers}
-                </p>
-              </div>
-
-              <div className="rounded border border-violet-200/30 dark:border-violet-500/20 bg-violet-50/40 dark:bg-violet-500/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-400">
-                  Total Wages
-                </p>
-                <p className="mt-2 text-2xl font-bold text-violet-900 dark:text-violet-200">
-                  {formatCurrency(data.totals.totalWages)}
-                </p>
-              </div>
+        ) : data ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded border border-violet-200/30 dark:border-violet-500/20 bg-violet-50/40 dark:bg-violet-500/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-400">
+                Project Cost
+              </p>
+              <p className="mt-2 text-2xl font-bold text-violet-900 dark:text-violet-200">
+                {formatCurrency(data.projectCost)}
+              </p>
             </div>
 
-            {/* Daily Breakdown */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">
-                Daily Breakdown
-              </h3>
-              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                {data.daily.map((d) => (
-                  <div
-                    key={d.date}
-                    className="rounded border border-slate-200/30 dark:border-slate-700/30 bg-slate-50/30 dark:bg-slate-800/20 p-4 transition-all hover:shadow-md"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                          {new Date(d.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                        <p className="mt-2 font-mono text-xs text-slate-700 dark:text-slate-300">
-                          {d.workers} scans
-                        </p>
-                      </div>
-                      <div className="rounded bg-violet-100/50 dark:bg-violet-500/10 px-3 py-2">
-                        <p className="text-xs font-bold text-violet-700 dark:text-violet-400">
-                          {formatCurrency(d.wages)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="rounded border border-blue-200/30 dark:border-blue-500/20 bg-blue-50/40 dark:bg-blue-500/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
+                Wages
+              </p>
+              <p className="mt-2 text-2xl font-bold text-blue-900 dark:text-blue-200">
+                {formatCurrency(data.wagesCost)}
+              </p>
+              {data.wagesPct !== null && (
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                  {data.wagesPct.toFixed(1)}% of project
+                </p>
+              )}
             </div>
 
-            {/* Foreman Breakdown */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">
-                By Foreman
-              </h3>
-              <div className="space-y-2">
-                {data.foremen.map((f) => (
-                  <div
-                    key={f.foremanId}
-                    className="rounded border border-slate-200/30 dark:border-slate-700/30 bg-slate-50/30 dark:bg-slate-800/20 p-4"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="truncate font-semibold text-slate-900 dark:text-white">
-                          {f.name}
-                        </h4>
-                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                          {f.days} day{f.days !== 1 ? "s" : ""} • {f.workers}{" "}
-                          worker scans
-                        </p>
-                      </div>
-                      <div className="rounded bg-violet-100/50 dark:bg-violet-500/10 px-4 py-2">
-                        <p className="font-bold text-violet-700 dark:text-violet-400">
-                          {formatCurrency(f.wages)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="rounded border border-emerald-200/30 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-500/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                Material &amp; Other
+              </p>
+              <p className="mt-2 text-2xl font-bold text-emerald-900 dark:text-emerald-200">
+                {formatCurrency(data.materialCost)}
+              </p>
+              {data.materialPct !== null && (
+                <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                  {data.materialPct.toFixed(1)}% of project
+                </p>
+              )}
             </div>
 
-            {/* Footer Note */}
-            <div className="rounded border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/20 p-4">
-              <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                <span className="font-semibold text-slate-900 dark:text-slate-200">
-                  Note:
-                </span>{" "}
-                These totals are calculated based on
-                AttendanceScan.dayRateAtScan, reflecting the wage rate that was
-                active at the time of each scan.
+            <div className="rounded border border-amber-200/30 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                Overtime
+              </p>
+              <p className="mt-2 text-2xl font-bold text-amber-900 dark:text-amber-200">
+                {formatCurrency(data.overtimeCost)}
               </p>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </Card>
   );

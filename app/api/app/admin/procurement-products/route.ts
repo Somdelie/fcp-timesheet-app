@@ -66,8 +66,11 @@ export async function GET(req: Request) {
     const q = (url.searchParams.get("q") ?? "").trim();
     const categoryId = url.searchParams.get("categoryId");
     const supplierId = url.searchParams.get("supplierId");
-    const productType = url.searchParams.get("productType") as ProductType | null;
+    const productType = url.searchParams.get(
+      "productType",
+    ) as ProductType | null;
     const includeInactive = url.searchParams.get("includeInactive") === "true";
+    const debugConsole = url.searchParams.get("debugConsole") === "true";
 
     const rawLimit = url.searchParams.get("limit");
     const rawPage = url.searchParams.get("page");
@@ -117,13 +120,44 @@ export async function GET(req: Request) {
               supplier: { select: { id: true, name: true } },
             },
           },
-          variantStocks: { select: { id: true, size: true, color: true, qty: true } },
-          _count: { select: { orderItems: true, supplierPrices: true, plantAssignments: true } },
+          variantStocks: {
+            select: { id: true, size: true, color: true, qty: true },
+          },
+          _count: {
+            select: {
+              orderItems: true,
+              supplierPrices: true,
+              plantAssignments: true,
+            },
+          },
         },
       }),
     ]);
 
     const hasMore = skip + products.length < total;
+
+    if (debugConsole && (!productType || productType === "MATERIAL")) {
+      console.log(
+        "SERVER DEBUG: procurement-material-products",
+        JSON.stringify(
+          products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            supplier: p.supplier,
+            supplierPrices: p.supplierPrices?.map((sp) => ({
+              id: sp.id,
+              price: decimalToNumber(sp.price),
+              uom: sp.uom,
+              unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
+              supplier: sp.supplier,
+            })),
+          })),
+          null,
+          2,
+        ),
+      );
+    }
 
     // For plant items, compute the total deployed quantity per product
     let deployedQtyMap = new Map<string, number>();
@@ -206,7 +240,11 @@ export async function POST(req: Request) {
       colors?: string[];
       sizes?: string[];
       stockQty?: number;
-      variantStocks?: { size?: string | null; color?: string | null; qty?: number }[];
+      variantStocks?: {
+        size?: string | null;
+        color?: string | null;
+        qty?: number;
+      }[];
     };
 
     const variantStocksInput = (body as any).variantStocks as
@@ -219,10 +257,11 @@ export async function POST(req: Request) {
         { status: 400, headers: CORS },
       );
 
-    const computedStockQty =
-      variantStocksInput?.length
-        ? variantStocksInput.reduce((s, v) => s + (Number(v.qty) || 0), 0)
-        : (stockQty != null ? Number(stockQty) : 0);
+    const computedStockQty = variantStocksInput?.length
+      ? variantStocksInput.reduce((s, v) => s + (Number(v.qty) || 0), 0)
+      : stockQty != null
+        ? Number(stockQty)
+        : 0;
 
     const product = await prisma.procurementProduct.create({
       data: {
@@ -258,7 +297,9 @@ export async function POST(req: Request) {
       include: {
         category: { select: { id: true, name: true } },
         supplier: { select: { id: true, name: true } },
-        variantStocks: { select: { id: true, size: true, color: true, qty: true } },
+        variantStocks: {
+          select: { id: true, size: true, color: true, qty: true },
+        },
       },
     });
 

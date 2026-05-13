@@ -45,6 +45,8 @@ const CreateOrderSchema = z
   .object({
     foremanId: z.string().min(1).optional(),
     adminUserId: z.string().min(1).optional(),
+    reference: z.string().min(1).max(200).optional(),
+    createdAt: z.string().datetime().optional(),
     items: z
       .array(
         z.object({
@@ -82,6 +84,20 @@ export async function POST(req: NextRequest) {
     }
 
     const data = body.data;
+
+    // Duplicate reference check
+    if (data.reference) {
+      const existing = await prisma.productOrder.findUnique({
+        where: { reference: data.reference },
+        select: { id: true },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: `Order "${data.reference}" already exists` },
+          { status: 409, headers: CORS_HEADERS },
+        );
+      }
+    }
 
     // Validate the target (foreman or admin)
     if (data.foremanId) {
@@ -125,12 +141,14 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.productOrder.create({
       data: {
+        reference: data.reference ?? null,
         ...(data.foremanId
           ? { foreman: { connect: { id: data.foremanId } } }
           : {}),
         ...(data.adminUserId
           ? { adminUser: { connect: { id: data.adminUserId } } }
           : {}),
+        ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
         createdByUser: { connect: { id: admin.id } },
         status: "PENDING",
       },
@@ -196,6 +214,7 @@ export async function POST(req: NextRequest) {
         ok: true,
         order: {
           id: order.id,
+          reference: order.reference ?? null,
           foremanId: order.foremanId,
           adminUserId: order.adminUserId,
           status: order.status,
@@ -300,6 +319,7 @@ export async function GET(req: NextRequest) {
 
       return {
         id: o.id,
+        reference: o.reference ?? null,
         foremanId: o.foremanId,
         adminUserId: o.adminUserId,
         isAdminOrder: isAdmin,

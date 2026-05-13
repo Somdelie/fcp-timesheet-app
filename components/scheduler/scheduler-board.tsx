@@ -26,6 +26,7 @@ import {
   deleteSchedulerTask,
   updateSchedulerTask,
 } from "@/actions/scheduler";
+import { setStoredTasks } from "@/lib/scheduler-storage";
 
 const columns = [
   { id: "todo", title: "To Do" },
@@ -39,11 +40,21 @@ export function SchedulerBoard() {
   const [viewTask, setViewTask] = useState<Task | null>(null);
   const [, startTransition] = useTransition();
 
+  // Wrapper that keeps localStorage in sync with every state change
+  function setAndSync(updater: Task[] | ((prev: Task[]) => Task[])) {
+    setTasks((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      setStoredTasks(next);
+      return next;
+    });
+  }
+
   useEffect(() => {
     startTransition(async () => {
       const data = await getSchedulerTasks();
-      setTasks(data);
+      setAndSync(data);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sensors = useSensors(
@@ -79,7 +90,7 @@ export function SchedulerBoard() {
     // If dropping over a column
     if (columns.some((c) => c.id === overId)) {
       if (activeTask.column !== overId) {
-        setTasks((tasks) =>
+        setAndSync((tasks) =>
           tasks.map((t) => (t.id === activeId ? { ...t, column: overId } : t)),
         );
       }
@@ -88,7 +99,7 @@ export function SchedulerBoard() {
 
     // If dropping over another task
     if (overTask && activeTask.column !== overTask.column) {
-      setTasks((tasks) =>
+      setAndSync((tasks) =>
         tasks.map((t) =>
           t.id === activeId ? { ...t, column: overTask.column } : t,
         ),
@@ -130,19 +141,19 @@ export function SchedulerBoard() {
         (t) => t.column !== activeTaskItem.column,
       );
 
-      setTasks([...otherTasks, ...reorderedColumnTasks]);
+      setAndSync([...otherTasks, ...reorderedColumnTasks]);
     }
   };
 
   const handleAddTask = (newTask: Omit<Task, "id">) => {
     startTransition(async () => {
       const created = await createSchedulerTask(newTask);
-      setTasks((prev) => [...prev, created]);
+      setAndSync((prev) => [...prev, created]);
     });
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setAndSync((prev) => prev.filter((t) => t.id !== taskId));
     startTransition(async () => {
       await deleteSchedulerTask(taskId);
     });
@@ -152,7 +163,7 @@ export function SchedulerBoard() {
     taskId: string,
     data: Partial<Omit<Task, "id">>,
   ) => {
-    setTasks((prev) =>
+    setAndSync((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, ...data } : t)),
     );
     setViewTask((prev) => (prev?.id === taskId ? { ...prev, ...data } : prev));

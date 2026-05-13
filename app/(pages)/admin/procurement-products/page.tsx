@@ -19,7 +19,15 @@ import {
   MoreHorizontal,
   RotateCcw,
   DollarSign,
+  Merge,
+  MoreVertical,
+  Wand2,
+  Download,
+  Loader2,
 } from "lucide-react";
+import { parseBuildSmartProduct } from "@/lib/product-color-parser";
+import { isNumericCostCode } from "@/lib/procurement/buildsmartProductCodes";
+import { Workbook } from "exceljs";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +62,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   useReactTable,
   getCoreRowModel,
@@ -171,6 +186,8 @@ type ProductVariantStock = {
 };
 
 type ProcurementProduct = {
+  createdAt: any;
+  updatedAt: any;
   id: string;
   name: string;
   sku: string | null;
@@ -247,6 +264,7 @@ export default function ProcurementProductsPage({
 }: {
   defaultProductType?: ProductType | "ALL";
 }) {
+  const showTypeTabs = !defaultProductType || defaultProductType === "ALL";
   const [products, setProducts] = useState<ProcurementProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -298,6 +316,8 @@ export default function ProcurementProductsPage({
   const [pricesProduct, setPricesProduct] = useState<ProcurementProduct | null>(
     null,
   );
+  const [suppliersProduct, setSuppliersProduct] =
+    useState<ProcurementProduct | null>(null);
   const [dialogPrices, setDialogPrices] = useState<SupplierPriceEntry[]>([]);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
@@ -312,6 +332,23 @@ export default function ProcurementProductsPage({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const [fixingNames, setFixingNames] = useState(false);
+  const [fixNamesProgress, setFixNamesProgress] = useState<{
+    done: number;
+    total: number;
+    message: string;
+    phase: string;
+  } | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  // merge state
+  const [mergeSource, setMergeSource] = useState<ProcurementProduct | null>(
+    null,
+  );
+  const [mergeTargetId, setMergeTargetId] = useState("");
+  const [mergeSearch, setMergeSearch] = useState("");
+  const [mergeSaving, setMergeSaving] = useState(false);
 
   useEffect(() => {
     async function loadLookups() {
@@ -342,6 +379,9 @@ export default function ProcurementProductsPage({
       if (showInactive) params.set("includeInactive", "true");
       if (filterCategory) params.set("categoryId", filterCategory);
       if (filterSupplier) params.set("supplierId", filterSupplier);
+      if (defaultProductType && defaultProductType !== "ALL") {
+        params.set("productType", defaultProductType);
+      }
       const res = await fetch(`/api/app/admin/procurement-products?${params}`, {
         credentials: "include",
       });
@@ -353,7 +393,7 @@ export default function ProcurementProductsPage({
     } finally {
       setLoading(false);
     }
-  }, [showInactive, filterCategory, filterSupplier]);
+  }, [showInactive, filterCategory, filterSupplier, defaultProductType]);
 
   useEffect(() => {
     load();
@@ -634,6 +674,107 @@ export default function ProcurementProductsPage({
     }
   }
 
+  async function handleMerge() {
+    if (!mergeSource || !mergeTargetId) return;
+    setMergeSaving(true);
+    try {
+      const res = await fetch(
+        `/api/app/admin/procurement-products/${mergeSource.id}/merge`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetId: mergeTargetId }),
+        },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to merge");
+      toast.success(`Merged "${mergeSource.name}" into target`);
+      setMergeSource(null);
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to merge");
+    } finally {
+      setMergeSaving(false);
+    }
+  }
+
+  async function handleFixNames() {
+    setFixingNames(true);
+    setFixNamesProgress({
+      phase: "start",
+      done: 0,
+      total: 1,
+      message: "Starting cleanup...",
+    });
+    try {
+      const res = await fetch(
+        "/api/admin/buildsmart/cleanup-product-names?stream=true",
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+      if (!res.ok) {
+        const errorPayload = await res.json().catch(() => null);
+        throw new Error(errorPayload?.error ?? "Failed to fix names");
+      }
+      if (!res.body) throw new Error("No progress stream returned");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let summary: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as
+            | {
+                type: "progress";
+                phase: string;
+                done: number;
+                total: number;
+                message: string;
+              }
+            | { type: "done"; summary: any }
+            | { type: "error"; error: string };
+
+          if (event.type === "progress") {
+            setFixNamesProgress({
+              phase: event.phase,
+              done: event.done,
+              total: event.total,
+              message: event.message,
+            });
+          } else if (event.type === "done") {
+            summary = event.summary;
+          } else if (event.type === "error") {
+            throw new Error(event.error);
+          }
+        }
+      }
+
+      const json = summary ?? {};
+      toast.success(
+        `Fixed ${json.nameUpdated ?? 0} name(s), cleared ${json.skuCleared ?? 0} cost code(s), merged ${json.merged ?? 0} duplicate(s)`,
+      );
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to fix product names");
+    } finally {
+      setFixingNames(false);
+      setFixNamesProgress(null);
+    }
+  }
+
   function startEditPrice(price: SupplierPriceEntry) {
     setEditingPriceId(price.id);
     setPriceForm({
@@ -670,6 +811,191 @@ export default function ProcurementProductsPage({
   }, [products, search, activeTab]);
 
   const isPpeTab = activeTab === "PPE";
+  const isPaintsTab = defaultProductType === "MATERIAL";
+
+  const exportProductsToExcel = useCallback(async () => {
+    setExporting(true);
+    try {
+      const workbook = new Workbook();
+      const sheet = workbook.addWorksheet("Procurement Products");
+      sheet.columns = [
+        { header: "Name", key: "name", width: 40 },
+        { header: "SKU", key: "sku", width: 18 },
+        { header: "Description", key: "description", width: 40 },
+        { header: "Type", key: "type", width: 14 },
+        { header: "Category", key: "category", width: 24 },
+        { header: "Supplier", key: "supplier", width: 24 },
+        { header: "Active", key: "active", width: 10 },
+        { header: "Returnable", key: "returnable", width: 12 },
+        { header: "Deductible", key: "deductible", width: 12 },
+        { header: "Deduction splits", key: "deductionSplits", width: 16 },
+        { header: "Colors", key: "colors", width: 24 },
+        { header: "Sizes", key: "sizes", width: 24 },
+        { header: "Stock qty", key: "stockQty", width: 12 },
+        { header: "Order items", key: "orderItems", width: 12 },
+        { header: "Prices", key: "prices", width: 60 },
+      ];
+
+      filteredProducts.forEach((product) => {
+        sheet.addRow({
+          name: product.name,
+          sku: product.sku ?? "",
+          description: product.description ?? "",
+          type: product.productType,
+          category: product.category?.name ?? "",
+          supplier: product.supplier?.name ?? "",
+          active: product.isActive ? "Yes" : "No",
+          returnable: product.isReturnable ? "Yes" : "No",
+          deductible: product.isDeductible ? "Yes" : "No",
+          deductionSplits: product.deductionSplits,
+          colors: product.colors.join(", "),
+          sizes: product.sizes.join(", "),
+          stockQty: product.stockQty,
+          orderItems: product._count.orderItems,
+          prices: product.supplierPrices
+            .map(
+              (price) =>
+                `${price.supplier.name}: ${price.price}${price.uom ? ` ${price.uom}` : ""}`,
+            )
+            .join("; "),
+        });
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `procurement-products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Failed to export procurement products to Excel.");
+    } finally {
+      setExporting(false);
+    }
+  }, [filteredProducts]);
+
+  const exportProductsToJson = useCallback(async () => {
+    setExporting(true);
+    try {
+      // Export complete data structure with all IDs and relationships
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        products: filteredProducts.map((product) => ({
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          description: product.description,
+          productType: product.productType,
+          isActive: product.isActive,
+          isReturnable: product.isReturnable,
+          isDeductible: product.isDeductible,
+          deductionSplits: product.deductionSplits,
+          colors: product.colors,
+          sizes: product.sizes,
+          stockQty: product.stockQty,
+          thumbnailUrl: product.thumbnailUrl,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          category: product.category
+            ? {
+                id: product.category.id,
+                name: product.category.name,
+              }
+            : null,
+          supplier: product.supplier
+            ? {
+                id: product.supplier.id,
+                name: product.supplier.name,
+              }
+            : null,
+          variantStocks:
+            product.variantStocks?.map((variant) => ({
+              id: variant.id,
+              size: variant.size,
+              color: variant.color,
+              qty: variant.qty,
+            })) || [],
+          supplierPrices:
+            product.supplierPrices?.map((price) => ({
+              id: price.id,
+              supplierId: price.supplierId,
+              price: price.price,
+              uom: price.uom,
+              unitSize: price.unitSize,
+              isActive: price.isActive,
+              supplier: {
+                id: price.supplier.id,
+                name: price.supplier.name,
+              },
+            })) || [],
+          _count: product._count,
+        })),
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `procurement-products-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      toast.success("JSON export completed successfully");
+    } catch (error) {
+      toast.error("Failed to export procurement products to JSON.");
+    } finally {
+      setExporting(false);
+    }
+  }, [filteredProducts]);
+
+  function getProductSuppliers(product: ProcurementProduct) {
+    const supplierMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        prices: SupplierPriceEntry[];
+        isDefault: boolean;
+      }
+    >();
+
+    if (product.supplier) {
+      supplierMap.set(product.supplier.id, {
+        ...product.supplier,
+        prices: [],
+        isDefault: true,
+      });
+    }
+
+    for (const price of product.supplierPrices ?? []) {
+      const existing = supplierMap.get(price.supplier.id);
+      if (existing) {
+        existing.prices.push(price);
+        existing.isDefault =
+          existing.isDefault || product.supplier?.id === price.supplier.id;
+      } else {
+        supplierMap.set(price.supplier.id, {
+          ...price.supplier,
+          prices: [price],
+          isDefault: product.supplier?.id === price.supplier.id,
+        });
+      }
+    }
+
+    return Array.from(supplierMap.values()).sort((a, b) => {
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
 
   const columns: ColumnDef<ProcurementProduct>[] = [
     {
@@ -696,23 +1022,42 @@ export default function ProcurementProductsPage({
     },
     {
       id: "thumbnail",
-      size: 50,
-      header: () => <span className="sr-only">Image</span>,
-      cell: ({ row }) =>
-        row.original.thumbnailUrl ? (
-          <img
-            src={row.original.thumbnailUrl}
-            alt={row.original.name}
-            className="h-9 w-9 rounded object-cover"
-          />
-        ) : (
-          <div className="flex h-9 w-9 items-center justify-center rounded bg-muted">
-            <Package className="h-4 w-4 text-muted-foreground" />
+      size: 130,
+      header: () => <span>Image / Code</span>,
+      cell: ({ row }) => {
+        const p = row.original;
+        const parsed = parseBuildSmartProduct(p.name);
+        const rawDisplaySku = p.sku ?? parsed.sku;
+        const displaySku =
+          rawDisplaySku && !isNumericCostCode(rawDisplaySku)
+            ? rawDisplaySku
+            : null;
+
+        return (
+          <div className="flex items-center gap-2 min-w-[110px]">
+            {p.thumbnailUrl ? (
+              <img
+                src={p.thumbnailUrl}
+                alt={parsed.cleanName || p.name}
+                className="h-9 w-9 rounded object-cover shrink-0"
+              />
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-muted">
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            {displaySku && (
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                {displaySku}
+              </span>
+            )}
           </div>
-        ),
+        );
+      },
       enableSorting: false,
     },
-    ...(!isPpeTab
+    // Type column — hidden on locked tabs (Paints/Tools)
+    ...(!isPpeTab && !isPaintsTab && defaultProductType !== "PLANT"
       ? [
           {
             id: "type",
@@ -763,15 +1108,17 @@ export default function ProcurementProductsPage({
       },
       cell: ({ row }) => {
         const p = row.original;
+        const parsed = parseBuildSmartProduct(p.name);
+        const displayName = parsed.cleanName;
         return (
-          <div className="min-w-[160px] max-w-[260px]">
-            <div className="font-medium leading-tight">{p.name}</div>
+          <div className="min-w-[180px] max-w-[420px]">
+            <div
+              className="truncate font-medium leading-tight"
+              title={displayName}
+            >
+              {displayName}
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {p.sku && (
-                <span className="text-[10px] text-muted-foreground">
-                  SKU: {p.sku}
-                </span>
-              )}
               {p.category && (
                 <Badge
                   variant="outline"
@@ -779,11 +1126,6 @@ export default function ProcurementProductsPage({
                 >
                   {p.category.name}
                 </Badge>
-              )}
-              {p.supplier && (
-                <span className="text-[10px] text-muted-foreground">
-                  {p.supplier.name}
-                </span>
               )}
               {isPpeTab && !p.isDeductible && (
                 <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -800,140 +1142,36 @@ export default function ProcurementProductsPage({
         );
       },
     },
+    // Price column — for Paints shows all supplier prices grouped by size (UOM)
     {
-      id: "sizesColors",
-      header: () => <span>Sizes / Colors</span>,
+      id: "suppliers",
+      size: 105,
+      header: () => <span>Suppliers</span>,
       cell: ({ row }) => {
-        const p = row.original;
-        const variants = p.variantStocks ?? [];
-        const sizes = p.sizes ?? [];
-        const colors = p.colors ?? [];
+        const productSuppliers = getProductSuppliers(row.original);
+        const supplierCount = productSuppliers.length;
 
-        if (variants.length > 0) {
-          const shown = variants.slice(0, 6);
-          const rest = variants.length - shown.length;
-          return (
-            <div className="flex flex-wrap gap-1 max-w-[220px]">
-              {shown.map((v) => {
-                const parts = [v.color, v.size].filter(Boolean);
-                const label = parts.join("-") || "Default";
-                return (
-                  <span
-                    key={v.id}
-                    className="inline-flex items-center rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium leading-tight whitespace-nowrap"
-                  >
-                    {label}
-                    <span className="ml-1 text-muted-foreground">
-                      ({v.qty})
-                    </span>
-                  </span>
-                );
-              })}
-              {rest > 0 && (
-                <span className="text-[10px] text-muted-foreground self-center">
-                  +{rest} more
-                </span>
-              )}
-            </div>
-          );
+        if (supplierCount === 0) {
+          return <span className="text-sm text-muted-foreground">0</span>;
         }
 
-        if (sizes.length === 0 && colors.length === 0) {
-          return <span className="text-muted-foreground text-sm">—</span>;
-        }
-
-        const tags: string[] = [];
-        if (sizes.length > 0 && colors.length > 0) {
-          for (const c of colors.slice(0, 3))
-            for (const s of sizes.slice(0, 3)) tags.push(`${c}-${s}`);
-        } else {
-          tags.push(...sizes.slice(0, 6), ...colors.slice(0, 6));
-        }
-        const totalCombos =
-          Math.max(sizes.length, 1) * Math.max(colors.length, 1);
-        const shown = tags.slice(0, 5);
-        const rest = totalCombos - shown.length;
         return (
-          <div className="flex flex-wrap gap-1 max-w-[220px]">
-            {shown.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium leading-tight whitespace-nowrap"
-              >
-                {tag}
-              </span>
-            ))}
-            {rest > 0 && (
-              <span className="text-[10px] text-muted-foreground self-center">
-                +{rest} more
-              </span>
-            )}
-          </div>
-        );
-      },
-      enableSorting: false,
-    },
-    {
-      id: "stockQty",
-      header: () => <span>In Stock</span>,
-      cell: ({ row }) => {
-        const variants = row.original.variantStocks ?? [];
-        if (variants.length === 0) {
-          return (
-            <Badge variant="secondary">{row.original.stockQty ?? 0}</Badge>
-          );
-        }
-        const total = variants.reduce((s, v) => s + v.qty, 0);
-        return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="flex flex-col items-start gap-0.5 text-left">
-                <Badge variant="secondary" className="cursor-pointer">
-                  {total}
-                </Badge>
-                <span className="text-[10px] text-muted-foreground">
-                  {variants.length} variants
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-3" align="start">
-              <div className="text-xs font-semibold mb-2 text-foreground">
-                Stock by variant
-              </div>
-              <div className="space-y-1">
-                {variants.map((v) => {
-                  const parts = [v.color, v.size].filter(Boolean);
-                  const label = parts.join("-") || "Default";
-                  return (
-                    <div
-                      key={v.id}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        {label}
-                      </span>
-                      <span className="text-[11px] font-semibold tabular-nums">
-                        {v.qty}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div className="border-t border-border mt-2 pt-2 flex items-center justify-between">
-                  <span className="text-[11px] font-medium">Total</span>
-                  <span className="text-[11px] font-bold tabular-nums">
-                    {total}
-                  </span>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setSuppliersProduct(row.original)}
+            title="View suppliers"
+          >
+            {supplierCount}
+          </Button>
         );
       },
       enableSorting: false,
     },
     {
       id: "price",
-      header: () => <span>Price</span>,
+      header: () => <span>{isPaintsTab ? "Prices by Size" : "Price"}</span>,
       cell: ({ row }) => {
         const p = row.original;
         if (p.productType === "PLANT")
@@ -948,25 +1186,72 @@ export default function ProcurementProductsPage({
               Non-deductible
             </span>
           );
-        const prices = p.supplierPrices;
-        if (!prices?.length)
-          return <span className="text-muted-foreground">—</span>;
+
+        // API already filters to active prices; use directly
+        const allPrices = p.supplierPrices ?? [];
+        if (!allPrices.length)
+          return <span className="text-muted-foreground text-sm">—</span>;
+
+        const fmtPrice = (v: number | null | undefined) =>
+          Number(v || 0).toLocaleString("en-ZA", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        const validUom = (uom: string | null | undefined) =>
+          uom && uom !== "null" && uom !== "undefined" ? uom : null;
+
+        if (isPaintsTab) {
+          return (
+            <div className="space-y-0.5">
+              {allPrices.map((sp) => {
+                const uom = validUom(sp.uom);
+                const sizeLabel = uom
+                  ? sp.unitSize != null
+                    ? `${sp.unitSize}${uom}`
+                    : uom
+                  : null;
+                return (
+                  <div
+                    key={sp.id}
+                    className="flex items-baseline gap-1.5 text-sm whitespace-nowrap"
+                  >
+                    {sizeLabel && (
+                      <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">
+                        {sizeLabel}
+                      </span>
+                    )}
+                    <span className="font-semibold tabular-nums">
+                      R {fmtPrice(sp.price)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // Default: show preferred price
         const preferred = p.supplier?.id
-          ? prices.find((sp) => sp.supplierId === p.supplier!.id)
+          ? allPrices.find((sp) => sp.supplierId === p.supplier!.id)
           : null;
-        const entry = preferred ?? prices[0];
+        const entry = preferred ?? allPrices[0];
         return (
           <div className="text-sm">
-            <span className="font-medium">R {entry.price.toFixed(2)}</span>
+            <span className="font-medium">
+              R{" "}
+              {entry.price.toLocaleString("en-ZA", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
             {entry.uom && (
-              <span className="text-muted-foreground text-xs">
-                {" "}
-                / {entry.uom}
+              <span className="text-muted-foreground text-xs ml-0.5">
+                {`/ ${entry.unitSize != null ? `${entry.unitSize}${entry.uom}` : entry.uom}`}
               </span>
             )}
-            {prices.length > 1 && (
+            {allPrices.length > 1 && (
               <span className="ml-1 text-xs text-muted-foreground">
-                (+{prices.length - 1})
+                (+{allPrices.length - 1})
               </span>
             )}
           </div>
@@ -974,6 +1259,74 @@ export default function ProcurementProductsPage({
       },
       enableSorting: false,
     },
+    // Stock column — hidden on Paints (paints are not stocked)
+    ...(!isPaintsTab
+      ? [
+          {
+            id: "stockQty",
+            header: () => <span>In Stock</span>,
+            cell: ({ row }: any) => {
+              const variants = row.original.variantStocks ?? [];
+              if (variants.length === 0) {
+                return (
+                  <Badge variant="secondary">
+                    {row.original.stockQty ?? 0}
+                  </Badge>
+                );
+              }
+              const total = variants.reduce(
+                (s: number, v: any) => s + v.qty,
+                0,
+              );
+              return (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex flex-col items-start gap-0.5 text-left">
+                      <Badge variant="secondary" className="cursor-pointer">
+                        {total}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground">
+                        {variants.length} variants
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-3" align="start">
+                    <div className="text-xs font-semibold mb-2 text-foreground">
+                      Stock by variant
+                    </div>
+                    <div className="space-y-1">
+                      {variants.map((v: any) => {
+                        const parts = [v.color, v.size].filter(Boolean);
+                        const label = parts.join("-") || "Default";
+                        return (
+                          <div
+                            key={v.id}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <span className="text-[11px] text-muted-foreground font-medium">
+                              {label}
+                            </span>
+                            <span className="text-[11px] font-semibold tabular-nums">
+                              {v.qty}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div className="border-t border-border mt-2 pt-2 flex items-center justify-between">
+                        <span className="text-[11px] font-medium">Total</span>
+                        <span className="text-[11px] font-bold tabular-nums">
+                          {total}
+                        </span>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            },
+            enableSorting: false,
+          } as ColumnDef<ProcurementProduct>,
+        ]
+      : []),
     {
       id: "status",
       header: () => <span>Status</span>,
@@ -993,40 +1346,45 @@ export default function ProcurementProductsPage({
     },
     {
       id: "actions",
-      header: () => <div className="text-right">Actions</div>,
+      size: 48,
+      header: () => <span>Actions</span>,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Manage prices"
-            onClick={() => openPricesDialog(row.original)}
-          >
-            <DollarSign className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Edit product"
-            onClick={() => openEdit(row.original)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive"
-            onClick={() => setDeleteTarget(row.original)}
-            disabled={row.original._count.orderItems > 0}
-            title={
-              row.original._count.orderItems > 0
-                ? "Cannot delete: used in orders"
-                : "Delete"
-            }
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => openPricesDialog(row.original)}>
+              <DollarSign className="mr-2 h-4 w-4" />
+              Manage Prices
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openEdit(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setMergeSource(row.original);
+                setMergeTargetId("");
+                setMergeSearch("");
+              }}
+            >
+              <Merge className="mr-2 h-4 w-4" />
+              Merge into…
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              disabled={row.original._count.orderItems > 0}
+              onClick={() => setDeleteTarget(row.original)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {row.original._count.orderItems > 0 ? "In use" : "Delete"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
       enableSorting: false,
     },
@@ -1055,30 +1413,41 @@ export default function ProcurementProductsPage({
     { value: "OTHER", label: "Other" },
   ];
 
+  const fixNamesPercent = fixNamesProgress
+    ? fixNamesProgress.total > 0
+      ? Math.min(
+          100,
+          Math.round((fixNamesProgress.done / fixNamesProgress.total) * 100),
+        )
+      : 100
+    : 0;
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
-      {/* Type tabs */}
-      <div className="flex items-center gap-1 border-b border-border">
-        {TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => {
-              setActiveTab(tab.value);
-              setPagination((p) => ({ ...p, pageIndex: 0 }));
-            }}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab.value
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-              {counts[tab.value] ?? 0}
-            </span>
-          </button>
-        ))}
-      </div>
+      {/* Type tabs — hidden when locked to a specific type */}
+      {showTypeTabs && (
+        <div className="flex items-center gap-1 border-b border-border">
+          {TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => {
+                setActiveTab(tab.value);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.value
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                {counts[tab.value] ?? 0}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1132,15 +1501,47 @@ export default function ProcurementProductsPage({
               ))}
             </SelectContent>
           </Select>
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={() => setShowInactive(!showInactive)}
           >
             {showInactive ? "Hide Inactive" : "Show Inactive"}
-          </Button>
+          </Button> */}
           <Button variant="ghost" size="icon" onClick={load}>
             <RotateCw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleFixNames}
+            disabled={fixingNames}
+            title="Strip embedded SKUs, pack numbers, and size suffixes from product names"
+          >
+            {fixingNames ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="mr-1.5 h-4 w-4" />
+            )}
+            {fixingNames ? <span>Fixing…</span> : <span>Fix Names</span>}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportProductsToExcel}
+            disabled={exporting || filteredProducts.length === 0}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            {exporting ? "Exporting…" : "Export Excel"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportProductsToJson}
+            disabled={exporting || filteredProducts.length === 0}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            {exporting ? "Exporting…" : "Export JSON"}
           </Button>
         </div>
         <div className="flex items-center gap-2">
@@ -1175,6 +1576,28 @@ export default function ProcurementProductsPage({
           </Button>
         </div>
       </div>
+
+      {fixNamesProgress && (
+        <div className="rounded border border-border bg-muted/30 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="truncate text-muted-foreground">
+              {fixNamesProgress.message}
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums">
+              {fixNamesProgress.done}
+              {" / "}
+              {fixNamesProgress.total}
+              <span className="ml-2 text-primary">{fixNamesPercent}%</span>
+            </span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-background">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-150"
+              style={{ width: `${fixNamesPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       {!loading && filteredProducts.length === 0 ? (
@@ -1900,6 +2323,108 @@ export default function ProcurementProductsPage({
         variant="destructive"
       />
 
+      {/* Suppliers Dialog */}
+      <Dialog
+        open={!!suppliersProduct}
+        onOpenChange={(o) => {
+          if (!o) setSuppliersProduct(null);
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Suppliers</DialogTitle>
+            <DialogDescription className="truncate">
+              {suppliersProduct
+                ? parseBuildSmartProduct(suppliersProduct.name).cleanName
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {suppliersProduct &&
+            (() => {
+              const productSuppliers = getProductSuppliers(suppliersProduct);
+              const fmtPrice = (v: number | null | undefined) =>
+                Number(v || 0).toLocaleString("en-ZA", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              const sizeLabel = (price: SupplierPriceEntry) =>
+                price.uom
+                  ? price.unitSize != null
+                    ? `${price.unitSize}${price.uom}`
+                    : price.uom
+                  : null;
+
+              if (productSuppliers.length === 0) {
+                return (
+                  <div className="rounded border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                    No suppliers linked to this product.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-2">
+                  {productSuppliers.map((supplier) => (
+                    <div
+                      key={supplier.id}
+                      className="rounded border border-border p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div
+                            className="truncate text-sm font-semibold"
+                            title={supplier.name}
+                          >
+                            {supplier.name}
+                          </div>
+                          {supplier.isDefault && (
+                            <div className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              Default supplier
+                            </div>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {supplier.prices.length} price
+                          {supplier.prices.length === 1 ? "" : "s"}
+                        </Badge>
+                      </div>
+
+                      {supplier.prices.length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {supplier.prices.map((price) => (
+                            <div
+                              key={price.id}
+                              className="flex items-center justify-between gap-3 text-xs"
+                            >
+                              <span className="text-muted-foreground">
+                                {sizeLabel(price) ?? "No UOM"}
+                              </span>
+                              <span className="font-semibold tabular-nums">
+                                R {fmtPrice(price.price)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          No active prices captured.
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuppliersProduct(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Prices Dialog */}
       <Dialog
         open={pricesOpen}
@@ -2120,6 +2645,127 @@ export default function ProcurementProductsPage({
           <DialogFooter>
             <Button variant="outline" onClick={() => setPricesOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Dialog */}
+      <Dialog
+        open={!!mergeSource}
+        onOpenChange={(o) => {
+          if (!o) setMergeSource(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Merge Product</DialogTitle>
+            <DialogDescription>
+              The source product will be deleted and all its data merged into
+              the target.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded border bg-muted/30 p-3 text-sm">
+              <div className="text-xs text-muted-foreground mb-0.5">
+                Merging (will be deleted)
+              </div>
+              <div className="font-medium">{mergeSource?.name}</div>
+              {mergeSource?.sku && (
+                <div className="text-xs text-muted-foreground">
+                  SKU: {mergeSource.sku}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground mt-1">
+                {mergeSource?.stockQty ?? 0} in stock
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Merge into</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search target product…"
+                  value={mergeSearch}
+                  onChange={(e) => {
+                    setMergeSearch(e.target.value);
+                    setMergeTargetId("");
+                  }}
+                  className="pl-9"
+                />
+              </div>
+              <div className="max-h-52 overflow-y-auto rounded border divide-y text-sm">
+                {(() => {
+                  const opts = products.filter(
+                    (p) =>
+                      p.id !== mergeSource?.id &&
+                      (mergeSearch === "" ||
+                        p.name
+                          .toLowerCase()
+                          .includes(mergeSearch.toLowerCase()) ||
+                        (p.sku ?? "")
+                          .toLowerCase()
+                          .includes(mergeSearch.toLowerCase())),
+                  );
+                  if (opts.length === 0)
+                    return (
+                      <div className="py-4 text-center text-muted-foreground text-xs">
+                        No products found
+                      </div>
+                    );
+                  return opts.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setMergeTargetId(p.id)}
+                      className={`w-full text-left px-3 py-2 transition-colors ${
+                        mergeTargetId === p.id
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{p.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.sku ? `SKU: ${p.sku} · ` : ""}
+                        {p.stockQty} in stock
+                      </div>
+                    </button>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {mergeTargetId &&
+              (() => {
+                const tgt = products.find((p) => p.id === mergeTargetId);
+                return tgt ? (
+                  <div className="rounded border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                    <div className="font-semibold">After merge:</div>
+                    <div>
+                      <span className="font-medium">{tgt.name}</span> will have{" "}
+                      <span className="font-medium">
+                        {(tgt.stockQty ?? 0) + (mergeSource?.stockQty ?? 0)}
+                      </span>{" "}
+                      in stock.
+                    </div>
+                    <div className="font-medium mt-1">
+                      "{mergeSource?.name}" will be permanently deleted.
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMergeSource(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleMerge}
+              disabled={mergeSaving || !mergeTargetId}
+            >
+              {mergeSaving ? "Merging…" : "Merge & Delete Source"}
             </Button>
           </DialogFooter>
         </DialogContent>

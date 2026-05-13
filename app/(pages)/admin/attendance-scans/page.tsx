@@ -192,7 +192,10 @@ export default function AdminAttendanceScansPage() {
   const [pageSize, setPageSize] = useState(20);
   const [activeTab, setActiveTab] = useState<string>("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [viewPhoto, setViewPhoto] = useState<{ url: string; name: string } | null>(null);
+  const [viewPhoto, setViewPhoto] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
 
   const handleDeleteScan = async (scanId: string) => {
     if (!scanId) return;
@@ -244,12 +247,12 @@ export default function AdminAttendanceScansPage() {
   return (
     <div className="container mx-auto py-6">
       <Card>
-        <CardHeader>
+        {/* <CardHeader>
           <CardTitle>Attendance Scans</CardTitle>
           <CardDescription>
             View all attendance scans with location data (last 7 days)
           </CardDescription>
-        </CardHeader>
+        </CardHeader> */}
         <CardContent>
           {/* Filters */}
           <div className="mb-6 flex flex-wrap gap-4">
@@ -522,7 +525,12 @@ export default function AdminAttendanceScansPage() {
                                     <button
                                       type="button"
                                       className="shrink-0 focus:outline-none"
-                                      onClick={() => setViewPhoto({ url: scan.employeePhotoUrl!, name: scan.employeeName })}
+                                      onClick={() =>
+                                        setViewPhoto({
+                                          url: scan.employeePhotoUrl!,
+                                          name: scan.employeeName,
+                                        })
+                                      }
                                     >
                                       <img
                                         src={scan.employeePhotoUrl}

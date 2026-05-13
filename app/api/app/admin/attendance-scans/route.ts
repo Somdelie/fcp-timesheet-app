@@ -51,14 +51,14 @@ export async function GET(req: NextRequest) {
   const supervisorId = url.searchParams.get("supervisorId");
   const dateStr = url.searchParams.get("date"); // YYYY-MM-DD
 
-  // Default to last 7 days
+  // Default to last 7 days of workDate (inclusive of today)
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
-  const sevenDaysAgo = addDaysUTC(todayStart, -7);
+  const sevenDaysAgo = addDaysUTC(todayStart, -6);
 
   // Build where clause
   const whereClause: any = {
-    scannedAt: { gte: sevenDaysAgo },
+    workDate: { gte: sevenDaysAgo, lt: addDaysUTC(todayStart, 1) },
   };
 
   if (siteId) {

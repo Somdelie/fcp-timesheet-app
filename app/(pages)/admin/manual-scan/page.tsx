@@ -242,8 +242,14 @@ export default function AdminManualScanPage() {
     ? employees.filter((e) => !scannedEmployeeIds.has(e.id))
     : employees;
 
-  // Max date = today (YYYY-MM-DD)
-  const todayStr = new Date().toISOString().split("T")[0];
+  const today = new Date();
+  const todayUtc = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  );
+  const minDate = new Date(todayUtc);
+  minDate.setUTCDate(minDate.getUTCDate() - 6);
+  const todayStr = todayUtc.toISOString().split("T")[0];
+  const minDateStr = minDate.toISOString().split("T")[0];
 
   if (loadingOptions) {
     return (
@@ -396,11 +402,12 @@ export default function AdminManualScanPage() {
                 setWorkDate(e.target.value);
                 setSelectedEmployeeId("");
               }}
+              min={minDateStr}
               max={todayStr}
             />
             <p className="text-xs text-muted-foreground">
-              Select the date first — employees already scanned on this date
-              will be hidden.
+              Select a date within the last 7 days ({minDateStr} to {todayStr}).
+              Employees already scanned on this date will be hidden.
             </p>
           </div>
 

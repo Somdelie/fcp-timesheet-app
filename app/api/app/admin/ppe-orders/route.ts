@@ -124,6 +124,15 @@ async function adjustLegacyOrderStock(
   }
 }
 
+const LEGACY_STATUS_MAP: Record<string, PpeOrderStatus> = {
+  PENDING: "PENDING",
+  COLLECTED: "FULFILLED",
+  DEDUCTED: "FULFILLED",
+  APPLIED: "FULFILLED",
+  PARTIALLY_APPLIED: "PARTIALLY_FULFILLED",
+  CANCELLED: "CANCELLED",
+};
+
 /** GET /api/app/admin/ppe-orders?foremanId=&siteId=&status= */
 export async function GET(req: Request) {
   try {
@@ -141,13 +150,76 @@ export async function GET(req: Request) {
     if (siteId) where.siteId = siteId;
     if (status) where.status = status;
 
-    const rows = await prisma.foremanPpeOrder.findMany({
+    // New system orders
+    const newRows = await prisma.foremanPpeOrder.findMany({
       where,
       orderBy: { createdAt: "desc" },
       include: orderInclude,
     });
 
-    return NextResponse.json({ ok: true, data: rows });
+    // Legacy orders from productOrder with PPE items
+    const legacyWhere: Record<string, unknown> = {
+      items: { some: { product: { category: "PPE" } } },
+    };
+    if (foremanId) legacyWhere.foremanId = foremanId;
+
+    const legacyRows = await prisma.productOrder.findMany({
+      where: legacyWhere,
+      orderBy: { createdAt: "desc" },
+      include: {
+        foreman: { include: { user: { select: { id: true, name: true } } } },
+        items: {
+          where: { product: { category: "PPE" } },
+          include: {
+            product: {
+              select: { id: true, name: true, thumbnailUrl: true, colors: true },
+            },
+          },
+        },
+      },
+    });
+
+    const legacyNormalized = legacyRows
+      .filter((o) => o.foremanId && o.foreman)
+      .map((o) => ({
+        id: o.id,
+        isLegacy: true,
+        status: (LEGACY_STATUS_MAP[o.status] ?? "PENDING") as PpeOrderStatus,
+        note: null,
+        createdAt: o.createdAt,
+        foreman: {
+          id: o.foreman!.id,
+          user: { id: o.foreman!.user.id, name: o.foreman!.user.name },
+        },
+        site: null,
+        createdByUser: null,
+        items: o.items.map((i) => ({
+          id: i.id,
+          quantity: i.quantity,
+          size: i.size ?? null,
+          color: i.color ?? null,
+          note: i.note ?? null,
+          product: {
+            id: i.product.id,
+            name: i.product.name,
+            thumbnailUrl: i.product.thumbnailUrl ?? null,
+            colors: i.product.colors ?? [],
+            isDeductible: false,
+            deductionSplits: 1,
+            supplierPrices: [] as { price: number; supplierId: string }[],
+          },
+        })),
+      }));
+
+    const combined = [
+      ...newRows.map((r) => ({ ...r, isLegacy: false })),
+      ...legacyNormalized,
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    return NextResponse.json({ ok: true, data: combined });
   } catch (e: any) {
     console.error("GET ppe-orders error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
