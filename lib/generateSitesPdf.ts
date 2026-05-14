@@ -17,6 +17,7 @@ export type SiteForPdf = {
   supervisorName?: string | null;
   totalWages?: number;
   totalMaterialCost?: number;
+  jobStatus?: string | null;
 };
 
 export type SitesPrintColumns = {
@@ -587,73 +588,76 @@ export function generateSitesPrintHTML(
   const formatCurrencyHtml = (n: number) =>
     `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const enabledCols: Record<ColumnKey, boolean> = {
-    code: true,
-    name: true,
-    client: columns?.client ?? true,
-    supervisor: columns?.supervisor ?? true,
-    wages: columns?.wages ?? true,
-    material: columns?.material ?? true,
-    total: columns?.total ?? true,
-    created: columns?.created ?? true,
-  };
+  const showClient = columns?.client ?? true;
 
-  const tableRows = sites
-    .map((site) => {
-      const wages = site.totalWages ?? 0;
-      const material = site.totalMaterialCost ?? 0;
-      const totalCost = wages + material;
+  // Only include ongoing sites that have at least some cost
+  const sitesWithCosts = sites.filter(
+    (s) =>
+      s.jobStatus === "ONGOING" &&
+      ((s.totalWages ?? 0) > 0 || (s.totalMaterialCost ?? 0) > 0),
+  );
 
-      const cells: string[] = [];
-      cells.push(`<td class="code-col">${escapeHTML(site.code ?? "—")}</td>`);
-      cells.push(`<td class="name-col">${escapeHTML(site.name)}</td>`);
-      if (enabledCols.client) {
-        cells.push(
-          `<td class="client-col">${escapeHTML(site.client ?? "—")}</td>`,
-        );
-      }
-      if (enabledCols.supervisor) {
-        cells.push(
-          `<td class="supervisor-col">${escapeHTML(
-            site.supervisorName ?? "—",
-          )}</td>`,
-        );
-      }
-      if (enabledCols.wages) {
-        cells.push(`<td class="wages-col">${formatCurrencyHtml(wages)}</td>`);
-      }
-      if (enabledCols.material) {
-        cells.push(
-          `<td class="material-col">${formatCurrencyHtml(material)}</td>`,
-        );
-      }
-      if (enabledCols.total) {
-        cells.push(
-          `<td class="total-col">${formatCurrencyHtml(totalCost)}</td>`,
-        );
-      }
-      if (enabledCols.created) {
-        cells.push(
-          `<td class="created-col">${formatDate(site.createdAt)}</td>`,
-        );
-      }
+  // Group by supervisor
+  const grouped = new Map<string, SiteForPdf[]>();
+  for (const site of sitesWithCosts) {
+    const key = site.supervisorName?.trim() || "Unassigned";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(site);
+  }
+
+  const sections = Array.from(grouped.entries())
+    .map(([supervisorName, supervisorSites], idx) => {
+      const rows = supervisorSites
+        .map((site) => {
+          const wages = site.totalWages ?? 0;
+          const material = site.totalMaterialCost ?? 0;
+          const total = wages + material;
+          return `
+            <tr>
+              <td class="code-col">${escapeHTML(site.code ?? "—")}</td>
+              <td class="name-col">${escapeHTML(site.name)}</td>
+              ${showClient ? `<td class="client-col">${escapeHTML(site.client ?? "—")}</td>` : ""}
+              <td class="wages-col">${formatCurrencyHtml(wages)}</td>
+              <td class="material-col">${formatCurrencyHtml(material)}</td>
+              <td class="total-col">${formatCurrencyHtml(total)}</td>
+            </tr>`;
+        })
+        .join("");
+
+      const totalWages = supervisorSites.reduce((s, x) => s + (x.totalWages ?? 0), 0);
+      const totalMaterial = supervisorSites.reduce((s, x) => s + (x.totalMaterialCost ?? 0), 0);
+      const totalCost = totalWages + totalMaterial;
+      const colSpanBefore = showClient ? 3 : 2;
 
       return `
-        <tr>
-          ${cells.join("")}
-        </tr>
-      `;
+        <div class="supervisor-section${idx > 0 ? " page-break" : ""}">
+          <h2 class="supervisor-name">${escapeHTML(supervisorName)}</h2>
+          <div class="table-container">
+            <table class="main-table">
+              <thead>
+                <tr>
+                  <th class="code-col">Job #</th>
+                  <th class="name-col">Name</th>
+                  ${showClient ? '<th class="client-col">Client</th>' : ""}
+                  <th class="wages-col">Wages</th>
+                  <th class="material-col">Material</th>
+                  <th class="total-col">Total Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+                <tr class="totals-row">
+                  <td colspan="${colSpanBefore}" class="totals-label">Total (${supervisorSites.length} job${supervisorSites.length === 1 ? "" : "s"})</td>
+                  <td class="wages-col">${formatCurrencyHtml(totalWages)}</td>
+                  <td class="material-col">${formatCurrencyHtml(totalMaterial)}</td>
+                  <td class="total-col">${formatCurrencyHtml(totalCost)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`;
     })
     .join("");
-
-  // Calculate totals
-  const totalWagesSum = sites.reduce((sum, s) => sum + (s.totalWages ?? 0), 0);
-  const totalMaterialSum = sites.reduce(
-    (sum, s) => sum + (s.totalMaterialCost ?? 0),
-    0,
-  );
-  const totalCostSum = totalWagesSum + totalMaterialSum;
-  const activeSites = sites.filter((s) => s.isActive).length;
 
   return `
     <!DOCTYPE html>
@@ -662,38 +666,23 @@ export function generateSitesPrintHTML(
       <title>Sites Report</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-          font-size: 12px; 
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
           color: #27272a;
           background: #fafafa;
           min-height: 100vh;
         }
-        
         .content {
           padding: 24px;
-          max-width: 1400px;
+          max-width: 1200px;
           margin: 0 auto;
-        }
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 20px;
-        }
-        h1 { 
-          font-size: 24px; 
-          font-weight: 700;
-          color: #18181b;
-          margin-bottom: 4px;
-        }
-        .subtitle {
-          font-size: 13px;
-          color: #71717a;
         }
         .actions {
           display: flex;
           gap: 8px;
+          justify-content: flex-end;
+          margin-bottom: 24px;
         }
         .btn {
           padding: 8px 16px;
@@ -701,204 +690,96 @@ export function generateSitesPrintHTML(
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
-          transition: all 0.15s;
           border: 1px solid #e4e4e7;
           background: white;
           color: #18181b;
-        }
-        .btn:hover {
-          background: #f4f4f5;
-          border-color: #d4d4d8;
         }
         .btn-primary {
           background: #16a34a;
           border-color: #16a34a;
           color: white;
         }
-        .btn-primary:hover {
-          background: #15803d;
-          border-color: #15803d;
+        .supervisor-section {
+          margin-bottom: 40px;
         }
-        
-        /* Summary cards */
-        .summary-cards {
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-        .summary-card {
-          background: white;
-          border: 1px solid #e4e4e7;
-          border-radius: 4px;
-          padding: 16px;
-        }
-        .summary-label {
-          font-size: 11px;
-          text-transform: uppercase;
-          color: #71717a;
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
-        .summary-value {
-          font-size: 20px;
+        .supervisor-name {
+          font-size: 18px;
           font-weight: 700;
           color: #18181b;
+          margin-bottom: 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #18181b;
         }
-        
-        /* Table */
         .table-container {
           background: white;
-          border: 2px solid #52525b;
+          border: 1px solid #d4d4d8;
           border-radius: 4px;
           overflow: hidden;
-          margin-bottom: 20px;
         }
-        table.main-table { 
-          width: 100%; 
+        table.main-table {
+          width: 100%;
           border-collapse: collapse;
         }
-        .main-table th, .main-table td { 
-          border: 1px solid #d4d4d8;
-          padding: 10px 12px; 
+        .main-table th, .main-table td {
+          border: 1px solid #e4e4e7;
+          padding: 8px 12px;
           text-align: left;
           font-size: 12px;
         }
-        .main-table th { 
-          background: #52525b; 
+        .main-table th {
+          background: #52525b;
           font-weight: 600;
           color: white;
           text-transform: uppercase;
           font-size: 11px;
         }
-        .main-table .code-col { 
-          font-family: monospace;
-          width: 80px;
-        }
-        .main-table .name-col { 
-          font-weight: 500;
-          min-width: 140px;
-        }
-        .main-table .client-col { 
-          min-width: 100px;
-        }
-        .main-table .supervisor-col { 
-          min-width: 110px;
-        }
-        .main-table .wages-col { 
-          text-align: right;
-          font-weight: 600;
-          min-width: 90px;
-        }
-        .main-table .material-col { 
-          text-align: right;
-          font-weight: 600;
-          min-width: 90px;
-        }
-        .main-table .total-col { 
-          text-align: right;
+        .main-table .code-col { font-family: monospace; width: 80px; }
+        .main-table .name-col { font-weight: 500; }
+        .main-table .client-col { min-width: 100px; }
+        .main-table .wages-col { text-align: right; font-weight: 600; white-space: nowrap; }
+        .main-table .material-col { text-align: right; font-weight: 600; white-space: nowrap; }
+        .main-table .total-col { text-align: right; font-weight: 700; white-space: nowrap; }
+        .main-table tbody tr:nth-child(even) { background: #fafafa; }
+        .totals-row td {
+          background: #f4f4f5 !important;
           font-weight: 700;
-          min-width: 90px;
+          border-top: 2px solid #d4d4d8;
         }
-        .main-table .created-col { 
-          width: 80px;
-        }
-        .main-table tbody tr:nth-child(even) {
-          background: #fafafa;
-        }
-        .main-table tbody tr:hover {
-          background: #f4f4f5;
-        }
-        
+        .totals-label { color: #52525b; font-size: 11px; text-transform: uppercase; }
+        .page-break { page-break-before: always; }
+
         @media print {
           body { background: white; }
           .content { padding: 0; max-width: none; }
           .actions { display: none; }
-          .summary-card, .table-container { 
-            border: 1px solid #666; 
-            box-shadow: none;
-          }
           .main-table th, .main-table td {
             padding: 6px 8px;
-            border: 1px solid #666;
+            border: 1px solid #aaa;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            color-adjust: exact !important;
           }
           .main-table th {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            color-adjust: exact !important;
+          }
+          .totals-row td {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       </style>
     </head>
     <body>
       <div class="content">
-        <div class="header">
-          <div>
-            <h1>Sites Report</h1>
-            <p class="subtitle">Generated: ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })} • ${sites.length} site${sites.length === 1 ? "" : "s"}</p>
-          </div>
-          <div class="actions">
-            <button class="btn btn-primary" id="print-btn">
-              🖨️ Print
-            </button>
-            <button class="btn" id="close-btn">
-              Close
-            </button>
-          </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="print-btn">🖨️ Print</button>
+          <button class="btn" id="close-btn">Close</button>
         </div>
-        
-        <div class="summary-cards">
-          <div class="summary-card">
-            <div class="summary-label">Total Sites</div>
-            <div class="summary-value">${sites.length}</div>
-          </div>
-          <div class="summary-card">
-            <div class="summary-label">Active Sites</div>
-            <div class="summary-value">${activeSites}</div>
-          </div>
-          <div class="summary-card">
-            <div class="summary-label">Total Wages</div>
-            <div class="summary-value">${formatCurrencyHtml(totalWagesSum)}</div>
-          </div>
-          <div class="summary-card">
-            <div class="summary-label">Total Material</div>
-            <div class="summary-value">${formatCurrencyHtml(totalMaterialSum)}</div>
-          </div>
-          <div class="summary-card">
-            <div class="summary-label">Total Cost</div>
-            <div class="summary-value">${formatCurrencyHtml(totalCostSum)}</div>
-          </div>
-        </div>
-        
-        <div class="table-container">
-          <table class="main-table">
-            <thead>
-              <tr>
-                <th class="code-col">Job #</th>
-                <th class="name-col">Name</th>
-                ${enabledCols.client ? '<th class="client-col">Client</th>' : ""}
-                ${enabledCols.supervisor ? '<th class="supervisor-col">Supervisor</th>' : ""}
-                ${enabledCols.wages ? '<th class="wages-col">Wages</th>' : ""}
-                ${enabledCols.material ? '<th class="material-col">Material</th>' : ""}
-                ${enabledCols.total ? '<th class="total-col">Total Cost</th>' : ""}
-                ${enabledCols.created ? '<th class="created-col">Created</th>' : ""}
-              </tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-          </table>
-        </div>
+        ${sections}
       </div>
-      
       <script>
-        document.getElementById('close-btn').addEventListener('click', function() {
-          window.close();
-        });
-        document.getElementById('print-btn').addEventListener('click', function() {
-          window.print();
-        });
+        document.getElementById('close-btn').addEventListener('click', function() { window.close(); });
+        document.getElementById('print-btn').addEventListener('click', function() { window.print(); });
       </script>
     </body>
     </html>

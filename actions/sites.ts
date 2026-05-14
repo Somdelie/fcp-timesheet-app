@@ -51,6 +51,7 @@ function serializeSite(s: any) {
       ),
     0,
   );
+  const latestClaim = s.claims?.[0] ?? null;
   return {
     id: s.id,
     name: s.name,
@@ -103,6 +104,17 @@ function serializeSite(s: any) {
     supervisorName,
     totalWages,
     totalMaterialCost,
+    claimDate: latestClaim?.claimDate instanceof Date
+      ? latestClaim.claimDate.toISOString()
+      : null,
+    claimAmountClaimed: latestClaim ? Number(latestClaim.amountClaimed) : 0,
+    claimAmountReceived: latestClaim ? Number(latestClaim.amountReceived) : 0,
+    claimOutstanding: latestClaim
+      ? Math.max(0, Number(latestClaim.amountClaimed) - Number(latestClaim.amountReceived))
+      : 0,
+    claimStatus: (latestClaim?.status ?? null) as
+      | "DRAFT" | "SUBMITTED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED"
+      | null,
   };
 }
 
@@ -210,6 +222,16 @@ export async function listSites(input?: {
               product: { select: { name: true } },
             },
           },
+        },
+      },
+      claims: {
+        orderBy: { claimDate: "desc" },
+        take: 1,
+        select: {
+          claimDate: true,
+          amountClaimed: true,
+          amountReceived: true,
+          status: true,
         },
       },
     },

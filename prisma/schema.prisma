@@ -209,6 +209,9 @@ model Foreman {
   // ✅ NEW: product orders created for this foreman
   productOrders ProductOrder[]
 
+  // site-level procurement orders assigned to this foreman
+  siteProductOrders SiteProductOrder[] @relation("ForemanSiteProductOrders")
+
   // ✅ NEW: site + foreman day rate overrides
   siteDayRateOverrides SiteForemanDayRateOverride[]
 
@@ -1466,6 +1469,11 @@ model SiteProductOrder {
   createdByUserId String?
   createdByUser   User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
 
+  // optional: which foreman this order is for (batch orders create one record per foreman)
+  foremanId   String?
+  foreman     Foreman? @relation("ForemanSiteProductOrders", fields: [foremanId], references: [id], onDelete: SetNull)
+  foremanName String? // snapshot of foreman name at order time
+
   reference String? // e.g. PO number, ticket number
   note      String?
 
@@ -1480,6 +1488,7 @@ model SiteProductOrder {
   @@index([siteId, createdAt])
   @@index([supplierId, createdAt])
   @@index([createdByUserId, createdAt])
+  @@index([foremanId, createdAt])
   @@index([reference])
 }
 

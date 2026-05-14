@@ -160,6 +160,41 @@ function lastAmount(line: string): string | null {
   return n.toFixed(2);
 }
 
+/**
+ * Smarter total resolver for DEL-batch lines.
+ *
+ * pdf-parse sometimes extracts PDF columns out of order, placing the unit-price
+ * column AFTER the line total. When that happens, lastAmount() returns the unit
+ * price instead of the total. This function corrects that by using the parsed
+ * quantity as a discriminator:
+ *
+ *   qty > 1  → find the pair where unitPrice × qty ≈ total (±2 %); return total.
+ *   fallback → return the maximum amount on the line (always ≥ unit price for qty ≥ 1).
+ */
+function resolveLineTotal(line: string, quantity: number | null): string | null {
+  const amounts = [...line.matchAll(AMOUNT_TOKEN_RE)]
+    .map((m) => parseFloat(m[0].replace(/[\s,]/g, "")))
+    .filter((n) => n > 0);
+
+  if (!amounts.length) return null;
+  if (amounts.length === 1) return amounts[0].toFixed(2);
+
+  if (quantity && quantity > 1) {
+    for (const unitCandidate of amounts) {
+      const expected = unitCandidate * quantity;
+      const totalCandidate = amounts.find(
+        (a) => a !== unitCandidate && Math.abs(a - expected) / expected < 0.02,
+      );
+      if (totalCandidate !== undefined) return totalCandidate.toFixed(2);
+    }
+  }
+
+  // Fallback: last amount (matches what pdf-parse usually places last).
+  // Do NOT use max — some report variants include a cumulative running-total
+  // column that is larger than the current line total.
+  return lastAmount(line);
+}
+
 // ── Material line field extraction ───────────────────────────────────────────
 
 /**
@@ -292,6 +327,32 @@ export async function parseCostReportBuffer(
   const materialLines: ParsedMaterialLine[] = [];
   const warnings: string[] = [];
 
+  // Pre-scan: collect identifiers for reversed/credited DEL deliveries.
+  // BuildSmart represents a canceled order with two lines:
+  //   delivery line  →  normal positive amount
+  //   reversal line  →  parenthetical amount e.g. (2,295.31)
+  // The reversal line may or may not carry the same DEL batch token, so we
+  // collect BOTH the batch ref AND the raw amount as fallback keys.
+  const reversedBatchRefs = new Set<string>();
+  const reversedAmounts = new Set<string>(); // normalised to "nnnn.nn"
+  for (const scanLine of lines) {
+    if (SKIP_RE.test(scanLine) || PERIOD_LINE_RE.test(scanLine)) continue;
+    const scanTxn = scanLine.match(TXN_DATE_PREFIX_RE);
+    if (!scanTxn) continue;
+    const creditMatches = [...scanLine.matchAll(/\(\s*([\d,\s]+\.\d{2})\s*\)/g)];
+    if (!creditMatches.length) continue;
+    // Store each credited amount as a normalised string
+    for (const m of creditMatches) {
+      reversedAmounts.add(parseFloat(m[1].replace(/[\s,]/g, "")).toFixed(2));
+    }
+    // If the credit line also has a DEL batch token, store that too
+    const scanAfterDate = scanLine.slice(scanTxn[0].length);
+    if (DEL_BATCH_RE.test(scanAfterDate)) {
+      const batchMatch = scanAfterDate.match(/\b(DEL\d+)\b/i);
+      if (batchMatch) reversedBatchRefs.add(batchMatch[1].toUpperCase());
+    }
+  }
+
   for (const line of lines) {
     // ── Skip obvious header/footer lines ──
     if (SKIP_RE.test(line)) continue;
@@ -345,7 +406,7 @@ export async function parseCostReportBuffer(
       if (PO_DELIVERY_RE.test(line)) continue;
 
       // Credit/return lines have amounts in parentheses e.g. (2,295.31) — skip them.
-      // Importing a return as a positive cost would corrupt historical totals.
+      // These represent canceled orders; the original delivery is already excluded.
       if (/\(\s*[\d,]+\.\d{2}\s*\)/.test(line)) continue;
 
       const afterDate = line.slice(txnMatch[0].length);
@@ -354,9 +415,19 @@ export async function parseCostReportBuffer(
       // Emitted into materialLines (structured order data for SiteProductOrder seeding)
       // AND into rows (financial record so Historical Costs tab still captures the spend).
       if (DEL_BATCH_RE.test(afterDate)) {
-        const amount = lastAmount(line);
+        const fields = extractMaterialFields(afterDate);
+
+        // Skip deliveries that have a corresponding credit in this PDF — fully reversed.
+        // Check by DEL batch ref first; fall back to amount match when the credit
+        // line uses a different batch token (e.g. a GL journal reversal).
+        const deliveryAmount = lastAmount(line);
+        const isReversed =
+          (fields.batchRef && reversedBatchRefs.has(fields.batchRef)) ||
+          (deliveryAmount !== null && reversedAmounts.has(deliveryAmount));
+        if (isReversed) continue;
+
+        const amount = resolveLineTotal(line, fields.quantity);
         if (amount) {
-          const fields = extractMaterialFields(afterDate);
           const amountNum = parseFloat(amount);
           const unitPrice =
             fields.quantity && fields.quantity > 0

@@ -105,6 +105,11 @@ export type SiteRow = {
   totalWages: number;
   totalMaterialCost: number;
   jobStatus: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
+  claimDate: string | null;
+  claimAmountClaimed: number;
+  claimAmountReceived: number;
+  claimOutstanding: number;
+  claimStatus: "DRAFT" | "SUBMITTED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED" | null;
 };
 
 export const SITE_TABLE_COLUMN_OPTIONS = [
@@ -112,13 +117,14 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "code", label: "Job Number" },
   { id: "name", label: "Name" },
   { id: "client", label: "Client" },
-  { id: "jobStatus", label: "Job Status" },
   { id: "siteClaimDate", label: "Claim Date" },
   { id: "supervisorName", label: "Supervisor" },
   { id: "totalWages", label: "Total Wages" },
   { id: "totalMaterialCost", label: "Total Material Cost" },
   { id: "totalCost", label: "Total Cost" },
   { id: "amountClaimed", label: "Amount Claimed" },
+  { id: "claimPaidToDate", label: "Paid to Date" },
+  { id: "claimOutstanding", label: "Outstanding" },
   { id: "profitLoss", label: "Profit / Loss" },
   { id: "actions", label: "Actions" },
 ] as const;
@@ -538,7 +544,7 @@ export default function SitesTable({
       {
         id: "code",
         accessorKey: "code",
-        size: 120,
+        size: 80,
         header: ({ column }) => {
           const isSorted = column.getIsSorted();
           return (
@@ -547,7 +553,7 @@ export default function SitesTable({
               onClick={() => column.toggleSorting(isSorted === "asc")}
             >
               <Hash className="h-4 w-4 text-indigo-600" />
-              Job Number
+              Job#
               {isSorted === "asc" ? (
                 <ChevronUp className="h-4 w-4" />
               ) : isSorted === "desc" ? (
@@ -620,18 +626,6 @@ export default function SitesTable({
         cell: ({ row }) => (
           <span className="text-sm">{row.original.client ?? "—"}</span>
         ),
-      },
-      {
-        id: "jobStatus",
-        accessorKey: "jobStatus",
-        size: 120,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-blue-600" />
-            Job Status
-          </div>
-        ),
-        cell: ({ row }) => <JobStatusBadge status={row.original.jobStatus} />,
       },
       {
         id: "siteClaimDate",
@@ -767,6 +761,59 @@ export default function SitesTable({
         ),
       },
       {
+        id: "claimPaidToDate",
+        accessorKey: "claimAmountReceived",
+        size: 150,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <Wallet className="h-4 w-4 text-emerald-600" />
+              Paid to Date
+              {isSorted === "asc" ? <ChevronUp className="h-4 w-4" /> : isSorted === "desc" ? <ChevronDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+          );
+        },
+        cell: ({ row }) => {
+          const v = row.original.claimAmountReceived;
+          return v > 0
+            ? <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">{formatCurrency(v)}</span>
+            : <span className="block text-right text-xs text-muted-foreground">—</span>;
+        },
+      },
+      {
+        id: "claimOutstanding",
+        accessorKey: "claimOutstanding",
+        size: 160,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <Calculator className="h-4 w-4 text-amber-600" />
+              Outstanding
+              {isSorted === "asc" ? <ChevronUp className="h-4 w-4" /> : isSorted === "desc" ? <ChevronDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+          );
+        },
+        cell: ({ row }) => {
+          const v = row.original.claimOutstanding;
+          if (v <= 0 && row.original.claimAmountClaimed === 0)
+            return <span className="block text-right text-xs text-muted-foreground">—</span>;
+          return (
+            <div className="text-right">
+              <span className="block text-sm font-bold text-amber-700 dark:text-amber-400">{formatCurrency(v)}</span>
+              <span className="text-[11px] text-muted-foreground">{formatCurrency(v * 1.15)} Inc VAT</span>
+            </div>
+          );
+        },
+      },
+      {
         id: "profitLoss",
         size: 150,
         header: () => (
@@ -854,7 +901,7 @@ export default function SitesTable({
                       minWidth: header.column.id === "select" ? 48 : undefined,
                       maxWidth: header.column.id === "select" ? 48 : undefined,
                       position: ["select", "code", "name"].includes(header.column.id) ? "sticky" : undefined,
-                      left: header.column.id === "select" ? 0 : header.column.id === "code" ? 48 : header.column.id === "name" ? 168 : undefined,
+                      left: header.column.id === "select" ? 0 : header.column.id === "code" ? 48 : header.column.id === "name" ? 128 : undefined,
                     }}
                     className={classNames(
                       "border border-zinc-200 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700",
@@ -900,7 +947,7 @@ export default function SitesTable({
                         minWidth: cell.column.id === "select" ? 48 : undefined,
                         maxWidth: cell.column.id === "select" ? 48 : undefined,
                         position: ["select", "code", "name"].includes(cell.column.id) ? "sticky" : undefined,
-                        left: cell.column.id === "select" ? 0 : cell.column.id === "code" ? 48 : cell.column.id === "name" ? 168 : undefined,
+                        left: cell.column.id === "select" ? 0 : cell.column.id === "code" ? 48 : cell.column.id === "name" ? 128 : undefined,
                       }}
                       className={classNames(
                         "border border-zinc-200 dark:border-zinc-700",

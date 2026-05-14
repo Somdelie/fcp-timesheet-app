@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import {
-  parseCostReportBuffers,
-} from "@/lib/buildsmart-cost-parser";
+import { parseCostReportBuffers } from "@/lib/buildsmart-cost-parser";
 import {
   importBuildSmartRows,
+  importBuildSmartRowsStream,
 } from "@/lib/procurement/buildsmartHistoricalImporter";
 import type { BuildSmartRow } from "@/lib/procurement/buildsmartHistoricalImporter";
 import { mapLedgerCategory } from "@/lib/buildsmart-ledger-mapper";
@@ -37,12 +36,18 @@ export async function POST(req: NextRequest) {
   const siteCodeOverride = (formData.get("siteCode") as string | null) ?? null;
 
   if (!["parse", "import"].includes(action)) {
-    return NextResponse.json({ error: 'action must be "parse" or "import"' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'action must be "parse" or "import"' },
+      { status: 400 },
+    );
   }
 
   const pdfEntries = formData.getAll("pdfs");
   if (!pdfEntries.length) {
-    return NextResponse.json({ error: "No PDF files provided" }, { status: 400 });
+    return NextResponse.json(
+      { error: "No PDF files provided" },
+      { status: 400 },
+    );
   }
   if (pdfEntries.length > MAX_FILES) {
     return NextResponse.json(
@@ -116,13 +121,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Filter to LABOUR only ──
+  const labourRows = allRows.filter(
+    (r) => mapLedgerCategory(r.ledgerCode) === "LABOUR",
+  );
+  const skippedNonLabour = allRows.length - labourRows.length;
+
   // ── Preview response (parse only) ──
   if (action === "parse") {
     return NextResponse.json({
       action: "parse",
-      totalRows: allRows.length,
+      totalRows: labourRows.length,
+      skippedNonLabour,
       parseWarnings,
-      rows: allRows.map((r) => ({
+      rows: labourRows.map((r) => ({
         fileName: r.fileName,
         siteCode: r.siteCode,
         siteName: r.parseSiteName,
@@ -137,8 +149,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ── Import ──
-  const importRows: BuildSmartRow[] = allRows.map((r) => ({
+  // ── Import (labour rows only) ──
+  const importRows: BuildSmartRow[] = labourRows.map((r) => ({
     siteCode: r.siteCode,
     ledgerCode: r.ledgerCode,
     externalRef: r.externalRef,
@@ -147,8 +159,7 @@ export async function POST(req: NextRequest) {
     amount: r.amount,
   }));
 
-  const results = await importBuildSmartRows(importRows);
-
+  const encoder = new TextEncoder();
   const counts = {
     NEW_HISTORICAL: 0,
     DUPLICATE_IMPORTED: 0,
@@ -156,22 +167,68 @@ export async function POST(req: NextRequest) {
     MISSING_SITE: 0,
     INVALID_ROW: 0,
   };
-  for (const r of results) counts[r.status]++;
 
-  return NextResponse.json({
-    action: "import",
-    summary: counts,
-    totalProcessed: results.length,
-    parseWarnings,
-    results: results.map((r) => ({
-      siteCode: r.row.siteCode,
-      ledgerCode: r.row.ledgerCode,
-      category: r.category ?? mapLedgerCategory(r.row.ledgerCode),
-      description: r.row.description,
-      transactionDate: r.row.transactionDate,
-      amount: r.row.amount,
-      status: r.status,
-      reason: r.reason,
-    })),
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        let done = 0;
+
+        for await (const {
+          total,
+          done: currentDone,
+          result,
+        } of importBuildSmartRowsStream(importRows)) {
+          done = currentDone;
+          counts[result.status] =
+            (counts[result.status as keyof typeof counts] ?? 0) + 1;
+
+          const line =
+            JSON.stringify({
+              type: "progress",
+              total,
+              done,
+              result: {
+                siteCode: result.row.siteCode,
+                ledgerCode: result.row.ledgerCode,
+                category:
+                  result.category ?? mapLedgerCategory(result.row.ledgerCode),
+                description: result.row.description,
+                transactionDate: result.row.transactionDate,
+                amount: result.row.amount,
+                status: result.status,
+                reason: result.reason,
+              },
+            }) + "\n";
+
+          controller.enqueue(encoder.encode(line));
+        }
+
+        const doneLine =
+          JSON.stringify({
+            type: "done",
+            summary: counts,
+            totalProcessed: importRows.length,
+            skippedNonLabour,
+            parseWarnings,
+          }) + "\n";
+        controller.enqueue(encoder.encode(doneLine));
+      } catch (err) {
+        const errLine =
+          JSON.stringify({
+            type: "error",
+            error: err instanceof Error ? err.message : "Import failed",
+          }) + "\n";
+        controller.enqueue(encoder.encode(errLine));
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "no-cache",
+    },
   });
 }

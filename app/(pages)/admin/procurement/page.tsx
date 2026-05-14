@@ -1,51 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import SuppliersPage from "../suppliers/page";
+import { useState, useEffect } from "react";
 import ProcurementProductsPage from "../procurement-products/page";
-import SupplierPricesPage from "../supplier-prices/page";
 
-const TABS = [
-  { value: "paints", label: "Paints" },
-  { value: "tools", label: "Tools" },
-  { value: "suppliers", label: "Suppliers" },
-  { value: "supplier-prices", label: "Supplier Prices" },
-];
+type Supplier = {
+  id: string;
+  name: string;
+  isActive: boolean;
+};
 
 export default function ProcurementPage() {
-  const [activeTab, setActiveTab] = useState<string>("paints");
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/app/admin/suppliers", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => setSuppliers(json.data ?? []));
+  }, []);
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
-      <div className="rounded border border-muted/50 bg-card">
-        <div className="flex border-b border-border overflow-x-auto">
-          {TABS.map((tab) => (
+    <div className="mx-auto w-full max-w-7xl flex gap-4 items-start">
+      {/* Supplier sidebar */}
+      <div className="w-56 shrink-0 sticky top-4">
+        <div className="rounded border border-border bg-card overflow-hidden">
+          <div className="px-3 py-2 border-b border-border">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Suppliers
+            </p>
+          </div>
+          <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
             <button
-              key={tab.value}
               type="button"
-              onClick={() => setActiveTab(tab.value)}
-              className={`shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.value
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+              onClick={() => setSelectedSupplierId("")}
+              className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                selectedSupplierId === ""
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
-              {tab.label}
+              All Suppliers
             </button>
-          ))}
+            {suppliers.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSelectedSupplierId(s.id)}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors truncate ${
+                  selectedSupplierId === s.id
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
-        <div className="p-4">
-          {activeTab === "paints" ? (
-            <ProcurementProductsPage defaultProductType="MATERIAL" />
-          ) : activeTab === "tools" ? (
-            <ProcurementProductsPage defaultProductType="PLANT" />
-          ) : activeTab === "suppliers" ? (
-            <SuppliersPage />
-          ) : activeTab === "supplier-prices" ? (
-            <SupplierPricesPage />
-          ) : null}
-        </div>
+      {/* Products panel */}
+      <div className="flex-1 min-w-0 rounded border border-muted/50 bg-card p-4">
+        <ProcurementProductsPage
+          supplierId={selectedSupplierId}
+        />
       </div>
     </div>
   );

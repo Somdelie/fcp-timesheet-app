@@ -77,8 +77,13 @@ type Order = {
   createdAt: string;
   supplier: { id: string; name: string } | null;
   createdByUser: { id: string; name: string } | null;
+  foremanId: string | null;
+  foremanName: string | null;
   items: OrderItem[];
 };
+
+type SiteForeman = { foremanId: string; name: string };
+type ForemanCart = { foremanId: string; foremanName: string; items: CartItem[] };
 
 type LookupItem = { id: string; name: string };
 type ProductLookup = {
@@ -268,6 +273,18 @@ export default function SiteMaterialOrdersPanel({
   const [posReference, setPosReference] = useState("");
   const [posNote, setPosNote] = useState("");
   const [placing, setPlacing] = useState(false);
+
+  // Batch order state
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [siteForemen, setSiteForemen] = useState<SiteForeman[]>([]);
+  const [batchForemenCarts, setBatchForemenCarts] = useState<ForemanCart[]>([]);
+  const [activeForemanId, setActiveForemanId] = useState<string | null>(null);
+  const [batchSupplier, setBatchSupplier] = useState("");
+  const [batchReference, setBatchReference] = useState("");
+  const [batchNote, setBatchNote] = useState("");
+  const [batchSearch, setBatchSearch] = useState("");
+  const [batchCategory, setBatchCategory] = useState("ALL");
+  const [batchPlacing, setBatchPlacing] = useState(false);
 
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [addItemOrderId, setAddItemOrderId] = useState("");
@@ -509,6 +526,179 @@ export default function SiteMaterialOrdersPanel({
     setPosReference("");
     setPosNote("");
     setPosOpen(true);
+  }
+
+  async function openBatch() {
+    setBatchForemenCarts([]);
+    setActiveForemanId(null);
+    setBatchSupplier("");
+    setBatchReference("");
+    setBatchNote("");
+    setBatchSearch("");
+    setBatchCategory("ALL");
+    setBatchOpen(true);
+    if (siteForemen.length === 0) {
+      try {
+        const res = await fetch(`/api/app/admin/sites/${siteId}/foremen`, { credentials: "include" });
+        const json = await res.json();
+        if (res.ok) {
+          const foremen: SiteForeman[] = (json.foremen ?? []).map((f: any) => ({
+            foremanId: f.foremanId,
+            name: f.name,
+          }));
+          setSiteForemen(foremen);
+          if (foremen.length > 0) {
+            setActiveForemanId(foremen[0].foremanId);
+            setBatchForemenCarts(foremen.map((f) => ({ foremanId: f.foremanId, foremanName: f.name, items: [] })));
+          }
+        }
+      } catch {
+        toast.error("Failed to load foremen");
+      }
+    } else {
+      setActiveForemanId(siteForemen[0]?.foremanId ?? null);
+      setBatchForemenCarts(siteForemen.map((f) => ({ foremanId: f.foremanId, foremanName: f.name, items: [] })));
+    }
+  }
+
+  function batchAddToCart(item: CatalogItem) {
+    if (!activeForemanId) return;
+    setBatchForemenCarts((prev) =>
+      prev.map((fc) => {
+        if (fc.foremanId !== activeForemanId) return fc;
+        const existing = fc.items.find((c) => c.key === item.key);
+        if (existing)
+          return { ...fc, items: fc.items.map((c) => c.key === item.key ? { ...c, quantity: c.quantity + 1 } : c) };
+        return { ...fc, items: [...fc.items, { key: item.key, item, quantity: 1 }] };
+      }),
+    );
+  }
+
+  function batchUpdateQty(key: string, delta: number) {
+    if (!activeForemanId) return;
+    setBatchForemenCarts((prev) =>
+      prev.map((fc) => {
+        if (fc.foremanId !== activeForemanId) return fc;
+        return {
+          ...fc,
+          items: fc.items.map((c) => {
+            if (c.key !== key) return c;
+            const nq = c.quantity + delta;
+            return nq < 1 ? c : { ...c, quantity: nq };
+          }),
+        };
+      }),
+    );
+  }
+
+  function batchRemoveFromCart(key: string) {
+    if (!activeForemanId) return;
+    setBatchForemenCarts((prev) =>
+      prev.map((fc) =>
+        fc.foremanId !== activeForemanId
+          ? fc
+          : { ...fc, items: fc.items.filter((c) => c.key !== key) },
+      ),
+    );
+  }
+
+  async function handlePlaceBatchOrders() {
+    const nonEmpty = batchForemenCarts.filter((fc) => fc.items.length > 0);
+    if (nonEmpty.length === 0) {
+      toast.error("Add items for at least one foreman");
+      return;
+    }
+    setBatchPlacing(true);
+    try {
+      const res = await fetch(`/api/app/admin/sites/${siteId}/product-orders/batch`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          supplierId: batchSupplier && batchSupplier !== "__none__" ? batchSupplier : null,
+          reference: batchReference.trim() || null,
+          note: batchNote.trim() || null,
+          foremen: nonEmpty.map((fc) => ({
+            foremanId: fc.foremanId,
+            foremanName: fc.foremanName,
+            items: fc.items.map((ci) => ({
+              productId: ci.item.productId,
+              quantity: ci.quantity,
+              uom: ci.item.uom || null,
+              unitSize: ci.item.unitSize ?? null,
+            })),
+          })),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to place orders");
+
+      const totalItems = nonEmpty.reduce((s, fc) => s + fc.items.reduce((s2, c) => s2 + c.quantity, 0), 0);
+      toast.success(`${nonEmpty.length} order${nonEmpty.length !== 1 ? "s" : ""} placed — ${totalItems} item${totalItems !== 1 ? "s" : ""}`);
+      setBatchOpen(false);
+      loadOrders();
+
+      // Open print after placing
+      printBatchOrders(nonEmpty, batchReference, batchNote, suppliers.find((s) => s.id === batchSupplier && batchSupplier !== "__none__")?.name ?? null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to place orders");
+    } finally {
+      setBatchPlacing(false);
+    }
+  }
+
+  function printBatchOrders(
+    carts: ForemanCart[],
+    reference: string,
+    note: string,
+    supplierName: string | null,
+  ) {
+    const nonEmpty = carts.filter((fc) => fc.items.length > 0);
+    const date = new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" });
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Batch Order${reference ? ` — ${reference}` : ""}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 20px; color: #111; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { font-size: 11px; color: #555; margin-bottom: 16px; }
+  .section { margin-bottom: 20px; page-break-inside: avoid; border: 1px solid #ccc; border-radius: 4px; overflow: hidden; }
+  .section-header { background: #1a3c5e; color: #fff; padding: 6px 10px; font-weight: bold; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f0f4f8; text-align: left; padding: 5px 8px; font-size: 11px; border-bottom: 1px solid #ddd; }
+  td { padding: 4px 8px; border-bottom: 1px solid #eee; }
+  tr:last-child td { border-bottom: none; }
+  .qty { text-align: center; width: 50px; }
+  .footer { margin-top: 16px; font-size: 10px; color: #888; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<h1>Material Order${reference ? ` — ${reference}` : ""}</h1>
+<div class="meta">
+  Date: ${date}${supplierName ? ` &nbsp;|&nbsp; Supplier: ${supplierName}` : ""}${note ? ` &nbsp;|&nbsp; Note: ${note}` : ""}
+</div>
+${nonEmpty.map((fc) => `
+<div class="section">
+  <div class="section-header">${fc.foremanName}</div>
+  <table>
+    <thead><tr><th>Product</th><th class="qty">Qty</th></tr></thead>
+    <tbody>
+      ${fc.items.map((ci) => `<tr><td>${fmtSize(ci.item.unitSize, ci.item.uom)} ${ci.item.productName}</td><td class="qty">${ci.quantity}</td></tr>`).join("")}
+    </tbody>
+  </table>
+</div>`).join("")}
+<div class="footer">Printed ${new Date().toLocaleString("en-ZA")}</div>
+</body>
+</html>`;
+    const w = window.open("", "_blank");
+    if (!w) { toast.error("Allow pop-ups to print"); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    w.print();
   }
 
   async function handleAddItem() {
@@ -842,7 +1032,13 @@ export default function SiteMaterialOrdersPanel({
               </div>
             ) : (
               <>
-                <div className="flex justify-end mb-3">
+                <div className="flex justify-end gap-2 mb-3">
+                  <button
+                    onClick={openBatch}
+                    className="h-8 px-3 rounded border border-primary text-primary hover:bg-primary/10 text-[13px] font-medium transition-colors shadow-sm flex items-center gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Batch Order
+                  </button>
                   <button
                     onClick={openPos}
                     className="h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-[13px] font-medium transition-colors shadow-sm flex items-center gap-1.5"
@@ -856,6 +1052,7 @@ export default function SiteMaterialOrdersPanel({
                       <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                         <TableHead className="w-8" />
                         <TableHead>Reference</TableHead>
+                        <TableHead>Foreman</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Created By</TableHead>
@@ -887,6 +1084,9 @@ export default function SiteMaterialOrdersPanel({
                                 {order.note && (
                                   <div className="text-[11px] text-slate-400 mt-0.5 max-w-[200px] truncate">{order.note}</div>
                                 )}
+                              </TableCell>
+                              <TableCell className="text-[12px] text-slate-600 dark:text-slate-300">
+                                {order.foremanName ?? <span className="text-slate-400">—</span>}
                               </TableCell>
                               <TableCell>
                                 {order.supplier ? (
@@ -1433,6 +1633,196 @@ export default function SiteMaterialOrdersPanel({
         confirmText="Delete"
         variant="destructive"
       />
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* Batch Order Dialog                                          */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0 [&>button]:z-50 rounded overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 shrink-0">
+            <div>
+              <DialogTitle className="text-[15px] font-semibold">Batch Order</DialogTitle>
+              <DialogDescription className="text-[12px] mt-0.5">
+                Create orders for multiple foremen — one order per foreman saved to DB, printed together.
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={batchSupplier} onValueChange={setBatchSupplier}>
+                <SelectTrigger className="h-8 w-40 text-xs">
+                  <SelectValue placeholder="Supplier (opt.)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No supplier</SelectItem>
+                  {suppliers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                className="h-8 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs text-slate-900 dark:text-white w-32"
+                placeholder="Reference (opt.)"
+                value={batchReference}
+                onChange={(e) => setBatchReference(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex flex-1 min-h-0">
+            {/* Left: foreman selector */}
+            <div className="w-48 shrink-0 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 flex flex-col">
+              <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                Foremen
+              </div>
+              {siteForemen.length === 0 ? (
+                <p className="px-3 py-4 text-[12px] text-slate-400">No foremen assigned to this site.</p>
+              ) : (
+                <div className="flex-1 overflow-y-auto">
+                  {siteForemen.map((f) => {
+                    const cart = batchForemenCarts.find((fc) => fc.foremanId === f.foremanId);
+                    const count = cart?.items.reduce((s, c) => s + c.quantity, 0) ?? 0;
+                    const isActive = activeForemanId === f.foremanId;
+                    return (
+                      <button
+                        key={f.foremanId}
+                        onClick={() => setActiveForemanId(f.foremanId)}
+                        className={`w-full text-left px-3 py-2.5 text-[13px] border-b border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-between gap-1 ${
+                          isActive
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                        }`}
+                      >
+                        <span className="truncate font-medium">{f.name}</span>
+                        {count > 0 && (
+                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-blue-100 text-blue-700"}`}>
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Right: POS for active foreman */}
+            <div className="flex-1 min-w-0 flex flex-col">
+              {!activeForemanId ? (
+                <div className="flex items-center justify-center flex-1 text-slate-400 text-sm">Select a foreman</div>
+              ) : (() => {
+                const activeCart = batchForemenCarts.find((fc) => fc.foremanId === activeForemanId)?.items ?? [];
+                const filteredBatch = catalog.filter((c) => {
+                  const q = batchSearch.toLowerCase().trim();
+                  if (q && !c.productName.toLowerCase().includes(q)) return false;
+                  if (batchCategory !== "ALL" && c.category?.id !== batchCategory) return false;
+                  return true;
+                });
+                return (
+                  <div className="flex flex-1 min-h-0">
+                    {/* Catalogue */}
+                    <div className="flex-1 min-w-0 flex flex-col border-r border-slate-200 dark:border-slate-700">
+                      <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex gap-2 shrink-0">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                          <input
+                            className="w-full h-8 pl-8 pr-3 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white"
+                            placeholder="Search products…"
+                            value={batchSearch}
+                            onChange={(e) => setBatchSearch(e.target.value)}
+                          />
+                        </div>
+                        <select
+                          value={batchCategory}
+                          onChange={(e) => setBatchCategory(e.target.value)}
+                          className="h-8 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[13px] text-slate-900 dark:text-white px-2"
+                        >
+                          <option value="ALL">All categories</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2 content-start">
+                        {filteredBatch.map((c) => (
+                          <button
+                            key={c.key}
+                            onClick={() => batchAddToCart(c)}
+                            className="text-left p-2.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                          >
+                            <div className="font-medium text-[12px] text-slate-900 dark:text-white leading-tight">{c.productName}</div>
+                            {(c.uom || c.unitSize) && (
+                              <div className="text-[11px] text-slate-400 mt-0.5">{fmtSize(c.unitSize, c.uom)}</div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cart */}
+                    <div className="w-64 shrink-0 flex flex-col bg-slate-50 dark:bg-slate-800/40">
+                      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 font-semibold text-[13px] text-slate-700 dark:text-slate-200 shrink-0">
+                        {siteForemen.find((f) => f.foremanId === activeForemanId)?.name} — Cart
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                        {activeCart.length === 0 ? (
+                          <p className="text-[12px] text-slate-400 text-center py-6">No items yet</p>
+                        ) : (
+                          activeCart.map((ci) => (
+                            <div key={ci.key} className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[12px] font-medium text-slate-900 dark:text-white truncate">{ci.item.productName}</div>
+                                {(ci.item.uom || ci.item.unitSize) && (
+                                  <div className="text-[11px] text-slate-400">{fmtSize(ci.item.unitSize, ci.item.uom)}</div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={() => batchUpdateQty(ci.key, -1)} className="h-5 w-5 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600">
+                                  <Minus className="h-3 w-3" />
+                                </button>
+                                <span className="text-[12px] w-5 text-center font-semibold">{ci.quantity}</span>
+                                <button onClick={() => batchUpdateQty(ci.key, 1)} className="h-5 w-5 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600">
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                                <button onClick={() => batchRemoveFromCart(ci.key)} className="h-5 w-5 rounded flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 ml-0.5">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 shrink-0">
+            <div className="text-[12px] text-slate-500">
+              {batchForemenCarts.filter((fc) => fc.items.length > 0).length} foreman order{batchForemenCarts.filter((fc) => fc.items.length > 0).length !== 1 ? "s" : ""} ready
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setBatchOpen(false)}
+                className="h-8 px-4 rounded border border-slate-200 dark:border-slate-700 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePlaceBatchOrders}
+                disabled={batchPlacing || batchForemenCarts.every((fc) => fc.items.length === 0)}
+                className="h-8 px-4 rounded bg-primary hover:bg-primary/90 text-white text-[13px] font-medium transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                {batchPlacing ? "Placing…" : "Place Orders & Print"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

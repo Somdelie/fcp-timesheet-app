@@ -76,7 +76,11 @@ type LastOrder = {
   orderNumber: string;
   issuedDate: string;
   supervisorName: string;
-  sites: { siteName: string; siteCode?: string | null; items: { productName: string; quantity: number; note?: string }[] }[];
+  sites: {
+    siteName: string;
+    siteCode?: string | null;
+    items: { productName: string; quantity: number; note?: string }[];
+  }[];
 };
 
 export default function PlantDeployPOS({
@@ -85,7 +89,8 @@ export default function PlantDeployPOS({
   allSites,
   onDeployed,
 }: PlantDeployPOSProps) {
-  const [selectedSupervisorId, setSelectedSupervisorId] = React.useState<string>("");
+  const [selectedSupervisorId, setSelectedSupervisorId] =
+    React.useState<string>("");
   const [supervisorOpen, setSupervisorOpen] = React.useState(false);
   const [sitesCarts, setSitesCarts] = React.useState<SiteCart[]>([]);
   const [activeSiteId, setActiveSiteId] = React.useState<string>("");
@@ -103,11 +108,15 @@ export default function PlantDeployPOS({
 
   const availableSitesToAdd = React.useMemo(() => {
     const supervisorSites = selectedSupervisor?.sites ?? [];
-    const sourceSites = supervisorSites.length > 0 ? supervisorSites : (allSites ?? []);
-    return sourceSites.filter((s) => !sitesCarts.some((sc) => sc.siteId === s.id));
+    const sourceSites =
+      supervisorSites.length > 0 ? supervisorSites : (allSites ?? []);
+    return sourceSites.filter(
+      (s) => !sitesCarts.some((sc) => sc.siteId === s.id),
+    );
   }, [selectedSupervisor, sitesCarts, allSites]);
 
-  const activeSiteCart = sitesCarts.find((sc) => sc.siteId === activeSiteId) ?? null;
+  const activeSiteCart =
+    sitesCarts.find((sc) => sc.siteId === activeSiteId) ?? null;
   const activeCart = activeSiteCart?.items ?? [];
 
   function handleSelectSupervisor(id: string) {
@@ -120,7 +129,13 @@ export default function PlantDeployPOS({
   function addSite(site: PlantSiteDto) {
     setSitesCarts((prev) => [
       ...prev,
-      { siteId: site.id, siteName: site.name, siteCode: site.code, chargeToSite: false, items: [] },
+      {
+        siteId: site.id,
+        siteName: site.name,
+        siteCode: site.code,
+        chargeToSite: false,
+        items: [],
+      },
     ]);
     setActiveSiteId(site.id);
     setAddSiteOpen(false);
@@ -145,9 +160,14 @@ export default function PlantDeployPOS({
     );
   }, [productSearch, items]);
 
-  function updateSiteCart(siteId: string, updater: (items: CartItem[]) => CartItem[]) {
+  function updateSiteCart(
+    siteId: string,
+    updater: (items: CartItem[]) => CartItem[],
+  ) {
     setSitesCarts((prev) =>
-      prev.map((sc) => (sc.siteId !== siteId ? sc : { ...sc, items: updater(sc.items) })),
+      prev.map((sc) =>
+        sc.siteId !== siteId ? sc : { ...sc, items: updater(sc.items) },
+      ),
     );
   }
 
@@ -162,7 +182,16 @@ export default function PlantDeployPOS({
         return prev.map((i) =>
           i.productId === item.id ? { ...i, quantity: i.quantity + 1 } : i,
         );
-      return [...prev, { productId: item.id, productName: item.name, quantity: 1, note: "", unitPrice: null }];
+      return [
+        ...prev,
+        {
+          productId: item.id,
+          productName: item.name,
+          quantity: 1,
+          note: "",
+          unitPrice: null,
+        },
+      ];
     });
   }
 
@@ -181,7 +210,9 @@ export default function PlantDeployPOS({
   }
 
   function removeFromCart(productId: string) {
-    updateSiteCart(activeSiteId, (prev) => prev.filter((i) => i.productId !== productId));
+    updateSiteCart(activeSiteId, (prev) =>
+      prev.filter((i) => i.productId !== productId),
+    );
   }
 
   function updateUnitPrice(productId: string, unitPrice: number | null) {
@@ -192,7 +223,9 @@ export default function PlantDeployPOS({
 
   function toggleChargeToSite(siteId: string) {
     setSitesCarts((prev) =>
-      prev.map((sc) => (sc.siteId !== siteId ? sc : { ...sc, chargeToSite: !sc.chargeToSite })),
+      prev.map((sc) =>
+        sc.siteId !== siteId ? sc : { ...sc, chargeToSite: !sc.chargeToSite },
+      ),
     );
   }
 
@@ -204,19 +237,31 @@ export default function PlantDeployPOS({
     .filter((sc) => sc.chargeToSite)
     .reduce(
       (sum, sc) =>
-        sum + sc.items.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0),
+        sum +
+        sc.items.reduce(
+          (s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0),
+          0,
+        ),
       0,
     );
   const activeCartCharged = activeSiteCart?.chargeToSite
-    ? activeCart.reduce((s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0), 0)
+    ? activeCart.reduce(
+        (s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0),
+        0,
+      )
     : 0;
-  const canDeploy = !!selectedSupervisorId && sitesCarts.length > 0 && totalUnits > 0;
+  const canDeploy =
+    !!selectedSupervisorId && sitesCarts.length > 0 && totalUnits > 0;
 
-  function buildVoucherData(orderNumber: string, issuedDate: string): LastOrder {
+  function buildVoucherData(
+    orderNumber: string,
+    issuedDate: string,
+  ): LastOrder {
     return {
       orderNumber,
       issuedDate,
-      supervisorName: selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
+      supervisorName:
+        selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
       sites: sitesCarts
         .filter((sc) => sc.items.length > 0)
         .map((sc) => ({
@@ -234,7 +279,8 @@ export default function PlantDeployPOS({
   function makeOrderMeta() {
     const pad = (n: number) => String(n).padStart(2, "0");
     const now = new Date();
-    const orderNumber = reference.trim() ||
+    const orderNumber =
+      reference.trim() ||
       `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const issuedDate = now.toLocaleDateString("en-ZA", {
       day: "2-digit",
@@ -245,10 +291,18 @@ export default function PlantDeployPOS({
   }
 
   async function handleDeploy() {
-    if (!reference.trim()) { toast.error("Order number is required"); return; }
-    if (!selectedSupervisorId) { toast.error("Please select a supervisor"); return; }
-    if (sitesCarts.length === 0) { toast.error("Add at least one site"); return; }
-    if (totalUnits === 0) { toast.error("Add at least one item to deploy"); return; }
+    if (!selectedSupervisorId) {
+      toast.error("Please select a supervisor");
+      return;
+    }
+    if (sitesCarts.length === 0) {
+      toast.error("Add at least one site");
+      return;
+    }
+    if (totalUnits === 0) {
+      toast.error("Add at least one item to deploy");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -259,8 +313,9 @@ export default function PlantDeployPOS({
             credentials: "include",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
-              reference: reference.trim(),
-              supervisorName: selectedSupervisor?.name ?? selectedSupervisor?.email ?? null,
+              reference: reference.trim() || undefined,
+              supervisorName:
+                selectedSupervisor?.name ?? selectedSupervisor?.email ?? null,
               siteId: siteCart.siteId,
               productId: item.productId,
               quantity: item.quantity,
@@ -271,9 +326,13 @@ export default function PlantDeployPOS({
           }).then(async (res) => {
             const json = await res.json().catch(() => null);
             if (res.status === 409)
-              throw new Error(`Deployment "${reference.trim()}" already exists`);
+              throw new Error(
+                `Deployment "${reference.trim()}" already exists`,
+              );
             if (!res.ok)
-              throw new Error(json?.error || `Failed to deploy ${item.productName}`);
+              throw new Error(
+                json?.error || `Failed to deploy ${item.productName}`,
+              );
             return json;
           }),
         ),
@@ -287,7 +346,9 @@ export default function PlantDeployPOS({
           sitesCarts.length === 1
             ? sitesCarts[0].siteName
             : `${sitesCarts.length} sites`;
-        toast.success(`${totalUnits} unit${totalUnits !== 1 ? "s" : ""} deployed to ${sitesLabel}`);
+        toast.success(
+          `${totalUnits} unit${totalUnits !== 1 ? "s" : ""} deployed to ${sitesLabel}`,
+        );
         const { orderNumber, issuedDate } = makeOrderMeta();
         setLastOrder(buildVoucherData(orderNumber, issuedDate));
         setSitesCarts([]);
@@ -304,7 +365,9 @@ export default function PlantDeployPOS({
       }
     } catch (err) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : "Failed to deploy items");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to deploy items",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -357,7 +420,8 @@ export default function PlantDeployPOS({
         </div>
         {totalUnits > 0 && (
           <span className="text-[10px] tracking-widest text-primary-foreground/70 uppercase">
-            {totalUnits} unit{totalUnits !== 1 ? "s" : ""} across {sitesWithItems} site
+            {totalUnits} unit{totalUnits !== 1 ? "s" : ""} across{" "}
+            {sitesWithItems} site
             {sitesWithItems !== 1 ? "s" : ""}
           </span>
         )}
@@ -367,8 +431,8 @@ export default function PlantDeployPOS({
         {/* Page title block */}
         <div className="border-b border-border pb-4 mb-6">
           <p className="text-[11px] tracking-[0.15em] text-muted-foreground uppercase mb-1">
-            Deploy plant &amp; equipment to one or more sites — creates tracked assignments
-            with full transfer history
+            Deploy plant &amp; equipment to one or more sites — creates tracked
+            assignments with full transfer history
           </p>
         </div>
 
@@ -383,13 +447,12 @@ export default function PlantDeployPOS({
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
                   Order Number
                 </span>
-                <span className="text-[10px] font-bold text-destructive uppercase tracking-wide">required</span>
               </div>
               <Input
                 placeholder="e.g. 68090 (BuildSmart PO #)"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                className={`h-10 text-sm font-medium ${!reference.trim() ? "border-destructive/50" : ""}`}
+                className="h-10 text-sm font-medium"
               />
             </div>
 
@@ -421,7 +484,10 @@ export default function PlantDeployPOS({
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
-                    <CommandInput placeholder="Search supervisor…" className="text-sm" />
+                    <CommandInput
+                      placeholder="Search supervisor…"
+                      className="text-sm"
+                    />
                     <CommandList>
                       <CommandEmpty>No supervisor found.</CommandEmpty>
                       <CommandGroup>
@@ -435,12 +501,17 @@ export default function PlantDeployPOS({
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedSupervisorId === sv.id ? "opacity-100" : "opacity-0",
+                                selectedSupervisorId === sv.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
-                            <span className="flex-1">{sv.name ?? sv.email}</span>
+                            <span className="flex-1">
+                              {sv.name ?? sv.email}
+                            </span>
                             <span className="text-xs text-muted-foreground ml-2">
-                              {sv.sites.length} site{sv.sites.length !== 1 ? "s" : ""}
+                              {sv.sites.length} site
+                              {sv.sites.length !== 1 ? "s" : ""}
                             </span>
                           </CommandItem>
                         ))}
@@ -478,13 +549,20 @@ export default function PlantDeployPOS({
                 {selectedSupervisorId && availableSitesToAdd.length > 0 && (
                   <Popover open={addSiteOpen} onOpenChange={setAddSiteOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                      >
                         <Plus className="h-3 w-3" /> Add Site
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-72 p-0" align="end">
                       <Command>
-                        <CommandInput placeholder="Search site…" className="text-sm" />
+                        <CommandInput
+                          placeholder="Search site…"
+                          className="text-sm"
+                        />
                         <CommandList>
                           <CommandEmpty>No more sites to add.</CommandEmpty>
                           <CommandGroup>
@@ -513,12 +591,17 @@ export default function PlantDeployPOS({
 
               {sitesCarts.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground">
-                  {selectedSupervisorId ? 'Click "Add Site" to begin' : "Select a supervisor first"}
+                  {selectedSupervisorId
+                    ? 'Click "Add Site" to begin'
+                    : "Select a supervisor first"}
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {sitesCarts.map((sc) => {
-                    const siteUnits = sc.items.reduce((s, i) => s + i.quantity, 0);
+                    const siteUnits = sc.items.reduce(
+                      (s, i) => s + i.quantity,
+                      0,
+                    );
                     return (
                       <button
                         key={sc.siteId}
@@ -574,7 +657,9 @@ export default function PlantDeployPOS({
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground truncate">
-                  {activeSiteCart ? `Items — ${activeSiteCart.siteName}` : "Deployment Items"}
+                  {activeSiteCart
+                    ? `Items — ${activeSiteCart.siteName}`
+                    : "Deployment Items"}
                 </span>
               </div>
               <div className="flex items-center gap-4 shrink-0">
@@ -588,10 +673,14 @@ export default function PlantDeployPOS({
                         : "border-border text-muted-foreground hover:border-primary/40",
                     )}
                   >
-                    <span className={cn(
-                      "w-2.5 h-2.5 rounded-sm border flex items-center justify-center",
-                      activeSiteCart?.chargeToSite ? "bg-primary-foreground border-primary-foreground" : "border-current",
-                    )}>
+                    <span
+                      className={cn(
+                        "w-2.5 h-2.5 rounded-sm border flex items-center justify-center",
+                        activeSiteCart?.chargeToSite
+                          ? "bg-primary-foreground border-primary-foreground"
+                          : "border-current",
+                      )}
+                    >
                       {activeSiteCart?.chargeToSite && (
                         <span className="block w-1.5 h-1 border-b-2 border-l-2 border-primary -rotate-45 -translate-y-px" />
                       )}
@@ -678,7 +767,10 @@ export default function PlantDeployPOS({
                             onChange={(e) => {
                               const n = Number(e.target.value);
                               if (!Number.isFinite(n)) return;
-                              updateQuantity(item.productId, Math.max(1, Math.floor(n)));
+                              updateQuantity(
+                                item.productId,
+                                Math.max(1, Math.floor(n)),
+                              );
                             }}
                             className="h-7 w-16 text-sm text-right tabular-nums px-2"
                           />
@@ -703,7 +795,9 @@ export default function PlantDeployPOS({
                         <TableCell className="py-2">
                           <Input
                             value={item.note}
-                            onChange={(e) => updateNote(item.productId, e.target.value)}
+                            onChange={(e) =>
+                              updateNote(item.productId, e.target.value)
+                            }
                             placeholder="Note…"
                             className="h-7 text-xs px-2"
                           />
@@ -748,7 +842,9 @@ export default function PlantDeployPOS({
                     <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
                       Last Order
                     </div>
-                    <div className="text-sm font-bold tabular-nums">{lastOrder.orderNumber}</div>
+                    <div className="text-sm font-bold tabular-nums">
+                      {lastOrder.orderNumber}
+                    </div>
                   </div>
                 ) : (
                   <span className="text-[11px] text-primary-foreground/50 tracking-wide">
@@ -812,7 +908,10 @@ export default function PlantDeployPOS({
             </div>
 
             {/* Item table */}
-            <div className="overflow-auto flex-1 bg-card" style={{ maxHeight: "520px" }}>
+            <div
+              className="overflow-auto flex-1 bg-card"
+              style={{ maxHeight: "520px" }}
+            >
               {filteredItems.length === 0 ? (
                 <div className="py-16 flex flex-col items-center gap-2">
                   <p className="text-xs text-muted-foreground tracking-widests uppercase">
@@ -863,7 +962,9 @@ export default function PlantDeployPOS({
                                   {p.name}
                                 </span>
                                 {p.sku && (
-                                  <div className="text-xs text-muted-foreground">{p.sku}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {p.sku}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -886,7 +987,9 @@ export default function PlantDeployPOS({
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className="py-3 text-right pr-5">

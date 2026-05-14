@@ -261,8 +261,10 @@ function ColorDot({ color }: { color: string }) {
 
 export default function ProcurementProductsPage({
   defaultProductType,
+  supplierId: supplierIdProp,
 }: {
   defaultProductType?: ProductType | "ALL";
+  supplierId?: string;
 }) {
   const showTypeTabs = !defaultProductType || defaultProductType === "ALL";
   const [products, setProducts] = useState<ProcurementProduct[]>([]);
@@ -270,13 +272,17 @@ export default function ProcurementProductsPage({
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("");
-  const [filterSupplier, setFilterSupplier] = useState<string>("");
+  const [filterSupplier, setFilterSupplier] = useState<string>(supplierIdProp ?? "");
   const [activeTab, setActiveTab] = useState<ProductType | "ALL">(
     defaultProductType ?? "ALL",
   );
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  useEffect(() => {
+    setFilterSupplier(supplierIdProp ?? "");
+  }, [supplierIdProp]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ProcurementProduct | null>(null);
@@ -379,7 +385,9 @@ export default function ProcurementProductsPage({
       if (showInactive) params.set("includeInactive", "true");
       if (filterCategory) params.set("categoryId", filterCategory);
       if (filterSupplier) params.set("supplierId", filterSupplier);
-      if (defaultProductType && defaultProductType !== "ALL") {
+      if (supplierIdProp !== undefined) {
+        params.set("productType", "MATERIAL");
+      } else if (defaultProductType && defaultProductType !== "ALL") {
         params.set("productType", defaultProductType);
       }
       const res = await fetch(`/api/app/admin/procurement-products?${params}`, {
@@ -1406,9 +1414,7 @@ export default function ProcurementProductsPage({
 
   const TABS: { value: ProductType | "ALL"; label: string }[] = [
     { value: "ALL", label: "All" },
-    { value: "PPE", label: "PPE" },
     { value: "MATERIAL", label: "Materials" },
-    { value: "PLANT", label: "Plant" },
     { value: "CONSUMABLE", label: "Consumables" },
     { value: "OTHER", label: "Other" },
   ];
@@ -1424,19 +1430,75 @@ export default function ProcurementProductsPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
-      {/* Type tabs — hidden when locked to a specific type */}
-      {showTypeTabs && (
+      {/* Category tabs (supplier context) or type tabs (legacy context) */}
+      {supplierIdProp !== undefined ? (
+        <div className="flex items-center gap-3 border-b border-border">
+          <div className="overflow-x-auto overflow-y-hidden flex-1 min-w-0">
+            <div className="flex w-max">
+              {[{ id: "", name: "All" }, ...categories].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setFilterCategory(cat.id);
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
+                    filterCategory === cat.id
+                      ? "border-primary text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pb-2 shrink-0">
+            {table.getSelectedRowModel().rows.length > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {table.getSelectedRowModel().rows.length} selected
+              </Badge>
+            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={!table.getSelectedRowModel().rows.length}
+              onClick={() => {
+                const selected = table
+                  .getSelectedRowModel()
+                  .rows.map((r) => r.original);
+                const deletable = selected.filter(
+                  (p) => p._count.orderItems === 0,
+                );
+                setBulkSummary({
+                  total: selected.length,
+                  deletable: deletable.length,
+                  blocked: selected.length - deletable.length,
+                });
+                setBulkDeleteOpen(true);
+              }}
+            >
+              <Trash2 className="mr-1 h-4 w-4" /> Delete selected
+            </Button>
+            <Button onClick={openCreate} size="sm">
+              <Plus className="mr-1 h-4 w-4" /> Add Product
+            </Button>
+          </div>
+        </div>
+      ) : showTypeTabs && (
         <div className="flex items-center gap-1 border-b border-border">
           {TABS.map((tab) => (
             <button
               key={tab.value}
+              type="button"
               onClick={() => {
                 setActiveTab(tab.value);
                 setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
                 activeTab === tab.value
-                  ? "border-primary text-primary"
+                  ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -1469,45 +1531,42 @@ export default function ProcurementProductsPage({
               </button>
             )}
           </div>
-          <Select
-            value={filterCategory}
-            onValueChange={(v) => setFilterCategory(v === "ALL" ? "" : v)}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All categories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filterSupplier}
-            onValueChange={(v) => setFilterSupplier(v === "ALL" ? "" : v)}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="All suppliers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All suppliers</SelectItem>
-              {suppliers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {/* <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowInactive(!showInactive)}
-          >
-            {showInactive ? "Hide Inactive" : "Show Inactive"}
-          </Button> */}
+          {supplierIdProp === undefined && (
+            <Select
+              value={filterCategory}
+              onValueChange={(v) => setFilterCategory(v === "ALL" ? "" : v)}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {supplierIdProp === undefined && (
+            <Select
+              value={filterSupplier}
+              onValueChange={(v) => setFilterSupplier(v === "ALL" ? "" : v)}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="All suppliers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All suppliers</SelectItem>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button variant="ghost" size="icon" onClick={load}>
             <RotateCw className="h-4 w-4" />
           </Button>
@@ -1544,37 +1603,39 @@ export default function ProcurementProductsPage({
             {exporting ? "Exporting…" : "Export JSON"}
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          {table.getSelectedRowModel().rows.length > 0 && (
-            <Badge variant="outline" className="text-xs">
-              {table.getSelectedRowModel().rows.length} selected
-            </Badge>
-          )}
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={!table.getSelectedRowModel().rows.length}
-            onClick={() => {
-              const selected = table
-                .getSelectedRowModel()
-                .rows.map((r) => r.original);
-              const deletable = selected.filter(
-                (p) => p._count.orderItems === 0,
-              );
-              setBulkSummary({
-                total: selected.length,
-                deletable: deletable.length,
-                blocked: selected.length - deletable.length,
-              });
-              setBulkDeleteOpen(true);
-            }}
-          >
-            <Trash2 className="mr-1 h-4 w-4" /> Delete selected
-          </Button>
-          <Button onClick={openCreate} size="sm">
-            <Plus className="mr-1 h-4 w-4" /> Add Product
-          </Button>
-        </div>
+        {supplierIdProp === undefined && (
+          <div className="flex items-center gap-2">
+            {table.getSelectedRowModel().rows.length > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {table.getSelectedRowModel().rows.length} selected
+              </Badge>
+            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={!table.getSelectedRowModel().rows.length}
+              onClick={() => {
+                const selected = table
+                  .getSelectedRowModel()
+                  .rows.map((r) => r.original);
+                const deletable = selected.filter(
+                  (p) => p._count.orderItems === 0,
+                );
+                setBulkSummary({
+                  total: selected.length,
+                  deletable: deletable.length,
+                  blocked: selected.length - deletable.length,
+                });
+                setBulkDeleteOpen(true);
+              }}
+            >
+              <Trash2 className="mr-1 h-4 w-4" /> Delete selected
+            </Button>
+            <Button onClick={openCreate} size="sm">
+              <Plus className="mr-1 h-4 w-4" /> Add Product
+            </Button>
+          </div>
+        )}
       </div>
 
       {fixNamesProgress && (

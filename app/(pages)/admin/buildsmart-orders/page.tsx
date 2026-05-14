@@ -14,6 +14,7 @@ import {
   History,
   TriangleAlert,
   ShoppingCart,
+  Receipt,
 } from "lucide-react";
 import {
   Card,
@@ -130,6 +131,10 @@ export default function BuildsmartPdfSeedPage() {
             <History className="mr-2 h-4 w-4" />
             Historical Costs
           </TabsTrigger>
+          <TabsTrigger value="claims" className="rounded">
+            <Receipt className="mr-2 h-4 w-4" />
+            Claims
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="orders">
           <PdfOrdersTab
@@ -144,6 +149,9 @@ export default function BuildsmartPdfSeedPage() {
         </TabsContent>
         <TabsContent value="historical">
           <HistoricalCostsTab />
+        </TabsContent>
+        <TabsContent value="claims">
+          <ClaimsTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -772,7 +780,10 @@ type MatImportResponse = {
 
 const MAT_STATUS_BADGE: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
 > = {
   CREATED: { label: "Created", variant: "default" },
   DUPLICATE: { label: "Already imported", variant: "secondary" },
@@ -788,16 +799,25 @@ function HistoricalMaterialsTab() {
   const [siteCodeOverride, setSiteCodeOverride] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [preview, setPreview] = useState<MatParseResponse | null>(null);
-  const [importResult, setImportResult] = useState<MatImportResponse | null>(null);
-  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null);
+  const [importResult, setImportResult] = useState<MatImportResponse | null>(
+    null,
+  );
+  const [importProgress, setImportProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   function addFiles(list: FileList | File[]) {
     const incoming = Array.from(list).filter(
-      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
     );
     setFiles((prev) => {
       const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
-      return [...prev, ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`))];
+      return [
+        ...prev,
+        ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`)),
+      ];
     });
     setPreview(null);
     setImportResult(null);
@@ -818,7 +838,8 @@ function HistoricalMaterialsTab() {
     try {
       const fd = new FormData();
       fd.append("action", action);
-      if (siteCodeOverride.trim()) fd.append("siteCode", siteCodeOverride.trim());
+      if (siteCodeOverride.trim())
+        fd.append("siteCode", siteCodeOverride.trim());
       for (const f of files) fd.append("pdfs", f, f.name);
 
       const res = await fetch("/api/admin/buildsmart/seed-material-orders", {
@@ -849,8 +870,18 @@ function HistoricalMaterialsTab() {
           for (const line of lines) {
             if (!line.trim()) continue;
             const event = JSON.parse(line) as
-              | { type: "progress"; total: number; done: number; result: MatImportResult }
-              | { type: "done"; summary: Record<string, number>; totalProcessed: number; parseWarnings: string[] }
+              | {
+                  type: "progress";
+                  total: number;
+                  done: number;
+                  result: MatImportResult;
+                }
+              | {
+                  type: "done";
+                  summary: Record<string, number>;
+                  totalProcessed: number;
+                  parseWarnings: string[];
+                }
               | { type: "error"; error: string };
 
             if (event.type === "progress") {
@@ -894,12 +925,15 @@ function HistoricalMaterialsTab() {
                   Historical Material Orders
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm">
-                  Upload BuildSmart cost-report PDFs to seed past supplier orders
-                  (DEL-batch lines). Each unique order number becomes one
+                  Upload BuildSmart cost-report PDFs to seed past supplier
+                  orders (DEL-batch lines). Each unique order number becomes one
                   SiteProductOrder with the original order date preserved.
                 </CardDescription>
               </div>
-              <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+              <Badge
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-xs"
+              >
                 Historical orders
               </Badge>
             </div>
@@ -907,10 +941,28 @@ function HistoricalMaterialsTab() {
 
           <CardContent className="space-y-5">
             <div
-              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
-              onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
-              onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files); }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                if (e.dataTransfer.files?.length)
+                  addFiles(e.dataTransfer.files);
+              }}
               className={cn(
                 "group rounded border-2 border-dashed p-8 transition",
                 dragActive
@@ -922,23 +974,36 @@ function HistoricalMaterialsTab() {
                 <div className="mb-4 rounded border bg-background p-4 shadow-sm">
                   <ShoppingCart className="h-8 w-8" />
                 </div>
-                <h3 className="text-lg font-medium">Drop cost-report PDFs here</h3>
+                <h3 className="text-lg font-medium">
+                  Drop cost-report PDFs here
+                </h3>
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground">
                   Only{" "}
-                  <span className="font-medium text-foreground">DEL-batch lines</span>{" "}
+                  <span className="font-medium text-foreground">
+                    DEL-batch lines
+                  </span>{" "}
                   are extracted — these are historical supplier purchase orders.
                   Use the{" "}
-                  <span className="font-medium text-foreground">PDF Orders</span>{" "}
+                  <span className="font-medium text-foreground">
+                    PDF Orders
+                  </span>{" "}
                   tab for ongoing orders instead.
                 </p>
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                  <Button onClick={() => inputRef.current?.click()} className="rounded">
+                  <Button
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded"
+                  >
                     <FolderOpen className="mr-2 h-4 w-4" />
                     Choose PDFs
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => { setFiles([]); setPreview(null); setImportResult(null); }}
+                    onClick={() => {
+                      setFiles([]);
+                      setPreview(null);
+                      setImportResult(null);
+                    }}
                     disabled={!files.length}
                     className="rounded"
                   >
@@ -952,7 +1017,10 @@ function HistoricalMaterialsTab() {
                   accept="application/pdf,.pdf"
                   multiple
                   className="hidden"
-                  onChange={(e) => { if (e.target.files?.length) addFiles(e.target.files); e.currentTarget.value = ""; }}
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
                 />
               </div>
             </div>
@@ -1010,9 +1078,14 @@ function HistoricalMaterialsTab() {
                     {"Importing orders…"}
                   </span>
                   <span className="font-semibold tabular-nums">
-                    {importProgress.done}{" / "}{importProgress.total}
+                    {importProgress.done}
+                    {" / "}
+                    {importProgress.total}
                     <span className="ml-2 text-primary">
-                      {Math.round((importProgress.done / importProgress.total) * 100)}{"%"}
+                      {Math.round(
+                        (importProgress.done / importProgress.total) * 100,
+                      )}
+                      {"%"}
                     </span>
                   </span>
                 </div>
@@ -1033,7 +1106,9 @@ function HistoricalMaterialsTab() {
         <Card className="rounded border shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Upload queue</CardTitle>
-            <CardDescription>Cost-report PDFs staged for material order seeding.</CardDescription>
+            <CardDescription>
+              Cost-report PDFs staged for material order seeding.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-96 pr-3">
@@ -1044,14 +1119,19 @@ function HistoricalMaterialsTab() {
                   </div>
                 ) : (
                   files.map((f) => (
-                    <div key={`${f.name}-${f.size}`} className="rounded border bg-card p-3 shadow-sm">
+                    <div
+                      key={`${f.name}-${f.size}`}
+                      className="rounded border bg-card p-3 shadow-sm"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="rounded border bg-muted p-2 shrink-0">
                             <FileText className="h-4 w-4" />
                           </div>
                           <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">{f.name}</div>
+                            <div className="truncate text-sm font-medium">
+                              {f.name}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {(f.size / 1024).toFixed(1)} KB
                             </div>
@@ -1122,7 +1202,10 @@ function HistoricalMaterialsTab() {
             </CardTitle>
             <CardDescription>
               Review detected orders before importing. Click{" "}
-              <span className="font-medium text-foreground">Import to database</span> when ready.
+              <span className="font-medium text-foreground">
+                Import to database
+              </span>{" "}
+              when ready.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -1130,9 +1213,13 @@ function HistoricalMaterialsTab() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left font-medium">Order No.</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Order No.
+                    </th>
                     <th className="px-4 py-2 text-left font-medium">Site</th>
-                    <th className="px-4 py-2 text-left font-medium">Order Date</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Order Date
+                    </th>
                     <th className="px-4 py-2 text-right font-medium">Lines</th>
                     <th className="px-4 py-2 text-right font-medium">Total</th>
                   </tr>
@@ -1141,24 +1228,51 @@ function HistoricalMaterialsTab() {
                   {orders.map((o, i) => (
                     <tr key={i} className="transition-colors hover:bg-muted/20">
                       <td className="px-4 py-2 font-mono text-xs font-semibold">
-                        {o.orderNumber ?? <span className="text-muted-foreground">—</span>}
+                        {o.orderNumber ?? (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2 text-xs">
                         <span className="font-mono">{o.siteCode}</span>
                         {o.siteName && (
-                          <div className="text-muted-foreground">{o.siteName}</div>
+                          <div className="text-muted-foreground">
+                            {o.siteName}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-2 text-xs">
-                        {new Date(o.transactionDate).toLocaleDateString("en-ZA")}
+                        {new Date(o.transactionDate).toLocaleDateString(
+                          "en-ZA",
+                        )}
                       </td>
-                      <td className="px-4 py-2 text-right text-xs">{o.lineCount}</td>
+                      <td className="px-4 py-2 text-right text-xs">
+                        {o.lineCount}
+                      </td>
                       <td className="px-4 py-2 text-right font-mono text-xs">
-                        R{Number(o.totalAmount).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                        R
+                        {Number(o.totalAmount).toLocaleString("en-ZA", {
+                          minimumFractionDigits: 2,
+                        })}
                       </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="border-t-2 border-border bg-muted/30">
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-2 text-xs font-semibold text-muted-foreground"
+                    >
+                      GRAND TOTAL
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-sm font-bold">
+                      R
+                      {orders
+                        .reduce((s, o) => s + Number(o.totalAmount), 0)
+                        .toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </ScrollArea>
           </CardContent>
@@ -1181,9 +1295,13 @@ function HistoricalMaterialsTab() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left font-medium">Order No.</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Order No.
+                    </th>
                     <th className="px-4 py-2 text-left font-medium">Site</th>
-                    <th className="px-4 py-2 text-left font-medium">Order Date</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Order Date
+                    </th>
                     <th className="px-4 py-2 text-right font-medium">Lines</th>
                     <th className="px-4 py-2 text-right font-medium">Total</th>
                     <th className="px-4 py-2 text-left font-medium">Status</th>
@@ -1191,7 +1309,10 @@ function HistoricalMaterialsTab() {
                 </thead>
                 <tbody className="divide-y">
                   {results.map((r, i) => {
-                    const statusInfo = MAT_STATUS_BADGE[r.status] ?? { label: r.status, variant: "secondary" as const };
+                    const statusInfo = MAT_STATUS_BADGE[r.status] ?? {
+                      label: r.status,
+                      variant: "secondary" as const,
+                    };
                     return (
                       <tr
                         key={i}
@@ -1199,31 +1320,49 @@ function HistoricalMaterialsTab() {
                           "transition-colors",
                           r.status === "CREATED" && "bg-green-50/50",
                           r.status === "DUPLICATE" && "bg-muted/30",
-                          (r.status === "MISSING_SITE" || r.status === "ERROR") && "bg-red-50/40",
+                          (r.status === "MISSING_SITE" ||
+                            r.status === "ERROR") &&
+                            "bg-red-50/40",
                         )}
                       >
                         <td className="px-4 py-2 font-mono text-xs font-semibold">
-                          {r.orderNumber ?? <span className="text-muted-foreground">—</span>}
+                          {r.orderNumber ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-2 text-xs">
                           <span className="font-mono">{r.siteCode}</span>
                           {r.siteName && (
-                            <div className="text-muted-foreground">{r.siteName}</div>
+                            <div className="text-muted-foreground">
+                              {r.siteName}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-2 text-xs">
-                          {new Date(r.transactionDate).toLocaleDateString("en-ZA")}
+                          {new Date(r.transactionDate).toLocaleDateString(
+                            "en-ZA",
+                          )}
                         </td>
-                        <td className="px-4 py-2 text-right text-xs">{r.linesCreated}</td>
+                        <td className="px-4 py-2 text-right text-xs">
+                          {r.linesCreated}
+                        </td>
                         <td className="px-4 py-2 text-right font-mono text-xs">
-                          R{Number(r.totalAmount).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                          R
+                          {Number(r.totalAmount).toLocaleString("en-ZA", {
+                            minimumFractionDigits: 2,
+                          })}
                         </td>
                         <td className="px-4 py-2">
-                          <Badge variant={statusInfo.variant} className="rounded-full text-xs">
+                          <Badge
+                            variant={statusInfo.variant}
+                            className="rounded-full text-xs"
+                          >
                             {statusInfo.label}
                           </Badge>
                           {r.reason && (
-                            <div className="mt-0.5 text-xs text-muted-foreground">{r.reason}</div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {r.reason}
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -1268,6 +1407,7 @@ type CostImportResult = {
 type ParseResponse = {
   action: "parse";
   totalRows: number;
+  skippedNonLabour: number;
   parseWarnings: string[];
   rows: CostPreviewRow[];
 };
@@ -1276,6 +1416,7 @@ type ImportResponse = {
   action: "import";
   summary: Record<string, number>;
   totalProcessed: number;
+  skippedNonLabour: number;
   parseWarnings: string[];
   results: CostImportResult[];
 };
@@ -1314,6 +1455,10 @@ function HistoricalCostsTab() {
   const [isBusy, setIsBusy] = useState(false);
   const [preview, setPreview] = useState<ParseResponse | null>(null);
   const [importResult, setImportResult] = useState<ImportResponse | null>(null);
+  const [importProgress, setImportProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   function addFiles(list: FileList | File[]) {
     const incoming = Array.from(list).filter(
@@ -1341,6 +1486,7 @@ function HistoricalCostsTab() {
     if (!files.length || isBusy) return;
     setIsBusy(true);
     if (action === "parse") setImportResult(null);
+    setImportProgress(null);
 
     try {
       const fd = new FormData();
@@ -1353,15 +1499,70 @@ function HistoricalCostsTab() {
         method: "POST",
         body: fd,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Request failed");
 
-      if (action === "parse") setPreview(data as ParseResponse);
-      else setImportResult(data as ImportResponse);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any).error ?? "Request failed");
+      }
+
+      if (action === "parse") {
+        const data = await res.json();
+        setPreview(data as ParseResponse);
+      } else {
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const streamedResults: CostImportResult[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop()!;
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const event = JSON.parse(line) as
+              | {
+                  type: "progress";
+                  total: number;
+                  done: number;
+                  result: CostImportResult;
+                }
+              | {
+                  type: "done";
+                  summary: Record<string, number>;
+                  totalProcessed: number;
+                  skippedNonLabour: number;
+                  parseWarnings: string[];
+                }
+              | { type: "error"; error: string };
+
+            if (event.type === "progress") {
+              setImportProgress({ done: event.done, total: event.total });
+              streamedResults.push(event.result);
+            } else if (event.type === "done") {
+              setImportResult({
+                action: "import",
+                summary: event.summary,
+                totalProcessed: event.totalProcessed,
+                skippedNonLabour: event.skippedNonLabour,
+                parseWarnings: event.parseWarnings,
+                results: streamedResults,
+              });
+              setImportProgress(null);
+            } else if (event.type === "error") {
+              throw new Error(event.error);
+            }
+          }
+        }
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsBusy(false);
+      setImportProgress(null);
     }
   }
 
@@ -1380,8 +1581,9 @@ function HistoricalCostsTab() {
                   Historical Cost Import
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm">
-                  Upload BuildSmart cost-report PDFs to import historical
-                  labour, materials, plant and other site costs.
+                  Upload BuildSmart cost-report PDFs to import historical labour
+                  costs only. Material rows are handled by the Historical
+                  Materials tab.
                 </CardDescription>
               </div>
               <Badge
@@ -1517,7 +1719,7 @@ function HistoricalCostsTab() {
                 size="lg"
                 className="rounded px-6"
               >
-                {isBusy && !!importResult ? (
+                {importProgress ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Play className="mr-2 h-4 w-4" />
@@ -1525,6 +1727,33 @@ function HistoricalCostsTab() {
                 Import to database
               </Button>
             </div>
+
+            {importProgress && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Importing rows…</span>
+                  <span className="font-semibold tabular-nums">
+                    {importProgress.done}
+                    {" / "}
+                    {importProgress.total}
+                    <span className="ml-2 text-primary">
+                      {Math.round(
+                        (importProgress.done / importProgress.total) * 100,
+                      )}
+                      {"%"}
+                    </span>
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-150"
+                    style={{
+                      width: `${Math.round((importProgress.done / importProgress.total) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1734,7 +1963,7 @@ function HistoricalCostsTab() {
                             >
                               {statusInfo?.label}
                             </Badge>
-                            {row.reason && (
+                            {row.reason && row.reason !== statusInfo?.label && (
                               <div className="mt-0.5 text-xs text-muted-foreground">
                                 {row.reason}
                               </div>
@@ -1745,6 +1974,542 @@ function HistoricalCostsTab() {
                     );
                   })}
                 </tbody>
+                <tfoot className="border-t-2 border-border bg-muted/30">
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-2 text-xs font-semibold text-muted-foreground"
+                    >
+                      GRAND TOTAL
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-sm font-bold">
+                      R
+                      {rows
+                        .reduce((s, r) => s + Number(r.amount), 0)
+                        .toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
+                    </td>
+                    {importResult && <td />}
+                  </tr>
+                </tfoot>
+              </table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Claims tab ───────────────────────────────────────────────────────────────
+
+type ClaimRow = {
+  fileName: string;
+  siteCode: string;
+  siteName: string | null;
+  claimDate: string;
+  amountClaimed: number;
+  amountReceived: number;
+  outstanding: number;
+  outstandingIncVat: number;
+  claimStatus: "SUBMITTED" | "PARTIALLY_RECEIVED" | "RECEIVED";
+  dbAction: "CREATE" | "UPDATE";
+  parseWarning?: string;
+};
+
+type ClaimParseResponse = {
+  action: "parse";
+  claims: ClaimRow[];
+  parseErrors: { fileName: string; error: string }[];
+  missingSiteErrors: { fileName: string; siteCode: string; error: string }[];
+};
+
+type ClaimImportResult = ClaimRow & {
+  importStatus: "CREATED" | "UPDATED" | "ERROR";
+  importError?: string;
+};
+
+type ClaimImportResponse = {
+  action: "import";
+  results: ClaimImportResult[];
+  parseErrors: { fileName: string; error: string }[];
+  missingSiteErrors: { fileName: string; siteCode: string; error: string }[];
+};
+
+const CLAIM_STATUS_BADGE: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "outline" }
+> = {
+  SUBMITTED: { label: "Submitted", variant: "secondary" },
+  PARTIALLY_RECEIVED: { label: "Partial", variant: "outline" },
+  RECEIVED: { label: "Received", variant: "default" },
+};
+
+const IMPORT_STATUS_BADGE: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" }
+> = {
+  CREATED: { label: "Created", variant: "default" },
+  UPDATED: { label: "Updated", variant: "secondary" },
+  ERROR: { label: "Error", variant: "destructive" },
+};
+
+function fmt(n: number) {
+  return n.toLocaleString("en-ZA", { minimumFractionDigits: 2 });
+}
+
+function ClaimsTab() {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isBusy, setIsBusy] = useState(false);
+  const [preview, setPreview] = useState<ClaimParseResponse | null>(null);
+  const [importResult, setImportResult] = useState<ClaimImportResponse | null>(
+    null,
+  );
+
+  function addFiles(list: FileList | File[]) {
+    const incoming = Array.from(list).filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    setFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      return [
+        ...prev,
+        ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`)),
+      ];
+    });
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  async function callApi(action: "parse" | "import") {
+    if (!files.length || isBusy) return;
+    setIsBusy(true);
+    if (action === "parse") setImportResult(null);
+
+    try {
+      const fd = new FormData();
+      fd.append("action", action);
+      for (const f of files) fd.append("pdfs", f, f.name);
+
+      const res = await fetch("/api/admin/buildsmart/seed-claims", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Request failed");
+
+      if (action === "parse") setPreview(data as ClaimParseResponse);
+      else setImportResult(data as ClaimImportResponse);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  const claims = importResult?.results ?? preview?.claims ?? [];
+  const allErrors = [
+    ...(importResult?.parseErrors ?? preview?.parseErrors ?? []),
+    ...(importResult?.missingSiteErrors ?? preview?.missingSiteErrors ?? []),
+  ];
+  const isResult = importResult !== null;
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        {/* Upload card */}
+        <Card className="rounded border shadow-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl font-semibold tracking-tight">
+                  Claim Seeder
+                </CardTitle>
+                <CardDescription className="mt-1 text-sm">
+                  Drop the latest monthly claim PDF for each site. One record
+                  per site is created or updated with the cumulative claim total
+                  and paid-to-date amount.
+                </CardDescription>
+              </div>
+              <Badge
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-xs"
+              >
+                Claims
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                if (e.dataTransfer.files?.length)
+                  addFiles(e.dataTransfer.files);
+              }}
+              className={cn(
+                "group rounded border-2 border-dashed p-8 transition",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+              )}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="mb-4 rounded border bg-background p-4 shadow-sm">
+                  <Receipt className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-medium">Drop claim PDFs here</h3>
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                  FCP monthly claim letters sent to clients. Site code is read
+                  from the{" "}
+                  <span className="font-medium text-foreground">
+                    FCP - XXXX
+                  </span>{" "}
+                  reference. Drop multiple PDFs to seed several sites at once —
+                  if you drop multiple months for one site, the most recent is
+                  used.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <Button
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded"
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Choose PDFs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFiles([]);
+                      setPreview(null);
+                      setImportResult(null);
+                    }}
+                    disabled={!files.length}
+                    className="rounded"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => callApi("parse")}
+                disabled={!files.length || isBusy}
+                variant="outline"
+                size="lg"
+                className="rounded px-6"
+              >
+                {isBusy && !importResult ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                Preview claims
+              </Button>
+              <Button
+                onClick={() => callApi("import")}
+                disabled={!files.length || isBusy || !preview}
+                size="lg"
+                className="rounded px-6"
+              >
+                {isBusy && !!importResult ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                Save to database
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* File queue */}
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Upload queue</CardTitle>
+            <CardDescription>Claim PDFs staged for import.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-96 pr-3">
+              <div className="space-y-3">
+                {!files.length ? (
+                  <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No PDFs added yet.
+                  </div>
+                ) : (
+                  files.map((f) => (
+                    <div
+                      key={`${f.name}-${f.size}`}
+                      className="rounded border bg-card p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="rounded border bg-muted p-2 shrink-0">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {f.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {(f.size / 1024).toFixed(1)} KB
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 rounded"
+                          onClick={() => removeFile(f.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Parse errors */}
+      {allErrors.length > 0 && (
+        <Card className="rounded border border-amber-200 bg-amber-50 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-800">
+              <TriangleAlert className="h-4 w-4" />
+              Warnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm text-amber-700">
+              {allErrors.map((e, i) => (
+                <li key={i}>
+                  <span className="font-medium">{e.fileName}</span>
+                  {" — "}
+                  {e.error}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Claims table */}
+      {claims.length > 0 && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {isResult ? "Import results" : "Preview"}{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {claims.length} {claims.length === 1 ? "site" : "sites"}
+              </span>
+            </CardTitle>
+            {!isResult && (
+              <CardDescription>
+                Review before saving. If multiple PDFs were dropped for the same
+                site, only the most recent is shown.
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Site</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Claim Date
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium">
+                      Total Claimed
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium">
+                      Paid to Date
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium">
+                      Outstanding
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">Status</th>
+                    {isResult && (
+                      <th className="px-4 py-2 text-left font-medium">
+                        Result
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {claims.map((c, i) => {
+                    const row = c as ClaimRow & Partial<ClaimImportResult>;
+                    const statusInfo = CLAIM_STATUS_BADGE[row.claimStatus] ?? {
+                      label: row.claimStatus,
+                      variant: "secondary" as const,
+                    };
+                    const importInfo =
+                      isResult && row.importStatus
+                        ? (IMPORT_STATUS_BADGE[row.importStatus] ?? {
+                            label: row.importStatus,
+                            variant: "secondary" as const,
+                          })
+                        : null;
+                    return (
+                      <tr
+                        key={i}
+                        className={cn(
+                          "transition-colors",
+                          isResult &&
+                            row.importStatus === "CREATED" &&
+                            "bg-green-50/50",
+                          isResult &&
+                            row.importStatus === "UPDATED" &&
+                            "bg-blue-50/30",
+                          isResult &&
+                            row.importStatus === "ERROR" &&
+                            "bg-red-50/40",
+                        )}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-xs font-semibold">
+                            {row.siteCode}
+                          </div>
+                          {row.siteName && (
+                            <div className="text-xs text-muted-foreground">
+                              {row.siteName}
+                            </div>
+                          )}
+                          {!isResult && (
+                            <Badge
+                              variant={
+                                row.dbAction === "CREATE"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="mt-1 rounded-full px-1.5 py-0 text-[10px]"
+                            >
+                              {row.dbAction}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {new Date(row.claimDate).toLocaleDateString("en-ZA")}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-xs">
+                          R{fmt(row.amountClaimed)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-xs">
+                          R{fmt(row.amountReceived)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="font-mono text-xs font-semibold">
+                            R{fmt(row.outstanding)}
+                          </div>
+                          <div className="flex items-center justify-end gap-1 mt-0.5">
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              R{fmt(row.outstandingIncVat)}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="rounded px-1 py-0 text-[10px] leading-4"
+                            >
+                              Inc VAT
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant={statusInfo.variant}
+                            className="rounded-full text-xs"
+                          >
+                            {statusInfo.label}
+                          </Badge>
+                          {row.parseWarning && (
+                            <div className="mt-0.5 text-[11px] text-amber-600">
+                              {row.parseWarning}
+                            </div>
+                          )}
+                        </td>
+                        {isResult && (
+                          <td className="px-4 py-3">
+                            {importInfo && (
+                              <Badge
+                                variant={importInfo.variant}
+                                className="rounded-full text-xs"
+                              >
+                                {importInfo.label}
+                              </Badge>
+                            )}
+                            {row.importError && (
+                              <div className="mt-0.5 text-xs text-destructive">
+                                {row.importError}
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="border-t-2 border-border bg-muted/30">
+                  <tr>
+                    <td
+                      colSpan={2}
+                      className="px-4 py-2 text-xs font-semibold text-muted-foreground"
+                    >
+                      TOTALS
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-sm font-bold">
+                      R{fmt(claims.reduce((s, c) => s + c.amountClaimed, 0))}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-sm font-bold">
+                      R{fmt(claims.reduce((s, c) => s + c.amountReceived, 0))}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-sm font-bold">
+                      R{fmt(claims.reduce((s, c) => s + c.outstanding, 0))}
+                    </td>
+                    <td colSpan={isResult ? 2 : 1} />
+                  </tr>
+                </tfoot>
               </table>
             </ScrollArea>
           </CardContent>
