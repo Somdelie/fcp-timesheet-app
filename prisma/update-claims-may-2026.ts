@@ -18,7 +18,7 @@ async function updateClaimDates() {
   for (const [, claimInfo] of Object.entries(claimsData)) {
     try {
       // Skip COC entries
-      if (claimInfo.claimDay === 0) {
+      if (claimInfo.claimDay === "COC") {
         skipped++;
         continue;
       }
