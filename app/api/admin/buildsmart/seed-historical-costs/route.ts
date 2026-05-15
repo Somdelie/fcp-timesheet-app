@@ -121,20 +121,24 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Filter to LABOUR only ──
-  const labourRows = allRows.filter(
-    (r) => mapLedgerCategory(r.ledgerCode) === "LABOUR",
+  const importRows = allRows;
+  const rowsByCategory = importRows.reduce(
+    (acc, r) => {
+      const cat = mapLedgerCategory(r.ledgerCode);
+      acc[cat] = (acc[cat] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
   );
-  const skippedNonLabour = allRows.length - labourRows.length;
 
   // ── Preview response (parse only) ──
   if (action === "parse") {
     return NextResponse.json({
       action: "parse",
-      totalRows: labourRows.length,
-      skippedNonLabour,
+      totalRows: importRows.length,
+      rowsByCategory,
       parseWarnings,
-      rows: labourRows.map((r) => ({
+      rows: importRows.map((r) => ({
         fileName: r.fileName,
         siteCode: r.siteCode,
         siteName: r.parseSiteName,
@@ -149,8 +153,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ── Import (labour rows only) ──
-  const importRows: BuildSmartRow[] = labourRows.map((r) => ({
+  // ── Import all parsed financial rows (labour → wages, others → material cost) ──
+  const buildSmartImportRows: BuildSmartRow[] = importRows.map((r) => ({
     siteCode: r.siteCode,
     ledgerCode: r.ledgerCode,
     externalRef: r.externalRef,
@@ -177,7 +181,7 @@ export async function POST(req: NextRequest) {
           total,
           done: currentDone,
           result,
-        } of importBuildSmartRowsStream(importRows)) {
+        } of importBuildSmartRowsStream(buildSmartImportRows)) {
           done = currentDone;
           counts[result.status] =
             (counts[result.status as keyof typeof counts] ?? 0) + 1;
@@ -207,8 +211,8 @@ export async function POST(req: NextRequest) {
           JSON.stringify({
             type: "done",
             summary: counts,
-            totalProcessed: importRows.length,
-            skippedNonLabour,
+            totalProcessed: buildSmartImportRows.length,
+            rowsByCategory,
             parseWarnings,
           }) + "\n";
         controller.enqueue(encoder.encode(doneLine));

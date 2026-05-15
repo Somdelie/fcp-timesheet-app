@@ -1,9 +1,13 @@
-"use client";
-
 import * as React from "react";
 import { toast } from "react-toastify";
 
-import { Check, ChevronsUpDown, Printer, Loader2 } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  Printer,
+  Loader2,
+  FileText,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { AdminProductDto } from "@/components/products/ProductsList";
@@ -210,14 +215,20 @@ export default function OrdersPOS({
   requireReference = false,
   onOrderCreated,
 }: OrdersPOSProps) {
-  const [selectedForemanIds, setSelectedForemanIds] = React.useState<string[]>([]);
+  const [selectedForemanIds, setSelectedForemanIds] = React.useState<string[]>(
+    [],
+  );
   const [foremanOpen, setForemanOpen] = React.useState(false);
-  const [bulkProgress, setBulkProgress] = React.useState<{ done: number; total: number } | null>(null);
+  const [bulkProgress, setBulkProgress] = React.useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [productSearch, setProductSearch] = React.useState("");
-  const [cart, setCart] = React.useState<CartItem[]>([]);
+  const [carts, setCarts] = React.useState<Record<string, CartItem[]>>({});
   const [reference, setReference] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
+  const [activeForemanId, setActiveForemanId] = React.useState<string>("");
 
   // Variant picker state
   const [pickerProduct, setPickerProduct] =
@@ -229,6 +240,19 @@ export default function OrdersPOS({
     if (!q) return products;
     return products.filter((p) => p.name.toLowerCase().includes(q));
   }, [productSearch, products]);
+
+  // Update active foreman when selection changes
+  React.useEffect(() => {
+    if (selectedForemanIds.length > 0 && !activeForemanId) {
+      setActiveForemanId(selectedForemanIds[0]);
+    } else if (selectedForemanIds.length === 0) {
+      setActiveForemanId("");
+    } else if (!selectedForemanIds.includes(activeForemanId)) {
+      setActiveForemanId(selectedForemanIds[0]);
+    }
+  }, [selectedForemanIds, activeForemanId]);
+
+  const currentCart = carts[activeForemanId] || [];
 
   function openAddProduct(product: AdminProductDto) {
     const priceNum = Number(product.price);
@@ -253,54 +277,84 @@ export default function OrdersPOS({
     color: string | null,
     qty: number,
   ) {
+    if (!activeForemanId) {
+      toast.error("Please select a foreman first");
+      return;
+    }
     const priceNum = Number(product.price);
     const key = makeCartKey(product.id, size, color);
-    setCart((prev) => {
-      const existing = prev.find((i) => i.cartKey === key);
+    setCarts((prev) => {
+      const foremanCart = prev[activeForemanId] || [];
+      const existing = foremanCart.find((i) => i.cartKey === key);
       if (existing) {
-        return prev.map((i) =>
-          i.cartKey === key ? { ...i, quantity: i.quantity + qty } : i,
-        );
+        return {
+          ...prev,
+          [activeForemanId]: foremanCart.map((i) =>
+            i.cartKey === key ? { ...i, quantity: i.quantity + qty } : i,
+          ),
+        };
       }
-      return [
+      return {
         ...prev,
-        {
-          cartKey: key,
-          productId: product.id,
-          productName: product.name,
-          unitPrice: priceNum,
-          quantity: qty,
-          size,
-          color,
-          note: "",
-        },
-      ];
+        [activeForemanId]: [
+          ...foremanCart,
+          {
+            cartKey: key,
+            productId: product.id,
+            productName: product.name,
+            unitPrice: priceNum,
+            quantity: qty,
+            size,
+            color,
+            note: "",
+          },
+        ],
+      };
     });
   }
 
   function updateQuantity(cartKey: string, quantity: number) {
-    setCart((prev) =>
-      prev
+    if (!activeForemanId) return;
+    setCarts((prev) => ({
+      ...prev,
+      [activeForemanId]: (prev[activeForemanId] || [])
         .map((item) =>
           item.cartKey === cartKey ? { ...item, quantity } : item,
         )
         .filter((item) => item.quantity > 0),
-    );
+    }));
   }
 
   function updateNote(cartKey: string, note: string) {
-    setCart((prev) =>
-      prev.map((item) => (item.cartKey === cartKey ? { ...item, note } : item)),
-    );
+    if (!activeForemanId) return;
+    setCarts((prev) => ({
+      ...prev,
+      [activeForemanId]: (prev[activeForemanId] || []).map((item) =>
+        item.cartKey === cartKey ? { ...item, note } : item,
+      ),
+    }));
   }
 
   function removeFromCart(cartKey: string) {
-    setCart((prev) => prev.filter((item) => item.cartKey !== cartKey));
+    if (!activeForemanId) return;
+    setCarts((prev) => ({
+      ...prev,
+      [activeForemanId]: (prev[activeForemanId] || []).filter(
+        (item) => item.cartKey !== cartKey,
+      ),
+    }));
   }
 
   const cartTotal = React.useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  }, [cart]);
+    return currentCart.reduce(
+      (sum, item) => sum + item.unitPrice * item.quantity,
+      0,
+    );
+  }, [currentCart]);
+
+  const totalItemsAcrossAllCarts = React.useMemo(() => {
+    return Object.values(carts).reduce((sum, cart) => sum + cart.length, 0);
+  }, [carts]);
 
   function toggleForeman(id: string) {
     setSelectedForemanIds((prev) =>
@@ -309,24 +363,28 @@ export default function OrdersPOS({
   }
 
   async function handlePrintVoucher() {
-    const selectedForemanId = selectedForemanIds[0];
-    if (!selectedForemanId || cart.length === 0) return;
+    const firstSelectedId = selectedForemanIds[0];
+    if (!firstSelectedId) return;
+    const firstCart = carts[firstSelectedId] || [];
+    if (firstCart.length === 0) return;
+
     const pad = (n: number) => String(n).padStart(2, "0");
     const now = new Date();
-    const orderNumber = reference.trim() ||
+    const orderNumber =
+      reference.trim() ||
       `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const issuedDate = now.toLocaleDateString("en-ZA", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
-    const selected = foremen.find((f) => f.id === selectedForemanId);
+    const selected = foremen.find((f) => f.id === firstSelectedId);
     const voucherData = {
       orderNumber,
       issuedDate,
       recipientName: selected?.name || selected?.email || "",
       recipientType: (selected?.type ?? "foreman") as "foreman" | "admin",
-      items: cart.map((i) => ({
+      items: firstCart.map((i) => ({
         productName: i.productName,
         size: i.size ?? null,
         color: i.color ?? null,
@@ -355,6 +413,70 @@ export default function OrdersPOS({
     }
   }
 
+  async function handlePrintBatchVouchers() {
+    if (selectedForemanIds.length === 0) return;
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const now = new Date();
+    const baseOrderNumber =
+      reference.trim() ||
+      `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const issuedDate = now.toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    const batchData = selectedForemanIds
+      .map((foremanId, index) => {
+        const cart = carts[foremanId] || [];
+        if (cart.length === 0) return null;
+
+        const selected = foremen.find((f) => f.id === foremanId);
+        const orderNumber =
+          selectedForemanIds.length > 1
+            ? `${baseOrderNumber}-${index + 1}`
+            : baseOrderNumber;
+
+        return {
+          orderNumber,
+          issuedDate,
+          recipientName: selected?.name || selected?.email || "",
+          recipientType: (selected?.type ?? "foreman") as "foreman" | "admin",
+          items: cart.map((i) => ({
+            productName: i.productName,
+            size: i.size ?? null,
+            color: i.color ?? null,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            note: i.note.trim() || null,
+          })),
+        };
+      })
+      .filter(Boolean);
+
+    if (batchData.length === 0) return;
+
+    setPrinting(true);
+    try {
+      const res = await fetch("/api/app/admin/product-order/pdf/batch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orders: batchData }),
+      });
+      if (!res.ok) throw new Error("Failed to generate batch vouchers");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Could not generate batch voucher PDF");
+    } finally {
+      setPrinting(false);
+    }
+  }
+
   async function handleCreateOrder() {
     if (requireReference && !reference.trim()) {
       toast.error("Order number is required");
@@ -364,55 +486,107 @@ export default function OrdersPOS({
       toast.error("Please select at least one recipient");
       return;
     }
-    if (cart.length === 0) {
-      toast.error("Add at least one product to the order");
+
+    // Check if any selected foreman has items in their cart
+    const hasAnyItems = selectedForemanIds.some(
+      (id) => (carts[id] || []).length > 0,
+    );
+    if (!hasAnyItems) {
+      toast.error("Add at least one product to an order");
       return;
     }
 
-    const itemsPayload = cart.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      ...(item.size ? { size: item.size } : {}),
-      ...(item.color ? { color: item.color } : {}),
-      note: item.note.trim() || undefined,
-    }));
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const now = new Date();
+    const baseOrderNumber =
+      reference.trim() ||
+      `PO-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
     try {
       setSubmitting(true);
       setBulkProgress({ done: 0, total: selectedForemanIds.length });
       let failed = 0;
+      const successfulOrders: any[] = [];
 
       for (let i = 0; i < selectedForemanIds.length; i++) {
         const id = selectedForemanIds[i];
+        const cart = carts[id] || [];
+
+        // Skip foremen with empty carts
+        if (cart.length === 0) {
+          setBulkProgress({ done: i + 1, total: selectedForemanIds.length });
+          continue;
+        }
+
         const recipient = foremen.find((f) => f.id === id);
         const isAdmin = recipient?.type === "admin";
+        const orderNumber =
+          selectedForemanIds.length > 1
+            ? `${baseOrderNumber}-${i + 1}`
+            : baseOrderNumber;
+
+        const itemsPayload = cart.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          ...(item.size ? { size: item.size } : {}),
+          ...(item.color ? { color: item.color } : {}),
+          note: item.note.trim() || undefined,
+        }));
 
         const res = await fetch("/api/app/admin/orders", {
           method: "POST",
           credentials: "include",
-          headers: { "content-type": "application/json", accept: "application/json" },
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
           body: JSON.stringify({
             ...(isAdmin ? { adminUserId: id } : { foremanId: id }),
-            ...(reference.trim() ? { reference: reference.trim() } : {}),
+            ...(orderNumber ? { reference: orderNumber } : {}),
             items: itemsPayload,
           }),
         });
         const json = await res.json().catch(() => null as any);
         if (!res.ok) {
           const name = recipient?.name || recipient?.email || id;
-          const msg = res.status === 409
-            ? `Order "${reference.trim()}" already exists`
-            : `Failed for ${name}: ${json?.error ?? res.status}`;
+          const msg =
+            res.status === 409
+              ? `Order "${orderNumber}" already exists`
+              : `Failed for ${name}: ${json?.error ?? res.status}`;
           toast.error(msg);
           failed++;
+        } else {
+          successfulOrders.push({
+            orderNumber,
+            recipientName: recipient?.name || recipient?.email || "",
+            recipientType: (recipient?.type ?? "foreman") as
+              | "foreman"
+              | "admin",
+            items: cart.map((i) => ({
+              productName: i.productName,
+              size: i.size ?? null,
+              color: i.color ?? null,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              note: i.note.trim() || null,
+            })),
+          });
         }
         setBulkProgress({ done: i + 1, total: selectedForemanIds.length });
       }
 
-      if (failed === 0) {
-        const count = selectedForemanIds.length;
-        toast.success(count === 1 ? "Order created" : `${count} orders created`);
-        setCart([]);
+      if (successfulOrders.length > 0) {
+        const count = successfulOrders.length;
+        toast.success(
+          count === 1 ? "Order created" : `${count} orders created`,
+        );
+
+        // Auto-print batch vouchers
+        if (successfulOrders.length > 0) {
+          await handlePrintBatchVouchersAfterCreation(successfulOrders);
+        }
+
+        setCarts({});
         setSelectedForemanIds([]);
         setReference("");
         onOrderCreated?.();
@@ -420,6 +594,35 @@ export default function OrdersPOS({
     } finally {
       setSubmitting(false);
       setBulkProgress(null);
+    }
+  }
+
+  async function handlePrintBatchVouchersAfterCreation(orders: any[]) {
+    const issuedDate = new Date().toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    const batchData = orders.map((order) => ({
+      ...order,
+      issuedDate,
+    }));
+
+    try {
+      const res = await fetch("/api/app/admin/product-order/pdf/batch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ orders: batchData }),
+      });
+      if (!res.ok) throw new Error("Failed to generate batch vouchers");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Could not generate batch voucher PDF");
     }
   }
 
@@ -441,9 +644,11 @@ export default function OrdersPOS({
             Product Order Entry
           </span>
         </div>
-        {cart.length > 0 && (
+        {totalItemsAcrossAllCarts > 0 && (
           <span className="text-[10px] tracking-widest text-primary-foreground/70 uppercase">
-            {cart.length} item{cart.length !== 1 ? "s" : ""} in order
+            {totalItemsAcrossAllCarts} item
+            {totalItemsAcrossAllCarts !== 1 ? "s" : ""} in order
+            {selectedForemanIds.length > 1 ? "s" : ""}
           </span>
         )}
       </div>
@@ -469,11 +674,17 @@ export default function OrdersPOS({
                   Order Number
                 </span>
                 {requireReference && (
-                  <span className="text-[10px] font-bold text-destructive uppercase tracking-wide">required</span>
+                  <span className="text-[10px] font-bold text-destructive uppercase tracking-wide">
+                    required
+                  </span>
                 )}
               </div>
               <Input
-                placeholder={requireReference ? "e.g. 68090 (BuildSmart PO #)" : "e.g. 68090 (optional)"}
+                placeholder={
+                  requireReference
+                    ? "e.g. 68090 (BuildSmart PO #)"
+                    : "e.g. 68090 (optional)"
+                }
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 className={`h-10 text-sm font-medium ${requireReference && !reference.trim() ? "border-destructive/50" : ""}`}
@@ -594,134 +805,319 @@ export default function OrdersPOS({
               )}
             </div>
 
-            {/* Order items section header */}
-            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  Order Items
-                </span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
-                  Total
-                </span>
-                <span className="text-base font-bold tabular-nums text-foreground">
-                  {formatCurrency(cartTotal)}
-                </span>
-              </div>
-            </div>
-
-            {/* Cart table */}
-            <div className="bg-card overflow-x-auto">
-              {cart.length === 0 ? (
-                <div className="py-16 flex flex-col items-center gap-2 text-center">
-                  <div className="w-8 h-8 border border-border rounded flex items-center justify-center text-muted-foreground/40 text-lg">
-                    ∅
-                  </div>
-                  <p className="text-xs text-muted-foreground tracking-widest uppercase">
-                    No items added yet
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/60">
-                    Click "Add" on a product from the right panel
-                  </p>
-                </div>
-              ) : (
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow className="border-b border-border hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5 w-[180px]">
-                        Product
-                      </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
-                        Qty
-                      </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
-                        Unit
-                      </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
-                        Total
-                      </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-58 text-right">
-                        Note
-                      </TableHead>
-                      <TableHead className="w-10" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cart.map((item, idx) => (
-                      <TableRow
-                        key={item.cartKey}
-                        className={`border-b border-border transition-colors ${
-                          idx % 2 === 0 ? "" : "bg-muted/20"
-                        }`}
-                      >
-                        <TableCell className="py-2.5 pl-5">
-                          <div className="text-sm font-medium text-foreground">
-                            {item.productName}
+            {/* Order items section */}
+            {selectedForemen.length > 1 ? (
+              <Tabs
+                value={activeForemanId}
+                onValueChange={setActiveForemanId}
+                className="w-full"
+              >
+                <div className="border-b border-border px-5 py-3 bg-muted/40">
+                  <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
+                    {selectedForemen.map((f) => {
+                      const cartItems = carts[f.id] || [];
+                      return (
+                        <TabsTrigger
+                          key={f.id}
+                          value={f.id}
+                          className="text-xs relative"
+                        >
+                          <div className="flex items-center gap-1">
+                            {f.type === "admin" && (
+                              <span className="text-[8px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-1 rounded">
+                                A
+                              </span>
+                            )}
+                            <span className="truncate max-w-20">
+                              {f.name || f.email}
+                            </span>
+                            {cartItems.length > 0 && (
+                              <span className="ml-1 bg-primary text-primary-foreground text-[8px] px-1 rounded-full min-w-4 h-4 flex items-center justify-center">
+                                {cartItems.length}
+                              </span>
+                            )}
                           </div>
-                          {(item.size || item.color) && (
-                            <div className="mt-0.5 flex flex-wrap gap-1">
-                              {item.size && (
-                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
-                                  {item.size}
-                                </span>
-                              )}
-                              {item.color && (
-                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
-                                  {item.color}
-                                </span>
-                              )}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </div>
+                {selectedForemen.map((f) => {
+                  const foremanCart = carts[f.id] || [];
+                  const foremanTotal = foremanCart.reduce(
+                    (sum, item) => sum + item.unitPrice * item.quantity,
+                    0,
+                  );
+                  return (
+                    <TabsContent key={f.id} value={f.id} className="m-0">
+                      {/* Cart header for this foreman */}
+                      <div className="border-b border-border px-5 py-3 bg-muted/20 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                            {f.name || f.email}'s Order
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                            Total
+                          </span>
+                          <span className="text-base font-bold tabular-nums text-foreground">
+                            {formatCurrency(foremanTotal)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Cart table for this foreman */}
+                      <div className="bg-card overflow-x-auto">
+                        {foremanCart.length === 0 ? (
+                          <div className="py-16 flex flex-col items-center gap-2 text-center">
+                            <div className="w-8 h-8 border border-border rounded flex items-center justify-center text-muted-foreground/40 text-lg">
+                              ∅
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-2 pr-2">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const n = Number(e.target.value);
-                              if (!Number.isFinite(n)) return;
-                              updateQuantity(
-                                item.cartKey,
-                                Math.max(1, Math.floor(n)),
-                              );
-                            }}
-                            className="h-7 w-16 text-sm text-right tabular-nums px-2"
-                          />
-                        </TableCell>
-                        <TableCell className="py-2.5 text-sm tabular-nums text-muted-foreground text-right pr-3">
-                          {formatCurrency(item.unitPrice)}
-                        </TableCell>
-                        <TableCell className="py-2.5 text-sm font-semibold tabular-nums text-foreground text-right pr-3">
-                          {formatCurrency(item.unitPrice * item.quantity)}
-                        </TableCell>
-                        <TableCell className="py-2">
-                          <Input
-                            value={item.note}
-                            onChange={(e) =>
-                              updateNote(item.cartKey, e.target.value)
-                            }
-                            placeholder="Note…"
-                            className="h-7 text-xs px-2"
-                          />
-                        </TableCell>
-                        <TableCell className="py-2 pr-3 text-center">
-                          <button
-                            onClick={() => removeFromCart(item.cartKey)}
-                            className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
-                            aria-label="Remove item"
+                            <p className="text-xs text-muted-foreground tracking-widest uppercase">
+                              No items added yet
+                            </p>
+                            <p className="text-[11px] text-muted-foreground/60">
+                              Click "Add" on a product from the right panel
+                            </p>
+                          </div>
+                        ) : (
+                          <Table className="w-full">
+                            <TableHeader>
+                              <TableRow className="border-b border-border hover:bg-transparent">
+                                <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5 w-[180px]">
+                                  Product
+                                </TableHead>
+                                <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
+                                  Qty
+                                </TableHead>
+                                <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
+                                  Unit
+                                </TableHead>
+                                <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
+                                  Total
+                                </TableHead>
+                                <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-58 text-right">
+                                  Note
+                                </TableHead>
+                                <TableHead className="w-10" />
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {foremanCart.map((item, idx) => (
+                                <TableRow
+                                  key={item.cartKey}
+                                  className={`border-b border-border transition-colors ${
+                                    idx % 2 === 0 ? "" : "bg-muted/20"
+                                  }`}
+                                >
+                                  <TableCell className="py-2.5 pl-5">
+                                    <div className="text-sm font-medium text-foreground">
+                                      {item.productName}
+                                    </div>
+                                    {(item.size || item.color) && (
+                                      <div className="mt-0.5 flex flex-wrap gap-1">
+                                        {item.size && (
+                                          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                                            {item.size}
+                                          </span>
+                                        )}
+                                        {item.color && (
+                                          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                                            {item.color}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2 pr-2">
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      value={item.quantity}
+                                      onChange={(e) => {
+                                        const n = Number(e.target.value);
+                                        if (!Number.isFinite(n)) return;
+                                        updateQuantity(
+                                          item.cartKey,
+                                          Math.max(1, Math.floor(n)),
+                                        );
+                                      }}
+                                      className="h-7 w-16 text-sm text-right tabular-nums px-2"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="py-2.5 text-sm tabular-nums text-muted-foreground text-right pr-3">
+                                    {formatCurrency(item.unitPrice)}
+                                  </TableCell>
+                                  <TableCell className="py-2.5 text-sm font-semibold tabular-nums text-foreground text-right pr-3">
+                                    {formatCurrency(
+                                      item.unitPrice * item.quantity,
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2">
+                                    <Input
+                                      value={item.note}
+                                      onChange={(e) =>
+                                        updateNote(item.cartKey, e.target.value)
+                                      }
+                                      placeholder="Note…"
+                                      className="h-7 text-xs px-2"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="py-2 pr-3 text-center">
+                                    <button
+                                      onClick={() =>
+                                        removeFromCart(item.cartKey)
+                                      }
+                                      className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
+                                      aria-label="Remove item"
+                                    >
+                                      ×
+                                    </button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </div>
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
+            ) : (
+              <>
+                {/* Single foreman - Order items section header */}
+                <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                      Order Items
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Total
+                    </span>
+                    <span className="text-base font-bold tabular-nums text-foreground">
+                      {formatCurrency(cartTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cart table */}
+                <div className="bg-card overflow-x-auto">
+                  {currentCart.length === 0 ? (
+                    <div className="py-16 flex flex-col items-center gap-2 text-center">
+                      <div className="w-8 h-8 border border-border rounded flex items-center justify-center text-muted-foreground/40 text-lg">
+                        ∅
+                      </div>
+                      <p className="text-xs text-muted-foreground tracking-widest uppercase">
+                        No items added yet
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/60">
+                        Click "Add" on a product from the right panel
+                      </p>
+                    </div>
+                  ) : (
+                    <Table className="w-full">
+                      <TableHeader>
+                        <TableRow className="border-b border-border hover:bg-transparent">
+                          <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5 w-[180px]">
+                            Product
+                          </TableHead>
+                          <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
+                            Qty
+                          </TableHead>
+                          <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
+                            Unit
+                          </TableHead>
+                          <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-28 text-right">
+                            Total
+                          </TableHead>
+                          <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-58 text-right">
+                            Note
+                          </TableHead>
+                          <TableHead className="w-10" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentCart.map((item, idx) => (
+                          <TableRow
+                            key={item.cartKey}
+                            className={`border-b border-border transition-colors ${
+                              idx % 2 === 0 ? "" : "bg-muted/20"
+                            }`}
                           >
-                            ×
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+                            <TableCell className="py-2.5 pl-5">
+                              <div className="text-sm font-medium text-foreground">
+                                {item.productName}
+                              </div>
+                              {(item.size || item.color) && (
+                                <div className="mt-0.5 flex flex-wrap gap-1">
+                                  {item.size && (
+                                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                                      {item.size}
+                                    </span>
+                                  )}
+                                  {item.color && (
+                                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                                      {item.color}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 pr-2">
+                              <Input
+                                type="number"
+                                min={1}
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const n = Number(e.target.value);
+                                  if (!Number.isFinite(n)) return;
+                                  updateQuantity(
+                                    item.cartKey,
+                                    Math.max(1, Math.floor(n)),
+                                  );
+                                }}
+                                className="h-7 w-16 text-sm text-right tabular-nums px-2"
+                              />
+                            </TableCell>
+                            <TableCell className="py-2.5 text-sm tabular-nums text-muted-foreground text-right pr-3">
+                              {formatCurrency(item.unitPrice)}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-sm font-semibold tabular-nums text-foreground text-right pr-3">
+                              {formatCurrency(item.unitPrice * item.quantity)}
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <Input
+                                value={item.note}
+                                onChange={(e) =>
+                                  updateNote(item.cartKey, e.target.value)
+                                }
+                                placeholder="Note…"
+                                className="h-7 text-xs px-2"
+                              />
+                            </TableCell>
+                            <TableCell className="py-2 pr-3 text-center">
+                              <button
+                                onClick={() => removeFromCart(item.cartKey)}
+                                className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
+                                aria-label="Remove item"
+                              >
+                                ×
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Submit bar */}
             <div className="border-t border-border p-4 bg-primary flex items-center justify-between gap-4">
@@ -735,43 +1131,66 @@ export default function OrdersPOS({
                       {bulkProgress.done} / {bulkProgress.total}
                     </div>
                   </div>
-                ) : cart.length > 0 ? (
+                ) : totalItemsAcrossAllCarts > 0 ? (
                   <div>
                     <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
-                      Order Total
+                      {selectedForemen.length > 1
+                        ? "Combined Order Total"
+                        : "Order Total"}
                     </div>
                     <div className="text-xl font-bold tabular-nums">
-                      {formatCurrency(cartTotal)}
+                      {formatCurrency(
+                        Object.values(carts).reduce(
+                          (sum, cart) =>
+                            sum +
+                            cart.reduce(
+                              (cartSum, item) =>
+                                cartSum + item.unitPrice * item.quantity,
+                              0,
+                            ),
+                          0,
+                        ),
+                      )}
                     </div>
                   </div>
                 ) : (
                   <span className="text-[11px] text-primary-foreground/50 tracking-wide">
-                    No items in order
+                    No items in order{selectedForemen.length > 1 ? "s" : ""}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {cart.length > 0 && selectedForemanIds.length === 1 && (
+                {totalItemsAcrossAllCarts > 0 && (
                   <button
-                    onClick={handlePrintVoucher}
+                    onClick={handlePrintBatchVouchers}
                     disabled={printing}
                     className="flex items-center px-4 py-2.5 text-xs font-bold tracking-[0.15em] uppercase rounded border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {printing ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                      <Printer className="h-3.5 w-3.5" />
+                      <FileText className="h-3.5 w-3.5" />
                     )}
-                    {printing ? "Generating…" : "Print Order"}
+                    {printing
+                      ? "Generating…"
+                      : selectedForemen.length > 1
+                        ? "Print All Orders"
+                        : "Print Order"}
                   </button>
                 )}
                 <button
                   onClick={handleCreateOrder}
-                  disabled={submitting || selectedForemanIds.length === 0 || cart.length === 0}
+                  disabled={
+                    submitting ||
+                    selectedForemanIds.length === 0 ||
+                    totalItemsAcrossAllCarts === 0
+                  }
                   className={`
                     px-6 py-2.5 text-xs font-bold tracking-[0.2em] uppercase rounded transition-all
                     ${
-                      submitting || selectedForemanIds.length === 0 || cart.length === 0
+                      submitting ||
+                      selectedForemanIds.length === 0 ||
+                      totalItemsAcrossAllCarts === 0
                         ? "bg-primary-foreground/20 text-primary-foreground/40 cursor-not-allowed"
                         : "bg-primary-foreground text-primary hover:bg-primary-foreground/90 active:scale-95"
                     }
@@ -840,10 +1259,14 @@ export default function OrdersPOS({
                   </TableHeader>
                   <TableBody>
                     {filteredProducts.map((p, idx) => {
-                      const inCart = cart.some((c) => c.productId === p.id);
-                      const cartQty = cart
-                        .filter((c) => c.productId === p.id)
-                        .reduce((s, c) => s + c.quantity, 0);
+                      const cartItems = Object.values(carts)
+                        .flat()
+                        .filter((c) => c.productId === p.id);
+                      const inCart = cartItems.length > 0;
+                      const cartQty = cartItems.reduce(
+                        (s, c) => s + c.quantity,
+                        0,
+                      );
                       const hasVariants =
                         p.sizes.length > 0 || p.colors.length > 0;
                       return (

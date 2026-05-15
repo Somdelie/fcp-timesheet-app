@@ -17,7 +17,6 @@ import {
   Wrench,
   Layers,
   MoreHorizontal,
-  RotateCcw,
   DollarSign,
   Merge,
   MoreVertical,
@@ -33,11 +32,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -96,46 +90,33 @@ const PRODUCT_TYPES: {
   value: ProductType;
   label: string;
   icon: React.ReactNode;
-  color: string;
 }[] = [
   {
     value: "MATERIAL",
     label: "Material",
     icon: <Layers className="h-3.5 w-3.5" />,
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
   },
   {
     value: "PPE",
     label: "PPE",
     icon: <Package className="h-3.5 w-3.5" />,
-    color:
-      "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300",
   },
   {
     value: "PLANT",
     label: "Plant",
     icon: <Wrench className="h-3.5 w-3.5" />,
-    color:
-      "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300",
   },
   {
     value: "CONSUMABLE",
     label: "Consumable",
     icon: <Package className="h-3.5 w-3.5" />,
-    color:
-      "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300",
   },
   {
     value: "OTHER",
     label: "Other",
     icon: <MoreHorizontal className="h-3.5 w-3.5" />,
-    color: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   },
 ];
-
-function typeStyle(t: ProductType) {
-  return PRODUCT_TYPES.find((x) => x.value === t) ?? PRODUCT_TYPES[0];
-}
 
 type SupplierPriceEntry = {
   id: string;
@@ -1030,8 +1011,8 @@ export default function ProcurementProductsPage({
     },
     {
       id: "thumbnail",
-      size: 130,
-      header: () => <span>Image / Code</span>,
+      size: 96,
+      header: () => <span>Code</span>,
       cell: ({ row }) => {
         const p = row.original;
         const parsed = parseBuildSmartProduct(p.name);
@@ -1042,58 +1023,14 @@ export default function ProcurementProductsPage({
             : null;
 
         return (
-          <div className="flex items-center gap-2 min-w-[110px]">
-            {p.thumbnailUrl ? (
-              <img
-                src={p.thumbnailUrl}
-                alt={parsed.cleanName || p.name}
-                className="h-9 w-9 rounded object-cover shrink-0"
-              />
-            ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-muted">
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )}
-            {displaySku && (
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
-                {displaySku}
-              </span>
-            )}
-          </div>
+          <span className="text-xs font-medium tabular-nums text-muted-foreground">
+            {displaySku ?? "-"}
+          </span>
         );
       },
       enableSorting: false,
     },
     // Type column — hidden on locked tabs (Paints/Tools)
-    ...(!isPpeTab && !isPaintsTab && defaultProductType !== "PLANT"
-      ? [
-          {
-            id: "type",
-            size: 110,
-            header: () => <span>Type</span>,
-            cell: ({ row }: any) => {
-              const t = typeStyle(row.original.productType ?? "MATERIAL");
-              return (
-                <div className="flex flex-col gap-1">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${t.color}`}
-                  >
-                    {t.icon}
-                    {t.label}
-                  </span>
-                  {row.original.isReturnable && (
-                    <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                      <RotateCcw className="h-3 w-3" />
-                      Returnable
-                    </span>
-                  )}
-                </div>
-              );
-            },
-            enableSorting: false,
-          } as ColumnDef<ProcurementProduct>,
-        ]
-      : []),
     {
       accessorKey: "name",
       header: ({ column }) => {
@@ -1268,90 +1205,6 @@ export default function ProcurementProductsPage({
       enableSorting: false,
     },
     // Stock column — hidden on Paints (paints are not stocked)
-    ...(!isPaintsTab
-      ? [
-          {
-            id: "stockQty",
-            header: () => <span>In Stock</span>,
-            cell: ({ row }: any) => {
-              const variants = row.original.variantStocks ?? [];
-              if (variants.length === 0) {
-                return (
-                  <Badge variant="secondary">
-                    {row.original.stockQty ?? 0}
-                  </Badge>
-                );
-              }
-              const total = variants.reduce(
-                (s: number, v: any) => s + v.qty,
-                0,
-              );
-              return (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="flex flex-col items-start gap-0.5 text-left">
-                      <Badge variant="secondary" className="cursor-pointer">
-                        {total}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground">
-                        {variants.length} variants
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-3" align="start">
-                    <div className="text-xs font-semibold mb-2 text-foreground">
-                      Stock by variant
-                    </div>
-                    <div className="space-y-1">
-                      {variants.map((v: any) => {
-                        const parts = [v.color, v.size].filter(Boolean);
-                        const label = parts.join("-") || "Default";
-                        return (
-                          <div
-                            key={v.id}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span className="text-[11px] text-muted-foreground font-medium">
-                              {label}
-                            </span>
-                            <span className="text-[11px] font-semibold tabular-nums">
-                              {v.qty}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      <div className="border-t border-border mt-2 pt-2 flex items-center justify-between">
-                        <span className="text-[11px] font-medium">Total</span>
-                        <span className="text-[11px] font-bold tabular-nums">
-                          {total}
-                        </span>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              );
-            },
-            enableSorting: false,
-          } as ColumnDef<ProcurementProduct>,
-        ]
-      : []),
-    {
-      id: "status",
-      header: () => <span>Status</span>,
-      cell: ({ row }) => (
-        <Badge
-          variant={row.original.isActive ? "default" : "secondary"}
-          className={
-            row.original.isActive
-              ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-950/50 dark:text-green-300"
-              : ""
-          }
-        >
-          {row.original.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
-      enableSorting: false,
-    },
     {
       id: "actions",
       size: 48,
@@ -1430,97 +1283,96 @@ export default function ProcurementProductsPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
-      {/* Category tabs (supplier context) or type tabs (legacy context) */}
-      {supplierIdProp !== undefined ? (
-        <div className="flex items-center gap-3 border-b border-border">
-          <div className="overflow-x-auto overflow-y-hidden flex-1 min-w-0">
-            <div className="flex w-max">
-              {[{ id: "", name: "All" }, ...categories].map((cat) => (
+      <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
+        <div className="space-y-3">
+          <div className="hidden">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-semibold tracking-tight">
+                  {supplierIdProp !== undefined
+                    ? "Supplier Products"
+                    : "Procurement Products"}
+                </h2>
+                <Badge variant="secondary" className="h-5 rounded-full px-2">
+                  {filteredProducts.length}
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Manage catalogue items, supplier pricing, stock, and deductions.
+              </p>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {table.getSelectedRowModel().rows.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {table.getSelectedRowModel().rows.length} selected
+                </Badge>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={!table.getSelectedRowModel().rows.length}
+                onClick={() => {
+                  const selected = table
+                    .getSelectedRowModel()
+                    .rows.map((r) => r.original);
+                  const deletable = selected.filter(
+                    (p) => p._count.orderItems === 0,
+                  );
+                  setBulkSummary({
+                    total: selected.length,
+                    deletable: deletable.length,
+                    blocked: selected.length - deletable.length,
+                  });
+                  setBulkDeleteOpen(true);
+                }}
+              >
+                <Trash2 className="mr-1 h-4 w-4" /> Delete selected
+              </Button>
+              <Button onClick={openCreate} size="sm">
+                <Plus className="mr-1 h-4 w-4" /> Add Product
+              </Button>
+            </div>
+          </div>
+
+          {showTypeTabs && supplierIdProp === undefined && (
+            <div className="flex flex-wrap items-center gap-1 rounded-md bg-muted/40 p-1">
+              {TABS.map((tab) => (
                 <button
-                  key={cat.id}
+                  key={tab.value}
                   type="button"
                   onClick={() => {
-                    setFilterCategory(cat.id);
+                    setActiveTab(tab.value);
                     setPagination((p) => ({ ...p, pageIndex: 0 }));
                   }}
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
-                    filterCategory === cat.id
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  className={`flex h-8 items-center gap-1.5 rounded px-3 text-sm font-medium transition-colors ${
+                    activeTab === tab.value
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {cat.name}
+                  {tab.label}
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    {counts[tab.value] ?? 0}
+                  </span>
                 </button>
               ))}
             </div>
-          </div>
-          <div className="flex items-center gap-2 pb-2 shrink-0">
-            {table.getSelectedRowModel().rows.length > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {table.getSelectedRowModel().rows.length} selected
-              </Badge>
-            )}
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={!table.getSelectedRowModel().rows.length}
-              onClick={() => {
-                const selected = table
-                  .getSelectedRowModel()
-                  .rows.map((r) => r.original);
-                const deletable = selected.filter(
-                  (p) => p._count.orderItems === 0,
-                );
-                setBulkSummary({
-                  total: selected.length,
-                  deletable: deletable.length,
-                  blocked: selected.length - deletable.length,
-                });
-                setBulkDeleteOpen(true);
-              }}
-            >
-              <Trash2 className="mr-1 h-4 w-4" /> Delete selected
-            </Button>
-            <Button onClick={openCreate} size="sm">
-              <Plus className="mr-1 h-4 w-4" /> Add Product
-            </Button>
-          </div>
-        </div>
-      ) : showTypeTabs && (
-        <div className="flex items-center gap-1 border-b border-border">
-          {TABS.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.value);
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
-              }}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
-                activeTab === tab.value
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                {counts[tab.value] ?? 0}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-48 max-w-sm">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1fr)_190px_170px_auto]">
+              <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search name, SKU, color…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
+              className="h-9 pl-9"
             />
             {search && (
               <button
@@ -1531,12 +1383,14 @@ export default function ProcurementProductsPage({
               </button>
             )}
           </div>
-          {supplierIdProp === undefined && (
             <Select
-              value={filterCategory}
-              onValueChange={(v) => setFilterCategory(v === "ALL" ? "" : v)}
+              value={filterCategory || "ALL"}
+              onValueChange={(v) => {
+                setFilterCategory(v === "ALL" ? "" : v);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
             >
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -1548,13 +1402,15 @@ export default function ProcurementProductsPage({
                 ))}
               </SelectContent>
             </Select>
-          )}
-          {supplierIdProp === undefined && (
+          {supplierIdProp === undefined ? (
             <Select
-              value={filterSupplier}
-              onValueChange={(v) => setFilterSupplier(v === "ALL" ? "" : v)}
+              value={filterSupplier || "ALL"}
+              onValueChange={(v) => {
+                setFilterSupplier(v === "ALL" ? "" : v);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
             >
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue placeholder="All suppliers" />
               </SelectTrigger>
               <SelectContent>
@@ -1566,13 +1422,29 @@ export default function ProcurementProductsPage({
                 ))}
               </SelectContent>
             </Select>
+          ) : (
+            <label className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted-foreground">
+              <Checkbox
+                checked={showInactive}
+                onCheckedChange={(v) => setShowInactive(!!v)}
+              />
+              Inactive
+            </label>
           )}
-          <Button variant="ghost" size="icon" onClick={load}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={load}
+            className="h-9 w-9"
+          >
             <RotateCw className="h-4 w-4" />
           </Button>
+            </div>
+            <div className="hidden">
           <Button
             variant="outline"
             size="sm"
+            className="h-9"
             onClick={handleFixNames}
             disabled={fixingNames}
             title="Strip embedded SKUs, pack numbers, and size suffixes from product names"
@@ -1587,6 +1459,7 @@ export default function ProcurementProductsPage({
           <Button
             variant="outline"
             size="sm"
+            className="h-9"
             onClick={exportProductsToExcel}
             disabled={exporting || filteredProducts.length === 0}
           >
@@ -1596,46 +1469,81 @@ export default function ProcurementProductsPage({
           <Button
             variant="outline"
             size="sm"
+            className="h-9"
             onClick={exportProductsToJson}
             disabled={exporting || filteredProducts.length === 0}
           >
             <Download className="mr-1.5 h-4 w-4" />
             {exporting ? "Exporting…" : "Export JSON"}
           </Button>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              {table.getSelectedRowModel().rows.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    const selected = table
+                      .getSelectedRowModel()
+                      .rows.map((r) => r.original);
+                    const deletable = selected.filter(
+                      (p) => p._count.orderItems === 0,
+                    );
+                    setBulkSummary({
+                      total: selected.length,
+                      deletable: deletable.length,
+                      blocked: selected.length - deletable.length,
+                    });
+                    setBulkDeleteOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Delete {table.getSelectedRowModel().rows.length}
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <MoreHorizontal className="mr-1.5 h-4 w-4" />
+                    Tools
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem
+                    onClick={handleFixNames}
+                    disabled={fixingNames}
+                  >
+                    {fixingNames ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="mr-2 h-4 w-4" />
+                    )}
+                    Fix Names
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={exportProductsToExcel}
+                    disabled={exporting || filteredProducts.length === 0}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={exportProductsToJson}
+                    disabled={exporting || filteredProducts.length === 0}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={openCreate} size="sm" className="h-9">
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
         </div>
-        {supplierIdProp === undefined && (
-          <div className="flex items-center gap-2">
-            {table.getSelectedRowModel().rows.length > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {table.getSelectedRowModel().rows.length} selected
-              </Badge>
-            )}
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={!table.getSelectedRowModel().rows.length}
-              onClick={() => {
-                const selected = table
-                  .getSelectedRowModel()
-                  .rows.map((r) => r.original);
-                const deletable = selected.filter(
-                  (p) => p._count.orderItems === 0,
-                );
-                setBulkSummary({
-                  total: selected.length,
-                  deletable: deletable.length,
-                  blocked: selected.length - deletable.length,
-                });
-                setBulkDeleteOpen(true);
-              }}
-            >
-              <Trash2 className="mr-1 h-4 w-4" /> Delete selected
-            </Button>
-            <Button onClick={openCreate} size="sm">
-              <Plus className="mr-1 h-4 w-4" /> Add Product
-            </Button>
-          </div>
-        )}
+        </div>
       </div>
 
       {fixNamesProgress && (
@@ -1670,16 +1578,16 @@ export default function ProcurementProductsPage({
           </p>
         </div>
       ) : (
-        <div className="border bg-card rounded-lg overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <div className="overflow-x-auto">
-            <Table className="border-collapse">
-              <TableHeader className="bg-muted/60">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
                 {table.getHeaderGroups().map((hg) => (
                   <TableRow key={hg.id} className="hover:bg-transparent">
                     {hg.headers.map((h) => (
                       <TableHead
                         key={h.id}
-                        className="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-xs font-semibold uppercase tracking-wide"
+                        className="h-10 border-b border-r-0 border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                       >
                         {h.isPlaceholder
                           ? null
@@ -1706,12 +1614,13 @@ export default function ProcurementProductsPage({
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                      className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/35 data-[state=selected]:bg-primary/5"
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
-                          className="border border-zinc-200 dark:border-zinc-700 px-3 py-2"
+                          className="border-r-0 px-4 py-3 align-middle"
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
@@ -1736,7 +1645,7 @@ export default function ProcurementProductsPage({
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/60">
+          <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-3">
             <div className="text-muted-foreground hidden text-sm lg:flex">
               Showing{" "}
               {filteredProducts.length === 0

@@ -76,6 +76,26 @@ type ForemanCart = {
   items: PpeCartItem[];
 };
 
+type LastOrder = {
+  orderNumber: string;
+  issuedDate: string;
+  supervisorName: string;
+  foremen: {
+    foremanName: string;
+    siteName: string | null;
+    siteCode: string | null;
+    chargeToSite: boolean;
+    items: {
+      productName: string;
+      size: string | null;
+      color: string | null;
+      quantity: number;
+      unitPrice: number | null;
+      deductible: boolean;
+    }[];
+  }[];
+};
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function PpeAdminOrderSheet({
@@ -91,6 +111,7 @@ export function PpeAdminOrderSheet({
   const [productSearch, setProductSearch] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
+  const [lastOrder, setLastOrder] = React.useState<LastOrder | null>(null);
 
   const selectedSupervisor = React.useMemo(
     () => supervisors.find((s) => s.id === selectedSupervisorId) ?? null,
@@ -262,27 +283,28 @@ export function PpeAdminOrderSheet({
     foremanCarts.length > 0 &&
     foremanCarts.some((fc) => fc.items.length > 0);
 
-  function makeOrderNumber() {
+  function makeOrderMeta() {
     const pad = (n: number) => String(n).padStart(2, "0");
     const now = new Date();
-    return `PPE-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-  }
-
-  function makeIssuedDate() {
-    return new Date().toLocaleDateString("en-ZA", {
+    const orderNumber = `PPE-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const issuedDate = now.toLocaleDateString("en-ZA", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
+    return { orderNumber, issuedDate };
   }
 
-  function buildBatchPdfData(orderNumber: string, issuedDate: string) {
+  function buildVoucherData(
+    orderNumber: string,
+    issuedDate: string,
+  ): LastOrder {
     return {
       orderNumber,
       issuedDate,
       supervisorName:
         selectedSupervisor?.name ?? selectedSupervisor?.email ?? "",
-      orders: foremanCarts
+      foremen: foremanCarts
         .filter((fc) => fc.items.length > 0)
         .map((fc) => ({
           foremanName: fc.foremanName,
@@ -336,6 +358,10 @@ export function PpeAdminOrderSheet({
 
       const failed = results.filter((r) => r.status === "rejected");
       if (failed.length === 0) {
+        const { orderNumber, issuedDate } = makeOrderMeta();
+        setLastOrder(buildVoucherData(orderNumber, issuedDate));
+        setForemanCarts([]);
+        setActiveForemanId("");
         toast.success(
           `${foremanCarts.filter((fc) => fc.items.length > 0).length} PPE order(s) created`,
         );
@@ -357,27 +383,31 @@ export function PpeAdminOrderSheet({
     }
   }
 
-  async function handlePrint() {
-    if (!canSubmit) return;
+  async function handlePrintVoucher() {
+    let voucherData: LastOrder | null = null;
+    if (canSubmit) {
+      const { orderNumber, issuedDate } = makeOrderMeta();
+      voucherData = buildVoucherData(orderNumber, issuedDate);
+    } else {
+      voucherData = lastOrder;
+    }
+    if (!voucherData) return;
+
     setPrinting(true);
     try {
-      const voucherData = buildBatchPdfData(
-        makeOrderNumber(),
-        makeIssuedDate(),
-      );
       const res = await fetch("/api/app/admin/ppe-order/batch-pdf", {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(voucherData),
       });
-      if (!res.ok) throw new Error("PDF generation failed");
+      if (!res.ok) throw new Error("Failed to generate voucher");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not generate PDF");
+    } catch {
+      toast.error("Could not generate voucher PDF");
     } finally {
       setPrinting(false);
     }
@@ -824,6 +854,15 @@ export function PpeAdminOrderSheet({
                       )}
                     </div>
                   </div>
+                ) : lastOrder ? (
+                  <div>
+                    <div className="text-[10px] tracking-widest text-primary-foreground/60 uppercase">
+                      Last Order
+                    </div>
+                    <div className="text-sm font-bold tabular-nums">
+                      {lastOrder.orderNumber}
+                    </div>
+                  </div>
                 ) : (
                   <span className="text-[11px] text-primary-foreground/50 tracking-wide">
                     No items added yet
@@ -831,9 +870,9 @@ export function PpeAdminOrderSheet({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {canSubmit && (
+                {(canSubmit || lastOrder) && (
                   <button
-                    onClick={handlePrint}
+                    onClick={handlePrintVoucher}
                     disabled={printing}
                     className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold tracking-[0.15em] uppercase rounded border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -842,7 +881,7 @@ export function PpeAdminOrderSheet({
                     ) : (
                       <Printer className="h-3.5 w-3.5" />
                     )}
-                    {printing ? "Generating…" : "Print PDF"}
+                    {printing ? "Generating…" : "Print Order"}
                   </button>
                 )}
                 <button

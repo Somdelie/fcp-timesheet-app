@@ -92,6 +92,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
+  watermark: {
+    position: "absolute",
+    top: 350,
+    left: -185,
+    width: 960,
+    height: 90,
+    justifyContent: "center",
+    alignItems: "center",
+    transform: "rotate(-45deg)",
+  },
+  watermarkText: {
+    width: "100%",
+    fontSize: 56,
+    fontFamily: "Helvetica-Bold",
+    color: "#2F3B59",
+    opacity: 0.045,
+    letterSpacing: 5,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+
+  recipientSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2B2B2B",
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    marginTop: 10,
+    marginBottom: 0,
+  },
+  recipientSectionLabel: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    flex: 1,
+  },
+  recipientSectionMeta: {
+    fontSize: 7.5,
+    color: "#AAAAAA",
+    letterSpacing: 0.3,
+  },
+
   /* ---- Header ---- */
   topRow: {
     flexDirection: "row",
@@ -222,29 +266,289 @@ function MetaField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function RecipientItemsTable({
+  items,
+  startIndex,
+}: {
+  items: ProductOrderVoucherData["items"];
+  startIndex: number;
+}) {
+  const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+
+  return (
+    <View style={styles.table}>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.th, { width: "6%", textAlign: "center" }]}>
+          No.
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { flex: 1 }]}>Item Description</Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>
+          Size
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>
+          Color
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { width: "8%", textAlign: "center" }]}>
+          Qty
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.th, { width: "34%" }]}>Notes / Reason</Text>
+      </View>
+
+      {items.map((item, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <View style={styles.rowDivider} />}
+          <View
+            style={[styles.row, i % 2 === 1 ? styles.rowAlt : {}]}
+            wrap={false}
+          >
+            <Text
+              style={[
+                styles.td,
+                { width: "6%", textAlign: "center", color: "#999999" },
+              ]}
+            >
+              {startIndex + i + 1}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { flex: 1, fontWeight: 700 }]}>
+              {item.productName}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { width: "10%", textAlign: "center" }]}>
+              {item.size ?? "—"}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { width: "10%", textAlign: "center" }]}>
+              {item.color ?? "—"}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text
+              style={[
+                styles.td,
+                { width: "8%", textAlign: "center", fontWeight: 700 },
+              ]}
+            >
+              {item.quantity}
+            </Text>
+            <View style={styles.vDivider} />
+            <Text style={[styles.td, { width: "34%", color: "#555555" }]}>
+              {item.note ?? ""}
+            </Text>
+          </View>
+        </React.Fragment>
+      ))}
+
+      <View style={styles.totalRow} wrap={false}>
+        <Text style={[styles.td, { width: "6%", textAlign: "center" }]} />
+        <View style={styles.vDivider} />
+        <Text
+          style={[
+            styles.td,
+            {
+              flex: 1,
+              fontWeight: 700,
+              fontSize: 8,
+              textTransform: "uppercase",
+              letterSpacing: 0.3,
+            },
+          ]}
+        >
+          Recipient Total
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.td, { width: "10%" }]} />
+        <View style={styles.vDivider} />
+        <Text style={[styles.td, { width: "10%" }]} />
+        <View style={styles.vDivider} />
+        <Text
+          style={[
+            styles.td,
+            { width: "8%", textAlign: "center", fontWeight: 700 },
+          ]}
+        >
+          {totalQty}
+        </Text>
+        <View style={styles.vDivider} />
+        <Text style={[styles.td, { width: "34%" }]} />
+      </View>
+    </View>
+  );
+}
+
+function SignaturesAndDisclaimer() {
+  return (
+    <>
+      <View style={{ flex: 1 }} />
+      <View style={styles.disclaimer}>
+        <Text style={styles.disclaimerText}>
+          By signing this document, the recipient confirms that all items listed
+          above have been received in good condition and accepts responsibility
+          for their safekeeping. Any discrepancies must be reported immediately
+          to the office.
+        </Text>
+      </View>
+      <View style={styles.sigRow} wrap={false}>
+        <View style={styles.sigBox}>
+          <Text style={styles.sigTitle}>Received By</Text>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Full Name</Text>
+            <View style={styles.sigLine} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Signature</Text>
+            <View style={styles.sigLineWide} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Date</Text>
+            <View style={styles.sigLine} />
+          </View>
+        </View>
+        <View style={styles.sigBox}>
+          <Text style={styles.sigTitle}>Issued By</Text>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Full Name</Text>
+            <View style={styles.sigLine} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Signature</Text>
+            <View style={styles.sigLineWide} />
+          </View>
+          <View style={styles.sigField}>
+            <Text style={styles.sigLabel}>Date</Text>
+            <View style={styles.sigLine} />
+          </View>
+        </View>
+      </View>
+    </>
+  );
+}
+
+// Inner page — reused by both single and batch documents.
+// `fixed` is true for single-doc (borders/footer repeat on overflow pages)
+// and false for batch-doc (each foreman gets exactly one page).
+function VoucherPage({
+  data,
+  fixed = true,
+}: {
+  data: ProductOrderVoucherData;
+  fixed?: boolean;
+}) {
+  const totalQty = data.items.reduce((s, i) => s + i.quantity, 0);
+
+  return (
+    <Page size="A4" style={styles.page}>
+      <View style={styles.pageBorderOuter} fixed={fixed} />
+      <View style={styles.pageBorderMiddle} fixed={fixed} />
+      <View style={styles.pageBorderInner} fixed={fixed} />
+      <View style={styles.watermark} fixed={fixed}>
+        <Text style={styles.watermarkText}>{data.recipientName}</Text>
+      </View>
+
+      <View style={styles.box}>
+        {/* ---- Header ---- */}
+        <View style={styles.topRow}>
+          <View style={styles.brandBox}>
+            {LOGO_DATA_URI ? (
+              <Image src={LOGO_DATA_URI} style={styles.brandLogo} />
+            ) : (
+              <Text style={styles.brandFallback}>FIRST CLASS PROJECTS</Text>
+            )}
+          </View>
+          <View style={styles.titleBox}>
+            <Text style={styles.title}>PPE/Tools Order</Text>
+            <Text style={styles.subtitle}>PPE &amp; Tools Issue Record</Text>
+          </View>
+          <View style={styles.orderBox}>
+            <Text style={styles.orderLabel}>Order Number</Text>
+            <Text style={styles.orderValue}>{data.orderNumber}</Text>
+            <Text style={styles.dateValue}>{data.issuedDate}</Text>
+          </View>
+        </View>
+
+        {/* ---- Meta panels ---- */}
+        <View style={styles.metaRow}>
+          <View style={styles.metaPanel}>
+            <Text style={styles.metaPanelTitle}>Recipient Details</Text>
+            <MetaField
+              label={data.recipientType === "admin" ? "Admin" : "Foreman"}
+              value={data.recipientName}
+            />
+            <MetaField label="Date" value={data.issuedDate} />
+          </View>
+          <View style={styles.metaPanel}>
+            <Text style={styles.metaPanelTitle}>Order Summary</Text>
+            <MetaField label="Order No." value={data.orderNumber} />
+            <MetaField label="Total Items" value={String(data.items.length)} />
+            <MetaField label="Total Qty" value={String(totalQty)} />
+          </View>
+        </View>
+
+        <RecipientItemsTable items={data.items} startIndex={0} />
+        <SignaturesAndDisclaimer />
+      </View>
+
+      {/* ---- Footer ---- */}
+      <View style={styles.footer} fixed={fixed}>
+        <Text>First Class Projects (Pty) Ltd</Text>
+        <Text>{data.orderNumber} — PPE/Tools Order</Text>
+        <Text
+          render={({ pageNumber, totalPages }) =>
+            `Page ${pageNumber} of ${totalPages}`
+          }
+        />
+      </View>
+    </Page>
+  );
+}
+
 export function ProductOrderVoucherDocument({
   data,
 }: {
   data: ProductOrderVoucherData;
 }) {
-  const totalQty = data.items.reduce((s, i) => s + i.quantity, 0);
-  const totalValue = data.items.reduce(
-    (s, i) => s + i.quantity * i.unitPrice,
-    0,
-  );
-
-  const fmt = (n: number) =>
-    `R ${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-
   return (
     <Document title={`Product Order ${data.orderNumber}`}>
+      <VoucherPage data={data} fixed={true} />
+    </Document>
+  );
+}
+
+/** Unified batch PDF — one Plant-style page with per-recipient sections. */
+export function BatchProductOrderDocument({
+  orders,
+}: {
+  orders: ProductOrderVoucherData[];
+}) {
+  const isMulti = orders.length > 1;
+  const primary = orders[0];
+  const footerLabel = isMulti
+    ? `${orders.length} Orders — PPE/Tools`
+    : `${primary.orderNumber} — PPE/Tools Order`;
+
+  return (
+    <Document
+      title={
+        isMulti
+          ? `PPE/Tools Batch (${orders.length})`
+          : `PPE/Tools Order ${primary.orderNumber}`
+      }
+    >
       <Page size="A4" style={styles.page}>
         <View style={styles.pageBorderOuter} fixed />
         <View style={styles.pageBorderMiddle} fixed />
         <View style={styles.pageBorderInner} fixed />
+        <View style={styles.watermark} fixed>
+          <Text style={styles.watermarkText}>
+            {isMulti ? "PPE / TOOLS" : primary.recipientName}
+          </Text>
+        </View>
 
         <View style={styles.box}>
-          {/* ---- Header ---- */}
           <View style={styles.topRow}>
             <View style={styles.brandBox}>
               {LOGO_DATA_URI ? (
@@ -259,229 +563,108 @@ export function ProductOrderVoucherDocument({
             </View>
             <View style={styles.orderBox}>
               <Text style={styles.orderLabel}>Order Number</Text>
-              <Text style={styles.orderValue}>{data.orderNumber}</Text>
-              <Text style={styles.dateValue}>{data.issuedDate}</Text>
+              <Text style={styles.orderValue}>
+                {isMulti ? `${orders.length} Orders` : primary.orderNumber}
+              </Text>
+              <Text style={styles.dateValue}>{primary.issuedDate}</Text>
             </View>
           </View>
 
-          {/* ---- Meta panels ---- */}
           <View style={styles.metaRow}>
             <View style={styles.metaPanel}>
-              <Text style={styles.metaPanelTitle}>Recipient Details</Text>
-              <MetaField
-                label={data.recipientType === "admin" ? "Admin" : "Foreman"}
-                value={data.recipientName}
-              />
-              <MetaField label="Date" value={data.issuedDate} />
+              <Text style={styles.metaPanelTitle}>
+                {isMulti ? "Issue Details" : "Recipient Details"}
+              </Text>
+              {isMulti ? (
+                <>
+                  <MetaField
+                    label="Recipients"
+                    value={orders.map((o) => o.recipientName).join(", ")}
+                  />
+                </>
+              ) : (
+                <>
+                  <MetaField
+                    label={
+                      primary.recipientType === "admin" ? "Admin" : "Foreman"
+                    }
+                    value={primary.recipientName}
+                  />
+                  <MetaField label="Type" value={primary.recipientType} />
+                </>
+              )}
             </View>
             <View style={styles.metaPanel}>
-              <Text style={styles.metaPanelTitle}>Order Summary</Text>
-              <MetaField label="Order No." value={data.orderNumber} />
-              <MetaField
-                label="Total Items"
-                value={String(data.items.length)}
-              />
-              <MetaField label="Total Qty" value={String(totalQty)} />
-              {/* <MetaField label="Total Value" value={fmt(totalValue)} /> */}
+              <Text style={styles.metaPanelTitle}>Order Details</Text>
+              {!isMulti && (
+                <MetaField label="Order No." value={primary.orderNumber} />
+              )}
+              <MetaField label="Date Issued" value={primary.issuedDate} />
+              {isMulti && (
+                <MetaField
+                  label="No. of Recipients"
+                  value={String(orders.length)}
+                />
+              )}
             </View>
           </View>
 
-          {/* ---- Items table ---- */}
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, { width: "6%", textAlign: "center" }]}>
-                No.
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.th, { flex: 1 }]}>Product</Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>
-                Size
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.th, { width: "10%", textAlign: "center" }]}>
-                Color
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.th, { width: "8%", textAlign: "center" }]}>
-                Qty
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.th, { width: "14%", textAlign: "right" }]}>
-                Total
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.th, { width: "22%" }]}>Note</Text>
-            </View>
+          {orders.map((order, oIdx) => {
+            const prevCount = orders
+              .slice(0, oIdx)
+              .reduce((sum, o) => sum + o.items.length, 0);
+            const sectionQty = order.items.reduce((s, i) => s + i.quantity, 0);
+            const sectionLabel = isMulti
+              ? `${order.recipientName} — ${order.orderNumber}`
+              : null;
 
-            {data.items.map((item, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <View style={styles.rowDivider} />}
-                <View
-                  style={[styles.row, i % 2 === 1 ? styles.rowAlt : {}]}
-                  wrap={false}
-                >
-                  <Text
-                    style={[
-                      styles.td,
-                      { width: "6%", textAlign: "center", color: "#999999" },
-                    ]}
-                  >
-                    {i + 1}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { flex: 1, fontWeight: 700 }]}>
-                    {item.productName}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text
-                    style={[
-                      styles.td,
-                      { width: "10%", textAlign: "center", color: "#555" },
-                    ]}
-                  >
-                    {item.size ?? "—"}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text
-                    style={[
-                      styles.td,
-                      { width: "10%", textAlign: "center", color: "#555" },
-                    ]}
-                  >
-                    {item.color ?? "—"}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text
-                    style={[
-                      styles.td,
-                      { width: "8%", textAlign: "center", fontWeight: 700 },
-                    ]}
-                  >
-                    {item.quantity}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text
-                    style={[
-                      styles.td,
-                      { width: "14%", textAlign: "right", fontWeight: 700 },
-                    ]}
-                  >
-                    {fmt(item.quantity * item.unitPrice)}
-                  </Text>
-                  <View style={styles.vDivider} />
-                  <Text style={[styles.td, { width: "22%", color: "#555555" }]}>
-                    {item.note ?? ""}
-                  </Text>
-                </View>
+            return (
+              <React.Fragment key={oIdx}>
+                {isMulti && sectionLabel && (
+                  <View style={styles.recipientSectionHeader} wrap={false}>
+                    <Text style={styles.recipientSectionLabel}>
+                      {sectionLabel}
+                    </Text>
+                    <Text style={styles.recipientSectionMeta}>
+                      {sectionQty} units
+                    </Text>
+                  </View>
+                )}
+                <RecipientItemsTable
+                  items={order.items}
+                  startIndex={isMulti ? prevCount : 0}
+                />
               </React.Fragment>
-            ))}
+            );
+          })}
 
-            {/* Total row */}
-            <View style={styles.totalRow} wrap={false}>
-              <Text style={[styles.td, { width: "6%" }]} />
-              <View style={styles.vDivider} />
-              <Text
-                style={[
-                  styles.td,
-                  {
-                    flex: 1,
-                    fontWeight: 700,
-                    fontSize: 8,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.3,
-                  },
-                ]}
-              >
-                Total
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.td, { width: "10%" }]} />
-              <View style={styles.vDivider} />
-              <Text style={[styles.td, { width: "10%" }]} />
-              <View style={styles.vDivider} />
-              <Text
-                style={[
-                  styles.td,
-                  { width: "8%", textAlign: "center", fontWeight: 700 },
-                ]}
-              >
-                {totalQty}
-              </Text>
-              <View style={styles.vDivider} />
-              <Text
-                style={[
-                  styles.td,
-                  { width: "14%", textAlign: "right", fontWeight: 700 },
-                ]}
-              >
-                {fmt(totalValue)}
-              </Text>
-              <View style={styles.vDivider} />
-              <Text style={[styles.td, { width: "22%" }]} />
-            </View>
-          </View>
+          <SignaturesAndDisclaimer />
+        </View>
 
-          {/* Spacer */}
-          <View style={{ flex: 1 }} />
-
-          {/* ---- Disclaimer ---- */}
-          <View style={styles.disclaimer}>
-            <Text style={styles.disclaimerText}>
-              By signing this document, the recipient confirms that all items
-              listed above have been received in good condition and accepts
-              responsibility for their safekeeping. Any discrepancies must be
-              reported immediately to the office.
-            </Text>
-          </View>
-
-          {/* ---- Signatures ---- */}
-          <View style={styles.sigRow} wrap={false}>
-            <View style={styles.sigBox}>
-              <Text style={styles.sigTitle}>Received By</Text>
-              <View style={styles.sigField}>
-                <Text style={styles.sigLabel}>Full Name</Text>
-                <View style={styles.sigLine} />
-              </View>
-              <View style={styles.sigField}>
-                <Text style={styles.sigLabel}>Signature</Text>
-                <View style={styles.sigLineWide} />
-              </View>
-              <View style={styles.sigField}>
-                <Text style={styles.sigLabel}>Date</Text>
-                <View style={styles.sigLine} />
-              </View>
-            </View>
-
-            <View style={styles.sigBox}>
-              <Text style={styles.sigTitle}>Issued By</Text>
-              <View style={styles.sigField}>
-                <Text style={styles.sigLabel}>Full Name</Text>
-                <View style={styles.sigLine} />
-              </View>
-              <View style={styles.sigField}>
-                <Text style={styles.sigLabel}>Signature</Text>
-                <View style={styles.sigLineWide} />
-              </View>
-              <View style={styles.sigField}>
-                <Text style={styles.sigLabel}>Date</Text>
-                <View style={styles.sigLine} />
-              </View>
-            </View>
-          </View>
-
-          {/* ---- Footer ---- */}
-          <View style={styles.footer} fixed>
-            <Text>First Class Projects (Pty) Ltd</Text>
-            <Text>{data.orderNumber} — PPE/Tools Order</Text>
-            <Text
-              render={({ pageNumber, totalPages }) =>
-                `Page ${pageNumber} of ${totalPages}`
-              }
-            />
-          </View>
+        <View style={styles.footer} fixed>
+          <Text>First Class Projects (Pty) Ltd</Text>
+          <Text>{footerLabel}</Text>
+          <Text
+            render={({ pageNumber, totalPages }) =>
+              `Page ${pageNumber} of ${totalPages}`
+            }
+          />
         </View>
       </Page>
     </Document>
   );
+}
+
+/** @deprecated Use BatchProductOrderDocument */
+export type ProductOrderBatchData = {
+  orders: ProductOrderVoucherData[];
+};
+
+/** @deprecated Use BatchProductOrderDocument from this file */
+export function ProductOrderBatchDocument({
+  data,
+}: {
+  data: ProductOrderBatchData;
+}) {
+  return <BatchProductOrderDocument orders={data.orders} />;
 }

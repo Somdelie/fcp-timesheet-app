@@ -1407,7 +1407,7 @@ type CostImportResult = {
 type ParseResponse = {
   action: "parse";
   totalRows: number;
-  skippedNonLabour: number;
+  rowsByCategory: Record<string, number>;
   parseWarnings: string[];
   rows: CostPreviewRow[];
 };
@@ -1416,7 +1416,7 @@ type ImportResponse = {
   action: "import";
   summary: Record<string, number>;
   totalProcessed: number;
-  skippedNonLabour: number;
+  rowsByCategory: Record<string, number>;
   parseWarnings: string[];
   results: CostImportResult[];
 };
@@ -1534,7 +1534,7 @@ function HistoricalCostsTab() {
                   type: "done";
                   summary: Record<string, number>;
                   totalProcessed: number;
-                  skippedNonLabour: number;
+                  rowsByCategory: Record<string, number>;
                   parseWarnings: string[];
                 }
               | { type: "error"; error: string };
@@ -1547,7 +1547,7 @@ function HistoricalCostsTab() {
                 action: "import",
                 summary: event.summary,
                 totalProcessed: event.totalProcessed,
-                skippedNonLabour: event.skippedNonLabour,
+                rowsByCategory: event.rowsByCategory ?? {},
                 parseWarnings: event.parseWarnings,
                 results: streamedResults,
               });
@@ -1581,9 +1581,11 @@ function HistoricalCostsTab() {
                   Historical Cost Import
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm">
-                  Upload BuildSmart cost-report PDFs to import historical labour
-                  costs only. Material rows are handled by the Historical
-                  Materials tab.
+                  Upload BuildSmart &quot;Detail Contract Cost Report&quot; PDFs
+                  to import historical site costs (labour, materials, plant,
+                  consumables, and other ledger lines). DEL-batch material
+                  invoices can also be seeded separately under Historical
+                  Materials.
                 </CardDescription>
               </div>
               <Badge
@@ -2010,7 +2012,6 @@ type ClaimRow = {
   amountClaimed: number;
   amountReceived: number;
   outstanding: number;
-  outstandingIncVat: number;
   claimStatus: "SUBMITTED" | "PARTIALLY_RECEIVED" | "RECEIVED";
   dbAction: "CREATE" | "UPDATE";
   parseWarning?: string;
@@ -2440,21 +2441,8 @@ function ClaimsTab() {
                         <td className="px-4 py-3 text-right font-mono text-xs">
                           R{fmt(row.amountReceived)}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="font-mono text-xs font-semibold">
-                            R{fmt(row.outstanding)}
-                          </div>
-                          <div className="flex items-center justify-end gap-1 mt-0.5">
-                            <span className="font-mono text-[11px] text-muted-foreground">
-                              R{fmt(row.outstandingIncVat)}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className="rounded px-1 py-0 text-[10px] leading-4"
-                            >
-                              Inc VAT
-                            </Badge>
-                          </div>
+                        <td className="px-4 py-3 text-right font-mono text-xs font-semibold">
+                          R{fmt(row.outstanding)}
                         </td>
                         <td className="px-4 py-3">
                           <Badge

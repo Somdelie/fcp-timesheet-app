@@ -23,7 +23,8 @@
  */
 
 // pdf-parse v2.x exports PDFParse as a named class (no default export).
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 const { PDFParse } = require("pdf-parse");
 import type { BuildSmartRow } from "@/lib/procurement/buildsmartHistoricalImporter";
 
@@ -81,7 +82,17 @@ export interface ParsedCostReport {
 
 // "Contract: 6000 - Medicross Boksburg" or "Contract No. 6000 - ..."
 const CONTRACT_RE =
-  /^contract(?:\s+no\.?)?[:\s#]*(\d{4,6})\s*[-–]\s*(.+?)(?:\s{2,}.*)?$/i;
+  /^contract(?:\s+no\.?)?[:\s#]*(\d{4,6})\s*[-–]\s*(.+)$/i;
+
+/** Strip trailing report total columns accidentally captured in the site name. */
+function cleanContractSiteName(raw: string): string {
+  return raw
+    .replace(/\s{2,}.*$/, "") // double-space + trailing totals
+    .replace(/\t.*$/, "") // tab-separated amount columns
+    .replace(/\s*[-–]\s*[-–]\s*[\d,\s.]+\s*[\d,\s.]*\s*$/, "") // " - - 200,073.83 200,073.83"
+    .replace(/\s+[\d,\s]+\.\d{2}\s*[\d,\s.]*\s*$/, "") // trailing currency amounts
+    .trim();
+}
 
 // "924015 - Labour Only" or "922 - Materials" — 2–6 digit ledger code starting with 9.
 // Newer report variants use 2-3 digit hierarchy codes (92, 922) instead of the
@@ -362,7 +373,7 @@ export async function parseCostReportBuffer(
     const contractMatch = line.match(CONTRACT_RE);
     if (contractMatch) {
       currentSiteCode = contractMatch[1];
-      currentSiteName = contractMatch[2].replace(/\s{2,}.*$/, "").trim();
+      currentSiteName = cleanContractSiteName(contractMatch[2]);
       if (!primarySiteCode) {
         primarySiteCode = currentSiteCode;
         primarySiteName = currentSiteName;

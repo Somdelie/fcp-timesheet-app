@@ -20,7 +20,7 @@ export default function ProcurementPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-7xl flex gap-4 items-start">
+    <div className="mx-auto flex w-full max-w-7xl items-start gap-4">
       {/* Supplier sidebar */}
       <div className="w-56 shrink-0 sticky top-4">
         <div className="rounded border border-border bg-card overflow-hidden">
@@ -60,10 +60,8 @@ export default function ProcurementPage() {
       </div>
 
       {/* Products panel */}
-      <div className="flex-1 min-w-0 rounded border border-muted/50 bg-card p-4">
-        <ProcurementProductsPage
-          supplierId={selectedSupplierId}
-        />
+      <div className="min-w-0 flex-1">
+        <ProcurementProductsPage supplierId={selectedSupplierId} />
       </div>
     </div>
   );

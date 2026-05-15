@@ -806,10 +806,9 @@ export default function SitesTable({
           if (v <= 0 && row.original.claimAmountClaimed === 0)
             return <span className="block text-right text-xs text-muted-foreground">—</span>;
           return (
-            <div className="text-right">
-              <span className="block text-sm font-bold text-amber-700 dark:text-amber-400">{formatCurrency(v)}</span>
-              <span className="text-[11px] text-muted-foreground">{formatCurrency(v * 1.15)} Inc VAT</span>
-            </div>
+            <span className="block text-right text-sm font-bold text-amber-700 dark:text-amber-400">
+              {formatCurrency(v)}
+            </span>
           );
         },
       },

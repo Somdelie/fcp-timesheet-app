@@ -13,6 +13,7 @@
     "backfill:product-stock-from-orders": "tsx ./scripts/backfill-product-stock-from-orders.ts",
     "backfill:site-materials-from-orders": "tsx ./scripts/backfill-site-materials-from-orders.ts",
     "import:buildsmart": "tsx ./scripts/import-buildsmart.ts",
+    "backfill:buildsmart-suppliers": "tsx ./scripts/backfill-buildsmart-product-suppliers.ts",
     "cleanup:price-prefixed-products": "tsx prisma/cleanup-price-prefixed-products.ts"
   },
   "dependencies": {

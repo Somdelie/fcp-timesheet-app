@@ -18,15 +18,6 @@ export default function EquipmentPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Equipment</h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-          Manage plant and equipment workflows with a single tabbed entry. Use
-          the tabs to switch between equipment catalogue, deployed equipment,
-          and PPE catalogue.
-        </p>
-      </div>
-
       <div className="rounded border border-muted/50 bg-card p-4">
         <Tabs
           value={activeTab}

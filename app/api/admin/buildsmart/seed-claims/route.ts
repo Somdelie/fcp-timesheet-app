@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
     amountClaimed: number;
     amountReceived: number;
     outstanding: number;
-    outstandingIncVat: number;
     claimStatus: ClaimStatus;
     dbAction: "CREATE" | "UPDATE";
     parseWarning?: string;
@@ -105,7 +104,6 @@ export async function POST(req: NextRequest) {
       amountClaimed: claim.amountClaimed,
       amountReceived: claim.amountReceived,
       outstanding,
-      outstandingIncVat: outstanding * 1.15,
       claimStatus: deriveStatus(claim.amountClaimed, claim.amountReceived),
       dbAction: existing ? "UPDATE" : "CREATE",
       parseWarning: claim.parseWarning,
