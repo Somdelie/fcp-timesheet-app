@@ -62,9 +62,17 @@ type StockOrderResult = {
   reason?: string;
 };
 
+type ParseFailure = {
+  fileName: string;
+  orderNumber: string | null;
+  reason: string;
+};
+
 type SeedResponse = {
   summary: {
     totalFiles: number;
+    parsedOrders?: number;
+    parseFailures?: number;
     queuedOrders: number;
     seededOrders: number;
     savedToDb: number;
@@ -79,6 +87,7 @@ type SeedResponse = {
   duplicateRefs?: string[];
   skippedOrderNumbers: string[];
   skipReasons?: Record<string, string[]>;
+  parseFailures?: ParseFailure[];
   prismaSeedCode?: string;
 };
 
@@ -100,6 +109,30 @@ function fileSizeLabel(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+async function getResponseErrorMessage(res: Response) {
+  const fallback = `Request failed (${res.status}${res.statusText ? ` ${res.statusText}` : ""})`;
+  const contentType = res.headers.get("content-type") ?? "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      const data = (await res.json()) as {
+        error?: unknown;
+        message?: unknown;
+      };
+      return (
+        (typeof data.error === "string" && data.error) ||
+        (typeof data.message === "string" && data.message) ||
+        fallback
+      );
+    }
+
+    const text = (await res.text()).trim();
+    return text ? `${fallback}: ${text.slice(0, 300)}` : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function downloadText(filename: string, content: string) {
@@ -139,7 +172,7 @@ export default function BuildsmartPdfSeedPage() {
         <TabsContent value="orders">
           <PdfOrdersTab
             title="BuildSmart PDF Seeder"
-            description="Drop all order PDFs here, then generate seed-ready order payloads in one run."
+            description="Drop BuildSmart PO PDFs here. Each PO is saved once — if that order number already exists (from PDF Orders or Historical Materials), it is skipped."
             badgeText="PDF batch import"
             apiUrlDefault="/api/admin/buildsmart/seed-from-pdfs"
           />
@@ -247,16 +280,50 @@ function PdfOrdersTab({
       }
 
       setResult(data);
+      const failedByName = new Map(
+        (data.parseFailures ?? []).map((f) => [f.fileName, f.reason]),
+      );
+      const failedByOrder = new Map(
+        (data.parseFailures ?? [])
+          .filter((f) => f.orderNumber)
+          .map((f) => [f.orderNumber!, f.reason]),
+      );
       setFiles((prev) =>
-        prev.map((file) => ({
-          ...file,
-          status: data.skippedOrderNumbers?.includes(file.orderNumber)
-            ? "error"
-            : "done",
-          message: data.skippedOrderNumbers?.includes(file.orderNumber)
-            ? "Skipped"
-            : "Ready",
-        })),
+        prev.map((file) => {
+          const parseReason =
+            failedByName.get(file.file.name) ??
+            failedByOrder.get(file.orderNumber);
+          if (parseReason) {
+            return {
+              ...file,
+              status: "error" as const,
+              message: parseReason,
+            };
+          }
+          if (data.duplicateRefs?.includes(file.orderNumber)) {
+            return {
+              ...file,
+              status: "error" as const,
+              message: "Already imported (duplicate PO)",
+            };
+          }
+          if (data.skippedOrderNumbers?.includes(file.orderNumber)) {
+            return {
+              ...file,
+              status: "error" as const,
+              message:
+                data.skipReasons?.[file.orderNumber]?.join("; ") ?? "Skipped",
+            };
+          }
+          const saved = data.savedOrderIds?.length
+            ? data.duplicateRefs?.includes(file.orderNumber) === false
+            : false;
+          return {
+            ...file,
+            status: "done" as const,
+            message: saved ? "Saved to database" : "Parsed",
+          };
+        }),
       );
     } catch (error) {
       const message =
@@ -547,7 +614,18 @@ function PdfOrdersTab({
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <MetricCard label="Files" value={result.summary.totalFiles} />
                   <MetricCard
-                    label="Matched"
+                    label="Parsed"
+                    value={
+                      result.summary.parsedOrders ??
+                      result.summary.queuedOrders
+                    }
+                  />
+                  <MetricCard
+                    label="Parse failed"
+                    value={result.summary.parseFailures ?? 0}
+                  />
+                  <MetricCard
+                    label="Ready to save"
                     value={result.summary.seededOrders}
                   />
                   <MetricCard
@@ -641,6 +719,17 @@ function PdfOrdersTab({
                   <div className="text-sm font-medium">
                     Skipped order numbers
                   </div>
+                  {!!result.parseFailures?.length && (
+                    <ul className="mb-3 space-y-1 text-sm text-amber-700">
+                      {result.parseFailures.map((f) => (
+                        <li key={f.fileName}>
+                          {f.fileName}
+                          {f.orderNumber ? ` (PO ${f.orderNumber})` : ""}:{" "}
+                          {f.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {result.skippedOrderNumbers.length ? (
                     <div className="flex flex-wrap gap-2">
                       {result.skippedOrderNumbers.map((orderNumber) => (
@@ -1431,6 +1520,10 @@ const STATUS_BADGE: Record<
   NEW_HISTORICAL: { label: "Imported", variant: "default" },
   DUPLICATE_IMPORTED: { label: "Already imported", variant: "secondary" },
   DUPLICATE_EXISTING_APP: { label: "App duplicate", variant: "outline" },
+  DUPLICATE_ORDER: {
+    label: "PO already imported",
+    variant: "secondary",
+  },
   MISSING_SITE: { label: "Missing site", variant: "destructive" },
   INVALID_ROW: { label: "Invalid", variant: "destructive" },
 };
@@ -1501,8 +1594,7 @@ function HistoricalCostsTab() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).error ?? "Request failed");
+        throw new Error(await getResponseErrorMessage(res));
       }
 
       if (action === "parse") {
@@ -1582,10 +1674,10 @@ function HistoricalCostsTab() {
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm">
                   Upload BuildSmart &quot;Detail Contract Cost Report&quot; PDFs
-                  to import historical site costs (labour, materials, plant,
-                  consumables, and other ledger lines). DEL-batch material
-                  invoices can also be seeded separately under Historical
-                  Materials.
+                  for labour, plant, and other ledger lines. Rows tied to a PO
+                  already imported via PDF Orders or Historical Materials are
+                  skipped automatically. Use either PDF Orders or Historical
+                  Materials for material POs — not both.
                 </CardDescription>
               </div>
               <Badge

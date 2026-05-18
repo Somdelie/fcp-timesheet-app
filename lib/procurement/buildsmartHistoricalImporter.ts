@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { mapLedgerCategory, ledgerLabel } from "@/lib/buildsmart-ledger-mapper";
 import type { HistoricalCostCategory } from "@/lib/buildsmart-ledger-mapper";
+import {
+  isOrderReferenceTaken,
+  loadExistingOrderReferences,
+} from "@/lib/procurement/buildsmartOrderDedup";
 
 export type { HistoricalCostCategory };
 
@@ -17,6 +21,7 @@ export type ImportStatus =
   | "NEW_HISTORICAL"
   | "DUPLICATE_IMPORTED"
   | "DUPLICATE_EXISTING_APP"
+  | "DUPLICATE_ORDER"
   | "MISSING_SITE"
   | "INVALID_ROW";
 
@@ -25,6 +30,8 @@ export interface BuildSmartRow {
   ledgerCode: string;
   externalRef?: string;
   batchRef?: string;
+  /** BuildSmart PO number — skip row when SiteProductOrder already exists */
+  orderNumber?: string | null;
   description?: string;
   transactionDate: Date;
   amount: string;
@@ -78,6 +85,7 @@ async function appRecordExists(
 async function processBuildSmartRow(
   row: BuildSmartRow,
   siteMap: Map<string, string>,
+  existingOrderRefs: Set<string>,
 ): Promise<ImportResult> {
   if (
     !row.siteCode ||
@@ -112,6 +120,16 @@ async function processBuildSmartRow(
 
   const category = mapLedgerCategory(row.ledgerCode);
   const amount = new Prisma.Decimal(row.amount);
+
+  if (row.orderNumber && isOrderReferenceTaken(existingOrderRefs, row.orderNumber)) {
+    return {
+      row,
+      status: "DUPLICATE_ORDER",
+      reason: `PO ${row.orderNumber} already imported (PDF Orders or Historical Materials)`,
+      category,
+      siteId,
+    };
+  }
 
   if (row.externalRef && row.ledgerCode) {
     const existing = await prisma.historicalSiteCost.findFirst({
@@ -200,9 +218,10 @@ export async function importBuildSmartRows(
     select: { id: true, code: true },
   });
   const siteMap = new Map(sites.map((s) => [s.code!, s.id]));
+  const existingOrderRefs = await loadExistingOrderReferences();
 
   for (const row of rows) {
-    results.push(await processBuildSmartRow(row, siteMap));
+    results.push(await processBuildSmartRow(row, siteMap, existingOrderRefs));
   }
 
   return results;
@@ -221,10 +240,11 @@ export async function* importBuildSmartRowsStream(
     select: { id: true, code: true },
   });
   const siteMap = new Map(sites.map((s) => [s.code!, s.id]));
+  const existingOrderRefs = await loadExistingOrderReferences();
 
   let done = 0;
   for (const row of rows) {
-    const result = await processBuildSmartRow(row, siteMap);
+    const result = await processBuildSmartRow(row, siteMap, existingOrderRefs);
     done += 1;
     yield { total: rows.length, done, result };
   }

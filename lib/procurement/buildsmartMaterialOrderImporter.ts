@@ -14,6 +14,11 @@ import {
   resolveSupplierForOrderItems,
   resolveSupplierForProduct,
 } from "@/lib/procurement/resolveBuildSmartSupplier";
+import {
+  isOrderReferenceTaken,
+  loadExistingOrderReferences,
+  trackOrderReference,
+} from "@/lib/procurement/buildsmartOrderDedup";
 
 export type MaterialOrderImportStatus =
   | "CREATED"
@@ -159,6 +164,7 @@ async function resolveProduct(
 async function processOrderGroup(
   groupLines: ParsedMaterialLine[],
   siteMap: Map<string, string>,
+  existingOrderRefs: Set<string>,
 ): Promise<MaterialOrderImportResult> {
   const first = groupLines[0];
   const orderNumber = first.orderNumber;
@@ -192,11 +198,7 @@ async function processOrderGroup(
     };
   }
 
-  const existingOrder = await prisma.siteProductOrder.findFirst({
-    where: { siteId, reference: orderNumber },
-    select: { id: true },
-  });
-  if (existingOrder) {
+  if (isOrderReferenceTaken(existingOrderRefs, orderNumber)) {
     const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
     return {
       orderNumber,
@@ -204,8 +206,7 @@ async function processOrderGroup(
       siteName: first.siteName,
       transactionDate: first.transactionDate,
       status: "DUPLICATE",
-      reason: `Order ${orderNumber} already exists for this site`,
-      orderId: existingOrder.id,
+      reason: `PO ${orderNumber} already imported (PDF Orders or Historical Materials)`,
       linesCreated: 0,
       totalAmount: total.toFixed(2),
     };
@@ -277,6 +278,8 @@ async function processOrderGroup(
       select: { id: true },
     });
 
+    trackOrderReference(existingOrderRefs, orderNumber);
+
     return {
       orderNumber,
       siteCode: first.siteCode,
@@ -328,12 +331,17 @@ export async function* importMaterialOrdersStream(
     select: { id: true, code: true },
   });
   const siteMap = new Map(sites.map((s) => [s.code!, s.id]));
+  const existingOrderRefs = await loadExistingOrderReferences();
 
   const total = groups.size;
   let done = 0;
 
   for (const [, groupLines] of groups) {
-    const result = await processOrderGroup(groupLines, siteMap);
+    const result = await processOrderGroup(
+      groupLines,
+      siteMap,
+      existingOrderRefs,
+    );
     done++;
     yield { total, done, result };
   }

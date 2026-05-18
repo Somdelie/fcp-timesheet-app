@@ -1,5 +1,9 @@
-import pdf from "pdf-parse";
+import { createRequire } from "node:module";
 import { normalizeBuildSmartProductCode } from "@/lib/procurement/buildsmartProductCodes";
+
+// pdf-parse v2.x exports PDFParse as a named class (no default export).
+const require = createRequire(import.meta.url);
+const { PDFParse } = require("pdf-parse");
 
 // ── Types ──
 export type ParsedItem = {
@@ -411,13 +415,15 @@ export async function parsePdfBuffer(
   buffer: Buffer,
 ): Promise<ParsedOrder | null> {
   if (!buffer || buffer.length === 0) return null;
-  let data: { text: string };
+  let text: string;
   try {
-    data = await pdf(buffer);
+    const parser = new PDFParse({ data: buffer } as { data: Buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+    text = cleanText(result.text);
   } catch {
     return null;
   }
-  const text = cleanText(data.text);
 
   const orderNumber = extractOrderNumber(text);
   if (!orderNumber) return null;

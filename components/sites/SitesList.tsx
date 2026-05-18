@@ -52,6 +52,8 @@ import { Input } from "../ui/input";
 
 interface SitesListProps {
   initialSites: SiteRow[];
+  supervisorOptions?: Array<{ id: string; name: string; email: string }>;
+  foremanOptions?: Array<{ id: string; name: string; email: string }>;
 }
 
 const ALL_SUPERVISORS = "__all_supervisors__";
@@ -67,7 +69,11 @@ const UNASSIGNED_SUPERVISOR = "__unassigned_supervisor__";
 // # or
 // npx prisma generate
 
-export default function SitesList({ initialSites }: SitesListProps) {
+export default function SitesList({
+  initialSites,
+  supervisorOptions = [],
+  foremanOptions = [],
+}: SitesListProps) {
   const router = useRouter();
   const sp = useSearchParams();
   const role = useUserRole();
@@ -116,7 +122,7 @@ export default function SitesList({ initialSites }: SitesListProps) {
   // The effective data set: if date range is applied use date-filtered data, otherwise initialSites
   const effectiveData = dateFilteredSites ?? initialSites;
 
-  const supervisorOptions = React.useMemo(() => {
+  const supervisorFilterOptions = React.useMemo(() => {
     return Array.from(
       new Set(
         effectiveData
@@ -130,11 +136,11 @@ export default function SitesList({ initialSites }: SitesListProps) {
     if (
       supervisorFilter !== ALL_SUPERVISORS &&
       supervisorFilter !== UNASSIGNED_SUPERVISOR &&
-      !supervisorOptions.includes(supervisorFilter)
+      !supervisorFilterOptions.includes(supervisorFilter)
     ) {
       setSupervisorFilter(ALL_SUPERVISORS);
     }
-  }, [supervisorFilter, supervisorOptions]);
+  }, [supervisorFilter, supervisorFilterOptions]);
 
   async function handleApplyDateRange() {
     if (!dateFrom && !dateTo) {
@@ -301,8 +307,11 @@ export default function SitesList({ initialSites }: SitesListProps) {
                 <SelectItem value={UNASSIGNED_SUPERVISOR}>
                   Unassigned
                 </SelectItem>
-                {supervisorOptions.map((supervisorName) => (
-                  <SelectItem key={supervisorName} value={supervisorName}>
+                {supervisorFilterOptions.map((supervisorName, index) => (
+                  <SelectItem
+                    key={`${supervisorName ?? "unknown"}-${index}`}
+                    value={supervisorName}
+                  >
                     {supervisorName}
                   </SelectItem>
                 ))}
@@ -457,7 +466,12 @@ export default function SitesList({ initialSites }: SitesListProps) {
               value={statusFilter}
               onValueChange={(v) =>
                 setStatusFilter(
-                  v as "all" | "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD",
+                  v as
+                    | "all"
+                    | "NOT_STARTED"
+                    | "ONGOING"
+                    | "COMPLETED"
+                    | "ON_HOLD",
                 )
               }
             >
@@ -523,6 +537,8 @@ export default function SitesList({ initialSites }: SitesListProps) {
           onSelectionChange={setSelectedSites}
           columnVisibility={columnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
+          supervisorOptions={supervisorOptions}
+          foremanOptions={foremanOptions}
         />
       )}
 

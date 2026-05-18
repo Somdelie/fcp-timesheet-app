@@ -34,6 +34,10 @@ import {
 } from "@/components/ui/select";
 import SiteLocationPicker from "@/components/sites/SiteLocationPicker";
 import { updateSiteLocation } from "@/actions/sites";
+import {
+  assignSupervisorToSite,
+  assignForemanToSite,
+} from "@/actions/site-assignments";
 
 const JOB_STATUS_OPTIONS = [
   { value: "NOT_STARTED", label: "Not Started" },
@@ -52,8 +56,13 @@ const schema = z.object({
   location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
   siteClaimDate: z.string().max(10).optional(),
-  amountClaimed: z.number({ error: "Must be a number." }).min(0, "Cannot be negative.").optional(),
-  jobStatus: z.enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"]).optional(),
+  amountClaimed: z
+    .number({ error: "Must be a number." })
+    .min(0, "Cannot be negative.")
+    .optional(),
+  jobStatus: z
+    .enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"])
+    .optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -64,7 +73,15 @@ const schema = z.object({
     .min(-180, "Longitude must be between -180 and 180.")
     .max(180, "Longitude must be between -180 and 180.")
     .optional(),
+  supervisorUserId: z.string().optional(),
+  foremanUserId: z.string().optional(),
 });
+
+type PersonOption = {
+  id: string;
+  name: string;
+  email: string;
+};
 
 export default function EditSiteLocationDialog(props: {
   siteId: string;
@@ -82,6 +99,8 @@ export default function EditSiteLocationDialog(props: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  supervisorOptions?: PersonOption[];
+  foremanOptions?: PersonOption[];
 }) {
   const {
     siteId,
@@ -99,12 +118,18 @@ export default function EditSiteLocationDialog(props: {
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
     hideTrigger = false,
+    supervisorOptions = [],
+    foremanOptions = [],
   } = props;
 
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [supervisorUserId, setSupervisorUserId] = useState("");
+  const [foremanUserId, setForemanUserId] = useState("");
+  const [assigningSuper, setAssigningSuper] = useState(false);
+  const [assigningFore, setAssigningFore] = useState(false);
   const open = controlledOpen ?? internalOpen;
 
   const setOpen = (next: boolean) => {
@@ -123,7 +148,8 @@ export default function EditSiteLocationDialog(props: {
       location: initialLocation ?? "",
       address: initialAddress ?? "",
       siteClaimDate: initialSiteClaimDate?.slice(0, 10) ?? "",
-      amountClaimed: typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
+      amountClaimed:
+        typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
@@ -145,7 +171,8 @@ export default function EditSiteLocationDialog(props: {
       location: initialLocation ?? "",
       address: initialAddress ?? "",
       siteClaimDate: normalizeDateInput(initialSiteClaimDate),
-      amountClaimed: typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
+      amountClaimed:
+        typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
@@ -195,9 +222,47 @@ export default function EditSiteLocationDialog(props: {
         return;
       }
 
+      // Handle supervisor assignment if selected
+      if (values.supervisorUserId) {
+        setAssigningSuper(true);
+        try {
+          const superRes = await assignSupervisorToSite({
+            siteId,
+            supervisorUserId: values.supervisorUserId,
+          });
+          if (!superRes.ok) {
+            toast.error(superRes.error ?? "Failed to assign supervisor");
+          }
+        } catch (err: any) {
+          toast.error(err?.message ?? "Failed to assign supervisor");
+        } finally {
+          setAssigningSuper(false);
+        }
+      }
+
+      // Handle foreman assignment if selected
+      if (values.foremanUserId) {
+        setAssigningFore(true);
+        try {
+          const foreRes = await assignForemanToSite({
+            siteId,
+            foremanUserId: values.foremanUserId,
+          });
+          if (!foreRes.ok) {
+            toast.error(foreRes.error ?? "Failed to assign foreman");
+          }
+        } catch (err: any) {
+          toast.error(err?.message ?? "Failed to assign foreman");
+        } finally {
+          setAssigningFore(false);
+        }
+      }
+
       toast.success("Site updated.");
       setOpen(false);
       setPickerOpen(false);
+      setSupervisorUserId("");
+      setForemanUserId("");
       router.refresh();
     });
   }
@@ -438,6 +503,60 @@ export default function EditSiteLocationDialog(props: {
                 </Field>
               )}
             />
+
+            {supervisorOptions.length > 0 && (
+              <Field>
+                <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  Assign Supervisor{" "}
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                    (Optional)
+                  </span>
+                </FieldLabel>
+                <Select
+                  value={supervisorUserId}
+                  onValueChange={setSupervisorUserId}
+                  disabled={pending || assigningSuper}
+                >
+                  <SelectTrigger className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50">
+                    <SelectValue placeholder="Select supervisor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supervisorOptions.map((sup) => (
+                      <SelectItem key={sup.id} value={sup.id}>
+                        {sup.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+
+            {foremanOptions.length > 0 && (
+              <Field>
+                <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  Assign Foreman{" "}
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                    (Optional)
+                  </span>
+                </FieldLabel>
+                <Select
+                  value={foremanUserId}
+                  onValueChange={setForemanUserId}
+                  disabled={pending || assigningFore}
+                >
+                  <SelectTrigger className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50">
+                    <SelectValue placeholder="Select foreman" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {foremanOptions.map((fore) => (
+                      <SelectItem key={fore.id} value={fore.id}>
+                        {fore.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
 
             <Controller
               name="address"

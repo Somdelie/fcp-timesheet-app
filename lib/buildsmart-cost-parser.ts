@@ -463,6 +463,8 @@ export async function parseCostReportBuffer(
             ledgerCode: currentLedgerCode,
             transactionDate,
             externalRef: fields.invoiceRef ?? fields.batchRef,
+            orderNumber: fields.orderNumber,
+            description: fields.description,
             amount,
             rawLine: line,
           });

@@ -29,6 +29,11 @@ import {
 } from "@/lib/procurement/buildsmartProductCodes";
 import { parseBuildSmartProduct } from "@/lib/product-color-parser";
 import { matchStockProduct } from "@/lib/stock/stockProductMatcher";
+import {
+  isOrderReferenceTaken,
+  loadExistingOrderReferences,
+  trackOrderReference,
+} from "@/lib/procurement/buildsmartOrderDedup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +68,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Parse all PDFs ──
-  const parsedOrders: ParsedOrder[] = [];
+  const parsedOrders: (ParsedOrder & { sourceFileName: string })[] = [];
+  const parseFailures: { fileName: string; orderNumber: string | null; reason: string }[] =
+    [];
 
   for (const entry of pdfFiles) {
     if (!(entry instanceof File)) continue;
@@ -83,12 +90,25 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await entry.arrayBuffer();
-    if (!arrayBuffer || arrayBuffer.byteLength === 0) continue;
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      parseFailures.push({
+        fileName: entry.name,
+        orderNumber: entry.name.match(/(\d{4,})/)?.[1] ?? null,
+        reason: "Empty PDF file",
+      });
+      continue;
+    }
     const buffer = Buffer.from(arrayBuffer);
 
     const parsed = await parsePdfBuffer(buffer);
     if (parsed) {
-      parsedOrders.push(parsed);
+      parsedOrders.push({ ...parsed, sourceFileName: entry.name });
+    } else {
+      parseFailures.push({
+        fileName: entry.name,
+        orderNumber: entry.name.match(/(\d{4,})/)?.[1] ?? null,
+        reason: "Could not read PDF text or extract order number",
+      });
     }
   }
 
@@ -326,8 +346,18 @@ export async function POST(req: NextRequest) {
   const siteProductOrders: SeedOrder[] = [];
   const skippedOrderNumbers: string[] = [];
   const skipReasons: Record<string, string[]> = {};
+  const duplicateRefs: string[] = [];
+  const existingOrderRefs = await loadExistingOrderReferences();
 
   for (const order of siteParsed) {
+    if (isOrderReferenceTaken(existingOrderRefs, order.orderNumber)) {
+      duplicateRefs.push(order.orderNumber);
+      skipReasons[order.orderNumber] = [
+        "PO already imported (PDF Orders or Historical Materials)",
+      ];
+      continue;
+    }
+
     const reasons: string[] = [];
     const matchedItems: MatchedItem[] = [];
     const unmatchedItems: typeof order.items = [];
@@ -594,16 +624,9 @@ export async function POST(req: NextRequest) {
 
   // ── Persist matched orders to the database ──
   const savedOrderIds: string[] = [];
-  const duplicateRefs: string[] = [];
 
   for (const mo of matchedOrders) {
-    // Skip if order with same reference already exists
-    const existing = await prisma.siteProductOrder.findFirst({
-      where: { reference: mo.reference },
-      select: { id: true },
-    });
-
-    if (existing) {
+    if (isOrderReferenceTaken(existingOrderRefs, mo.reference)) {
       duplicateRefs.push(mo.reference);
       continue;
     }
@@ -661,6 +684,7 @@ export async function POST(req: NextRequest) {
     // Recalculate and persist the order total
     await recalcOrderTotal(created.id);
 
+    trackOrderReference(existingOrderRefs, mo.reference);
     savedOrderIds.push(created.id);
   }
 
@@ -669,6 +693,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     summary: {
       totalFiles: pdfFiles.length,
+      parsedOrders: parsedOrders.length,
+      parseFailures: parseFailures.length,
       queuedOrders: parsedOrders.length,
       seededOrders: siteProductOrders.length,
       savedToDb: savedOrderIds.length,
@@ -684,6 +710,7 @@ export async function POST(req: NextRequest) {
     duplicateRefs,
     skippedOrderNumbers,
     skipReasons,
+    parseFailures,
     debug: parsedOrders.map((o) => ({
       orderNumber: o.orderNumber,
       vendorName: o.vendorName,

@@ -109,7 +109,13 @@ export type SiteRow = {
   claimAmountClaimed: number;
   claimAmountReceived: number;
   claimOutstanding: number;
-  claimStatus: "DRAFT" | "SUBMITTED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED" | null;
+  claimStatus:
+    | "DRAFT"
+    | "SUBMITTED"
+    | "PARTIALLY_RECEIVED"
+    | "RECEIVED"
+    | "CANCELLED"
+    | null;
 };
 
 export const SITE_TABLE_COLUMN_OPTIONS = [
@@ -134,16 +140,37 @@ function classNames(...xs: Array<string | false | undefined | null>) {
 }
 
 const JOB_STATUS_CONFIG = {
-  NOT_STARTED: { label: "Not Started", className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400" },
-  ONGOING: { label: "Ongoing", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" },
-  COMPLETED: { label: "Completed", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" },
-  ON_HOLD: { label: "On Hold", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
+  NOT_STARTED: {
+    label: "Not Started",
+    className:
+      "bg-zinc-100 text-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400",
+  },
+  ONGOING: {
+    label: "Ongoing",
+    className:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  },
+  COMPLETED: {
+    label: "Completed",
+    className:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+  },
+  ON_HOLD: {
+    label: "On Hold",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  },
 } as const;
 
 function JobStatusBadge({ status }: { status: string }) {
-  const cfg = JOB_STATUS_CONFIG[status as keyof typeof JOB_STATUS_CONFIG] ?? { label: status, className: "" };
+  const cfg = JOB_STATUS_CONFIG[status as keyof typeof JOB_STATUS_CONFIG] ?? {
+    label: status,
+    className: "",
+  };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.className}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.className}`}
+    >
       {cfg.label}
     </span>
   );
@@ -188,10 +215,14 @@ function SiteRowActions({
   site,
   role,
   onRequestPhoto,
+  supervisorOptions = [],
+  foremanOptions = [],
 }: {
   site: SiteRow;
   role: string;
   onRequestPhoto: () => void;
+  supervisorOptions?: Array<{ id: string; name: string; email: string }>;
+  foremanOptions?: Array<{ id: string; name: string; email: string }>;
 }) {
   const router = useRouter();
   const [showEditDialog, setShowEditDialog] = React.useState(false);
@@ -364,6 +395,8 @@ function SiteRowActions({
         initialAmountClaimed={site.amountClaimed}
         initialJobStatus={site.jobStatus}
         canEditCoreDetails={role === "ADMIN"}
+        supervisorOptions={supervisorOptions}
+        foremanOptions={foremanOptions}
       />
 
       <ConfirmationDialog
@@ -483,6 +516,8 @@ interface SitesTableProps {
   onSelectionChange?: (selectedSites: SiteRow[]) => void;
   columnVisibility?: VisibilityState;
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>;
+  supervisorOptions?: Array<{ id: string; name: string; email: string }>;
+  foremanOptions?: Array<{ id: string; name: string; email: string }>;
 }
 
 export default function SitesTable({
@@ -492,6 +527,8 @@ export default function SitesTable({
   onSelectionChange,
   columnVisibility,
   onColumnVisibilityChange,
+  supervisorOptions = [],
+  foremanOptions = [],
 }: SitesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "siteClaimDate", desc: false },
@@ -690,7 +727,9 @@ export default function SitesTable({
           const pct = claimed > 0 ? (amount / claimed) * 100 : null;
           return (
             <div className="text-right">
-              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">{formatCurrency(amount)}</span>
+              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">
+                {formatCurrency(amount)}
+              </span>
               {pct !== null && (
                 <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
                   {pct.toFixed(1)}%
@@ -716,7 +755,9 @@ export default function SitesTable({
           const pct = claimed > 0 ? (amount / claimed) * 100 : null;
           return (
             <div className="text-right">
-              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">{formatCurrency(amount)}</span>
+              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">
+                {formatCurrency(amount)}
+              </span>
               {pct !== null && (
                 <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-400">
                   {pct.toFixed(1)}%
@@ -773,15 +814,27 @@ export default function SitesTable({
             >
               <Wallet className="h-4 w-4 text-emerald-600" />
               Paid to Date
-              {isSorted === "asc" ? <ChevronUp className="h-4 w-4" /> : isSorted === "desc" ? <ChevronDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
             </button>
           );
         },
         cell: ({ row }) => {
           const v = row.original.claimAmountReceived;
-          return v > 0
-            ? <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">{formatCurrency(v)}</span>
-            : <span className="block text-right text-xs text-muted-foreground">—</span>;
+          return v > 0 ? (
+            <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">
+              {formatCurrency(v)}
+            </span>
+          ) : (
+            <span className="block text-right text-xs text-muted-foreground">
+              —
+            </span>
+          );
         },
       },
       {
@@ -797,14 +850,24 @@ export default function SitesTable({
             >
               <Calculator className="h-4 w-4 text-amber-600" />
               Outstanding
-              {isSorted === "asc" ? <ChevronUp className="h-4 w-4" /> : isSorted === "desc" ? <ChevronDown className="h-4 w-4" /> : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
             </button>
           );
         },
         cell: ({ row }) => {
           const v = row.original.claimOutstanding;
           if (v <= 0 && row.original.claimAmountClaimed === 0)
-            return <span className="block text-right text-xs text-muted-foreground">—</span>;
+            return (
+              <span className="block text-right text-xs text-muted-foreground">
+                —
+              </span>
+            );
           return (
             <span className="block text-right text-sm font-bold text-amber-700 dark:text-amber-400">
               {formatCurrency(v)}
@@ -823,9 +886,15 @@ export default function SitesTable({
         ),
         cell: ({ row }) => {
           const claimed = row.original.amountClaimed ?? 0;
-          const totalCost = (row.original.totalWages ?? 0) + (row.original.totalMaterialCost ?? 0);
+          const totalCost =
+            (row.original.totalWages ?? 0) +
+            (row.original.totalMaterialCost ?? 0);
           if (claimed === 0) {
-            return <span className="block text-right text-xs text-muted-foreground">—</span>;
+            return (
+              <span className="block text-right text-xs text-muted-foreground">
+                —
+              </span>
+            );
           }
           const pl = claimed - totalCost;
           const isProfit = pl >= 0;
@@ -833,16 +902,23 @@ export default function SitesTable({
           return (
             <div className="text-right">
               <div className="flex items-center justify-end gap-1">
-                {isProfit
-                  ? <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                  : <TrendingDown className="h-3.5 w-3.5 shrink-0 text-red-500" />
-                }
-                <span className={`text-sm font-bold ${isProfit ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                  {isProfit ? "+" : ""}{formatCurrency(pl)}
+                {isProfit ? (
+                  <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                )}
+                <span
+                  className={`text-sm font-bold ${isProfit ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
+                >
+                  {isProfit ? "+" : ""}
+                  {formatCurrency(pl)}
                 </span>
               </div>
-              <span className={`text-[11px] font-semibold ${isProfit ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                {isProfit ? "+" : ""}{pct.toFixed(1)}%
+              <span
+                className={`text-[11px] font-semibold ${isProfit ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
+              >
+                {isProfit ? "+" : ""}
+                {pct.toFixed(1)}%
               </span>
             </div>
           );
@@ -858,12 +934,14 @@ export default function SitesTable({
               site={row.original}
               role={role}
               onRequestPhoto={() => onRequestPhoto(row.original)}
+              supervisorOptions={supervisorOptions}
+              foremanOptions={foremanOptions}
             />
           </div>
         ),
       },
     ],
-    [role, onRequestPhoto],
+    [role, onRequestPhoto, supervisorOptions, foremanOptions],
   );
 
   const table = useReactTable({
@@ -899,8 +977,19 @@ export default function SitesTable({
                       width: header.column.getSize(),
                       minWidth: header.column.id === "select" ? 48 : undefined,
                       maxWidth: header.column.id === "select" ? 48 : undefined,
-                      position: ["select", "code", "name"].includes(header.column.id) ? "sticky" : undefined,
-                      left: header.column.id === "select" ? 0 : header.column.id === "code" ? 48 : header.column.id === "name" ? 128 : undefined,
+                      position: ["select", "code", "name"].includes(
+                        header.column.id,
+                      )
+                        ? "sticky"
+                        : undefined,
+                      left:
+                        header.column.id === "select"
+                          ? 0
+                          : header.column.id === "code"
+                            ? 48
+                            : header.column.id === "name"
+                              ? 128
+                              : undefined,
                     }}
                     className={classNames(
                       "border border-zinc-200 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700",
@@ -945,8 +1034,19 @@ export default function SitesTable({
                         width: cell.column.getSize(),
                         minWidth: cell.column.id === "select" ? 48 : undefined,
                         maxWidth: cell.column.id === "select" ? 48 : undefined,
-                        position: ["select", "code", "name"].includes(cell.column.id) ? "sticky" : undefined,
-                        left: cell.column.id === "select" ? 0 : cell.column.id === "code" ? 48 : cell.column.id === "name" ? 128 : undefined,
+                        position: ["select", "code", "name"].includes(
+                          cell.column.id,
+                        )
+                          ? "sticky"
+                          : undefined,
+                        left:
+                          cell.column.id === "select"
+                            ? 0
+                            : cell.column.id === "code"
+                              ? 48
+                              : cell.column.id === "name"
+                                ? 128
+                                : undefined,
                       }}
                       className={classNames(
                         "border border-zinc-200 dark:border-zinc-700",
