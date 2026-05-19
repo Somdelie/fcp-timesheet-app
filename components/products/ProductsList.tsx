@@ -29,6 +29,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -75,8 +81,19 @@ function ColorDot({ color }: { color: string }) {
   );
 }
 
-function makeColumns(tab: Tab): ColumnDef<AdminProductDto>[] {
-  return [
+function makeColumns(
+  tab: Tab,
+  {
+    showSku = true,
+    showStatus = true,
+    onColorClick,
+  }: {
+    showSku?: boolean;
+    showStatus?: boolean;
+    onColorClick?: (product: AdminProductDto, color: string | null) => void;
+  } = {},
+): ColumnDef<AdminProductDto>[] {
+  const columns: ColumnDef<AdminProductDto>[] = [
     {
       id: "thumbnail",
       size: 48,
@@ -122,7 +139,7 @@ function makeColumns(tab: Tab): ColumnDef<AdminProductDto>[] {
         return (
           <div className="min-w-[160px]">
             <div className="font-medium leading-tight">{p.name}</div>
-            {p.sku && (
+            {showSku && p.sku && (
               <div className="text-[10px] text-muted-foreground mt-0.5">SKU: {p.sku}</div>
             )}
           </div>
@@ -131,33 +148,41 @@ function makeColumns(tab: Tab): ColumnDef<AdminProductDto>[] {
     },
     {
       id: "variants",
-      header: () => <span>Sizes / Colors</span>,
+      header: () => <span>Colors</span>,
       cell: ({ row }) => {
-        const { sizes, colors } = row.original;
-        if (sizes.length === 0 && colors.length === 0) {
+        const { sizes, colors, variants } = row.original;
+        const variantColors = variants
+          .map((variant) => variant.color)
+          .filter((color): color is string => Boolean(color));
+        const colorOptions = Array.from(new Set([...colors, ...variantColors]));
+        if (colorOptions.length === 0 && sizes.length === 0) {
           return <span className="text-xs text-muted-foreground">—</span>;
         }
         return (
-          <div className="flex flex-col gap-1 min-w-[120px]">
-            {sizes.length > 0 && (
-              <div className="flex flex-wrap gap-0.5">
-                {sizes.slice(0, 4).map((s) => (
-                  <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                    {s}
-                  </Badge>
+          <div className="flex min-w-[180px] flex-wrap gap-1.5">
+            {colorOptions.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {colorOptions.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => onColorClick?.(row.original, c)}
+                    className="inline-flex h-7 items-center gap-1.5 rounded border border-border bg-background px-2 text-xs font-medium hover:bg-muted"
+                  >
+                    <ColorDot color={c} />
+                    {c}
+                  </button>
                 ))}
-                {sizes.length > 4 && (
-                  <span className="text-[10px] text-muted-foreground">+{sizes.length - 4}</span>
-                )}
               </div>
             )}
-            {colors.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1">
-                {colors.slice(0, 6).map((c) => <ColorDot key={c} color={c} />)}
-                {colors.length > 6 && (
-                  <span className="text-[10px] text-muted-foreground">+{colors.length - 6}</span>
-                )}
-              </div>
+            {colorOptions.length === 0 && sizes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onColorClick?.(row.original, null)}
+                className="inline-flex h-7 items-center rounded border border-border bg-background px-2 text-xs font-medium hover:bg-muted"
+              >
+                Sizes
+              </button>
             )}
           </div>
         );
@@ -223,6 +248,7 @@ function makeColumns(tab: Tab): ColumnDef<AdminProductDto>[] {
       sortingFn: (a, b) => Number(a.original.price) - Number(b.original.price),
     },
     {
+      id: "status",
       accessorKey: "isActive",
       header: () => <span>Status</span>,
       cell: ({ row }) =>
@@ -248,11 +274,21 @@ function makeColumns(tab: Tab): ColumnDef<AdminProductDto>[] {
       enableSorting: false,
     },
   ];
+
+  return showStatus
+    ? columns
+    : columns.filter((column) => column.id !== "status");
 }
 
 interface ProductsListProps {
   ppeProducts: AdminProductDto[];
   toolProducts: AdminProductDto[];
+  defaultTab?: Tab;
+  hideTabs?: boolean;
+  autoLoad?: boolean;
+  showSku?: boolean;
+  showStatus?: boolean;
+  includeInactive?: boolean;
 }
 
 function ProductTable({
@@ -260,17 +296,33 @@ function ProductTable({
   tab,
   onReload,
   loading,
+  showSku,
+  showStatus,
 }: {
   products: AdminProductDto[];
   tab: Tab;
   onReload: () => void;
   loading: boolean;
+  showSku: boolean;
+  showStatus: boolean;
 }) {
   const [q, setQ] = React.useState("");
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
+  const [detail, setDetail] = React.useState<{
+    product: AdminProductDto;
+    color: string | null;
+  } | null>(null);
 
-  const columns = React.useMemo(() => makeColumns(tab), [tab]);
+  const columns = React.useMemo(
+    () =>
+      makeColumns(tab, {
+        showSku,
+        showStatus,
+        onColorClick: (product, color) => setDetail({ product, color }),
+      }),
+    [tab, showSku, showStatus],
+  );
 
   const filtered = React.useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -294,6 +346,33 @@ function ProductTable({
   });
 
   const label = tab === "PPE" ? "PPE items" : "tools";
+  const detailRows = React.useMemo(() => {
+    if (!detail) return [];
+
+    const matchingVariants = detail.product.variants.filter((variant) =>
+      detail.color === null
+        ? !variant.color
+        : variant.color === detail.color,
+    );
+
+    if (matchingVariants.length > 0) {
+      return matchingVariants.map((variant) => ({
+        key: variant.id,
+        size: variant.size ?? "-",
+        color: variant.color ?? "-",
+        qty: variant.qty,
+      }));
+    }
+
+    const sizes = detail.product.sizes.length ? detail.product.sizes : ["-"];
+    return sizes.map((size) => ({
+      key: size,
+      size,
+      color: detail.color ?? "-",
+      qty: detail.product.stockQty,
+    }));
+  }, [detail]);
+  const detailTotal = detailRows.reduce((sum, row) => sum + row.qty, 0);
 
   return (
     <div className="flex flex-col min-h-0 space-y-3">
@@ -465,20 +544,68 @@ function ProductTable({
           </div>
         </div>
       )}
+
+      <Dialog open={detail !== null} onOpenChange={(open) => !open && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {detail?.product.name}
+              {detail ? ` - ${detail.color ?? "Sizes"}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded border bg-muted/30 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Total in stock</span>
+              <span className="font-semibold tabular-nums">{detailTotal}</span>
+            </div>
+            <div className="overflow-hidden rounded border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Size</TableHead>
+                    <TableHead>Color</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detailRows.map((row) => (
+                    <TableRow key={row.key}>
+                      <TableCell className="font-medium">{row.size}</TableCell>
+                      <TableCell>{row.color}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {row.qty}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-export default function ProductsList({ ppeProducts, toolProducts }: ProductsListProps) {
-  const [tab, setTab] = React.useState<Tab>("PPE");
+export default function ProductsList({
+  ppeProducts,
+  toolProducts,
+  defaultTab = "PPE",
+  hideTabs = false,
+  autoLoad = false,
+  showSku = true,
+  showStatus = true,
+  includeInactive = true,
+}: ProductsListProps) {
+  const [tab, setTab] = React.useState<Tab>(defaultTab);
   const [ppe, setPpe] = React.useState<AdminProductDto[]>(ppeProducts);
   const [tools, setTools] = React.useState<AdminProductDto[]>(toolProducts);
   const [loading, setLoading] = React.useState(false);
 
-  async function reload() {
+  const reload = React.useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/app/admin/products?includeInactive=true", {
+      const res = await fetch(`/api/app/admin/products?includeInactive=${includeInactive ? "true" : "false"}`, {
         credentials: "include",
         headers: { accept: "application/json" },
       });
@@ -493,13 +620,17 @@ export default function ProductsList({ ppeProducts, toolProducts }: ProductsList
     } finally {
       setLoading(false);
     }
-  }
+  }, [includeInactive]);
 
   React.useEffect(() => {
     const handler = () => void reload();
     document.addEventListener("admin-products:reload", handler);
     return () => document.removeEventListener("admin-products:reload", handler);
-  }, []);
+  }, [reload]);
+
+  React.useEffect(() => {
+    if (autoLoad) void reload();
+  }, [autoLoad, reload]);
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "PPE", label: "PPE", count: ppe.length },
@@ -508,6 +639,7 @@ export default function ProductsList({ ppeProducts, toolProducts }: ProductsList
 
   return (
     <div className="space-y-4">
+      {!hideTabs && (
       <div className="flex border-b border-zinc-200 dark:border-zinc-700">
         {tabs.map((t) => (
           <button
@@ -528,11 +660,26 @@ export default function ProductsList({ ppeProducts, toolProducts }: ProductsList
           </button>
         ))}
       </div>
+      )}
 
       {tab === "PPE" ? (
-        <ProductTable products={ppe} tab="PPE" onReload={reload} loading={loading} />
+        <ProductTable
+          products={ppe}
+          tab="PPE"
+          onReload={reload}
+          loading={loading}
+          showSku={showSku}
+          showStatus={showStatus}
+        />
       ) : (
-        <ProductTable products={tools} tab="TOOL" onReload={reload} loading={loading} />
+        <ProductTable
+          products={tools}
+          tab="TOOL"
+          onReload={reload}
+          loading={loading}
+          showSku={showSku}
+          showStatus={showStatus}
+        />
       )}
     </div>
   );

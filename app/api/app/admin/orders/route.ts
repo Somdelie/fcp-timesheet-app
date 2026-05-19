@@ -40,6 +40,12 @@ async function getAdminFromRequest(req: NextRequest) {
   return null;
 }
 
+function normalizeName(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
 // Either foremanId OR adminUserId must be provided (not both, not neither)
 const CreateOrderSchema = z
   .object({
@@ -47,6 +53,7 @@ const CreateOrderSchema = z
     adminUserId: z.string().min(1).optional(),
     reference: z.string().min(1).max(200).optional(),
     createdAt: z.string().datetime().optional(),
+    destination: z.enum(["JHB", "CAPE_TOWN"]).optional(),
     items: z
       .array(
         z.object({
@@ -127,7 +134,14 @@ export async function POST(req: NextRequest) {
     const productIds = Array.from(new Set(data.items.map((i) => i.productId)));
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, price: true, isActive: true, category: true },
+      select: {
+        id: true,
+        price: true,
+        isActive: true,
+        category: true,
+        name: true,
+        normalizedName: true,
+      },
     });
 
     if (products.length !== productIds.length) {
@@ -164,6 +178,9 @@ export async function POST(req: NextRequest) {
       note: string | null;
     }[];
 
+    const destinationIsCapeTown =
+      String(data.destination ?? "JHB").toUpperCase() === "CAPE_TOWN";
+
     for (const item of data.items) {
       const p = productsById.get(item.productId)!;
       const priceNum = Number((p.price as any).toString?.() ?? p.price);
@@ -191,11 +208,41 @@ export async function POST(req: NextRequest) {
       });
       items.push(createdItem);
 
-      if (p.category === "PPE") {
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stockQty: { decrement: item.quantity } },
+      if (p.category === "PPE" && destinationIsCapeTown) {
+        let ctItem = await prisma.capeTownStockItem.findFirst({
+          where: {
+            name: { equals: p.name, mode: "insensitive" },
+          },
         });
+
+        const lookupName = normalizeName(p.normalizedName || p.name);
+        if (!ctItem && lookupName) {
+          ctItem = await prisma.capeTownStockItem.findFirst({
+            where: {
+              name: {
+                contains: lookupName,
+                mode: "insensitive",
+              },
+            },
+          });
+        }
+
+        if (ctItem) {
+          await prisma.capeTownStockOrder.create({
+            data: {
+              itemId: ctItem.id,
+              qty: item.quantity,
+              size: normalizedSize,
+              color: normalizedColor,
+              notes: `ProductOrder:${order.id}`,
+              status: "PENDING",
+            },
+          });
+          continue;
+        }
+      }
+
+      if (p.category === "PPE") {
         if (normalizedSize !== null || normalizedColor !== null) {
           await prisma.stockItemVariant.updateMany({
             where: {
@@ -206,6 +253,10 @@ export async function POST(req: NextRequest) {
             data: { qty: { decrement: item.quantity } },
           });
         }
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stockQty: { decrement: item.quantity } },
+        });
       }
     }
 

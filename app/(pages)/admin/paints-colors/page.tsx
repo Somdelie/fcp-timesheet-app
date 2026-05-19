@@ -111,6 +111,9 @@ const BASE_TYPES: { value: ColorBaseType; label: string; color: string }[] = [
   { value: "NEUTRAL", label: "Neutral Base", color: "bg-yellow-500" },
 ];
 
+const ALL_PRODUCTS_VALUE = "__all_products__";
+const ALL_BASE_TYPES_VALUE = "__all_base_types__";
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                           */
 /* ------------------------------------------------------------------ */
@@ -528,12 +531,17 @@ export default function ColorVariantsPage() {
           />
         </div>
 
-        <Select value={filterProduct} onValueChange={setFilterProduct}>
+        <Select
+          value={filterProduct || ALL_PRODUCTS_VALUE}
+          onValueChange={(value) =>
+            setFilterProduct(value === ALL_PRODUCTS_VALUE ? "" : value)
+          }
+        >
           <SelectTrigger className="w-48">
             <SelectValue placeholder="All Products" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Products</SelectItem>
+            <SelectItem value={ALL_PRODUCTS_VALUE}>All Products</SelectItem>
             {uniqueProducts.map((product) => (
               <SelectItem key={product.id} value={product.id}>
                 {product.name}
@@ -542,12 +550,17 @@ export default function ColorVariantsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={filterBaseType} onValueChange={setFilterBaseType}>
+        <Select
+          value={filterBaseType || ALL_BASE_TYPES_VALUE}
+          onValueChange={(value) =>
+            setFilterBaseType(value === ALL_BASE_TYPES_VALUE ? "" : value)
+          }
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All Base Types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Base Types</SelectItem>
+            <SelectItem value={ALL_BASE_TYPES_VALUE}>All Base Types</SelectItem>
             {BASE_TYPES.map((type) => (
               <SelectItem key={type.value} value={type.value}>
                 {type.label}

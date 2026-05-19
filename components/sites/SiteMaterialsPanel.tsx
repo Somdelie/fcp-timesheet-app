@@ -79,12 +79,34 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     const res = await listSiteMaterials(siteId);
+    console.debug("listSiteMaterials response for site", siteId, res);
     if (res.ok) {
-      setMaterials(res.materials);
+      // sort materials by computed quantity (highest first)
+      const sorted = (res.materials || []).slice().sort((a, b) => {
+        const aQty = getSiteMaterialQuantity(a) ?? -1;
+        const bQty = getSiteMaterialQuantity(b) ?? -1;
+        if (bQty !== aQty) return bQty - aQty;
+        return a.product.name.localeCompare(b.product.name);
+      });
+      setMaterials(sorted);
       setPage(0);
     }
     setLoading(false);
   }, [siteId]);
+
+  function getSiteMaterialQuantity(
+    siteMaterial: SiteMaterialRow,
+  ): number | null {
+    const usageTotal = (siteMaterial.usages ?? []).reduce(
+      (sum, usage) => sum + (usage.quantity ?? 0),
+      0,
+    );
+    if (siteMaterial.quantity != null) return siteMaterial.quantity;
+    if (usageTotal > 0) return usageTotal;
+    if ((siteMaterial as any).orderedQuantity > 0)
+      return (siteMaterial as any).orderedQuantity;
+    return null;
+  }
 
   useEffect(() => {
     load();
@@ -179,9 +201,9 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
           <Table className="border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
             <TableHeader>
               <TableRow>
+                <TableHead>SKU</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>SKU</TableHead>
                 <TableHead>Usage</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead className="w-24" />
@@ -190,6 +212,9 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
             <TableBody>
               {paginated.map((m) => (
                 <TableRow key={m.id}>
+                  <TableCell className="font-mono text-xs">
+                    {m.product.sku || "—"}
+                  </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-slate-400" />
@@ -204,9 +229,6 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {m.product.sku || "—"}
                   </TableCell>
 
                   {/* Usages */}
@@ -244,7 +266,7 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
                         className="cursor-pointer hover:underline"
                         onClick={() => startEdit(m)}
                       >
-                        {m.quantity ?? "—"}
+                        {getSiteMaterialQuantity(m) ?? "—"}
                       </span>
                     )}
                   </TableCell>
@@ -303,22 +325,48 @@ export default function SiteMaterialsPanel({ siteId }: { siteId: string }) {
       {materials.length > PAGE_SIZE && (
         <div className="flex items-center justify-between mt-4 px-1">
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, materials.length)} of {materials.length}
+            {page * PAGE_SIZE + 1}–
+            {Math.min((page + 1) * PAGE_SIZE, materials.length)} of{" "}
+            {materials.length}
           </span>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(0)} disabled={page === 0}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage(0)}
+              disabled={page === 0}
+            >
               <ChevronsLeft className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 0}
+            >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
             <span className="text-xs text-slate-500 dark:text-slate-400 px-2">
               {page + 1} / {totalPages}
             </span>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages - 1}
+            >
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPage(totalPages - 1)}
+              disabled={page >= totalPages - 1}
+            >
               <ChevronsRight className="h-3.5 w-3.5" />
             </Button>
           </div>

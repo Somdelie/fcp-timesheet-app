@@ -271,13 +271,13 @@ function PdfOrdersTab({
         body: formData,
       });
 
+      if (!response.ok) {
+        throw new Error(await getResponseErrorMessage(response));
+      }
+
       const data = (await response.json()) as SeedResponse & {
         error?: string;
       };
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to process PDFs");
-      }
 
       setResult(data);
       const failedByName = new Map(

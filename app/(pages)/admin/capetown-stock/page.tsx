@@ -290,11 +290,19 @@ function VariantGrid({ item }: { item: StockItem }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function CapeTownStockPage() {
+export default function CapeTownStockPage({
+  defaultCategory = "PPE",
+  lockCategory = false,
+  showHeader = true,
+}: {
+  defaultCategory?: Category;
+  lockCategory?: boolean;
+  showHeader?: boolean;
+}) {
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<Category>("PPE");
+  const [activeTab, setActiveTab] = useState<Category>(defaultCategory);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Add dialog
@@ -570,7 +578,7 @@ export default function CapeTownStockPage() {
           const s = column.getIsSorted();
           return (
             <button className="flex items-center gap-1 hover:text-foreground" onClick={() => column.toggleSorting(s === "asc")}>
-              Total Stock
+              In Stock
               {s === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : s === "desc" ? <ChevronDown className="h-3.5 w-3.5" /> : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
             </button>
           );
@@ -681,20 +689,22 @@ export default function CapeTownStockPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Cape Town Stock</h1>
-          <p className="text-sm text-muted-foreground">PPE & Tools inventory for Cape Town</p>
+      {showHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Cape Town Stock</h1>
+            <p className="text-sm text-muted-foreground">PPE & Tools inventory for Cape Town</p>
+          </div>
+          {pendingOrders > 0 && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              {pendingOrders} order{pendingOrders !== 1 ? "s" : ""} pending
+            </Badge>
+          )}
         </div>
-        {pendingOrders > 0 && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            {pendingOrders} order{pendingOrders !== 1 ? "s" : ""} pending
-          </Badge>
-        )}
-      </div>
+      )}
 
       {/* Summary cards */}
+      {showHeader && (
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded border bg-card px-4 py-3">
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium uppercase tracking-wide mb-1">
@@ -715,20 +725,23 @@ export default function CapeTownStockPage() {
           <div className="text-2xl font-bold">{pendingOrders}</div>
         </div>
       </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Category)}>
         <div className="flex items-center gap-3 mb-2">
-          <TabsList>
-            <TabsTrigger value="PPE" className="gap-1.5">
-              <Shield className="h-3.5 w-3.5" />PPE
-              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">{ppeCnt}</span>
-            </TabsTrigger>
-            <TabsTrigger value="TOOL" className="gap-1.5">
-              <Wrench className="h-3.5 w-3.5" />Tools
-              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">{toolCnt}</span>
-            </TabsTrigger>
-          </TabsList>
+          {!lockCategory && (
+            <TabsList>
+              <TabsTrigger value="PPE" className="gap-1.5">
+                <Shield className="h-3.5 w-3.5" />PPE
+                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">{ppeCnt}</span>
+              </TabsTrigger>
+              <TabsTrigger value="TOOL" className="gap-1.5">
+                <Wrench className="h-3.5 w-3.5" />Tools
+                <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">{toolCnt}</span>
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           <div className="flex items-center gap-2 ml-auto">
             <div className="relative w-52">

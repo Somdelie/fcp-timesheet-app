@@ -20,7 +20,7 @@ export async function listSiteMaterials(siteId: string) {
 
   const materials = await prisma.siteMaterial.findMany({
     where: { siteId: id },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ quantity: "desc" }, { createdAt: "desc" }],
     select: {
       id: true,
       siteId: true,
@@ -49,6 +49,21 @@ export async function listSiteMaterials(siteId: string) {
       },
     },
   });
+  // Aggregate ordered quantities (from SiteProductOrderItem) for these products
+  const productIds = materials.map((m) => m.productId).filter(Boolean);
+  const orderedSums =
+    productIds.length > 0
+      ? await prisma.siteProductOrderItem.groupBy({
+          by: ["productId"],
+          where: { productId: { in: productIds }, order: { siteId: id } },
+          _sum: { quantity: true },
+        })
+      : [];
+
+  const orderedMap = new Map<string, number>();
+  for (const row of orderedSums) {
+    orderedMap.set(row.productId, row._sum?.quantity ?? 0);
+  }
 
   return {
     ok: true as const,
@@ -57,6 +72,7 @@ export async function listSiteMaterials(siteId: string) {
       siteId: m.siteId,
       productId: m.productId,
       quantity: m.quantity,
+      orderedQuantity: orderedMap.get(m.productId) ?? 0,
       note: m.note,
       createdAt: m.createdAt.toISOString(),
       product: {
@@ -84,6 +100,7 @@ export type SiteMaterialRow = {
   siteId: string;
   productId: string;
   quantity: number | null;
+  orderedQuantity?: number;
   note: string | null;
   createdAt: string;
   product: {

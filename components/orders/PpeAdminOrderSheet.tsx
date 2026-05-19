@@ -111,6 +111,9 @@ export function PpeAdminOrderSheet({
   const [productSearch, setProductSearch] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
+  const [destination, setDestination] = React.useState<"JHB" | "CAPE_TOWN">(
+    "JHB",
+  );
   const [lastOrder, setLastOrder] = React.useState<LastOrder | null>(null);
 
   const selectedSupervisor = React.useMemo(
@@ -339,6 +342,7 @@ export function PpeAdminOrderSheet({
                 foremanId: fc.foremanId,
                 siteId: fc.siteId || undefined,
                 chargeToSite: fc.chargeToSite,
+                destination: destination,
                 items: fc.items.map((i) => ({
                   productId: i.productId,
                   quantity: i.quantity,
@@ -444,6 +448,20 @@ export function PpeAdminOrderSheet({
             Create PPE orders for one or more foremen — one PDF document, one
             supervisor collects
           </p>
+        </div>
+
+        <div className="mb-4 flex items-center gap-3">
+          <Label className="text-xs">Destination</Label>
+          <select
+            value={destination}
+            onChange={(e) =>
+              setDestination(e.target.value as "JHB" | "CAPE_TOWN")
+            }
+            className="h-8 text-sm rounded border px-2"
+          >
+            <option value="JHB">JHB (Local)</option>
+            <option value="CAPE_TOWN">Cape Town</option>
+          </select>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border border-border rounded-md overflow-hidden">

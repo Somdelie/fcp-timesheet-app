@@ -37,11 +37,29 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const MAX_FILES = 50;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
 
 export async function POST(req: NextRequest) {
+  try {
+    return await seedFromPdfs(req);
+  } catch (err) {
+    console.error("BuildSmart PDF Orders import failed", err);
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "BuildSmart PDF Orders import failed",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+async function seedFromPdfs(req: NextRequest) {
   // Auth: require ADMIN or OFFICE role
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;

@@ -20,6 +20,7 @@ import {
   Eye,
   Edit3,
   Image,
+  Download,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -175,6 +176,8 @@ export function NoteDetail({
   onDeclineInvite,
   isPending,
 }: NoteDetailProps) {
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
@@ -198,6 +201,48 @@ export function NoteDetail({
     await onUpdate(note.id, { title, content });
     setEditing(false);
   };
+
+  async function handleExportPdf() {
+    if (!contentRef.current) return;
+    try {
+      setExporting(true);
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const element = contentRef.current;
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps: any = (pdf as any).getImageProperties(imgData);
+      const imgWidth = pdfWidth;
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      const fileName = `${note.title ? note.title.replace(/[^a-z0-9-_ ]/gi, "") : "note"}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("Export PDF failed", err);
+      toast.error("Unable to export PDF");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const cancel = () => {
     setTitle(note.title);
@@ -250,9 +295,10 @@ export function NoteDetail({
     }
   };
 
-  const activeBg = note.background === IMAGE_BG_KEY
-    ? { key: IMAGE_BG_KEY, style: IMAGE_BG_STYLE }
-    : null;
+  const activeBg =
+    note.background === IMAGE_BG_KEY
+      ? { key: IMAGE_BG_KEY, style: IMAGE_BG_STYLE }
+      : null;
 
   return (
     <>
@@ -366,6 +412,18 @@ export function NoteDetail({
                         icon={<Share2 size={16} />}
                         label="Share"
                         disabled={submitting}
+                      />
+                      <ToolButton
+                        onClick={() => void handleExportPdf()}
+                        icon={
+                          exporting ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <Download size={16} />
+                          )
+                        }
+                        label="Export PDF"
+                        disabled={submitting || exporting}
                       />
                       <ToolButton
                         onClick={() =>
@@ -499,32 +557,41 @@ export function NoteDetail({
             className="custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto"
             style={activeBg?.style ?? {}}
           >
-            <div className={cn("flex-1 p-8 pb-12", activeBg?.key && "flex items-start justify-center")}>
-              <div className={cn(
-                activeBg?.key && "w-full max-w-2xl rounded bg-white/90 p-8 shadow-2xl backdrop-blur-md dark:bg-black/75"
-              )}>
-              {editing ? (
-                <RichTextEditor
-                  content={content}
-                  onChange={setContent}
-                  placeholder="Write your note…"
-                />
-              ) : (
-                <div
-                  className="note-content prose prose-sm max-w-none cursor-text text-foreground/90 dark:prose-invert"
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.tagName === "IMG") {
-                      setLightboxUrl((target as HTMLImageElement).src);
-                    }
-                  }}
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      content ||
-                      "<p class='text-muted-foreground/60 italic'>Empty note — click edit to add content.</p>",
-                  }}
-                />
+            <div
+              className={cn(
+                "flex-1 p-8 pb-12",
+                activeBg?.key && "flex items-start justify-center",
               )}
+            >
+              <div
+                className={cn(
+                  activeBg?.key &&
+                    "w-full max-w-2xl rounded bg-white/90 p-8 shadow-2xl backdrop-blur-md dark:bg-black/75",
+                )}
+              >
+                {editing ? (
+                  <RichTextEditor
+                    content={content}
+                    onChange={setContent}
+                    placeholder="Write your note…"
+                  />
+                ) : (
+                  <div
+                    ref={contentRef}
+                    className="note-content prose prose-sm max-w-none cursor-text text-foreground/90 dark:prose-invert"
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === "IMG") {
+                        setLightboxUrl((target as HTMLImageElement).src);
+                      }
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        content ||
+                        "<p class='text-muted-foreground/60 italic'>Empty note — click edit to add content.</p>",
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -541,7 +608,8 @@ export function NoteDetail({
               onClick={() => setCommentsOpen(!commentsOpen)}
               className={cn(
                 "flex w-full shrink-0 items-center gap-2 border-b border-border/40 px-4 py-4 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-                activeBg?.key && "bg-white/70 backdrop-blur-sm dark:bg-black/50",
+                activeBg?.key &&
+                  "bg-white/70 backdrop-blur-sm dark:bg-black/50",
               )}
             >
               <ChevronRight
@@ -564,10 +632,13 @@ export function NoteDetail({
 
             {commentsOpen && (
               <>
-                <div className={cn(
-                  "custom-scrollbar min-h-0 flex-1 overflow-y-auto",
-                  activeBg?.key && "bg-white/70 backdrop-blur-sm dark:bg-black/50",
-                )}>
+                <div
+                  className={cn(
+                    "custom-scrollbar min-h-0 flex-1 overflow-y-auto",
+                    activeBg?.key &&
+                      "bg-white/70 backdrop-blur-sm dark:bg-black/50",
+                  )}
+                >
                   {note.comments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                       <div className="flex size-10 items-center justify-center rounded-full bg-secondary/50">
@@ -593,10 +664,13 @@ export function NoteDetail({
                   )}
                 </div>
 
-                <div className={cn(
-                  "shrink-0 border-t border-border/40 p-4",
-                  activeBg?.key && "bg-white/70 backdrop-blur-sm dark:bg-black/50",
-                )}>
+                <div
+                  className={cn(
+                    "shrink-0 border-t border-border/40 p-4",
+                    activeBg?.key &&
+                      "bg-white/70 backdrop-blur-sm dark:bg-black/50",
+                  )}
+                >
                   <div className="flex items-center gap-2">
                     <input
                       ref={commentInputRef}

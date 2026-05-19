@@ -211,6 +211,18 @@ function formatDate(iso: string) {
   });
 }
 
+function getSiteMaterialQuantity(siteMaterial: SiteMaterialRow): number | null {
+  const usageTotal = (siteMaterial.usages ?? []).reduce(
+    (sum, usage) => sum + (usage.quantity ?? 0),
+    0,
+  );
+  if (siteMaterial.quantity != null) return siteMaterial.quantity;
+  if (usageTotal > 0) return usageTotal;
+  if ((siteMaterial as any).orderedQuantity > 0)
+    return (siteMaterial as any).orderedQuantity;
+  return null;
+}
+
 function SiteRowActions({
   site,
   role,
@@ -243,8 +255,15 @@ function SiteRowActions({
     setLoadingProducts(true);
     try {
       const res = await listSiteMaterials(site.id);
+      console.debug("listSiteMaterials response for site", site.id, res);
       if (res.ok) {
-        setSiteProducts(res.materials);
+        const sortedMaterials = res.materials.slice().sort((a, b) => {
+          const aQty = getSiteMaterialQuantity(a) ?? -1;
+          const bQty = getSiteMaterialQuantity(b) ?? -1;
+          if (bQty !== aQty) return bQty - aQty;
+          return a.product.name.localeCompare(b.product.name);
+        });
+        setSiteProducts(sortedMaterials);
       }
     } finally {
       setLoadingProducts(false);
@@ -443,15 +462,19 @@ function SiteRowActions({
               <Table className="border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
                 <TableHeader>
                   <TableRow>
+                    <TableHead>SKU</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>SKU</TableHead>
                     <TableHead>Qty</TableHead>
+                    <TableHead>Computed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {siteProducts.map((m) => (
                     <TableRow key={m.id}>
+                      <TableCell className="font-mono text-xs">
+                        {m.product.sku || "—"}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-slate-400" />
@@ -467,10 +490,16 @@ function SiteRowActions({
                           <span className="text-slate-400">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {m.product.sku || "—"}
+                      <TableCell>
+                        {getSiteMaterialQuantity(m) != null
+                          ? getSiteMaterialQuantity(m)
+                          : "—"}
                       </TableCell>
-                      <TableCell>{m.quantity ?? "—"}</TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {`${getSiteMaterialQuantity(m) ?? "—"} / ${
+                          (m as any).orderedQuantity ?? 0
+                        }`}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

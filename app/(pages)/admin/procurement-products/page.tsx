@@ -253,7 +253,9 @@ export default function ProcurementProductsPage({
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("");
-  const [filterSupplier, setFilterSupplier] = useState<string>(supplierIdProp ?? "");
+  const [filterSupplier, setFilterSupplier] = useState<string>(
+    supplierIdProp ?? "",
+  );
   const [activeTab, setActiveTab] = useState<ProductType | "ALL">(
     defaultProductType ?? "ALL",
   );
@@ -1056,7 +1058,7 @@ export default function ProcurementProductsPage({
         const parsed = parseBuildSmartProduct(p.name);
         const displayName = parsed.cleanName;
         return (
-          <div className="min-w-[180px] max-w-[420px]">
+          <div className="w-[280px]">
             <div
               className="truncate font-medium leading-tight"
               title={displayName}
@@ -1064,14 +1066,6 @@ export default function ProcurementProductsPage({
               {displayName}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {p.category && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] px-1.5 py-0 h-4"
-                >
-                  {p.category.name}
-                </Badge>
-              )}
               {isPpeTab && !p.isDeductible && (
                 <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                   Non-deductible
@@ -1091,25 +1085,31 @@ export default function ProcurementProductsPage({
     {
       id: "suppliers",
       size: 105,
-      header: () => <span>Suppliers</span>,
+      header: () => <span className="text-center w-full block">Suppliers</span>,
       cell: ({ row }) => {
         const productSuppliers = getProductSuppliers(row.original);
         const supplierCount = productSuppliers.length;
 
         if (supplierCount === 0) {
-          return <span className="text-sm text-muted-foreground">0</span>;
+          return (
+            <div className="text-center">
+              <span className="text-sm text-muted-foreground">0</span>
+            </div>
+          );
         }
 
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => setSuppliersProduct(row.original)}
-            title="View suppliers"
-          >
-            {supplierCount}
-          </Button>
+          <div className="text-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setSuppliersProduct(row.original)}
+              title="View suppliers"
+            >
+              {supplierCount}
+            </Button>
+          </div>
         );
       },
       enableSorting: false,
@@ -1364,118 +1364,118 @@ export default function ProcurementProductsPage({
           <div className="flex flex-wrap items-center gap-2">
             <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1fr)_190px_170px_auto]">
               <div className="relative min-w-0">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search name, SKU, color…"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
-              }}
-              className="h-9 pl-9"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search name, SKU, color…"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
+                  className="h-9 pl-9"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <Select
+                value={filterCategory || "ALL"}
+                onValueChange={(v) => {
+                  setFilterCategory(v === "ALL" ? "" : v);
+                  setPagination((p) => ({ ...p, pageIndex: 0 }));
+                }}
               >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-            <Select
-              value={filterCategory || "ALL"}
-              onValueChange={(v) => {
-                setFilterCategory(v === "ALL" ? "" : v);
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
-              }}
-            >
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All categories</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          {supplierIdProp === undefined ? (
-            <Select
-              value={filterSupplier || "ALL"}
-              onValueChange={(v) => {
-                setFilterSupplier(v === "ALL" ? "" : v);
-                setPagination((p) => ({ ...p, pageIndex: 0 }));
-              }}
-            >
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="All suppliers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All suppliers</SelectItem>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <label className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted-foreground">
-              <Checkbox
-                checked={showInactive}
-                onCheckedChange={(v) => setShowInactive(!!v)}
-              />
-              Inactive
-            </label>
-          )}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={load}
-            className="h-9 w-9"
-          >
-            <RotateCw className="h-4 w-4" />
-          </Button>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All categories</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {supplierIdProp === undefined ? (
+                <Select
+                  value={filterSupplier || "ALL"}
+                  onValueChange={(v) => {
+                    setFilterSupplier(v === "ALL" ? "" : v);
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue placeholder="All suppliers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All suppliers</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <label className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted-foreground">
+                  <Checkbox
+                    checked={showInactive}
+                    onCheckedChange={(v) => setShowInactive(!!v)}
+                  />
+                  Inactive
+                </label>
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={load}
+                className="h-9 w-9"
+              >
+                <RotateCw className="h-4 w-4" />
+              </Button>
             </div>
             <div className="hidden">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9"
-            onClick={handleFixNames}
-            disabled={fixingNames}
-            title="Strip embedded SKUs, pack numbers, and size suffixes from product names"
-          >
-            {fixingNames ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Wand2 className="mr-1.5 h-4 w-4" />
-            )}
-            {fixingNames ? <span>Fixing…</span> : <span>Fix Names</span>}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9"
-            onClick={exportProductsToExcel}
-            disabled={exporting || filteredProducts.length === 0}
-          >
-            <Download className="mr-1.5 h-4 w-4" />
-            {exporting ? "Exporting…" : "Export Excel"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9"
-            onClick={exportProductsToJson}
-            disabled={exporting || filteredProducts.length === 0}
-          >
-            <Download className="mr-1.5 h-4 w-4" />
-            {exporting ? "Exporting…" : "Export JSON"}
-          </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={handleFixNames}
+                disabled={fixingNames}
+                title="Strip embedded SKUs, pack numbers, and size suffixes from product names"
+              >
+                {fixingNames ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="mr-1.5 h-4 w-4" />
+                )}
+                {fixingNames ? <span>Fixing…</span> : <span>Fix Names</span>}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={exportProductsToExcel}
+                disabled={exporting || filteredProducts.length === 0}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                {exporting ? "Exporting…" : "Export Excel"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={exportProductsToJson}
+                disabled={exporting || filteredProducts.length === 0}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                {exporting ? "Exporting…" : "Export JSON"}
+              </Button>
             </div>
             <div className="ml-auto flex items-center gap-2">
               {table.getSelectedRowModel().rows.length > 0 && (
@@ -1542,7 +1542,7 @@ export default function ProcurementProductsPage({
                 Add Product
               </Button>
             </div>
-        </div>
+          </div>
         </div>
       </div>
 
@@ -1587,7 +1587,7 @@ export default function ProcurementProductsPage({
                     {hg.headers.map((h) => (
                       <TableHead
                         key={h.id}
-                        className="h-10 border-b border-r-0 border-border px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                        className="h-8 border-b border-r border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0"
                       >
                         {h.isPlaceholder
                           ? null
@@ -1620,7 +1620,7 @@ export default function ProcurementProductsPage({
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
-                          className="border-r-0 px-4 py-3 align-middle"
+                          className="border-r border-border px-3 py-1.5 align-middle last:border-r-0"
                         >
                           {flexRender(
                             cell.column.columnDef.cell,

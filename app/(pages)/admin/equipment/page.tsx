@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlantListPage from "../plant-list/page";
 import PlantAssignmentsPage from "../plant-assignments/page";
-import EquipmentInventoryPage from "../equipment-inventory/page";
-import ProcurementProductsPage from "../procurement-products/page";
+import ProductsList from "@/components/products/ProductsList";
+import { CreateProductDialog } from "@/components/products/CreateProductDialog";
+import CapeTownStockPage from "../capetown-stock/page";
 
 const TABS = [
   { value: "plants", label: "Plants" },
@@ -41,7 +42,34 @@ export default function EquipmentPage() {
             </TabsContent>
             <TabsContent value="ppe" className="space-y-6">
               {activeTab === "ppe" ? (
-                <ProcurementProductsPage defaultProductType="PPE" />
+                <>
+                  <CreateProductDialog />
+                  <Tabs defaultValue="jhb" className="space-y-4">
+                    <TabsList className="grid w-full max-w-md grid-cols-2 gap-2">
+                      <TabsTrigger value="jhb">JHB</TabsTrigger>
+                      <TabsTrigger value="capetown">Cape Town</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="jhb" className="space-y-4">
+                      <ProductsList
+                        ppeProducts={[]}
+                        toolProducts={[]}
+                        defaultTab="PPE"
+                        hideTabs
+                        autoLoad
+                        showSku={false}
+                        showStatus={false}
+                        includeInactive={false}
+                      />
+                    </TabsContent>
+                    <TabsContent value="capetown" className="space-y-4">
+                      <CapeTownStockPage
+                        defaultCategory="PPE"
+                        lockCategory
+                        showHeader={false}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </>
               ) : null}
             </TabsContent>
           </div>

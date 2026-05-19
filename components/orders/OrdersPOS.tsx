@@ -226,6 +226,9 @@ export default function OrdersPOS({
   const [productSearch, setProductSearch] = React.useState("");
   const [carts, setCarts] = React.useState<Record<string, CartItem[]>>({});
   const [reference, setReference] = React.useState("");
+  const [destination, setDestination] = React.useState<"JHB" | "CAPE_TOWN">(
+    "JHB",
+  );
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
   const [activeForemanId, setActiveForemanId] = React.useState<string>("");
@@ -543,6 +546,7 @@ export default function OrdersPOS({
           body: JSON.stringify({
             ...(isAdmin ? { adminUserId: id } : { foremanId: id }),
             ...(orderNumber ? { reference: orderNumber } : {}),
+            destination,
             items: itemsPayload,
           }),
         });
@@ -689,6 +693,25 @@ export default function OrdersPOS({
                 onChange={(e) => setReference(e.target.value)}
                 className={`h-10 text-sm font-medium ${requireReference && !reference.trim() ? "border-destructive/50" : ""}`}
               />
+            </div>
+
+            <div className="border-b border-border p-5 bg-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                  Destination
+                </span>
+              </div>
+              <select
+                value={destination}
+                onChange={(e) =>
+                  setDestination(e.target.value as "JHB" | "CAPE_TOWN")
+                }
+                className="h-10 w-full rounded border border-border bg-background px-3 text-sm"
+              >
+                <option value="JHB">JHB (Local)</option>
+                <option value="CAPE_TOWN">Cape Town</option>
+              </select>
             </div>
 
             {/* Foreman / Admin selector */}

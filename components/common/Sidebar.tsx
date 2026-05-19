@@ -23,6 +23,7 @@ import {
   Clock,
   ClipboardList,
   Paintbrush,
+  Palette,
   CalendarDays,
   StickyNote,
   CloudSun,
@@ -160,9 +161,15 @@ const menuGroups: {
     group: "Procurement",
     items: [
       {
-        href: "/admin/procurement",
-        label: "Procurement",
+        href: "/admin/paints&preperations",
+        label: "Paints & Preparations",
         icon: Truck,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
+        href: "/admin/procurement-products/colors",
+        label: "Paint Colors & Bases",
+        icon: Palette,
         roles: ["ADMIN", "OFFICE"],
       },
       {

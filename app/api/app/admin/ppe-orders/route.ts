@@ -172,7 +172,12 @@ export async function GET(req: Request) {
           where: { product: { category: "PPE" } },
           include: {
             product: {
-              select: { id: true, name: true, thumbnailUrl: true, colors: true },
+              select: {
+                id: true,
+                name: true,
+                thumbnailUrl: true,
+                colors: true,
+              },
             },
           },
         },
@@ -234,20 +239,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { foremanId, siteId, note, chargeToSite, items } = body as {
-      foremanId: string;
-      siteId?: string;
-      note?: string;
-      chargeToSite?: boolean;
-      items: {
-        productId: string;
-        quantity: number;
-        size?: string;
-        color?: string;
+    const { foremanId, siteId, note, chargeToSite, destination, items } =
+      body as {
+        foremanId: string;
+        siteId?: string;
         note?: string;
-        unitPriceAtOrder?: number | null;
-      }[];
-    };
+        chargeToSite?: boolean;
+        destination?: string;
+        items: {
+          productId: string;
+          quantity: number;
+          size?: string;
+          color?: string;
+          note?: string;
+          unitPriceAtOrder?: number | null;
+        }[];
+      };
 
     if (!foremanId)
       return NextResponse.json(
@@ -273,12 +280,22 @@ export async function POST(req: Request) {
         priceMap.set(sp.productId, Number(sp.price));
     }
 
+    // Pre-fetch procurement product metadata to help map items to Cape Town stock items
+    const procurementProducts = await prisma.procurementProduct.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, name: true, normalizedName: true },
+    });
+    const procurementMap = new Map(procurementProducts.map((p) => [p.id, p]));
+
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.foremanPpeOrder.create({
         data: {
           foremanId,
           siteId: siteId || null,
-          note: note?.trim() || null,
+          note:
+            destination === "CAPE_TOWN"
+              ? `[DEST:CAPE_TOWN] ${String(note ?? "").trim()}`
+              : note?.trim() || null,
           createdByUserId: auth.id,
           status: "PENDING",
           chargeToSite: chargeToSite ?? false,
@@ -300,32 +317,104 @@ export async function POST(req: Request) {
       });
 
       // Deduct stock for each item
-      for (const i of items) {
-        const size = i.size?.trim() || null;
-        const color = i.color?.trim() || null;
+      if (String(destination ?? "JHB").toUpperCase() === "CAPE_TOWN") {
+        // For Cape Town destination, create CapeTownStockOrder entries when we can
+        for (const i of items) {
+          const size = i.size?.trim() || null;
+          const color = i.color?.trim() || null;
 
-        // Deduct variant stock if a size and color are both selected
-        if (size && color) {
-          await tx.productVariantStock.upsert({
-            where: {
-              productId_size_color: { productId: i.productId, size, color },
-            },
-            update: { qty: { decrement: i.quantity } },
-            create: { productId: i.productId, size, color, qty: -i.quantity },
-          });
+          const procurement = procurementMap.get(i.productId as string) as
+            | { id: string; name: string | null; normalizedName: string | null }
+            | undefined;
+
+          let ctItem = null;
+          if (procurement?.name) {
+            ctItem = await tx.capeTownStockItem.findFirst({
+              where: {
+                name: { equals: procurement.name, mode: "insensitive" },
+              },
+            });
+          }
+          if (!ctItem && procurement?.normalizedName) {
+            ctItem = await tx.capeTownStockItem.findFirst({
+              where: {
+                name: {
+                  contains: procurement.normalizedName,
+                  mode: "insensitive",
+                },
+              },
+            });
+          }
+
+          if (ctItem) {
+            await tx.capeTownStockOrder.create({
+              data: {
+                itemId: ctItem.id,
+                qty: i.quantity,
+                size: size,
+                color: color,
+                notes: `ForemanPpeOrder:${created.id}`,
+                status: "PENDING",
+              },
+            });
+            // do not deduct JHB procurement stock when creating Cape Town order
+          } else {
+            // fallback: deduct JHB procurement stock if we can't map to Cape Town
+            if (size && color) {
+              await tx.productVariantStock.upsert({
+                where: {
+                  productId_size_color: { productId: i.productId, size, color },
+                },
+                update: { qty: { decrement: i.quantity } },
+                create: {
+                  productId: i.productId,
+                  size,
+                  color,
+                  qty: -i.quantity,
+                },
+              });
+            }
+            await tx.procurementProduct.update({
+              where: { id: i.productId },
+              data: { stockQty: { decrement: i.quantity } },
+            });
+
+            await adjustLegacyOrderStock(
+              tx,
+              { productId: i.productId, quantity: i.quantity, size, color },
+              "deduct",
+            );
+          }
         }
+      } else {
+        // Default: JHB flow — deduct procurement stock as before
+        for (const i of items) {
+          const size = i.size?.trim() || null;
+          const color = i.color?.trim() || null;
 
-        // Always deduct from master stockQty
-        await tx.procurementProduct.update({
-          where: { id: i.productId },
-          data: { stockQty: { decrement: i.quantity } },
-        });
+          // Deduct variant stock if a size and color are both selected
+          if (size && color) {
+            await tx.productVariantStock.upsert({
+              where: {
+                productId_size_color: { productId: i.productId, size, color },
+              },
+              update: { qty: { decrement: i.quantity } },
+              create: { productId: i.productId, size, color, qty: -i.quantity },
+            });
+          }
 
-        await adjustLegacyOrderStock(
-          tx,
-          { productId: i.productId, quantity: i.quantity, size, color },
-          "deduct",
-        );
+          // Always deduct from master stockQty
+          await tx.procurementProduct.update({
+            where: { id: i.productId },
+            data: { stockQty: { decrement: i.quantity } },
+          });
+
+          await adjustLegacyOrderStock(
+            tx,
+            { productId: i.productId, quantity: i.quantity, size, color },
+            "deduct",
+          );
+        }
       }
 
       return created;
