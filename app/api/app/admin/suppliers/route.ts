@@ -86,6 +86,10 @@ export async function GET(req: Request) {
           address: true,
           isActive: true,
           createdAt: true,
+          parentSupplierId: true,
+          parentSupplier: {
+            select: { id: true, name: true },
+          },
           _count: { select: { products: true, orders: true } },
         },
       }),
@@ -108,7 +112,7 @@ export async function GET(req: Request) {
 
 /**
  * POST /api/app/admin/suppliers
- * Body: { name, phone?, email?, address? }
+ * Body: { name, phone?, email?, address?, parentSupplierId? }
  */
 export async function POST(req: Request) {
   try {
@@ -120,11 +124,12 @@ export async function POST(req: Request) {
       );
 
     const body = await req.json();
-    const { name, phone, email, address } = body as {
+    const { name, phone, email, address, parentSupplierId } = body as {
       name: string;
       phone?: string;
       email?: string;
       address?: string;
+      parentSupplierId?: string | null;
     };
 
     if (!name || !name.trim())
@@ -139,6 +144,7 @@ export async function POST(req: Request) {
         phone: phone?.trim() || null,
         email: email?.trim() || null,
         address: address?.trim() || null,
+        parentSupplierId: parentSupplierId || null,
       },
     });
 

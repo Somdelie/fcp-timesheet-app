@@ -1,0 +1,144 @@
+[
+  {
+    "brand": "Plascon",
+    "name": "UC2 WOOD PRIMER - PINK",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 380.26,
+        "color": "PINK"
+      },
+      {
+        "size": "5L",
+        "price": 369.18,
+        "color": "PINK"
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "PP700 PROF PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 1021.94
+      },
+      {
+        "size": "5L",
+        "price": 992.18
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "PGS1 PROF W/BASE GYPSUM & PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 816.15
+      },
+      {
+        "size": "5L",
+        "price": 792.38
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM800 PROF MATT-WHITE",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 838.8,
+        "color": "WHITE"
+      },
+      {
+        "size": "5L",
+        "price": 814.37,
+        "color": "WHITE"
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "DOUBLE VELVET - WHITE & VEL 2 TAWNY MINK",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 1432.34
+      },
+      {
+        "size": "5L",
+        "price": 562.32
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "CAS 1 CASHMERE - WHITE",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 1849.4
+      },
+      {
+        "size": "5L",
+        "price": 582.06
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "PES 1 PROF ELASTOSHIELD - WHITE",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 1553.13
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "TRP PLASCON NUROOF COOL - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 1143.43
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "WAA 1 WALL & ALL - WHITE",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "20L",
+        "price": 1672.22
+      },
+      {
+        "size": "5L",
+        "price": 567.22
+      }
+    ]
+  },
+  {
+    "brand": "Plascon",
+    "name": "VLO - VELVAGLO WHITE & BLACK",
+    "productType": "MATERIAL",
+    "variants": [
+      {
+        "size": "5L",
+        "price": 530.89
+      }
+    ]
+  }
+]

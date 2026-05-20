@@ -1,0 +1,110 @@
+[
+  {
+    "name": "MARMOCOTE M100",
+    "brand": "Marmoran",
+    "productType": "MATERIAL",
+    "stockQty": 0,
+    "isReturnable": false,
+    "variants": [
+      {
+        "size": "5L",
+        "color": "WHITE",
+        "price": 668.0,
+        "code": "AC004-C041"
+      },
+      {
+        "size": "20L",
+        "color": "WHITE",
+        "price": 2230.0,
+        "code": "AC004-C042E"
+      },
+      {
+        "size": "5L",
+        "color": "DEEP",
+        "price": 750.0,
+        "code": "AC004-D-C041"
+      }
+    ]
+  },
+  {
+    "name": "Urochem 101 Twin Pack Epoxy primer",
+    "brand": "UROCHEM",
+    "productType": "MATERIAL",
+    "stockQty": 0,
+    "isReturnable": false,
+    "variants": [
+      {
+        "size": "250ML",
+        "color": "CLEAR",
+        "price": 68.68,
+        "code": "101-250ml"
+      },
+      {
+        "size": "500ML",
+        "color": "CLEAR",
+        "price": 116.03,
+        "code": "101-500ML"
+      },
+      {
+        "size": "1L",
+        "color": "CLEAR",
+        "price": 212.31,
+        "code": "101-1L"
+      },
+      {
+        "size": "5L",
+        "color": "CLEAR",
+        "price": 950.23,
+        "code": "101-5L"
+      },
+      {
+        "size": "20L",
+        "color": "CLEAR",
+        "price": 3558.16,
+        "code": "101-20l"
+      }
+    ]
+  },
+  {
+    "name": "CEMBOND",
+    "brand": "Cemcrete",
+    "productType": "MATERIAL",
+    "stockQty": 0,
+    "isReturnable": false,
+    "variants": [
+      {
+        "size": "1L",
+        "color": "N/A",
+        "price": 158.0,
+        "code": "CEMBOND-1L"
+      },
+      {
+        "size": "5L",
+        "color": "N/A",
+        "price": 664.0,
+        "code": "CEMBOND-5L"
+      },
+      {
+        "size": "20L",
+        "color": "N/A",
+        "price": 2425.0,
+        "code": "CEMBOND-20L"
+      }
+    ]
+  },
+  {
+    "name": "TRADE 65",
+    "brand": "Dulux",
+    "productType": "MATERIAL",
+    "stockQty": 0,
+    "isReturnable": false,
+    "variants": [
+      {
+        "size": "5L",
+        "color": "WHITE",
+        "price": 0,
+        "code": "TRADE65-W"
+      }
+    ]
+  }
+]

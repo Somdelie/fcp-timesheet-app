@@ -1,0 +1,1547 @@
+[
+  {
+    "name": "MARMOTEK FINE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOTEK FIRST COAT",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "STUCCO CRETE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASY-KEY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASY-PLAST",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCIDE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCLEAN",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MASONRY FILLER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SKIMCOAT",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SKIMFILL",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOBOND SEALER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ACRYLIC PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "HEATGARD MP1 METAL PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "HEATGARD 4 UC UNDERCOAT",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "METALLICA UNIVERSAL PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RBP ACRYLIC PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RBP MASONRY PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RLP ACRYLIC PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PLASTER PRIMER - WATER BASED ZERO VOC",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "UNIVERSAL PRIMER - WATER BASED",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "UNIVERSAL UNDERCOAT - SOLVENT BASED",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WOOD PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GALVANISED CLEANER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GALVANISED PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LIME WASH BRICK PRIMER - WATER BASED",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CHROMATEX",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CONCRETEX",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOTEX",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLITTERTEX",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "HERITAGE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOSAIC",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SANDSTONE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PARISLITE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLASSGUARD",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOLITE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CALEDONPLAST 2 in 1",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMACRETE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMACRETE BRILLIANT WHITE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMAPLAST",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMASUEDE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CARRARA GRANOSTONE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CARRARATONE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MONOCOTE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MULTICOTE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MAYAN SPRAY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CATO SPRAY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CATOTONE SPRAY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MALI SPRAY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMA SPRAY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "REO SPRAY",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "STONE FINISH",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "POLYSHEEN",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "POLYSPLATTER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ROLON SILK",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "AZTEC",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "COSMOS",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARAKESH",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARAKESH COURSE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOGUARD",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ROLON",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "BRUSHCOAT",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DESIGNER GLAZE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLAZE 15",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLITTER GLAZE SOLVENT BASED",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLITTER GLAZE WATER BASED",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "HYDROTHANE PU221 GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "HYDROTHANE PU221 SATIN",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "METALLICA AQUACLEAR GLAZE GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "METALLICA AQUACLEAR GLAZE SATIN",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SUPERGLAZE GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SUPERGLAZE SATIN",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SUPERGLAZE PEARLESCENT WHITE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "UNIVERSAL GLAZE GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "UNIVERSAL GLAZE SATIN",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCOTE M75",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCOTE M100",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCOTE M140",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCOTE M180",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCLAD",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCLAD TEXTURED",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMOCOTE M200",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "AQUANIL",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERCALE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ELASTOCOAT",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ELASTOTEX",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "HEATGARD 4",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "AQUASTOP",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MARMODEK",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "G P WATERPROOFING COMPOUND",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ANTI BACTERIAL",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Marmoglow Non Drip Semi Gloss Enamel",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "COMBED PLASTER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DÉCOR CLASSICA POLISHED PLASTER",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LENATAFOIL",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LONDON STONE",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LUNAR PITTED FINISH",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "METALLICA SMOOTH ALUMINIUM",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "METALLICA TEXTURED ALUMINIUM",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "METALLICA RETARDER THINNERS",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "KRAALPLAST",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LIMEWASH",
+    "productType": "MATERIAL",
+    "brand": "Marmoran",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "8KG",
+      "20L",
+      "32KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  }
+]

@@ -64,7 +64,9 @@ export async function GET(
           include: { supplier: { select: { id: true, name: true } } },
           orderBy: { startsOn: "desc" },
         },
-        variantStocks: { select: { id: true, size: true, color: true, qty: true } },
+        variantStocks: {
+          select: { id: true, size: true, color: true, qty: true },
+        },
         _count: { select: { orderItems: true } },
       },
     });
@@ -97,6 +99,9 @@ export async function GET(
 /**
  * PATCH /api/app/admin/procurement-products/[id]
  * Body: { name?, sku?, categoryId?, uom?, unitSize?, description?, supplierId?, isActive?, thumbnailUrl? }
+ *
+ * This endpoint works with both Material and ProcurementProduct records.
+ * It will first try Material, then fall back to ProcurementProduct.
  */
 export async function PATCH(
   req: Request,
@@ -141,84 +146,182 @@ export async function PATCH(
       colors?: string[];
       sizes?: string[];
       stockQty?: number;
-      variantStocks?: { size?: string | null; color?: string | null; qty?: number }[];
+      variantStocks?: {
+        size?: string | null;
+        color?: string | null;
+        qty?: number;
+      }[];
     };
 
+    // Try to update Material first
+    const existingMaterial = await prisma.material.findUnique({
+      where: { id },
+      include: {
+        supplier: { select: { id: true, name: true } },
+        prices: {
+          where: { isActive: true },
+          include: { supplier: { select: { id: true, name: true } } },
+          orderBy: { startsOn: "desc" },
+        },
+      },
+    });
+
+    if (existingMaterial) {
+      const data: Record<string, unknown> = {};
+      if (name !== undefined) data.name = name.trim();
+      if (sku !== undefined) data.sku = sku?.trim() || null;
+      if (categoryId !== undefined)
+        data.category = categoryId
+          ? { connect: { id: categoryId } }
+          : { disconnect: true };
+      if (description !== undefined)
+        data.description = description?.trim() || null;
+      if (supplierId !== undefined)
+        data.supplier = supplierId
+          ? { connect: { id: supplierId } }
+          : { disconnect: true };
+      if (isActive !== undefined) data.isActive = isActive;
+      if (isReturnable !== undefined) data.isReturnable = isReturnable;
+      if (colors !== undefined) data.colors = colors;
+
+      const updated = await prisma.material.update({
+        where: { id },
+        data,
+        include: {
+          supplier: { select: { id: true, name: true } },
+          prices: {
+            where: { isActive: true },
+            include: { supplier: { select: { id: true, name: true } } },
+            orderBy: { startsOn: "desc" },
+          },
+        },
+      });
+
+      const sizes = (updated.prices ?? [])
+        .map((p: any) => {
+          if (p.unitSize != null && p.uom) return `${p.unitSize}${p.uom}`;
+          return null;
+        })
+        .filter(Boolean) as string[];
+
+      const result = {
+        id: updated.id,
+        name: updated.name,
+        sku: updated.sku,
+        description: updated.description,
+        thumbnailUrl: null,
+        isActive: updated.isActive,
+        productType: "MATERIAL" as ProductType,
+        isReturnable: updated.isReturnable,
+        isDeductible: true,
+        deductionSplits: 1,
+        colors: updated.colors ?? [],
+        sizes: Array.from(new Set(sizes)),
+        stockQty: 0,
+        variantStocks: [],
+        category: null,
+        supplier: updated.supplier,
+        supplierPrices: (updated.prices ?? []).map((sp: any) => ({
+          id: sp.id,
+          price: decimalToNumber(sp.price),
+          uom: sp.uom,
+          unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
+          supplierId: sp.supplierId,
+          supplier: sp.supplier,
+          isActive: true,
+        })),
+        _count: {
+          orderItems: 0,
+          supplierPrices: (updated.prices ?? []).length,
+        },
+      };
+
+      return NextResponse.json({ ok: true, data: result }, { headers: CORS });
+    }
+
+    // Fall back to ProcurementProduct
     const variantStocksInput = (body as any).variantStocks as
       | { size?: string | null; color?: string | null; qty?: number }[]
       | undefined;
 
-    const data: Record<string, unknown> = {};
-    if (name !== undefined) data.name = name.trim();
-    if (sku !== undefined) data.sku = sku?.trim() || null;
+    const ppData: Record<string, unknown> = {};
+    if (name !== undefined) ppData.name = name.trim();
+    if (sku !== undefined) ppData.sku = sku?.trim() || null;
     if (categoryId !== undefined)
-      data.category = categoryId
+      ppData.category = categoryId
         ? { connect: { id: categoryId } }
         : { disconnect: true };
-    if (uom !== undefined) data.uom = uom;
+    if (uom !== undefined) ppData.uom = uom;
     if (unitSize !== undefined)
-      data.unitSize = unitSize != null ? Number(unitSize) : null;
+      ppData.unitSize = unitSize != null ? Number(unitSize) : null;
     if (description !== undefined)
-      data.description = description?.trim() || null;
+      ppData.description = description?.trim() || null;
     if (supplierId !== undefined)
-      data.supplier = supplierId
+      ppData.supplier = supplierId
         ? { connect: { id: supplierId } }
         : { disconnect: true };
-    if (isActive !== undefined) data.isActive = isActive;
+    if (isActive !== undefined) ppData.isActive = isActive;
     if (thumbnailUrl !== undefined)
-      data.thumbnailUrl = thumbnailUrl?.trim() || null;
-    if (productType !== undefined) data.productType = productType;
-    if (isReturnable !== undefined) data.isReturnable = isReturnable;
-    if ((body as any).isDeductible !== undefined) data.isDeductible = (body as any).isDeductible;
-    if ((body as any).deductionSplits !== undefined) data.deductionSplits = Number((body as any).deductionSplits) || 1;
-    if (colors !== undefined) data.colors = colors;
-    if ((body as any).sizes !== undefined) data.sizes = (body as any).sizes;
+      ppData.thumbnailUrl = thumbnailUrl?.trim() || null;
+    if (productType !== undefined) ppData.productType = productType;
+    if (isReturnable !== undefined) ppData.isReturnable = isReturnable;
+    if ((body as any).isDeductible !== undefined)
+      ppData.isDeductible = (body as any).isDeductible;
+    if ((body as any).deductionSplits !== undefined)
+      ppData.deductionSplits = Number((body as any).deductionSplits) || 1;
+    if (colors !== undefined) ppData.colors = colors;
+    if ((body as any).sizes !== undefined) ppData.sizes = (body as any).sizes;
 
     if (variantStocksInput !== undefined) {
-      data.stockQty = variantStocksInput.reduce(
+      ppData.stockQty = variantStocksInput.reduce(
         (s, v) => s + (Number(v.qty) || 0),
         0,
       );
     } else if (stockQty !== undefined) {
-      data.stockQty = Number(stockQty);
+      ppData.stockQty = Number(stockQty);
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      if (variantStocksInput !== undefined) {
-        await tx.productVariantStock.deleteMany({ where: { productId: id } });
-      }
-      const product = await tx.procurementProduct.update({
-        where: { id },
-        data,
-        include: {
-          category: { select: { id: true, name: true } },
-          supplier: { select: { id: true, name: true } },
-          variantStocks: { select: { id: true, size: true, color: true, qty: true } },
-        },
-      });
-      if (variantStocksInput?.length) {
-        await tx.productVariantStock.createMany({
-          data: variantStocksInput.map((v) => ({
-            productId: id,
-            size: v.size || null,
-            color: v.color || null,
-            qty: Math.max(0, Number(v.qty) || 0),
-          })),
+    const ppUpdated = await prisma.$transaction(
+      async (tx) => {
+        if (variantStocksInput !== undefined) {
+          await tx.productVariantStock.deleteMany({ where: { productId: id } });
+        }
+        const product = await tx.procurementProduct.update({
+          where: { id },
+          data: ppData,
+          include: {
+            category: { select: { id: true, name: true } },
+            supplier: { select: { id: true, name: true } },
+            variantStocks: {
+              select: { id: true, size: true, color: true, qty: true },
+            },
+          },
         });
-        product.variantStocks = await tx.productVariantStock.findMany({
-          where: { productId: id },
-          select: { id: true, size: true, color: true, qty: true },
-        });
-      }
-      return product;
-    }, { maxWait: 10000, timeout: 30000 });
+        if (variantStocksInput?.length) {
+          await tx.productVariantStock.createMany({
+            data: variantStocksInput.map((v) => ({
+              productId: id,
+              size: v.size || null,
+              color: v.color || null,
+              qty: Math.max(0, Number(v.qty) || 0),
+            })),
+          });
+          product.variantStocks = await tx.productVariantStock.findMany({
+            where: { productId: id },
+            select: { id: true, size: true, color: true, qty: true },
+          });
+        }
+        return product;
+      },
+      { maxWait: 10000, timeout: 30000 },
+    );
 
-    const result = {
-      ...updated,
-      unitSize: updated.unitSize ? decimalToNumber(updated.unitSize) : null,
+    const ppResult = {
+      ...ppUpdated,
+      unitSize: ppUpdated.unitSize ? decimalToNumber(ppUpdated.unitSize) : null,
     };
 
-    return NextResponse.json({ ok: true, data: result }, { headers: CORS });
+    return NextResponse.json({ ok: true, data: ppResult }, { headers: CORS });
   } catch (e: any) {
     if (e?.code === "P2025")
       return NextResponse.json(
@@ -240,6 +343,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/app/admin/procurement-products/[id]
+ * Deletes from Material or ProcurementProduct (tries Material first, then falls back to ProcurementProduct).
  */
 export async function DELETE(
   req: Request,
@@ -255,9 +359,26 @@ export async function DELETE(
 
     const { id } = await ctx.params;
 
-    await prisma.procurementProduct.delete({ where: { id } });
-
-    return NextResponse.json({ ok: true }, { headers: CORS });
+    try {
+      await prisma.procurementProduct.delete({ where: { id } });
+      return NextResponse.json({ ok: true }, { headers: CORS });
+    } catch (e: any) {
+      // If not found in ProcurementProduct, try Material
+      if (e?.code === "P2025") {
+        try {
+          await prisma.material.delete({ where: { id } });
+          return NextResponse.json({ ok: true }, { headers: CORS });
+        } catch (e2: any) {
+          if (e2?.code === "P2025")
+            return NextResponse.json(
+              { error: "Product not found" },
+              { status: 404, headers: CORS },
+            );
+          throw e2;
+        }
+      }
+      throw e;
+    }
   } catch (e: any) {
     if (e?.code === "P2025")
       return NextResponse.json(

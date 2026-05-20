@@ -32,7 +32,7 @@ export function inferBuildSmartProductCode(
     const escapedUnit = unitText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     body = body.replace(new RegExp(`${escapedUnit}$`, "i"), "");
   }
-  const embeddedUnit = body.match(/^(\d{4,})(\d{1,3})(ML|L|KG|G)$/i);
+  const embeddedUnit = body.match(/^(\d{6})(\d{1,3})(ML|L|KG|G)$/i);
   if (embeddedUnit) {
     body = embeddedUnit[1];
   } else {

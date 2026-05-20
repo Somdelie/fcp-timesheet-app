@@ -1,0 +1,6822 @@
+[
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "ALL03-C041",
+      "price": 510.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "EASY-KEY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Kg",
+      "color": null,
+      "code": "ACB003-C041",
+      "price": 405.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "EASY-KEY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Kg",
+      "color": null,
+      "code": "ACB003-C042E",
+      "price": 1355.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "EASY-PLAST",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "ACB001-C041",
+      "price": 552.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "EASY-PLAST",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "ACB001-C042E",
+      "price": 1885.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "EASY-PLAST",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "ACB001-C005",
+      "price": 14965.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOCIDE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AD003-C041",
+      "price": 245.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOCLEAN",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AD002-C041",
+      "price": 260.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MASONRY FILLER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "2 Kg",
+      "color": null,
+      "code": "AF001-C004A",
+      "price": 150.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AF001-C042E",
+      "price": 1388.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AF001-C005",
+      "price": 10125.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SKIMCOAT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "7 Kg",
+      "color": null,
+      "code": "CT006-C041",
+      "price": 350.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SKIMCOAT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "28 Kg",
+      "color": null,
+      "code": "CT006-C042E",
+      "price": 1130.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SKIMCOAT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "CT006-C005",
+      "price": 9685.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SKIMFILL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AF002-C041",
+      "price": 424.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SKIMFILL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AF002-C042E",
+      "price": 1325.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SKIMFILL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AF002-C005",
+      "price": 10465.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOBOND SEALER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "ACS001-C041",
+      "price": 500.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "200 Lt",
+      "color": null,
+      "code": "ACS001-C005",
+      "price": 16670.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AC008-C041",
+      "price": 642.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "AC008-C042E",
+      "price": 2185.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "200 Lt",
+      "color": null,
+      "code": "AC008-C005",
+      "price": 20220.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AC008-D-C041",
+      "price": 660.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "AC008-D-C042E",
+      "price": 2240.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "200 Lt",
+      "color": null,
+      "code": "AC008-D-C005",
+      "price": 20585.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AC008-UD-C041",
+      "price": 750.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "AC008-UD-C042E",
+      "price": 2332.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "HG1/MP-C041",
+      "price": 715.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "HG4/UC-C041",
+      "price": 935.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 Lt",
+      "color": null,
+      "code": "MET/UP1-C040",
+      "price": 200.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AP001-C041",
+      "price": 515.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AP001-C042E",
+      "price": 1735.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AP001-C005",
+      "price": 13515.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AP001-D-C041",
+      "price": 5550.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AP001-D-C042E",
+      "price": 1790.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AP001-D-C005",
+      "price": 14100.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AP001-UD-C041",
+      "price": 610.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Colour",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AP001-UD-C042E",
+      "price": 1180.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "SP003-C002B",
+      "price": 920.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "SP003-C009D",
+      "price": 3155.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "SP003-D-C002B",
+      "price": 950.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "SP003-D-C009D",
+      "price": 3175.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "SP003-UD-C002B",
+      "price": 980.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AP007-C041",
+      "price": 700.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AP007-C042E",
+      "price": 2150.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AP007-C005",
+      "price": 18260.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AP007-D-C041",
+      "price": 745.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AP007-D-C042E",
+      "price": 2320.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AP007-D-C005",
+      "price": 19770.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AP007-UD-C041",
+      "price": 845.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AP007-UD-C042E",
+      "price": 2195.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "TRADE PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "SP004-C002B",
+      "price": 840.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AP006-C041",
+      "price": 795.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "200 Lt",
+      "color": null,
+      "code": "AP006-C005",
+      "price": 23760.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 Lt",
+      "color": null,
+      "code": "ASP008-C001C",
+      "price": 260.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "ASP008-C009D",
+      "price": 3770.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "1",
+      "price": 225.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "3",
+      "price": 185.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "SP008-C001C",
+      "price": 1085.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "SP008-C002B",
+      "price": 1155.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AS040-C041",
+      "price": 415.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "AS040-CO42E",
+      "price": 1485.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006-C041",
+      "price": 435.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006-C042E",
+      "price": 1325.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006-D-C041",
+      "price": 450.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006-D-C042E",
+      "price": 1365.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006-UD-C041",
+      "price": 525.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006-UD-C042E",
+      "price": 1495.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "ACB005-D-CO41",
+      "price": 420.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "ACB005-D-CO42E",
+      "price": 1290.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007-A-C041",
+      "price": 490.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007-A-C042E",
+      "price": 1390.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007-A-D-C041",
+      "price": 535.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007-A-D-C042E",
+      "price": 1485.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007-A-UD-C041",
+      "price": 590.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007-A-UD-C042E",
+      "price": 1590.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007-B-C041",
+      "price": 495.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007-B-C042E",
+      "price": 1425.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007-B-D-C041",
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007-B-D-C042E",
+      "price": 1500.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007-B-UD-C041",
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "RED OXIDE STEEL PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007-B-UD-C042E",
+      "price": 1615.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Glittertex Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS042-BS-C041",
+      "price": 525.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Glittertex Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS042-BS-C042E",
+      "price": 1805.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Glittertex Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS042-BS-C041",
+      "price": 660.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Glittertex Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS042-BS-C042E",
+      "price": 2190.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Heritage Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS015-STD-C041",
+      "price": 535.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Heritage Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS015-STD-C042E",
+      "price": 1750.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Heritage Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS015-PRE-C041",
+      "price": 675.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "Heritage Spread rate",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS015-PRE-C042E",
+      "price": 2220.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008-AS-C041",
+      "price": 565.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008-AS-C042E",
+      "price": 1800.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008-BS-C041",
+      "price": 590.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008-BS-C042E",
+      "price": 1880.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008-AP-C041",
+      "price": 675.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008-AP-C042E",
+      "price": 2165.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008-BP-C041",
+      "price": 695.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008-BP-C042E",
+      "price": 2270.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Kg",
+      "color": null,
+      "code": "AS021-C041",
+      "price": 875.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25 Kg",
+      "color": null,
+      "code": "AS021-C042E",
+      "price": 2860.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "250 Kg",
+      "color": null,
+      "code": "AS021-C005",
+      "price": 26720.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40 Kg",
+      "color": null,
+      "code": "PS10/B-C029",
+      "price": 1545.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "PS10/B-C005",
+      "price": 10095.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS045-C041",
+      "price": 870.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS045-C042E",
+      "price": 3075.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS045-D-C041",
+      "price": 905.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS045-D-C042E",
+      "price": 3160.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS045-UD-C041",
+      "price": 940.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS045-UD-C042E",
+      "price": 3260.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "FSG001-CO41",
+      "price": 680.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AGGREGATE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40 Kg",
+      "color": null,
+      "code": "FSG001-CO20",
+      "price": 2685.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2mm GLASSGUARD BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS017C-C041",
+      "price": 530.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2mm GLASSGUARD BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS017C-C042E",
+      "price": 1760.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2mm GLASSGUARD BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS017C-C005",
+      "price": 15155.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2mm GLASSGUARD BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS017-UD-C041",
+      "price": 585.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2mm GLASSGUARD BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS017-UD-C042E",
+      "price": 1905.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2mm GLASSGUARD BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS017-UD-C005",
+      "price": 16500.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2-3mm CRUSHED GLASSGUARD CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40 Kg",
+      "color": null,
+      "code": "NFS47-C020",
+      "price": 1390.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "2-3mm CRUSHED GLASSGUARD CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "240Kg",
+      "color": null,
+      "code": "NFS47-C005",
+      "price": 7420.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOLITE BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS023-C041",
+      "price": 560.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOLITE BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS023-C042E",
+      "price": 1870.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOLITE BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS023-C005",
+      "price": 15050.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOLITE BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS023-UD-C041",
+      "price": 635.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOLITE BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS023-UD-C042E",
+      "price": 2105.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "MARMOLITE BACKGROUND PLASTER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS023-UD-C005",
+      "price": 17225.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40 Kg",
+      "color": null,
+      "code": "NFS46-C029",
+      "price": 1390.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "240Kg",
+      "color": null,
+      "code": "NFS46-C005",
+      "price": 7420.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS032-C041",
+      "price": 585.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS032-C042E",
+      "price": 1875.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS032-C005",
+      "price": 15580.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS032-UD-C041",
+      "price": 645.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS032-UD-C042E",
+      "price": 2095.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "1.5mm CRUSHED MARMOLITE CRYSTALS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS032-UD-C005",
+      "price": 17510.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS003-C041",
+      "price": 630.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS003-C042E",
+      "price": 2145.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS003-C005",
+      "price": 16960.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS003-UD-C041",
+      "price": 690.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS003-UD-C042E",
+      "price": 2255.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS003-UD-C005",
+      "price": 17970.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS003-BW-C041",
+      "price": 715.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS003-BW-C042E",
+      "price": 2325.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS003-BW-C005",
+      "price": 18600.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS014-C041",
+      "price": 610.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS014-C042E",
+      "price": 1910.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS014-C005",
+      "price": 16165.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS014-UD-C041",
+      "price": 675.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS014-UD-C042E",
+      "price": 2025.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS014-UD-C005",
+      "price": 16985.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS024-C041",
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS024-C042E",
+      "price": 1675.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS024-C005",
+      "price": 13780.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS024-UD-C041",
+      "price": 605.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS024-UD-C042E",
+      "price": 1795.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS024-UD-C005",
+      "price": 14835.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS030-C041",
+      "price": 620.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "AS003D 3.0mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS030-C042E",
+      "price": 2030.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS030-C041",
+      "price": 620.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS030-C042E",
+      "price": 2030.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS015S-STD-C041",
+      "price": 630.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS015S-STD-C042E",
+      "price": 2175.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS015S-PRE-C041",
+      "price": 775.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS015S-PRE-C042E",
+      "price": 2450.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS015S-STD-C041",
+      "price": 630.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS015S-STD-C042E",
+      "price": 2175.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS015S-PRE-C041",
+      "price": 785.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS015S-PRE-C042E",
+      "price": 2475.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008S-A-C041",
+      "price": 595.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008S-A-C042E",
+      "price": 1695.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008S-B-C041",
+      "price": 665.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008S-B-C042E",
+      "price": 1900.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS008S-AP-C041",
+      "price": 715.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008S-AP-C042E",
+      "price": 1940.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8Kg",
+      "color": null,
+      "code": "AS008-BP-C041",
+      "price": 900.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS008-BP-C042E",
+      "price": 2415.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006S-C041",
+      "price": 465.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006S-C042E",
+      "price": 1410.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006S-D-C041",
+      "price": 495.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006S-D-C042E",
+      "price": 1485.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006S-UD-C041",
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006S-UD-C042E",
+      "price": 1605.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006S-C041",
+      "price": 465.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006S-C042E",
+      "price": 1410.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006S-D-C041",
+      "price": 495.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006S-D-C042E",
+      "price": 1485.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS006S-UD-C041",
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS006S-UD-C042E",
+      "price": 1605.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007S-A-C041",
+      "price": 515.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007S-A-C042E",
+      "price": 1485.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007S-A-UD-C041",
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007S-A-UD-C042E",
+      "price": 1565.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007S-B-C041",
+      "price": 575.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007S-B-C042E",
+      "price": 1565.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS007S-B-UD-C041",
+      "price": 610.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS007S-B-UD-C042E",
+      "price": 1650.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS014S-C041",
+      "price": 665.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS014S-C042E",
+      "price": 1940.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS014S-C005",
+      "price": 17540.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS014S-UD-C041",
+      "price": 700.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS014S-UD-C042E",
+      "price": 2000.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS014S-UD-C005",
+      "price": 17885.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AS011S-C041",
+      "price": 670.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "AS011S-C042E",
+      "price": 1990.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "200 Lt",
+      "color": null,
+      "code": "AS011S-C005",
+      "price": 17735.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 Lt",
+      "color": null,
+      "code": "AS011S-UD-C041",
+      "price": 705.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 Lt",
+      "color": null,
+      "code": "AS011S-UD-C042E",
+      "price": 2100.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "SPECIAL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "200 Lt",
+      "color": null,
+      "code": "AS011S-UD-C005",
+      "price": 18525.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS018-C041",
+      "price": 585.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS018-C042E",
+      "price": 1835.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS018-C005",
+      "price": 15785.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "AS018-UD-C041",
+      "price": 650.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "AS018-UD-C042E",
+      "price": 1945.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "AS018-UD-C005",
+      "price": 16430.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "8 Kg",
+      "color": null,
+      "code": "CAS024-CO41",
+      "price": 320.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "32 Kg",
+      "color": null,
+      "code": "CAS024-CO42E",
+      "price": 1160.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "CAS024-CO05",
+      "price": 9600.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40Kg",
+      "color": null,
+      "code": "NFS01-C029",
+      "price": 910.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "NFS01-C005",
+      "price": 7130.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40Kg",
+      "color": null,
+      "code": "NFS02-C029",
+      "price": 1275.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "NFS02-C005",
+      "price": 9010.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40 Kg",
+      "color": null,
+      "code": "PS03-C029",
+      "price": 1485.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "PS03-C005",
+      "price": 9960.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40 Kg",
+      "color": null,
+      "code": "PS04-C029",
+      "price": 1820.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "PS04-C005",
+      "price": 11655.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "40Kg",
+      "color": null,
+      "code": "PP01-C029",
+      "price": 1960.0
+    }
+  },
+  {
+    "brand": "Marmoran",
+    "name": "4.8mm STONE FINISH",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "300 Kg",
+      "color": null,
+      "code": "PP01-C020",
+      "price": 13250.0
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Weathercoat GP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20KG",
+      "color": null,
+      "code": "SET.31",
+      "price": 1082.64
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Styrobond DP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20kg",
+      "color": null,
+      "code": "75410DP",
+      "price": 300.86
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Styrofix SA",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20kg",
+      "color": null,
+      "code": "STYROFIXT",
+      "price": 200.58
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Terramix SA",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20kg",
+      "color": null,
+      "code": "TERRAMIX",
+      "price": 270.03
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Terramesh",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "50m x 1m",
+      "color": null,
+      "code": "TERRAMESH",
+      "price": 1150.12
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "TTC SIL Excel 2MM",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61413.25KPP1002",
+      "price": 1529.4
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "TTC BT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61460.25KPP1002",
+      "price": 1689.66
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "TTC Suede SIL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61464.25KPP1002",
+      "price": 1529.4
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Gravitex Excel 2mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61622.25KPPIHR",
+      "price": 1099.01
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Gravitex Suede 1mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61627.25KPPIHR",
+      "price": 1082.51
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Gravitex Excel 1mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61647.25KPP1002",
+      "price": 1073.11
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "TTC Sil Granule Filled 1.5mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61924.25KPP1002",
+      "price": 1406.01
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "TTC SIL Granule 1mm",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "61423.25KKPP1002",
+      "price": 1300.74
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Handycoat Flex",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "12kg",
+      "color": null,
+      "code": "64230.12KPPIHR",
+      "price": 1127.64
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Penetrating Primer Pigmented SA",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20kg",
+      "color": null,
+      "code": "68120.20KPPIHR",
+      "price": 1503.08
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Terrabond A",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "15kg",
+      "color": null,
+      "code": "68210.15KPJIHR",
+      "price": 1808.31
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "PP Flexicoat",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20kg",
+      "color": null,
+      "code": "66110.20K",
+      "price": 1779.52
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Terracoat Stain",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "15L",
+      "color": null,
+      "code": "61223.15LPP1002",
+      "price": 2106.7
+    }
+  },
+  {
+    "brand": "Terraco",
+    "name": "Antique Stucco",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "25kg",
+      "color": null,
+      "code": "62330.25KKPP1002",
+      "price": 2923.5
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ACRYLIC PVA 140 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "ACR001401",
+      "price": 1514.31
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "APARTMENT PRIDE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "APA007851-0020",
+      "price": 403.1
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "APARTMENT PRIDE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "APA007851-0020",
+      "price": 1304.63
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "APARTMENT PRIDE PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "APA007851-0020",
+      "price": 469.67
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "APARTMENT PRIDE PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "APA007851-0020",
+      "price": 1597.57
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 190 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID001901-0001",
+      "price": 122.37
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 190 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID001901-0005",
+      "price": 474.0
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 190 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID001901-0020",
+      "price": 1474.66
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 190 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID019011-0001",
+      "price": 135.68
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 190 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID019011-0005",
+      "price": 533.9
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 190 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID019011-0020",
+      "price": 1687.66
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 200 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID002001-0001",
+      "price": 111.32
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 200 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002001-0005",
+      "price": 423.81
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 200 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002001-0020",
+      "price": 1302.68
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 200 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID020011-0001",
+      "price": 124.64
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 200 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID020011-0005",
+      "price": 483.71
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMAX 200 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID020011-0020",
+      "price": 1515.68
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 220 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID002221-0001",
+      "price": 120.03
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 220 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002221-0005",
+      "price": 464.44
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 220 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002221-0020",
+      "price": 1442.57
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 220 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID022211-0001",
+      "price": 133.34
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 220 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID022211-0005",
+      "price": 524.34
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 220 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID022211-0020",
+      "price": 1655.57
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID002251-0001",
+      "price": 139.41
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002251-0005",
+      "price": 548.94
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002251-0020",
+      "price": 1754.34
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID022511-0001",
+      "price": 152.72
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID022511-0005",
+      "price": 608.84
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID022511-0020",
+      "price": 1967.34
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID022551-0001",
+      "price": 176.83
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID022551-0005",
+      "price": 741.33
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFELT 225 DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID022551-0020",
+      "price": 2338.21
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 230 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID002301-0001",
+      "price": 142.67
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 230 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002301-0005",
+      "price": 563.7
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 230 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002301-0020",
+      "price": 1798.5
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 230 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID023011-0001",
+      "price": 155.98
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 230 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID023011-0005",
+      "price": 623.61
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 230 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID023011-0020",
+      "price": 2011.5
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID002401-0001",
+      "price": 149.88
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002401-0005",
+      "price": 597.92
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002401-0020",
+      "price": 1921.92
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID024011-0001",
+      "price": 163.19
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID024011-0005",
+      "price": 657.83
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID024011-0020",
+      "price": 2134.92
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID024051-0001",
+      "price": 209.73
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID024041-0005",
+      "price": 822.79
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 240 DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID024051-0020",
+      "price": 2585.89
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 250 WHTE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "ENV002701-0001",
+      "price": 218.37
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDALUX 250 WHTE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "ENV002701-0005",
+      "price": 969.3
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBREFLEX WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "FIB000381-0005",
+      "price": 809.53
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBREFLEX WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "FIB000381-0020",
+      "price": 2690.21
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBREFLEX PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "FIB000381-0005",
+      "price": 869.43
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBREFLEX PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "FIB000381-0020",
+      "price": 2903.21
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "COAST GUARD WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "0000255005",
+      "price": 750.03
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "COAST GUARD WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "0000255020",
+      "price": 2462.28
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "COAST GUARD PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "0000255005",
+      "price": 809.93
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "COAST GUARD PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "0000255020",
+      "price": 2675.28
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "COAST GUARD DEEP COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "0000256005",
+      "price": 809.93
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "COAST GUARD DEEP COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "0000256020",
+      "price": 3067.2
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID002701-0001",
+      "price": 146.04
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002701-0005",
+      "price": 580.67
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002701-0020",
+      "price": 1860.55
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID027011-0001",
+      "price": 159.35
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID027011-0005",
+      "price": 640.57
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID027011-0020",
+      "price": 2073.55
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID027055-0001",
+      "price": 179.4
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID027055-0005",
+      "price": 783.93
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE FINE DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID027055-0020",
+      "price": 2491.57
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE MEDIUM WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID000141-0005",
+      "price": 587.61
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE MEDIUM WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID000141-0020",
+      "price": 2087.84
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE COARSE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID002751-0005",
+      "price": 599.06
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAMITE COARSE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MID002751-0020",
+      "price": 2133.97
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "FRE000051-0001",
+      "price": 146.74
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "FRE000051-0005",
+      "price": 651.62
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "FRE000051-0020",
+      "price": 2345.58
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "FRE000051-0001",
+      "price": 160.05
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "FRE000051-0005",
+      "price": 718.18
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "FRE000005-0020",
+      "price": 2611.83
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "FRE000055-0001",
+      "price": 180.83
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "FRE000055-0005",
+      "price": 823.8
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FRESCO DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "FRE000055-0020",
+      "price": 3086.34
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBRE SUPREME LIGHT GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "0335106005",
+      "price": 559.13
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBRE SUPREME LIGHT GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "0335106020",
+      "price": 1980.9
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBREFORCE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "FIB000391-0005",
+      "price": 733.3
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "FIBREFORCE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "FIB000391-0020",
+      "price": 2610.9
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB MASONRY SEALER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "ENV002101-0001",
+      "price": 173.6
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB MASONRY SEALER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "ENV002101-0005",
+      "price": 782.78
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB MASONRY SEALER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "ENV002101-0020",
+      "price": 2875.5
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "PRIME WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "BOND",
+      "price": 235.0
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "PRIME WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "BOND",
+      "price": 1145.75
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB METALPRIME GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MET033554-0005",
+      "price": 906.93
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB WOODPRIME WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "ENV002301-0005",
+      "price": 936.19
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB UNIVERSAL UNDERCOAT WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "ENV002201-0005",
+      "price": 1052.28
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB SATIN GLOSS ENAMEL WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "ENV002701-0001",
+      "price": 218.37
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB SATIN GLOSS ENAMEL WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "ENV002701-0005",
+      "price": 969.3
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB NON DRIP SATIN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "335081001",
+      "price": 213.0
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB NON DRIP SATIN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "335081005",
+      "price": 947.85
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB NON DRIP SATIN PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "335081001",
+      "price": 226.31
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB NON DRIP SATIN PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "335081005",
+      "price": 1014.41
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB NON DRIP SATIN DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "335081001",
+      "price": 251.29
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WB NON DRIP SATIN DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "335081005",
+      "price": 1127.57
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WOODCOTE WATERBASED WOOD TREATMENT CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005171-0001",
+      "price": 175.65
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WOODCOTE WATERBASED WOOD TREATMENT CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005171-0005",
+      "price": 761.23
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WOODCOTE WATERBASED WOOD TREATMENT STD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005171-0001",
+      "price": 188.96
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WOODCOTE WATERBASED WOOD TREATMENT STD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005171-0005",
+      "price": 827.8
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MASONRY PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MAS003101-0001",
+      "price": 191.95
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MASONRY PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MAS003101-0005",
+      "price": 648.68
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MASONRY PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "MAS003101-0020",
+      "price": 2049.93
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ALKALI RESISTING PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "ARP003201-0001",
+      "price": 185.76
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ALKALI RESISTING PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "ARP003201-0005",
+      "price": 619.85
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ALKALI RESISTING PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "ARP003201-0020",
+      "price": 1926.6
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "PLASTER PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "INT000321-0005",
+      "price": 149.96
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "PLASTER PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "INT000321-0001",
+      "price": 506.86
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "PLASTER PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "INT000321-0020",
+      "price": 1367.4
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "METAL ETCH PRIMER RED",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "335008001",
+      "price": 211.08
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "METAL ETCH PRIMER RED",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "335008005",
+      "price": 812.44
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ETCH PRIMER RED",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "METAL",
+      "price": 2931.55
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "METAL ETCH PRIMER BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "335009001",
+      "price": 211.85
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "METAL ETCH PRIMER BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "335009005",
+      "price": 816.28
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ETCH PRIMER BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "METAL",
+      "price": 2946.91
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "METAL ETCH PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "335009001",
+      "price": 209.54
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "METAL ETCH PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "335009005",
+      "price": 804.76
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "ETCH PRIMER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "METAL",
+      "price": 2900.85
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WOODPRIME WHITE INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WDP003401-0001",
+      "price": 223.23
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "WOODPRIME WHITE INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WDP003401-0005",
+      "price": 844.47
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "UNIVERSAL UNDERCOAT WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "UNI003001-0001",
+      "price": 210.74
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "UNIVERSAL UNDERCOAT WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "UNI003001-0005",
+      "price": 655.35
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "UNIVERSAL UNDERCOAT WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20 LITRE",
+      "color": null,
+      "code": "UNI003001-0020",
+      "price": 2650.7
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID004211-0001",
+      "price": 300.22
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID004211-0005",
+      "price": 988.84
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID004211-0001",
+      "price": 316.35
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN PASTEL & MEDIUM COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID004211-0005",
+      "price": 1053.34
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID004211-0001",
+      "price": 353.46
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN DARK COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID004211-0005",
+      "price": 1212.99
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID042155-0001",
+      "price": 299.24
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDACOAT SATIN BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID042155-0005",
+      "price": 977.97
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL WHITE INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID004011-0001",
+      "price": 241.19
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL WHITE INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID004011-0005",
+      "price": 751.22
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL PASTEL & MEDIUM COLOURS INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID004011-0001",
+      "price": 257.31
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL PASTEL & MEDIUM COLOURS INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID004011-0005",
+      "price": 815.72
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL DARK COLOURS INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID004011-0001",
+      "price": 337.84
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL DARK COLOURS INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID004011-0005",
+      "price": 948.0
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL BLACK INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "MID040155-0001",
+      "price": 254.48
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MIDAFLOW GLOSS ENAMEL BLACK INT /",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "MID040155-0005",
+      "price": 798.32
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "TIMBER PRESERVATIVE CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005191-0001",
+      "price": 235.89
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "TIMBER PRESERVATIVE CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005191-0005",
+      "price": 912.12
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "TIMBER PRESERVATIVE STANDARD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005191-0001",
+      "price": 252.01
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "TIMBER PRESERVATIVE STANDARD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005191-0005",
+      "price": 992.75
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "OUTDOOR CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005161-0001",
+      "price": 312.76
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "OUTDOOR CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005161-0005",
+      "price": 1292.51
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "OUTDOOR STANDARD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005161-0001",
+      "price": 328.88
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "OUTDOOR STANDARD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005161-0005",
+      "price": 1373.14
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "INDOOR SATIN CLEAR (Not for floors)",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005131-0001",
+      "price": 278.08
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "INDOOR SATIN CLEAR (Not for floors)",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005131-0005",
+      "price": 1121.8
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "INDOOR SATIN STANDARD COLOURS (Not for floors)",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005131-0001",
+      "price": 294.21
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "INDOOR SATIN STANDARD COLOURS (Not for floors)",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005131-0005",
+      "price": 1202.42
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MULTI-PURPOSE CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005151-0001",
+      "price": 265.03
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MULTI-PURPOSE CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005151-0005",
+      "price": 1055.84
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MULTI-PURPOSE STANDARD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1 LITRE",
+      "color": null,
+      "code": "WCT005151-0001",
+      "price": 281.16
+    }
+  },
+  {
+    "brand": "Midas",
+    "name": "MULTI-PURPOSE STANDARD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5 LITRE",
+      "color": null,
+      "code": "WCT005151-0005",
+      "price": 1136.47
+    }
+  },
+  {
+    "brand": "UROCHEM",
+    "name": "Urochem 101 Twin Pack Epoxy primer",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "250ML",
+      "color": null,
+      "code": "101-250ml",
+      "price": 68.68
+    }
+  },
+  {
+    "brand": "UROCHEM",
+    "name": "Urochem 101 Twin Pack Epoxy primer",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "500ML",
+      "color": null,
+      "code": "101-500ML",
+      "price": 116.03
+    }
+  },
+  {
+    "brand": "UROCHEM",
+    "name": "Urochem 101 Twin Pack Epoxy primer",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1L",
+      "color": null,
+      "code": "101-1L",
+      "price": 212.31
+    }
+  },
+  {
+    "brand": "UROCHEM",
+    "name": "Urochem 205 Grey",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1L",
+      "color": null,
+      "code": "205-1L",
+      "price": 280.02
+    }
+  },
+  {
+    "brand": "UROCHEM",
+    "name": "Urochem 205 Grey",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "2L",
+      "color": null,
+      "code": "205-2L",
+      "price": 498.59
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "UC2 WOOD PRIMER - PINK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 380.26
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PP700 PROF PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1021.94
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PGS1 PROF W/BASE GYPSUM & PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 816.15
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "UC170 PLASCOPRIME -170 - MILD STEEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1915.03
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "UC170 PLASCOPRIME -170 - MILD STEEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 468.16
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "GIP METALCARE GALVANISED IRON PRIMER - YELLOW",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1729.99
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "GIP METALCARE GALVANISED IRON PRIMER - YELLOW",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 455.26
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "EMS18 PLASCOSAFE - 18 - PRIMER RED OXIDE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1861.86
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "EMS18 PLASCOSAFE - 18 - PRIMER RED OXIDE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 436.21
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "AW225 EPIWASH STRON.CHROM.PRIMER-YELLOW",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "10L",
+      "color": null,
+      "code": null,
+      "price": 1360.35
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TH128 PLASCON EPIWASH THINNER 2X5L",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 764.84
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "WUP1 MULTI-SURFACE PRIMER - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 394.34
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM600 - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 447.56
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TCP1000 - PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 736.48
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM800 PROF MATT-WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 838.8
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM 900 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 672.66
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM 900 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 304.04
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TSA 1010 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 719.74
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TSA 1010 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 304.08
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TSA 2010 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 707.01
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TSA 2010 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 324.81
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TSA 3010 TRANSPARENT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 852.98
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TSA 3010 TRANSPARENT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 345.93
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM 1000 LOW SHEEN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 921.88
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM 1000 LOW SHEEN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 437.35
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TLS1000 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 803.08
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TLS1000 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 437.3
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TLS2000 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1006.64
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TLS2000 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 465.91
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TLS3010 TRANSPARENT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1124.89
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TLS3010 TRANSPARENT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 494.16
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "EPL30 POLVIN SUPER ACRYLIC - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1026.17
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TAP1000 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 974.82
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TAP2000 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1042.62
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TAP3000 TRANSPARENT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1094.83
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "DOUBLE VELVET - WHITE & VEL 2 TAWNY MINK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1432.34
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "DOUBLE VELVET - WHITE & VEL 2 TAWNY MINK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 562.32
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TDV 1000 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1432.19
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TDV 1000 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 562.32
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TDV 2000 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1555.46
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PWC 520",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 827.51
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PSB600 PROF DAMP PLASTER PAINT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1488.35
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PU800 ALL PURPOSE UNDERCOAT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 940.58
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PU800 ALL PURPOSE UNDERCOAT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 253.9
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "NY1 SUPER UNIVERSAL ENAMEL - SUPER WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 384.36
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "G - SUPER UNIVERSAL G/ENAMEL - G2,G7,G15",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 436.24
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SUPER UNIVERSAL G/ENAMEL - G13",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 457.52
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TGE - PASTEL BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1591.72
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TGE - PASTEL BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 409.69
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TGE - DEEP BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 443.53
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TGE - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 537.26
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "VLO - VELVAGLO WHITE & BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 530.89
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TVG 1000 PASTEL - SOLVENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 530.94
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TVG 2000 DEEP - SOLVENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 561.36
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TVG 3010 TRANSPARENT- SOLVENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 600.63
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "VLW 1 WATERBASE VELVAGLO - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 482.48
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "VLW2 WATERBASE VELVAGLO - BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 489.83
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TVW - WATERBASE VELVAGLO - PASTEL BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 482.44
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TVW - WATERBASE VELVAGLO - DEEP BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 498.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TVW - WATERBASE VELVAGLO - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 522.67
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PSI1 PLASCON SKIMCOAT INTERIOR - 23KG",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "23KG",
+      "color": null,
+      "code": null,
+      "price": 509.89
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "BBO - MICATEX - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": null
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TMX1050 - PASTEL BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1063.9
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TMX2050 - DEEP BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1117.13
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TMX3050 - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1223.55
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TRP PLASCON NUROOF COOL - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1143.43
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "WAA 1 WALL & ALL - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1672.22
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "WAA 1 WALL & ALL - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 567.22
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TWA1000 - PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1672.21
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TWA2000 - DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1834.93
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TWA3000 - TRANSPARENT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1965.47
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "FPR 1 - 6 WOODCARE WOOD PRES - CLEAR & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 552.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "WSP 1 - 28 EXT WOODCARE SUNPROOF - GLOSS - CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 489.85
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "X33 & 35 - 38 WOODCARE ULTRA VARNISH - GLOSS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 637.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "X44 WOODCARE ULTRA VARNISH - SUEDE - CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 637.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "WBS 1 PLASCON BRICKSEAL - CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 621.35
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TBD 1 PLASCON BRICK & SLASTO DRSSING - CLEAR",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 657.62
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "GW7 GEHOPON 7 SEALER - GREEN DL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 935.0
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "GW3001 GEHOPON - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1827.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "GW3050 GEHOPON - NAVY LIGHT GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1785.0
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "GW3030 GEHOPON - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1742.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SP1 STOEP ENAMEL BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 432.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SP2 STOEP ENAMEL GREEN",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 432.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SP3 STOEP ENAMEL RED",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 432.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SP7 STOEP ENAMEL GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 432.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SP13 STOEP ENAMEL TERRA COTTA",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 432.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SP16 STOEP ENAMEL NAVY LIGHT GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 432.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEX756 PLASCOGUARD -75- FRENCH GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "4L",
+      "color": null,
+      "code": null,
+      "price": 829.6
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEH125 PLASCOGUARD HARDNER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1L",
+      "color": null,
+      "code": null,
+      "price": 352.75
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "EPD1 PLASCOTUFF PITCH COAT BLACK DL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 933.28
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEX3500 PLASCOTUFF 3500 - GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "4L",
+      "color": null,
+      "code": null,
+      "price": 1092.62
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEH3500 PLASCOTUFF 3500 HARDENER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "1L",
+      "color": null,
+      "code": null,
+      "price": 291.37
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PRH9 P/THANE -9000- HARDENER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "715ML",
+      "color": null,
+      "code": null,
+      "price": 210.4
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PRT9001 P/THANE -9000- T/BASE-PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "4.2L",
+      "color": null,
+      "code": null,
+      "price": 637.42
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PRT9003 P/THANE -9000 - T/BASE-TRANS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "3.9L",
+      "color": null,
+      "code": null,
+      "price": 558.39
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "CAS 1 CASHMERE - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1849.4
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "CAS 1 CASHMERE - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 582.06
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TCA1000 PATEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1298.71
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TCA1000 PATEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 581.99
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TCA2000 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1841.08
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PEM950 PROF SUPER MATT - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1453.72
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TPM1000 PROF SUPER MATT T/BASE -PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1509.6
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TPM2000 PROF SUPER MATT T/BASE - DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1565.5
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "PES 1 PROF ELASTOSHIELD - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1553.13
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TED1000 PASTEL",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1553.17
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "TED2000 DEEP",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1682.59
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "SMOOTH RIPPLE FINISH - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1520.0
+    }
+  },
+  {
+    "brand": "Plascon",
+    "name": "ASS1 METAL CARE SILVERSHINE ALUMINIUM",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 864.99
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WOOD PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 460.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE ALKALI RESISTANT PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1050.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "ECOSURE PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 905.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE STEEL PRIMER GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 530.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "GALVANISED IRON PRIMER",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 720.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "RUST SHIELD W/BASE - RED OXIDE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "RUST SHIELD W/BASE - BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "RUST SHIELD W/BASE - GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 2150.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "RUST SHIELD W/BASE - GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 550.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "SUPERGRIP PRIMER W/B WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 750.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "BERGER NUKOTE WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 530.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE 65 WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 750.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE 65 - PASTEL7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 780.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE 65 - MEDIUM 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 860.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE 65 - DEEP 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 980.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE 100 LOWSHEEN WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1080.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE 100 LOWSHEEN - PASTEL 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1130.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE100 LOWSHEEN - MEDIUM 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1200.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE100 LOWSHEEN - DEEP 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1300.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE100 LOWSHEEN - U. DEEP 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1500.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ACRYLIC PVA - ALL STD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1200.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ACRYLIC PVA - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 980.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ACRYLIC PVA - PATEL - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1160.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ACRYLIC PVA - DEEP - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1270.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ACRYLIC PVA - TRANSP - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1400.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ACRYLIC PVA - BASE 6 - (4x5l - R1500)",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1700.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "LUX SILK BRILLIANT WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1490.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "LUX SILK - PASTEL 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1530.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "LUX SILK - MEDIUM 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1630.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "LUX SILK - DEEP 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1730.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "LUX SILK - U/DEEP 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1950.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "RAINSHIELD (WHITE & GREY)",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1100.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DAMPSHIELD",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1150.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE UNIVERSAL UNDERCOAT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1030.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS STD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 500.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS ENAMEL - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1900.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS ENAMEL - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 500.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS ENAMEL - BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 610.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS ENAMEL - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 480.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS ENAMEL - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 500.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DULUX GLOSS ENAMEL - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 535.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "SOLVENT BASE PEARLGLO WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 620.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "SOLVENT BASE PEARLGLO - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 640.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "SOLVENT BASE PEARLGLO - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 660.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "SOLVENT BASE PEARLGLO - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 680.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "SOLVENT BASE PEARLGLO - BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 750.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WATERBASE PEARLGLO - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 510.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WATERBASE PEARLGLO - PEBBLE BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 510.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WATERBASED PEARLGLO - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 490.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WATERBASED PEARLGLO - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 510.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WATERBASED PEARLGLO - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 530.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WATERBASED PEARLGLO - BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 570.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "PREPAINT SMOOTHOVER INT/EXT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "35KG",
+      "color": null,
+      "code": null,
+      "price": 630.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "W/GUARD FINE TEXTURED - WHITE & STD COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 930.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD FINE TEXTURED -BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1190.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD FINE TEXTURED - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1300.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATERGUARD FINE TEXTURED - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1400.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD FINE TEXTURED - BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1670.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX ROOFGUARD - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1080.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX WALLGUARD - BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 2050.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX WALLGUARD - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX WALLGUARD - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1700.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "DLX WALLGUARD - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1800.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TIMBA PRESERVATIVE CLEAR - ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 540.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WG TIMBAVARNISH INT/EXT - CLEAR & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 560.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WOODGARD RUBBOL CLEAR & ALL COLOURS",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1400.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "BRICK/SLASTO DRESSING S/B",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TUFFCOTE EPOXY WB LIGHT GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1350.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TUFFCOTE EPOXY WB DAIRY WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1350.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TR- HI-CHEM ENAMEL S/B - BRILLIANT/GREEN",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1280.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TR- HI-CHEM ENAMEL S/B - LIGHT GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1280.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TR- HI-CHEM ENAMEL S/B - DARK GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1280.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TR - HI-CHEM ENAMEL S/B - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 1280.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "FLOORCOTE SB BLACK",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "FLOORCOTE SB BRILLIANT GRN",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "FLOORCOTE SB CHROM OXID GRN",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "FLOORCOTE SB DARK SEA GREY",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "FLOORCOTE SB RED OXIDE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 600.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WALLCLAD WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1630.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WALLCLAD BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1670.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WALLCLAD BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1740.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WALLCLAD BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1900.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WALLCLAD BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 2200.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1320.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1430.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1540.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1850.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WEATHERSHIELD - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1950.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WEATHERSHIELD - PASTEL 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 2100.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WEATHERSHIELD - MEDIUM 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 2180.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE WEATHERSHIELD - DEEP 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 2240.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1420.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - PASTEL - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1500.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - PASTEL - BASE 7",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 720.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - MEDIUM - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "20L",
+      "color": null,
+      "code": null,
+      "price": 1560.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - MEDIUM - BASE 8",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 750.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - DEEP - BASE 9",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 820.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "EASYCARE - ULTRA - BASE 6",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": "5L",
+      "color": null,
+      "code": null,
+      "price": 920.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "TRADE STERISHIELD - DIAMOND MATT WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 930.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "STERISHIELD DIAMOND EGGSHELL WHITE",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 930.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "STERISHIELD DIAMOND E/SHELL LIGHT TINTED",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 930.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "STERISHIELD DIAMOND E/SHELL MEDIUM TINT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 940.0
+    }
+  },
+  {
+    "brand": "Dulux",
+    "name": "STERISHIELD DIAMOND E/SHELL EX/DEEP TINT",
+    "productType": "MATERIAL",
+    "variant": {
+      "size": null,
+      "color": null,
+      "code": null,
+      "price": 960.0
+    }
+  }
+]

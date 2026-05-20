@@ -91,7 +91,7 @@ export async function GET(
 
 /**
  * PATCH /api/app/admin/suppliers/[id]
- * Body: { name?, phone?, email?, address?, isActive? }
+ * Body: { name?, phone?, email?, address?, isActive?, parentSupplierId? }
  */
 export async function PATCH(
   req: Request,
@@ -107,13 +107,15 @@ export async function PATCH(
 
     const { id } = await ctx.params;
     const body = await req.json();
-    const { name, phone, email, address, isActive } = body as {
-      name?: string;
-      phone?: string | null;
-      email?: string | null;
-      address?: string | null;
-      isActive?: boolean;
-    };
+    const { name, phone, email, address, isActive, parentSupplierId } =
+      body as {
+        name?: string;
+        phone?: string | null;
+        email?: string | null;
+        address?: string | null;
+        isActive?: boolean;
+        parentSupplierId?: string | null;
+      };
 
     const data: Record<string, unknown> = {};
     if (name !== undefined) data.name = name.trim();
@@ -121,6 +123,8 @@ export async function PATCH(
     if (email !== undefined) data.email = email?.trim() || null;
     if (address !== undefined) data.address = address?.trim() || null;
     if (isActive !== undefined) data.isActive = isActive;
+    if (parentSupplierId !== undefined)
+      data.parentSupplierId = parentSupplierId || null;
 
     const updated = await prisma.supplier.update({ where: { id }, data });
 

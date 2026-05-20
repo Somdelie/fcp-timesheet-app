@@ -73,34 +73,98 @@ export async function PATCH(
       data.unitSize =
         unitSize != null && unitSize !== "" ? Number(unitSize) : null;
 
-    const updated = await prisma.supplierProductPrice.update({
-      where: { id },
-      data,
-      include: {
-        supplier: { select: { id: true, name: true } },
-        product: {
-          select: { id: true, name: true, uom: true, unitSize: true },
-        },
-      },
-    });
-
-    return NextResponse.json(
-      {
-        ok: true,
-        data: {
-          ...updated,
-          price: decimalToNumber(updated.price),
-          unitSize: updated.unitSize ? decimalToNumber(updated.unitSize) : null,
+    try {
+      const updated = await prisma.supplierProductPrice.update({
+        where: { id },
+        data,
+        include: {
+          supplier: { select: { id: true, name: true } },
           product: {
-            ...updated.product,
-            unitSize: updated.product.unitSize
-              ? decimalToNumber(updated.product.unitSize)
-              : null,
+            select: { id: true, name: true, uom: true, unitSize: true },
           },
         },
-      },
-      { headers: CORS },
-    );
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          data: {
+            ...updated,
+            price: decimalToNumber(updated.price),
+            unitSize: updated.unitSize
+              ? decimalToNumber(updated.unitSize)
+              : null,
+            product: {
+              ...updated.product,
+              unitSize: updated.product.unitSize
+                ? decimalToNumber(updated.product.unitSize)
+                : null,
+            },
+          },
+        },
+        { headers: CORS },
+      );
+    } catch (e: any) {
+      // If not found in supplierProductPrice, try MaterialPrice (legacy material prices)
+      if (e?.code === "P2025") {
+        try {
+          const matUpdated = await prisma.materialPrice.update({
+            where: { id },
+            data: {
+              price: data.price as any,
+              uom: (data.uom as any) || undefined,
+              unitSize: data.unitSize as any,
+              startsOn: data.startsOn as any,
+              endsOn: data.endsOn as any,
+              isActive: data.isActive as any,
+            },
+            include: {
+              supplier: { select: { id: true, name: true } },
+              material: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                },
+              },
+            },
+          });
+
+          return NextResponse.json(
+            {
+              ok: true,
+              data: {
+                ...matUpdated,
+                price: decimalToNumber(matUpdated.price),
+                unitSize: matUpdated.unitSize
+                  ? decimalToNumber(matUpdated.unitSize)
+                  : null,
+                product: {
+                  id: matUpdated.material.id,
+                  name: matUpdated.material.name,
+                  sku: matUpdated.material.sku,
+                  uom: null,
+                  unitSize: null,
+                },
+              },
+            },
+            { headers: CORS },
+          );
+        } catch (e2: any) {
+          if (e2?.code === "P2025")
+            return NextResponse.json(
+              { error: "Price record not found" },
+              { status: 404, headers: CORS },
+            );
+          console.error("PATCH material-price error:", e2);
+          return NextResponse.json(
+            { error: "Internal error" },
+            { status: 500, headers: CORS },
+          );
+        }
+      }
+      throw e;
+    }
   } catch (e: any) {
     if (e?.code === "P2025")
       return NextResponse.json(

@@ -1247,8 +1247,9 @@ model ProductCategory {
 
   procurementProducts ProcurementProduct[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  materials Material[]
 
   @@index([normalizedName])
 }
@@ -1283,6 +1284,8 @@ model Supplier {
   orders                 SiteProductOrder[]
   supplierProductPrices  SupplierProductPrice[]
   finishingScheduleItems SiteFinishingScheduleItem[] @relation("FinishingScheduleItemSupplier")
+  materials              Material[]
+  materialPrices         MaterialPrice[]
 
   @@unique([name])
   @@index([isActive])
@@ -1684,6 +1687,114 @@ model FortnightMeetingTotals {
 }
 
 // ============================
+// MATERIALS (Clean seed model)
+// ============================
+// New material model for seeding clean product data independently of ProcurementProduct.
+// No inventory tracking (materials are stocked at supplier, not internally).
+// Sizes are managed per price point (e.g., 5L paint, 20L paint, 10KG cement)
+// Suppliers use parent/child hierarchy: parent = brand (Plascon, Dulux), child = shop supplying us
+
+model Material {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  sku         String?          @unique
+  description String?
+  categoryId  String?
+  category    ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Product classification
+  productType  ProductType @default(MATERIAL)
+  isReturnable Boolean     @default(false)
+
+  // Color variants
+  colors String[]
+
+  isActive Boolean @default(true)
+
+  // Deduction settings (PPE)
+  isDeductible    Boolean @default(true)
+  deductionSplits Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Preferred supplier (typically a brand like Plascon)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  // Prices by supplier with size variants
+  prices MaterialPrice[]
+
+  // Color variants for paints, etc.
+  colorVariants MaterialColorVariant[]
+
+  // References from site materials
+  siteMaterials SiteMaterial[]
+
+  @@index([isActive])
+  @@index([categoryId])
+  @@index([name])
+  @@index([productType])
+}
+
+// Price per supplier per material, optionally per size/color
+// Example: Plascon 5L paint at R437, Dulux 5L paint at R450, etc.
+model MaterialPrice {
+  id String @id @default(cuid())
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  // Optional: link to color variant
+  colorVariantId String?
+  colorVariant   MaterialColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: SetNull)
+
+  // Size/unit of this price point (e.g. 5L, 20L, 10KG)
+  // UOM is the unit type (L, KG, M, etc.)
+  // unitSize is the quantity (5, 20, 10)
+  uom      ProductUom?
+  unitSize Decimal?    @db.Decimal(12, 3)
+
+  // Current price for this supplier/size/color combo
+  price Decimal @db.Decimal(12, 2)
+
+  // Optional effective date range
+  startsOn DateTime  @default(now())
+  endsOn   DateTime?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId, materialId])
+  @@index([materialId, isActive])
+  @@index([supplierId, isActive])
+}
+
+model MaterialColorVariant {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  colorName String
+  colorCode String?
+  baseType  ColorBaseType @default(DEEP)
+  isTinted  Boolean       @default(false)
+
+  prices MaterialPrice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([materialId, colorName, baseType])
+  @@index([materialId])
+}
+
+// ============================
 // SITE MATERIALS (Bill of Materials)
 // ============================
 // Products expected to be used on a site (not actual orders)
@@ -1696,6 +1807,10 @@ model SiteMaterial {
 
   productId String
   product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Optional: reference to new clean Material model
+  materialId String?
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
 
   // Optional estimated quantity
   quantity Int?
@@ -1713,6 +1828,7 @@ model SiteMaterial {
   @@unique([siteId, productId])
   @@index([siteId])
   @@index([productId])
+  @@index([materialId])
 }
 
 // Usage tags for a site material — e.g. "External Walls", "Internal Walls", "Stills", "Main Color", "Feature Wall"

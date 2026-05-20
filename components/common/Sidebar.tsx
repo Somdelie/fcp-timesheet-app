@@ -167,14 +167,20 @@ const menuGroups: {
         roles: ["ADMIN", "OFFICE"],
       },
       {
-        href: "/admin/procurement-products/colors",
+        href: "/admin/suppliers",
+        label: "Suppliers & Categories",
+        icon: Tag,
+        roles: ["ADMIN", "OFFICE"],
+      },
+      {
+        href: "/admin/paints-colors",
         label: "Paint Colors & Bases",
         icon: Palette,
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/admin/equipment",
-        label: "Equipment Catelogue",
+        label: "Equipment Catalogue",
         icon: Wrench,
         roles: ["ADMIN", "OFFICE"],
       },

@@ -1,0 +1,767 @@
+[
+  {
+    "name": "Urochem 101 Twin Pack Epoxy primer",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 102 Single Pack Silane Based Primer",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 105 Single pack Aliphatic primer",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 106 Twin pack water tolerant primer for damp surfaces",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 107 Twin pack water & oil tolerant primer",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 205 Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 205 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 205 Grey Low Viscosity",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 205 Colours Low Viscosity",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 211",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 230",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 260 grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 260 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 280 Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 280 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 299 Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 299 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 299 LV Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 299 LV Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 303 Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 303 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 304 Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 304 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 305",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 306 Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 306 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 307 Grey Top Coat",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 307 Colours Top Coat",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 307 Primer",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 309 1:1 Ratio",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 311 1:1 adhesive",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 313 Wet to dry epoxy adhesive",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 340",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 500 HP SL",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 501 HP",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 505",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 515",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 525",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 535",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem Wood Adhesive PU",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem Wood Binder",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem PU 25 LV",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 606 Clear",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 606 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 611 HV Grey",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 611 HV Aluminium",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 614 Clear",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 614 Colours",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 617",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 700",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "Urochem 901",
+    "productType": "MATERIAL",
+    "brand": "UROCHEM",
+    "colors": [],
+    "sizes": [
+      "500ML",
+      "1L",
+      "2L",
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  }
+]

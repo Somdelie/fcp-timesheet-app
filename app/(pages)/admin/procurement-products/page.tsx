@@ -25,7 +25,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { parseBuildSmartProduct } from "@/lib/product-color-parser";
-import { isNumericCostCode } from "@/lib/procurement/buildsmartProductCodes";
+import {
+  isNumericCostCode,
+  normalizeBuildSmartProductCode,
+} from "@/lib/procurement/buildsmartProductCodes";
 import { Workbook } from "exceljs";
 
 import { Button } from "@/components/ui/button";
@@ -93,18 +96,13 @@ const PRODUCT_TYPES: {
 }[] = [
   {
     value: "MATERIAL",
-    label: "Material",
+    label: "Paints",
     icon: <Layers className="h-3.5 w-3.5" />,
   },
   {
     value: "PPE",
     label: "PPE",
     icon: <Package className="h-3.5 w-3.5" />,
-  },
-  {
-    value: "PLANT",
-    label: "Plant",
-    icon: <Wrench className="h-3.5 w-3.5" />,
   },
   {
     value: "CONSUMABLE",
@@ -368,7 +366,8 @@ export default function ProcurementProductsPage({
       if (showInactive) params.set("includeInactive", "true");
       if (filterCategory) params.set("categoryId", filterCategory);
       if (filterSupplier) params.set("supplierId", filterSupplier);
-      if (supplierIdProp !== undefined) {
+      // If this page is specifically the paints/preparations view, request materials-only
+      if (supplierIdProp !== undefined || defaultProductType === "MATERIAL") {
         params.set("productType", "MATERIAL");
       } else if (defaultProductType && defaultProductType !== "ALL") {
         params.set("productType", defaultProductType);
@@ -433,6 +432,9 @@ export default function ProcurementProductsPage({
       variantQtys,
       stockQty: p.stockQty ?? 0,
     });
+    // populate inline prices editor when editing a product
+    setPricesProduct(p);
+    setDialogPrices(p.supplierPrices || []);
     setDialogOpen(true);
   }
 
@@ -789,8 +791,8 @@ export default function ProcurementProductsPage({
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
-      if (activeTab !== "ALL" && (p.productType ?? "MATERIAL") !== activeTab)
-        return false;
+      const productType = (p.productType ?? "MATERIAL") as ProductType;
+      if (activeTab !== "ALL" && productType !== activeTab) return false;
       if (!term) return true;
       return (
         p.name.toLowerCase().includes(term) ||
@@ -1055,16 +1057,16 @@ export default function ProcurementProductsPage({
       },
       cell: ({ row }) => {
         const p = row.original;
-        const parsed = parseBuildSmartProduct(p.name);
-        const displayName = parsed.cleanName;
+        const displayName = p.name;
         return (
-          <div className="w-[280px]">
+          <div className="w-full">
             <div
-              className="truncate font-medium leading-tight"
+              className="font-medium leading-tight break-words"
               title={displayName}
             >
               {displayName}
             </div>
+            {/* SKU/code is shown in the separate 'Code' column — omit duplicate under name */}
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               {isPpeTab && !p.isDeductible && (
                 <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -1116,7 +1118,12 @@ export default function ProcurementProductsPage({
     },
     {
       id: "price",
-      header: () => <span>{isPaintsTab ? "Prices by Size" : "Price"}</span>,
+      size: 240,
+      header: () => (
+        <span className="text-left w-full block">
+          {isPaintsTab ? "Prices by Size" : "Price"}
+        </span>
+      ),
       cell: ({ row }) => {
         const p = row.original;
         if (p.productType === "PLANT")
@@ -1146,31 +1153,46 @@ export default function ProcurementProductsPage({
           uom && uom !== "null" && uom !== "undefined" ? uom : null;
 
         if (isPaintsTab) {
-          return (
-            <div className="space-y-0.5">
-              {allPrices.map((sp) => {
-                const uom = validUom(sp.uom);
-                const sizeLabel = uom
-                  ? sp.unitSize != null
-                    ? `${sp.unitSize}${uom}`
-                    : uom
-                  : null;
-                return (
-                  <div
-                    key={sp.id}
-                    className="flex items-baseline gap-1.5 text-sm whitespace-nowrap"
-                  >
-                    {sizeLabel && (
-                      <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">
-                        {sizeLabel}
+          if (allPrices.length <= 2) {
+            return (
+              <div className="flex items-center justify-start gap-4 whitespace-nowrap">
+                {allPrices.map((sp) => {
+                  const uom = validUom(sp.uom);
+                  const sizeLabel = uom
+                    ? sp.unitSize != null
+                      ? `${sp.unitSize}${uom}`
+                      : uom
+                    : null;
+                  return (
+                    <div
+                      key={sp.id}
+                      className="inline-flex items-center gap-1 text-sm"
+                    >
+                      {sizeLabel ? (
+                        <span className="text-xs text-muted-foreground">
+                          {sizeLabel} -
+                        </span>
+                      ) : null}
+                      <span className="font-semibold tabular-nums">
+                        R {fmtPrice(sp.price)}
                       </span>
-                    )}
-                    <span className="font-semibold tabular-nums">
-                      R {fmtPrice(sp.price)}
-                    </span>
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex justify-start">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => openPricesDialog(p)}
+              >
+                View prices ({allPrices.length})
+              </Button>
             </div>
           );
         }
@@ -1207,7 +1229,7 @@ export default function ProcurementProductsPage({
     // Stock column — hidden on Paints (paints are not stocked)
     {
       id: "actions",
-      size: 48,
+      size: 40,
       header: () => <span>Actions</span>,
       cell: ({ row }) => (
         <DropdownMenu>
@@ -1267,7 +1289,7 @@ export default function ProcurementProductsPage({
 
   const TABS: { value: ProductType | "ALL"; label: string }[] = [
     { value: "ALL", label: "All" },
-    { value: "MATERIAL", label: "Materials" },
+    { value: "MATERIAL", label: "Paints" },
     { value: "CONSUMABLE", label: "Consumables" },
     { value: "OTHER", label: "Other" },
   ];
@@ -1422,15 +1444,7 @@ export default function ProcurementProductsPage({
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
-                <label className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={showInactive}
-                    onCheckedChange={(v) => setShowInactive(!!v)}
-                  />
-                  Inactive
-                </label>
-              )}
+              ) : null}
               <Button
                 variant="outline"
                 size="icon"
@@ -1807,48 +1821,31 @@ export default function ProcurementProductsPage({
             </div>
 
             {/* Type + Returnable */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Product Type *</label>
-                <Select
-                  value={form.productType}
-                  onValueChange={(v) =>
-                    setForm({
-                      ...form,
-                      productType: v as ProductType,
-                      isReturnable: v === "PLANT" ? true : form.isReturnable,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRODUCT_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        <span className="flex items-center gap-2">
-                          {t.icon}
-                          {t.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col justify-end space-y-1">
-                <label className="text-sm font-medium">Returnable</label>
-                <label className="flex items-center gap-2 cursor-pointer rounded border border-border px-3 py-2 hover:bg-muted/40">
-                  <Checkbox
-                    checked={form.isReturnable}
-                    onCheckedChange={(v) =>
-                      setForm({ ...form, isReturnable: !!v })
-                    }
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Must be returned to office
-                  </span>
-                </label>
-              </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Product Type *</label>
+              <Select
+                value={form.productType}
+                onValueChange={(v) =>
+                  setForm({
+                    ...form,
+                    productType: v as ProductType,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUCT_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      <span className="flex items-center gap-2">
+                        {t.icon}
+                        {t.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* PPE-specific: deductible + split */}
@@ -2025,203 +2022,105 @@ export default function ProcurementProductsPage({
               )}
             </div>
 
-            {/* Description */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Description</label>
-              <Input
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                placeholder="Optional description"
-              />
-            </div>
+            {/* Description removed per UI preference */}
 
-            {/* Stock Quantities */}
-            {(() => {
-              const sizes = form.sizesRaw
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean);
-              const colors = form.colorsRaw
-                .split(",")
-                .map((c) => c.trim())
-                .filter(Boolean);
-              const hasVariants = sizes.length > 0 || colors.length > 0;
-
-              const getQty = (size: string, color: string) =>
-                form.variantQtys[variantKey(size, color)] ?? 0;
-              const setQty = (size: string, color: string, qty: number) =>
-                setForm((f) => ({
-                  ...f,
-                  variantQtys: {
-                    ...f.variantQtys,
-                    [variantKey(size, color)]: Math.max(0, qty),
-                  },
-                }));
-
-              if (!hasVariants) {
-                return (
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">
-                      Stock Quantity
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.stockQty}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          stockQty: Math.max(0, Number(e.target.value)),
-                        })
-                      }
-                      placeholder="0"
-                    />
-                  </div>
-                );
-              }
-
-              if (sizes.length > 0 && colors.length > 0) {
-                const total = sizes
-                  .flatMap((s) => colors.map((c) => getQty(s, c)))
-                  .reduce((a, b) => a + b, 0);
-                return (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">
-                      Stock per Size &amp; Color
-                      <span className="ml-2 font-normal text-muted-foreground text-xs">
-                        total: {total}
-                      </span>
-                    </label>
-                    <div className="overflow-x-auto rounded border border-border">
-                      <table className="w-full border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-muted/60">
-                            <th className="border-b border-r border-border px-2 py-1.5 text-left font-medium text-muted-foreground">
-                              Size / Color
-                            </th>
-                            {colors.map((color) => (
-                              <th
-                                key={color}
-                                className="border-b border-r border-border px-2 py-1.5 text-center font-medium last:border-r-0"
-                              >
-                                <div className="flex items-center justify-center gap-1">
-                                  <ColorDot color={color} />
-                                  {color}
-                                </div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sizes.map((size, si) => (
-                            <tr
-                              key={size}
-                              className={si % 2 === 0 ? "" : "bg-muted/20"}
-                            >
-                              <td className="border-b border-r border-border px-2 py-1 font-medium last:border-b-0">
-                                {size}
-                              </td>
-                              {colors.map((color) => (
-                                <td
-                                  key={color}
-                                  className="border-b border-r border-border px-1 py-1 last:border-r-0 last:border-b-0"
-                                >
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    value={getQty(size, color)}
-                                    onChange={(e) =>
-                                      setQty(
-                                        size,
-                                        color,
-                                        Number(e.target.value),
-                                      )
-                                    }
-                                    className="h-7 w-16 text-center text-xs"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (sizes.length > 0) {
-                const total = sizes
-                  .map((s) => getQty(s, ""))
-                  .reduce((a, b) => a + b, 0);
-                return (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">
-                      Stock per Size
-                      <span className="ml-2 font-normal text-muted-foreground text-xs">
-                        total: {total}
-                      </span>
-                    </label>
-                    <div className="space-y-1">
-                      {sizes.map((size) => (
-                        <div key={size} className="flex items-center gap-3">
-                          <span className="w-20 shrink-0 rounded border border-border bg-muted/40 px-2 py-1 text-center text-xs font-medium">
-                            {size}
-                          </span>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={getQty(size, "")}
-                            onChange={(e) =>
-                              setQty(size, "", Number(e.target.value))
-                            }
-                            className="h-8 w-24 text-xs"
-                            placeholder="0"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-
-              const total = colors
-                .map((c) => getQty("", c))
-                .reduce((a, b) => a + b, 0);
-              return (
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    Stock per Color
-                    <span className="ml-2 font-normal text-muted-foreground text-xs">
-                      total: {total}
-                    </span>
-                  </label>
-                  <div className="space-y-1">
-                    {colors.map((color) => (
-                      <div key={color} className="flex items-center gap-3">
-                        <div className="flex w-32 shrink-0 items-center gap-1.5 rounded border border-border bg-muted/40 px-2 py-1">
-                          <ColorDot color={color} />
-                          <span className="truncate text-xs">{color}</span>
-                        </div>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={getQty("", color)}
-                          onChange={(e) =>
-                            setQty("", color, Number(e.target.value))
-                          }
-                          className="h-8 w-24 text-xs"
-                          placeholder="0"
-                        />
+            {/* Stock per size removed per UI preference */}
+          </div>
+          {/* Prices inline editor (when editing) */}
+          {editing && (
+            <div className="space-y-2 mt-3">
+              <div className="text-sm font-medium">Prices</div>
+              <div className="space-y-2">
+                {dialogPrices.map((dp) => (
+                  <div
+                    key={dp.id}
+                    className="flex items-center justify-between gap-3 rounded border border-border p-2"
+                  >
+                    <div className="text-sm">
+                      <div className="font-medium">{dp.supplier.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {dp.unitSize != null && dp.uom
+                          ? `${dp.unitSize}${dp.uom} - `
+                          : ""}
+                        R{" "}
+                        {Number(dp.price).toLocaleString("en-ZA", {
+                          minimumFractionDigits: 2,
+                        })}
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingPriceId(dp.id);
+                          setPriceForm({
+                            supplierId: dp.supplier.id,
+                            price: String(dp.price),
+                            uom: dp.uom ?? "",
+                            isActive: dp.isActive,
+                          });
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeletePrice(dp.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="grid grid-cols-3 gap-2 items-end">
+                  <Select
+                    value={priceForm.supplierId || ""}
+                    onValueChange={(v) =>
+                      setPriceForm({ ...priceForm, supplierId: v })
+                    }
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="Supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Input
+                    value={priceForm.price}
+                    onChange={(e) =>
+                      setPriceForm({ ...priceForm, price: e.target.value })
+                    }
+                    placeholder="Price"
+                    className="h-8"
+                  />
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={priceForm.uom}
+                      onChange={(e) =>
+                        setPriceForm({ ...priceForm, uom: e.target.value })
+                      }
+                      placeholder="UOM"
+                      className="h-8"
+                    />
+                    <Button onClick={handleSavePrice} disabled={savingPrice}>
+                      {editingPriceId ? "Update" : "Add"}
+                    </Button>
                   </div>
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
@@ -2424,22 +2323,19 @@ export default function ProcurementProductsPage({
             </div>
           ) : (
             <div className="rounded border border-border overflow-hidden">
-              <table className="w-full text-sm border-collapse">
+              <table className="w-full text-sm border-collapse border border-border">
                 <thead className="bg-muted/60">
                   <tr>
-                    <th className="border-b border-border px-3 py-2 text-left text-xs font-semibold">
+                    <th className="border-b border-x border-border px-3 py-2 text-left text-xs font-semibold">
                       Supplier
                     </th>
-                    <th className="border-b border-border px-3 py-2 text-right text-xs font-semibold">
+                    <th className="border-b border-x border-border px-3 py-2 text-left text-xs font-semibold">
                       Price
                     </th>
-                    <th className="border-b border-border px-3 py-2 text-left text-xs font-semibold">
+                    <th className="border-b border-x border-border px-3 py-2 text-left text-xs font-semibold">
                       UOM
                     </th>
-                    <th className="border-b border-border px-2 py-2 text-center text-xs font-semibold">
-                      Active
-                    </th>
-                    <th className="border-b border-border px-2 py-2"></th>
+                    <th className="border-b border-x border-border px-2 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2448,21 +2344,18 @@ export default function ProcurementProductsPage({
                       key={price.id}
                       className={`${i % 2 !== 0 ? "bg-muted/20" : ""} ${editingPriceId === price.id ? "ring-1 ring-inset ring-primary/30" : ""}`}
                     >
-                      <td className="border-b border-border px-3 py-2 text-xs last:border-b-0">
+                      <td className="border-b border-x border-border px-3 py-2 text-xs last:border-b-0">
                         {price.supplier.name}
                       </td>
-                      <td className="border-b border-border px-3 py-2 text-xs text-right font-medium tabular-nums last:border-b-0">
+                      <td className="border-b border-x border-border px-3 py-2 text-xs font-medium tabular-nums last:border-b-0">
                         R {price.price.toFixed(2)}
                       </td>
-                      <td className="border-b border-border px-3 py-2 text-xs text-muted-foreground last:border-b-0">
-                        {price.uom || "—"}
+                      <td className="border-b border-x border-border px-3 py-2 text-xs text-muted-foreground last:border-b-0">
+                        {price.unitSize != null
+                          ? `${price.unitSize}${price.uom ?? ""}`
+                          : price.uom || "—"}
                       </td>
-                      <td className="border-b border-border px-2 py-2 text-center last:border-b-0">
-                        <span
-                          className={`inline-flex h-2 w-2 rounded-full ${price.isActive ? "bg-green-500" : "bg-zinc-400"}`}
-                        />
-                      </td>
-                      <td className="border-b border-border px-2 py-2 last:border-b-0">
+                      <td className="border-b border-x border-border px-2 py-2 last:border-b-0">
                         <div className="flex items-center gap-0.5 justify-end">
                           <Button
                             variant="ghost"

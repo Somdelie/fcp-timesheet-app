@@ -128,8 +128,13 @@ async function runCleanup(onProgress?: (event: ProgressEvent) => void) {
 
   let cleaned = 0;
   for (const product of products) {
-    const { cleanName, sku: parsedSku, colorName, baseType, isTinted } =
-      parseBuildSmartProduct(product.name);
+    const {
+      cleanName,
+      sku: parsedSku,
+      colorName,
+      baseType,
+      isTinted,
+    } = parseBuildSmartProduct(product.name);
     const safeName = cleanName.length > 0 ? cleanName : product.name.trim();
     const normalizedName = normalizeProductName(safeName);
 
@@ -137,14 +142,15 @@ async function runCleanup(onProgress?: (event: ProgressEvent) => void) {
     if (newSku && isNumericCostCode(newSku)) {
       newSku = null;
     } else if (newSku) {
-      const normalizedSku = normalizeBuildSmartProductCode(newSku) ?? newSku.trim();
+      const normalizedSku =
+        normalizeBuildSmartProductCode(newSku) ?? newSku.trim();
       const owner = skuOwner.get(normalizeSkuKey(normalizedSku));
       newSku = !owner || owner === product.id ? normalizedSku : null;
     }
 
     const candidateSku =
       parsedSku && !isNumericCostCode(parsedSku)
-        ? normalizeBuildSmartProductCode(parsedSku) ?? parsedSku
+        ? (normalizeBuildSmartProductCode(parsedSku) ?? parsedSku)
         : null;
 
     if (!newSku && candidateSku) {
@@ -205,7 +211,12 @@ async function runCleanup(onProgress?: (event: ProgressEvent) => void) {
       }
     }
 
-    if (!nameChanged && !skuChanged && !normalizedNameChanged && !variantCreated) {
+    if (
+      !nameChanged &&
+      !skuChanged &&
+      !normalizedNameChanged &&
+      !variantCreated
+    ) {
       skipped++;
     } else {
       changes.push({
@@ -245,7 +256,13 @@ async function runCleanup(onProgress?: (event: ProgressEvent) => void) {
   const cleanedProducts = await loadProducts();
   const groups = new Map<string, CleanupProduct[]>();
   for (const product of cleanedProducts) {
-    const key = `${product.productType}:${normalizeProductName(product.name)}`;
+    const skuKey =
+      product.sku && !isNumericCostCode(product.sku)
+        ? normalizeSkuKey(product.sku)
+        : null;
+    const key = skuKey
+      ? `${product.productType}:sku:${skuKey}`
+      : `${product.productType}:name:${normalizeProductName(product.name)}`;
     const group = groups.get(key) ?? [];
     group.push(product);
     groups.set(key, group);

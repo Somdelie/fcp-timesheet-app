@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import {
   Plus,
@@ -13,6 +13,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  FolderTree,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -48,7 +56,15 @@ type Supplier = {
   address: string | null;
   isActive: boolean;
   createdAt: string;
+  parentSupplierId: string | null;
+  parentSupplier: { id: string; name: string } | null;
   _count: { products: number; orders: number };
+};
+
+type Category = {
+  id: string;
+  name: string;
+  _count: { procurementProducts: number };
 };
 
 /* ------------------------------------------------------------------ */
@@ -56,262 +72,533 @@ type Supplier = {
 /* ------------------------------------------------------------------ */
 
 export default function SuppliersPage() {
+  const [activeTab, setActiveTab] = useState<"suppliers" | "categories">(
+    "suppliers",
+  );
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
+  const [supplierSearch, setSupplierSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
 
-  // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Supplier | null>(null);
-  const [form, setForm] = useState({
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categorySearch, setCategorySearch] = useState("");
+
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [supplierForm, setSupplierForm] = useState({
     name: "",
     phone: "",
     email: "",
     address: "",
+    parentSupplierId: "",
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [supplierSubmitting, setSupplierSubmitting] = useState(false);
+  const [supplierDeleteTarget, setSupplierDeleteTarget] =
+    useState<Supplier | null>(null);
 
-  // Delete
-  const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryName, setCategoryName] = useState("");
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [categoryDeleteTarget, setCategoryDeleteTarget] =
+    useState<Category | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadSuppliers = useCallback(async () => {
+    setSuppliersLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set("q", search);
+      if (supplierSearch) params.set("q", supplierSearch);
       if (showInactive) params.set("includeInactive", "true");
       const res = await fetch(`/api/app/admin/suppliers?${params}`, {
         credentials: "include",
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to load");
+      if (!res.ok) throw new Error(json?.error ?? "Failed to load suppliers");
       setSuppliers(json.data);
     } catch (e: any) {
       toast.error(e?.message || "Failed to load suppliers");
     } finally {
-      setLoading(false);
+      setSuppliersLoading(false);
     }
-  }, [search, showInactive]);
+  }, [supplierSearch, showInactive]);
+
+  const loadCategories = useCallback(async () => {
+    setCategoriesLoading(true);
+    try {
+      const res = await fetch("/api/app/admin/product-categories", {
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to load categories");
+      setCategories(json.data);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to load categories");
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadSuppliers();
+    loadCategories();
+  }, [loadSuppliers, loadCategories]);
 
-  function openCreate() {
-    setEditing(null);
-    setForm({ name: "", phone: "", email: "", address: "" });
-    setDialogOpen(true);
-  }
-
-  function openEdit(s: Supplier) {
-    setEditing(s);
-    setForm({
-      name: s.name,
-      phone: s.phone ?? "",
-      email: s.email ?? "",
-      address: s.address ?? "",
+  function openCreateSupplier() {
+    setEditingSupplier(null);
+    setSupplierForm({
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      parentSupplierId: "",
     });
-    setDialogOpen(true);
+    setSupplierDialogOpen(true);
   }
 
-  async function handleSubmit() {
-    if (!form.name.trim()) {
+  function openEditSupplier(supplier: Supplier) {
+    setEditingSupplier(supplier);
+    setSupplierForm({
+      name: supplier.name,
+      phone: supplier.phone ?? "",
+      email: supplier.email ?? "",
+      address: supplier.address ?? "",
+      parentSupplierId: supplier.parentSupplierId ?? "",
+    });
+    setSupplierDialogOpen(true);
+  }
+
+  async function handleSupplierSubmit() {
+    if (!supplierForm.name.trim()) {
       toast.error("Name is required");
       return;
     }
-    setSubmitting(true);
+    setSupplierSubmitting(true);
     try {
-      const url = editing
-        ? `/api/app/admin/suppliers/${editing.id}`
+      const url = editingSupplier
+        ? `/api/app/admin/suppliers/${editingSupplier.id}`
         : `/api/app/admin/suppliers`;
-      const method = editing ? "PATCH" : "POST";
-
+      const method = editingSupplier ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          name: form.name.trim(),
-          phone: form.phone.trim() || null,
-          email: form.email.trim() || null,
-          address: form.address.trim() || null,
+          name: supplierForm.name.trim(),
+          phone: supplierForm.phone.trim() || null,
+          email: supplierForm.email.trim() || null,
+          address: supplierForm.address.trim() || null,
+          parentSupplierId: supplierForm.parentSupplierId.trim() || null,
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to save");
-
-      toast.success(editing ? "Supplier updated" : "Supplier created");
-      setDialogOpen(false);
-      load();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to save supplier");
+      toast.success(editingSupplier ? "Supplier updated" : "Supplier created");
+      setSupplierDialogOpen(false);
+      loadSuppliers();
     } catch (e: any) {
       toast.error(e?.message || "Failed to save supplier");
     } finally {
-      setSubmitting(false);
+      setSupplierSubmitting(false);
     }
   }
 
-  async function handleDelete() {
-    if (!deleteTarget) return;
+  async function handleSupplierDelete() {
+    if (!supplierDeleteTarget) return;
     try {
-      const res = await fetch(`/api/app/admin/suppliers/${deleteTarget.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/app/admin/suppliers/${supplierDeleteTarget.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Failed to delete");
+      if (!res.ok) throw new Error(json?.error ?? "Failed to delete supplier");
       toast.success("Supplier deleted");
-      setDeleteTarget(null);
-      load();
+      setSupplierDeleteTarget(null);
+      loadSuppliers();
     } catch (e: any) {
       toast.error(e?.message || "Failed to delete supplier");
     }
   }
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Suppliers</h1>
-        <Button onClick={openCreate} size="sm">
-          <Plus className="mr-1 h-4 w-4" /> Add Supplier
-        </Button>
-      </div>
+  function openCreateCategory() {
+    setEditingCategory(null);
+    setCategoryName("");
+    setCategoryDialogOpen(true);
+  }
 
-      {/* Search bar */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search suppliers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+  function openEditCategory(category: Category) {
+    setEditingCategory(category);
+    setCategoryName(category.name);
+    setCategoryDialogOpen(true);
+  }
+
+  async function handleCategorySubmit() {
+    if (!categoryName.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    setCategorySubmitting(true);
+    try {
+      const url = editingCategory
+        ? `/api/app/admin/product-categories/${editingCategory.id}`
+        : `/api/app/admin/product-categories`;
+      const method = editingCategory ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: categoryName.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to save category");
+      toast.success(editingCategory ? "Category updated" : "Category created");
+      setCategoryDialogOpen(false);
+      loadCategories();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save category");
+    } finally {
+      setCategorySubmitting(false);
+    }
+  }
+
+  async function handleCategoryDelete() {
+    if (!categoryDeleteTarget) return;
+    try {
+      const res = await fetch(
+        `/api/app/admin/product-categories/${categoryDeleteTarget.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "Failed to delete category");
+      toast.success("Category deleted");
+      setCategoryDeleteTarget(null);
+      loadCategories();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete category");
+    }
+  }
+
+  const filteredCategories = categorySearch.trim()
+    ? categories.filter((c) =>
+        c.name.toLowerCase().includes(categorySearch.trim().toLowerCase()),
+      )
+    : categories;
+
+  return (
+    <div className="mx-auto w-full max-w-7xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+            Manage material suppliers and procurement categories from one place.
+          </p>
         </div>
         <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowInactive(!showInactive)}
+          onClick={
+            activeTab === "suppliers" ? openCreateSupplier : openCreateCategory
+          }
         >
-          {showInactive ? "Hide Inactive" : "Show Inactive"}
-        </Button>
-        <Button variant="ghost" size="icon" onClick={load}>
-          <RotateCw className="h-4 w-4" />
+          <Plus className="mr-2 h-4 w-4" />
+          {activeTab === "suppliers" ? "Add Supplier" : "Add Category"}
         </Button>
       </div>
 
-      {/* Table */}
-      <div className="rounded border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Supplier</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead className="text-center">Products</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : suppliers.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  <Truck className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                  No suppliers found
-                </TableCell>
-              </TableRow>
-            ) : (
-              suppliers.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <div className="font-medium">{s.name}</div>
-                    {s.address && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <MapPin className="h-3 w-3" />
-                        {s.address}
-                      </div>
+      <div className="rounded border border-muted/50 bg-card">
+        <div className="flex gap-1 border-b border-border">
+          <button
+            type="button"
+            onClick={() => setActiveTab("suppliers")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "suppliers"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Suppliers
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("categories")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "categories"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Categories
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-5 p-4">
+          {activeTab === "suppliers" ? (
+            <>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search suppliers..."
+                    value={supplierSearch}
+                    onChange={(e) => setSupplierSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                  {supplierSearch && (
+                    <button
+                      onClick={() => setSupplierSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowInactive(!showInactive)}
+                  >
+                    {showInactive ? "Hide Inactive" : "Show Inactive"}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={loadSuppliers}>
+                    <RotateCw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead className="text-center">Parent</TableHead>
+                      <TableHead className="text-center">Products</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {suppliersLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : suppliers.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          <Truck className="mx-auto h-8 w-8 mb-2 opacity-40" />
+                          No suppliers found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      suppliers.map((supplier) => (
+                        <TableRow key={supplier.id}>
+                          <TableCell>
+                            <div className="font-medium">{supplier.name}</div>
+                            {supplier.address && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <MapPin className="h-3 w-3" />
+                                {supplier.address}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5 text-sm">
+                              {supplier.phone && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Phone className="h-3 w-3" /> {supplier.phone}
+                                </div>
+                              )}
+                              {supplier.email && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Mail className="h-3 w-3" /> {supplier.email}
+                                </div>
+                              )}
+                              {!supplier.phone && !supplier.email && (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {supplier.parentSupplier ? (
+                              <Badge variant="secondary">
+                                {supplier.parentSupplier.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">
+                                —
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary">
+                              {supplier._count.products}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={
+                                supplier.isActive ? "default" : "outline"
+                              }
+                            >
+                              {supplier.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditSupplier(supplier)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() =>
+                                  setSupplierDeleteTarget(supplier)
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-0.5 text-sm">
-                      {s.phone && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Phone className="h-3 w-3" /> {s.phone}
-                        </div>
-                      )}
-                      {s.email && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Mail className="h-3 w-3" /> {s.email}
-                        </div>
-                      )}
-                      {!s.phone && !s.email && (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary">{s._count.products}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={s.isActive ? "default" : "outline"}>
-                      {s.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(s)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => setDeleteTarget(s)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search categories..."
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="pl-9"
+                  />
+                  {categorySearch && (
+                    <button
+                      onClick={() => setCategorySearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <Button variant="ghost" size="icon" onClick={loadCategories}>
+                  <RotateCw className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="rounded border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-center">Products</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categoriesLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredCategories.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          <FolderTree className="mx-auto h-8 w-8 mb-2 opacity-40" />
+                          {categorySearch
+                            ? "No categories match your search"
+                            : "No categories yet"}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredCategories.map((category) => (
+                        <TableRow key={category.id}>
+                          <TableCell className="font-medium">
+                            {category.name}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary">
+                              {category._count.procurementProducts}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditCategory(category)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() =>
+                                  setCategoryDeleteTarget(category)
+                                }
+                                disabled={
+                                  category._count.procurementProducts > 0
+                                }
+                                title={
+                                  category._count.procurementProducts > 0
+                                    ? "Cannot delete: category has products"
+                                    : "Delete category"
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={supplierDialogOpen} onOpenChange={setSupplierDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit Supplier" : "Add Supplier"}
+              {editingSupplier ? "Edit Supplier" : "Add Supplier"}
             </DialogTitle>
             <DialogDescription>
-              {editing
+              {editingSupplier
                 ? "Update the supplier details."
                 : "Add a new supplier to the system."}
             </DialogDescription>
@@ -320,16 +607,20 @@ export default function SuppliersPage() {
             <div className="space-y-1">
               <label className="text-sm font-medium">Name *</label>
               <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                value={supplierForm.name}
+                onChange={(e) =>
+                  setSupplierForm({ ...supplierForm, name: e.target.value })
+                }
                 placeholder="Supplier name"
               />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Phone</label>
               <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                value={supplierForm.phone}
+                onChange={(e) =>
+                  setSupplierForm({ ...supplierForm, phone: e.target.value })
+                }
                 placeholder="Phone number"
               />
             </div>
@@ -337,38 +628,129 @@ export default function SuppliersPage() {
               <label className="text-sm font-medium">Email</label>
               <Input
                 type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                value={supplierForm.email}
+                onChange={(e) =>
+                  setSupplierForm({ ...supplierForm, email: e.target.value })
+                }
                 placeholder="Email address"
               />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Address</label>
               <Input
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                value={supplierForm.address}
+                onChange={(e) =>
+                  setSupplierForm({ ...supplierForm, address: e.target.value })
+                }
                 placeholder="Physical address"
               />
             </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Parent Supplier (Optional)
+              </label>
+              <Select
+                value={supplierForm.parentSupplierId}
+                onValueChange={(value) =>
+                  setSupplierForm({ ...supplierForm, parentSupplierId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a parent supplier..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {suppliers
+                    .filter((s) => s.id !== editingSupplier?.id)
+                    .map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setSupplierDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Saving..." : editing ? "Update" : "Create"}
+            <Button
+              onClick={handleSupplierSubmit}
+              disabled={supplierSubmitting}
+            >
+              {supplierSubmitting
+                ? "Saving..."
+                : editingSupplier
+                  ? "Update"
+                  : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingCategory ? "Edit Category" : "Add Category"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingCategory
+                ? "Update the category name."
+                : "Create a new product category."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Name *</label>
+              <Input
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                placeholder="Category name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCategoryDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCategorySubmit}
+              disabled={categorySubmitting}
+            >
+              {categorySubmitting
+                ? "Saving..."
+                : editingCategory
+                  ? "Update"
+                  : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmationDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={!!supplierDeleteTarget}
+        onOpenChange={(open) => !open && setSupplierDeleteTarget(null)}
         title="Delete Supplier"
-        description={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone.`}
-        onConfirm={handleDelete}
+        description={`Are you sure you want to delete "${supplierDeleteTarget?.name}"? This cannot be undone.`}
+        onConfirm={handleSupplierDelete}
+        confirmText="Delete"
+        variant="destructive"
+      />
+
+      <ConfirmationDialog
+        open={!!categoryDeleteTarget}
+        onOpenChange={(open) => !open && setCategoryDeleteTarget(null)}
+        title="Delete Category"
+        description={`Are you sure you want to delete "${categoryDeleteTarget?.name}"? This cannot be undone.`}
+        onConfirm={handleCategoryDelete}
         confirmText="Delete"
         variant="destructive"
       />

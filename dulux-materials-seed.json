@@ -1,0 +1,1046 @@
+[
+  {
+    "name": "WOOD PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE ALKALI RESISTANT PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ECOSURE PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE STEEL PRIMER GREY",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GALVANISED IRON PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RUST SHIELD W/BASE - BLACK",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RUST SHIELD W/BASE - RED OXIDE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RUST SHIELD W/BASE - GREY",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SUPERGRIP PRIMER W/B WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "BERGER NUKOTE WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SMOOTH RIPPLE FINISH - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE 65 WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE 65 - PASTEL7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE 65 - MEDIUM 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE 65 - DEEP 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WALLCLAD WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WALLCLAD BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WALLCLAD BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WALLCLAD BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WALLCLAD BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD ULTRA SMOOTH BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE 100 LOWSHEEN WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE 100 LOWSHEEN - PASTEL 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE100 LOWSHEEN - MEDIUM 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE100 LOWSHEEN - DEEP 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE100 LOWSHEEN - U. DEEP 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ACRYLIC PVA -ALL STD COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ACRYLIC PVA - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ACRYLIC PVA - PATEL - BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ACRYLIC PVA - DEEP - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ACRYLIC PVA - TRANSP - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ACRYLIC PVA - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LUX SILK BRILLIANT WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LUX SILK - PASTEL 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LUX SILK - MEDIUM 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LUX SILK - DEEP 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "LUX SILK - U/DEEP 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASYCARE - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASYCARE - PASTEL - BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASYCARE - MEDIUM - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASYCARE - DEEP - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EASYCARE - ULTRA - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RAINSHIELD (WHITE)",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RAINSHIELD (GREY)",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DAMPSHIELD",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE UNIVERSAL UNDERCOAT",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DULUX GLOSS STD COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DULUX GLOSS ENAMEL - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DULUX GLOSS ENAMEL - BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DULUX GLOSS ENAMEL - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DULUX GLOSS ENAMEL - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DULUX GLOSS ENAMEL - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SOLVENT BASE PEARLGLO WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SOLVENT BASE PEARLGLO - BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SOLVENT BASE PEARLGLO - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SOLVENT BASE PEARLGLO - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SOLVENT BASE PEARLGLO - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERBASE PEARLGLO - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERBASE PEARLGLO - PEBBLE BLACK",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERBASED PEARLGLO - BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERBASED PEARLGLO - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERBASED PEARLGLO - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERBASED PEARLGLO - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PREPAINT SMOOTHOVER INT/EXT 35KG",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD FINE TEXTURED - WHITE & STD COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD FINE TEXTURED -BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD FINE TEXTURED - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATERGUARD FINE TEXTURED - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WEATHERGUARD FINE TEXTURED - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX ROOFGUARD - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX WALLGUARD - BASE 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX WALLGUARD - BASE 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX WALLGUARD - BASE 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DLX WALLGUARD - BASE 6",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WEATHERSHIELD - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WEATHERSHIELD - PASTEL 7",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WEATHERSHIELD - MEDIUM 8",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE WEATHERSHIELD - DEEP 9",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TIMBA PRESERVATIVE CLEAR - ALL COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WG TIMBAVARNISH INT/EXT -Clear & All Colours",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRADE STERISHIELD - DIAMOND MATT WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "STERISHIELD DIAMOND EGGSHELL WHITE",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "STERISHIELD DIAMOND E/SHELL LIGHT TINTED",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "STERISHIELD DIAMOND E/SHELL MEDIUM TINT",
+    "productType": "MATERIAL",
+    "brand": "Dulux",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  }
+]

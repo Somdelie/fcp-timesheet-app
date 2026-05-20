@@ -1,34 +1,31 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   Plus,
-  Search,
-  X,
-  RotateCw,
-  Palette,
-  Pencil,
   Trash2,
-  ChevronUp,
-  ChevronDown,
-  ArrowUpDown,
-  MoreHorizontal,
-  Merge,
+  Edit,
   MoreVertical,
-  Filter,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Upload,
+  Loader2,
+  FileText,
+  Play,
+  Save,
+  AlertTriangle,
+  Palette,
+  ListChecks,
+  FolderOpen,
 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -38,740 +35,1187 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getPaginationRowModel,
-  flexRender,
-  type ColumnDef,
-  type SortingState,
-} from "@tanstack/react-table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsRight,
-} from "lucide-react";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 import type { ColorBaseType } from "@/generated/prisma/client";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                               */
-/* ------------------------------------------------------------------ */
+/* ── Types ────────────────────────────────────────────────────────── */
 
-type ProductColorVariant = {
-  id: string;
-  productId: string;
-  product: {
+type DedupColor = {
+  colorName: string;
+  baseType: ColorBaseType;
+  colorCode: string | null;
+  isTinted: boolean;
+  supplier: { id: string; name: string } | null;
+  products: {
     id: string;
     name: string;
     sku: string | null;
     category: { id: string; name: string } | null;
-  };
-  colorName: string;
-  colorCode: string | null;
-  baseType: ColorBaseType;
-  isTinted: boolean;
-  supplierPrices: {
-    id: string;
-    supplier: { id: string; name: string };
-    price: number;
-    uom: string | null;
-    unitSize: number | null;
   }[];
-  createdAt: string;
-  updatedAt: string;
+  productCount: number;
 };
 
-const BASE_TYPES: { value: ColorBaseType; label: string; color: string }[] = [
-  { value: "DEEP", label: "Deep Base", color: "bg-blue-500" },
-  { value: "PASTEL", label: "Pastel Base", color: "bg-pink-500" },
-  { value: "WHITE", label: "White Base", color: "bg-gray-100" },
-  {
-    value: "CLEAR",
-    label: "Clear Base",
-    color: "bg-transparent border-2 border-gray-300",
+const BASE_TYPE_LABELS: Record<ColorBaseType, string> = {
+  DEEP: "Deep Base",
+  PASTEL: "T/Base Pastel",
+  WHITE: "White Base",
+  CLEAR: "Clear Base",
+  NEUTRAL: "Neutral Base",
+};
+
+const BASE_TYPE_COLORS: Record<ColorBaseType, string> = {
+  DEEP: "bg-blue-100 text-blue-800",
+  PASTEL: "bg-pink-100 text-pink-800",
+  WHITE: "bg-gray-100 text-gray-800",
+  CLEAR: "bg-cyan-100 text-cyan-800",
+  NEUTRAL: "bg-yellow-100 text-yellow-800",
+};
+
+/* ── Local Text Component ────────────────────────────────────────── */
+
+function Text(
+  props: React.HTMLAttributes<HTMLSpanElement> & {
+    children?: React.ReactNode;
   },
-  { value: "NEUTRAL", label: "Neutral Base", color: "bg-yellow-500" },
-];
-
-const ALL_PRODUCTS_VALUE = "__all_products__";
-const ALL_BASE_TYPES_VALUE = "__all_base_types__";
-
-/* ------------------------------------------------------------------ */
-/*  Component                                                           */
-/* ------------------------------------------------------------------ */
-
-export default function ColorVariantsPage() {
-  const [variants, setVariants] = useState<ProductColorVariant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterProduct, setFilterProduct] = useState<string>("");
-  const [filterBaseType, setFilterBaseType] = useState<string>("");
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<ProductColorVariant | null>(null);
-  const [form, setForm] = useState({
-    productId: "",
-    colorName: "",
-    colorCode: "",
-    baseType: "DEEP" as ColorBaseType,
-    isTinted: false,
-  });
-  const [submitting, setSubmitting] = useState(false);
-
-  const [deleteTarget, setDeleteTarget] = useState<ProductColorVariant | null>(
-    null,
+) {
+  const { children, className, ...rest } = props;
+  return (
+    <span className={className} {...rest}>
+      {children}
+    </span>
   );
-  const [mergeTargets, setMergeTargets] = useState<ProductColorVariant[]>([]);
+}
 
-  // Load color variants
-  const loadVariants = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/procurement-products/colors");
-      if (!res.ok) throw new Error("Failed to load color variants");
-      const data = await res.json();
-      setVariants(data);
-    } catch (error) {
-      toast.error("Failed to load color variants");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadVariants();
-  }, [loadVariants]);
-
-  // Filtered variants
-  const filteredVariants = useMemo(() => {
-    return variants.filter((variant) => {
-      const matchesSearch =
-        variant.colorName.toLowerCase().includes(search.toLowerCase()) ||
-        variant.product.name.toLowerCase().includes(search.toLowerCase());
-
-      const matchesProduct =
-        !filterProduct || variant.productId === filterProduct;
-      const matchesBaseType =
-        !filterBaseType || variant.baseType === filterBaseType;
-
-      return matchesSearch && matchesProduct && matchesBaseType;
-    });
-  }, [variants, search, filterProduct, filterBaseType]);
-
-  // Unique products for filter
-  const uniqueProducts = useMemo(() => {
-    const products = variants.map((v) => v.product);
-    return products.filter(
-      (p, i, arr) => arr.findIndex((x) => x.id === p.id) === i,
-    );
-  }, [variants]);
-
-  // Handle create/edit
-  const handleSubmit = async () => {
-    if (!form.productId || !form.colorName.trim()) {
-      toast.error("Product and color name are required");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const url = editing
-        ? `/api/admin/procurement-products/colors/${editing.id}`
-        : "/api/admin/procurement-products/colors";
-
-      const method = editing ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to save color variant");
-      }
-
-      toast.success(
-        editing ? "Color variant updated" : "Color variant created",
-      );
-      setDialogOpen(false);
-      setEditing(null);
-      resetForm();
-      loadVariants();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setForm({
-      productId: "",
-      colorName: "",
-      colorCode: "",
-      baseType: "DEEP",
-      isTinted: false,
-    });
-  };
-
-  const openCreateDialog = () => {
-    resetForm();
-    setEditing(null);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (variant: ProductColorVariant) => {
-    setForm({
-      productId: variant.productId,
-      colorName: variant.colorName,
-      colorCode: variant.colorCode || "",
-      baseType: variant.baseType,
-      isTinted: variant.isTinted,
-    });
-    setEditing(variant);
-    setDialogOpen(true);
-  };
-
-  // Handle delete
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-
-    try {
-      const res = await fetch(
-        `/api/admin/procurement-products/colors/${deleteTarget.id}`,
-        {
-          method: "DELETE",
-        },
-      );
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to delete color variant");
-      }
-
-      toast.success("Color variant deleted");
-      setDeleteTarget(null);
-      loadVariants();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete");
-    }
-  };
-
-  // Handle merge
-  const handleMerge = async () => {
-    if (mergeTargets.length < 2) return;
-
-    try {
-      const res = await fetch("/api/admin/procurement-products/colors/merge", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          variantIds: mergeTargets.map((v) => v.id),
-          targetId: mergeTargets[0].id, // Merge into first one
-        }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to merge color variants");
-      }
-
-      toast.success(`${mergeTargets.length} color variants merged`);
-      setMergeTargets([]);
-      loadVariants();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to merge");
-    }
-  };
-
-  // Table columns
-  const columns: ColumnDef<ProductColorVariant>[] = [
-    {
-      accessorKey: "colorName",
-      header: ({ column }) => {
-        const s = column.getIsSorted();
-        return (
-          <button
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-            onClick={() => column.toggleSorting(s === "asc")}
-          >
-            Color Name
-            {s === "asc" ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : s === "desc" ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
-        );
-      },
-      cell: ({ row }) => {
-        const variant = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-4 h-4 rounded-full border ${BASE_TYPES.find((bt) => bt.value === variant.baseType)?.color || "bg-gray-400"}`}
-            />
-            <div>
-              <div className="font-medium">{variant.colorName}</div>
-              {variant.colorCode && (
-                <div className="text-xs text-muted-foreground">
-                  {variant.colorCode}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "product.name",
-      header: "Product",
-      cell: ({ row }) => {
-        const variant = row.original;
-        return (
-          <div>
-            <div className="font-medium">{variant.product.name}</div>
-            {variant.product.sku && (
-              <div className="text-xs text-muted-foreground">
-                SKU: {variant.product.sku}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "baseType",
-      header: "Base Type",
-      cell: ({ row }) => {
-        const baseType = BASE_TYPES.find(
-          (bt) => bt.value === row.original.baseType,
-        );
-        return (
-          <Badge variant="outline" className="capitalize">
-            {baseType?.label || row.original.baseType}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: "tinted",
-      header: "Type",
-      cell: ({ row }) => (
-        <Badge variant={row.original.isTinted ? "default" : "secondary"}>
-          {row.original.isTinted ? "Tinted" : "Base"}
-        </Badge>
-      ),
-    },
-    {
-      id: "prices",
-      header: "Supplier Prices",
-      cell: ({ row }) => {
-        const prices = row.original.supplierPrices;
-        if (!prices.length)
-          return <span className="text-muted-foreground">—</span>;
-
-        return (
-          <div className="text-sm">
-            {prices.slice(0, 2).map((price) => (
-              <div key={price.id} className="flex items-center gap-1">
-                <span className="font-medium">R{price.price.toFixed(2)}</span>
-                <span className="text-muted-foreground">
-                  {price.supplier.name}
-                </span>
-              </div>
-            ))}
-            {prices.length > 2 && (
-              <div className="text-xs text-muted-foreground">
-                +{prices.length - 2} more
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      id: "actions",
-      size: 60,
-      cell: ({ row }) => {
-        const variant = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openEditDialog(variant)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() =>
-                  setMergeTargets((prev) =>
-                    prev.find((v) => v.id === variant.id)
-                      ? prev.filter((v) => v.id !== variant.id)
-                      : [...prev, variant],
-                  )
-                }
-                className={
-                  mergeTargets.find((v) => v.id === variant.id)
-                    ? "bg-blue-50"
-                    : ""
-                }
-              >
-                <Merge className="mr-2 h-4 w-4" />
-                {mergeTargets.find((v) => v.id === variant.id)
-                  ? "Unselect for merge"
-                  : "Select for merge"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setDeleteTarget(variant)}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
-  const table = useReactTable({
-    data: filteredVariants,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize: 20 },
-    },
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RotateCw className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+function ColorSwatch({ colorCode }: { colorCode: string | null }) {
+  const backgroundColor = colorCode || "transparent";
 
   return (
-    <div className="space-y-6">
+    <span
+      className="h-5 w-5 shrink-0 rounded border border-border bg-muted"
+      style={{ backgroundColor }}
+    />
+  );
+}
+
+/* ── Page wrapper with tabs ─────────────────────────────────────── */
+
+export default function PaintColorsAdminPage() {
+  return (
+    <div className="flex flex-col h-full p-6 bg-background">
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="mb-4 rounded border bg-muted/40 p-1">
+          <TabsTrigger value="list" className="rounded">
+            <ListChecks className="mr-2 h-4 w-4" />
+            Colour List
+          </TabsTrigger>
+          <TabsTrigger value="seed" className="rounded">
+            <Upload className="mr-2 h-4 w-4" />
+            Seed from PDFs
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="list">
+          <PaintColorsListTab />
+        </TabsContent>
+        <TabsContent value="seed">
+          <SeedFromPdfsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+/* ── List tab ────────────────────────────────────────────────────── */
+
+function PaintColorsListTab() {
+  const [colors, setColors] = useState<DedupColor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+
+  // Fetch deduplicated colors
+  useEffect(() => {
+    const fetchColors = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/admin/procurement-products/colors/dedup");
+        if (!res.ok) throw new Error("Failed to fetch colors");
+        const data = await res.json();
+        setColors(data || []);
+      } catch (error) {
+        console.error("Error fetching colors:", error);
+        toast.error("Failed to load colors");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchColors();
+  }, []);
+
+  // Filter colors by search
+  const filtered = colors.filter((c) => {
+    const searchLower = search.toLowerCase();
+    return (
+      c.colorName.toLowerCase().includes(searchLower) ||
+      (c.colorCode && c.colorCode.toLowerCase().includes(searchLower)) ||
+      c.baseType.toLowerCase().includes(searchLower) ||
+      (c.supplier?.name && c.supplier.name.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filtered.length / pagination.pageSize),
+  );
+  const currentPageIndex = Math.min(pagination.pageIndex, pageCount - 1);
+  const pageStart = currentPageIndex * pagination.pageSize;
+  const pageEnd = Math.min(pageStart + pagination.pageSize, filtered.length);
+  const paginatedColors = filtered.slice(pageStart, pageEnd);
+
+  // Delete color (all variants with this colorName + baseType)
+  const handleDelete = async (colorName: string, baseType: ColorBaseType) => {
+    if (deleting) return;
+    if (!confirm(`Delete color "${colorName}" (${baseType})?`)) return;
+
+    try {
+      setDeleting(`${colorName}||${baseType}`);
+      const res = await fetch(
+        `/api/admin/procurement-products/colors?colorName=${encodeURIComponent(colorName)}&baseType=${encodeURIComponent(baseType)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error("Failed to delete color");
+      setColors(
+        colors.filter(
+          (c) => !(c.colorName === colorName && c.baseType === baseType),
+        ),
+      );
+      toast.success(`Deleted "${colorName}"`);
+    } catch (error) {
+      console.error("Error deleting color:", error);
+      toast.error("Failed to delete color");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Color Variants</h1>
-          <p className="text-muted-foreground">
-            Manage color variants for procurement products
+          <h1 className="text-3xl font-bold text-foreground">
+            <Text>Paint Colors</Text>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            <Text>Manage available paint colors and bases</Text>
           </p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Variant
-        </Button>
+        <Link href="/admin/paints-colors/create">
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            <Text>New Color</Text>
+          </Button>
+        </Link>
       </div>
 
-      {/* Merge banner */}
-      {mergeTargets.length > 1 && (
-        <div className="flex items-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <Merge className="h-5 w-5 text-blue-600" />
-          <span className="text-sm font-medium">
-            {mergeTargets.length} variants selected for merge
-          </span>
-          <Button size="sm" onClick={handleMerge} className="ml-auto">
-            Merge Selected
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setMergeTargets([])}
-          >
-            Cancel
-          </Button>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search colors or products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-        <Select
-          value={filterProduct || ALL_PRODUCTS_VALUE}
-          onValueChange={(value) =>
-            setFilterProduct(value === ALL_PRODUCTS_VALUE ? "" : value)
-          }
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="All Products" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_PRODUCTS_VALUE}>All Products</SelectItem>
-            {uniqueProducts.map((product) => (
-              <SelectItem key={product.id} value={product.id}>
-                {product.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filterBaseType || ALL_BASE_TYPES_VALUE}
-          onValueChange={(value) =>
-            setFilterBaseType(value === ALL_BASE_TYPES_VALUE ? "" : value)
-          }
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="All Base Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_BASE_TYPES_VALUE}>All Base Types</SelectItem>
-            {BASE_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Search */}
+      <div className="flex gap-3">
+        <Input
+          placeholder="Search by color name, code, base, or supplier..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+          className="max-w-md"
+        />
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No color variants found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Showing{" "}
-          {table.getState().pagination.pageIndex *
-            table.getState().pagination.pageSize +
-            1}{" "}
-          to{" "}
-          {Math.min(
-            (table.getState().pagination.pageIndex + 1) *
-              table.getState().pagination.pageSize,
-            filteredVariants.length,
-          )}{" "}
-          of {filteredVariants.length} variants
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editing ? "Edit Color Variant" : "Create Color Variant"}
-            </DialogTitle>
-            <DialogDescription>
-              {editing
-                ? "Update the color variant details"
-                : "Add a new color variant to a procurement product"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Product</label>
-              <Select
-                value={form.productId}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, productId: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {uniqueProducts.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Color Name</label>
-              <Input
-                value={form.colorName}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, colorName: e.target.value }))
-                }
-                placeholder="e.g. Offshore 50, White, Deep Base"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">
-                Color Code (Optional)
-              </label>
-              <Input
-                value={form.colorCode}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, colorCode: e.target.value }))
-                }
-                placeholder="e.g. #FFFFFF, BS123"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Base Type</label>
-              <Select
-                value={form.baseType}
-                onValueChange={(value: ColorBaseType) =>
-                  setForm((prev) => ({ ...prev, baseType: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BASE_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isTinted"
-                checked={form.isTinted}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, isTinted: e.target.checked }))
-                }
-              />
-              <label htmlFor="isTinted" className="text-sm font-medium">
-                Is Tinted Color
-              </label>
-            </div>
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Text>Loading colors...</Text>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Text>
+              {search ? "No colors match your search" : "No colors created yet"}
+            </Text>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-8 border-b border-r border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Text>Color</Text>
+                    </TableHead>
+                    <TableHead className="h-8 border-b border-r border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Text>Base</Text>
+                    </TableHead>
+                    <TableHead className="h-8 border-b border-r border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Text>Supplier</Text>
+                    </TableHead>
+                    <TableHead className="h-8 border-b border-border px-3 py-1 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Text>Actions</Text>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedColors.map((color) => {
+                    const key = `${color.colorName}||${color.baseType}`;
+                    const isDeleting = deleting === key;
+                    return (
+                      <TableRow
+                        key={key}
+                        className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/35"
+                      >
+                        {/* Color Name */}
+                        <TableCell className="border-r border-border px-3 py-1.5 align-middle">
+                          <div className="flex items-center gap-2">
+                            <ColorSwatch colorCode={color.colorCode} />
+                            <Text className="font-medium text-foreground">
+                              {color.colorName.toUpperCase()}
+                            </Text>
+                            {color.isTinted && (
+                              <Badge
+                                variant="secondary"
+                                className="h-5 text-[10px]"
+                              >
+                                <Text>Tinted</Text>
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (
-                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {editing ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                        {/* Base Type */}
+                        <TableCell className="border-r border-border px-3 py-1.5 align-middle">
+                          <Badge
+                            className={`${BASE_TYPE_COLORS[color.baseType]} font-medium`}
+                          >
+                            <Text>{BASE_TYPE_LABELS[color.baseType]}</Text>
+                          </Badge>
+                        </TableCell>
 
-      {/* Delete Confirmation */}
-      <ConfirmationDialog
-        open={!!deleteTarget}
-        onOpenChange={() => setDeleteTarget(null)}
-        title="Delete Color Variant"
-        description={`Are you sure you want to delete the "${deleteTarget?.colorName}" variant? This action cannot be undone.`}
-        onConfirm={handleDelete}
-      />
+                        {/* Supplier */}
+                        <TableCell className="border-r border-border px-3 py-1.5 align-middle">
+                          <Text className="text-foreground">
+                            {color.supplier?.name || "—"}
+                          </Text>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell className="px-3 py-1.5 text-right align-middle">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                disabled={isDeleting}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">
+                                  <Text>Open menu</Text>
+                                </span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={`/admin/paints-colors/${encodeURIComponent(key)}`}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  <Text>Edit</Text>
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleDelete(color.colorName, color.baseType)
+                                }
+                                disabled={isDeleting}
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Text>
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </Text>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-3">
+              <div className="hidden text-sm text-muted-foreground lg:flex">
+                <Text>
+                  Showing {filtered.length === 0 ? 0 : pageStart + 1} to{" "}
+                  {pageEnd} of {filtered.length} colors
+                </Text>
+              </div>
+              <div className="flex items-center gap-6 lg:gap-8">
+                <div className="hidden items-center gap-2 lg:flex">
+                  <span className="text-sm font-medium">
+                    <Text>Rows per page</Text>
+                  </span>
+                  <Select
+                    value={String(pagination.pageSize)}
+                    onValueChange={(value) => {
+                      setPagination({ pageIndex: 0, pageSize: Number(value) });
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-20">
+                      <SelectValue placeholder={pagination.pageSize} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                      {[5, 10, 25, 50, 100].map((pageSize) => (
+                        <SelectItem key={pageSize} value={String(pageSize)}>
+                          {pageSize}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex w-fit items-center justify-center text-sm font-medium">
+                  <Text>
+                    Page {currentPageIndex + 1} of {pageCount}
+                  </Text>
+                </div>
+                <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="hidden h-8 w-8 lg:flex"
+                    onClick={() =>
+                      setPagination((p) => ({ ...p, pageIndex: 0 }))
+                    }
+                    disabled={currentPageIndex === 0}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() =>
+                      setPagination((p) => ({
+                        ...p,
+                        pageIndex: Math.max(0, currentPageIndex - 1),
+                      }))
+                    }
+                    disabled={currentPageIndex === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() =>
+                      setPagination((p) => ({
+                        ...p,
+                        pageIndex: Math.min(
+                          pageCount - 1,
+                          currentPageIndex + 1,
+                        ),
+                      }))
+                    }
+                    disabled={currentPageIndex >= pageCount - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="hidden h-8 w-8 lg:flex"
+                    onClick={() =>
+                      setPagination((p) => ({
+                        ...p,
+                        pageIndex: pageCount - 1,
+                      }))
+                    }
+                    disabled={currentPageIndex >= pageCount - 1}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Seed from PDFs tab ──────────────────────────────────────────── */
+
+type PendingFile = { id: string; file: File };
+
+type ParsedColorPreview = {
+  colorName: string;
+  baseType: ColorBaseType;
+  colorCode: string | null;
+  isTinted: boolean;
+  suppliers: string[];
+  sourceCount: number;
+  examples: string[];
+};
+
+type ParsedSupplierPreview = {
+  normalisedName: string;
+  rawNames: string[];
+  vendorCode: string | null;
+};
+
+type ParsedPricePreview = {
+  brand: "PLASCON" | "DULUX";
+  productCode: string | null;
+  productLabel: string;
+  baseType: ColorBaseType;
+  unitSizeL: number | null;
+  priceZar: number | null;
+  sourceFile: string;
+};
+
+type ParseResponse = {
+  action: "parse";
+  summary: {
+    orderPdfs: number;
+    priceListPdfs: number;
+    extractedColors: number;
+    uniqueColors: number;
+    suppliersDetected: number;
+    priceRows: number;
+    parseFailures: number;
+  };
+  colors: ParsedColorPreview[];
+  suppliers: ParsedSupplierPreview[];
+  prices: ParsedPricePreview[];
+  parseFailures: { fileName: string; reason: string }[];
+};
+
+type ImportResponse = {
+  action: "import";
+  summary: {
+    orderPdfs: number;
+    priceListPdfs: number;
+    uniqueColors: number;
+    variantsCreated: number;
+    variantsSkipped: number;
+    suppliersTouched: number;
+    orderPriceLinksCreated: number;
+    priceListRows: number;
+    priceListImported: number;
+    priceListUnmatched: number;
+    priceListDuplicateMatches?: number;
+    parseFailures: number;
+  };
+  createdVariants: { colorName: string; baseType: ColorBaseType; id: string }[];
+  skippedVariants: { colorName: string; baseType: ColorBaseType; reason: string }[];
+  parseFailures: { fileName: string; reason: string }[];
+  unmatchedPriceLabels: string[];
+};
+
+type ImportProgress = {
+  done: number;
+  total: number;
+  phase: string;
+  message: string;
+  log: string[];
+};
+
+function SeedFromPdfsTab() {
+  const orderInputRef = useRef<HTMLInputElement | null>(null);
+  const priceInputRef = useRef<HTMLInputElement | null>(null);
+  const [orderFiles, setOrderFiles] = useState<PendingFile[]>([]);
+  const [priceFiles, setPriceFiles] = useState<PendingFile[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [busy, setBusy] = useState<"" | "parsing" | "importing">("");
+  const [preview, setPreview] = useState<ParseResponse | null>(null);
+  const [importResult, setImportResult] = useState<ImportResponse | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
+
+  function addOrderFiles(list: FileList | File[]) {
+    const accepted = Array.from(list).filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    setOrderFiles((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      const merged = [...prev];
+      for (const f of accepted) {
+        const id = `${f.name}-${f.size}-${f.lastModified}`;
+        if (!seen.has(id)) merged.push({ id, file: f });
+      }
+      return merged;
+    });
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  function addPriceFiles(list: FileList | File[]) {
+    const accepted = Array.from(list).filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    setPriceFiles((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      const merged = [...prev];
+      for (const f of accepted) {
+        const id = `${f.name}-${f.size}-${f.lastModified}`;
+        if (!seen.has(id)) merged.push({ id, file: f });
+      }
+      return merged;
+    });
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  function removeOrderFile(id: string) {
+    setOrderFiles((prev) => prev.filter((f) => f.id !== id));
+    setPreview(null);
+    setImportResult(null);
+  }
+  function removePriceFile(id: string) {
+    setPriceFiles((prev) => prev.filter((f) => f.id !== id));
+    setPreview(null);
+    setImportResult(null);
+  }
+  function clearAll() {
+    setOrderFiles([]);
+    setPriceFiles([]);
+    setPreview(null);
+    setImportResult(null);
+  }
+
+  async function callApi(action: "parse" | "import") {
+    if (!orderFiles.length && !priceFiles.length) {
+      toast.error("Add at least one PDF first");
+      return;
+    }
+    if (action === "import" && !preview) {
+      toast.error("Run Parse before Save");
+      return;
+    }
+    setBusy(action === "parse" ? "parsing" : "importing");
+    if (action === "import") {
+      setProgress({ done: 0, total: 0, phase: "starting", message: "Starting…", log: [] });
+      setImportResult(null);
+    }
+    try {
+      const fd = new FormData();
+      fd.append("action", action);
+      for (const f of orderFiles) fd.append("pdfs", f.file, f.file.name);
+      for (const f of priceFiles) fd.append("priceList", f.file, f.file.name);
+
+      const res = await fetch("/api/admin/paints-colors/seed-from-pdfs", {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any).error ?? "Request failed");
+      }
+
+      if (action === "parse") {
+        const data = await res.json();
+        setPreview(data as ParseResponse);
+        setImportResult(null);
+        toast.success(
+          `Parsed ${data.summary.uniqueColors} unique colours from ${data.summary.orderPdfs} PDF(s)`,
+        );
+      } else {
+        // Stream NDJSON progress events
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const logLines: string[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop()!;
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let event: any;
+            try {
+              event = JSON.parse(line);
+            } catch {
+              continue;
+            }
+            if (event.type === "start") {
+              setProgress({
+                done: 0,
+                total: event.total,
+                phase: "starting",
+                message: `Total ${event.total} steps`,
+                log: [],
+              });
+            } else if (event.type === "progress") {
+              const logEntry = `[${event.phase}] ${event.message}`;
+              logLines.push(logEntry);
+              if (logLines.length > 200) logLines.shift();
+              setProgress({
+                done: event.done,
+                total: event.total,
+                phase: event.phase,
+                message: event.message,
+                log: [...logLines],
+              });
+            } else if (event.type === "done") {
+              setImportResult(event as ImportResponse);
+              toast.success(
+                `Saved ${event.summary.variantsCreated} new colour variants`,
+              );
+            } else if (event.type === "error") {
+              throw new Error(event.error);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            <Text>Seed Colours from PDFs</Text>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            <Text>
+              Drop BuildSmart order PDFs to extract colour names, codes and
+              bases. Optionally include a Plascon/Dulux price list to seed
+              supplier prices.
+            </Text>
+          </p>
+        </div>
+        <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+          <Text>PDF batch import</Text>
+        </Badge>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Order PDFs</CardTitle>
+            <CardDescription>
+              Each PO line is scanned for "T/Base &lt;Base&gt; - &lt;Colour&gt;
+              &lt;Code&gt;" patterns. Supplier comes from the PDF vendor.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                if (e.dataTransfer.files?.length)
+                  addOrderFiles(e.dataTransfer.files);
+              }}
+              className={cn(
+                "rounded border-2 border-dashed p-6 text-center transition",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+              )}
+            >
+              <Upload className="mx-auto h-7 w-7 text-muted-foreground" />
+              <p className="mt-2 text-sm font-medium">
+                Drop ORDER xxxxx.pdf files here
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Or pick them from your computer.
+              </p>
+              <div className="mt-3 flex justify-center gap-2">
+                <Button
+                  onClick={() => orderInputRef.current?.click()}
+                  size="sm"
+                  className="rounded"
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Choose Order PDFs
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAll}
+                  disabled={!orderFiles.length && !priceFiles.length}
+                  className="rounded"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All
+                </Button>
+              </div>
+              <input
+                ref={orderInputRef}
+                type="file"
+                multiple
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) addOrderFiles(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </div>
+
+            <ScrollArea className="h-48 rounded border bg-muted/10 p-2">
+              {orderFiles.length === 0 ? (
+                <div className="p-4 text-center text-xs text-muted-foreground">
+                  No order PDFs queued.
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {orderFiles.map((f) => (
+                    <li
+                      key={f.id}
+                      className="flex items-center justify-between gap-2 rounded border bg-card px-2 py-1.5"
+                    >
+                      <span className="flex items-center gap-2 truncate text-sm">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="truncate">{f.file.name}</span>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeOrderFile(f.id)}
+                        className="h-6 w-6"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Price List PDF (optional)</CardTitle>
+            <CardDescription>
+              Used to also seed Plascon/Dulux supplier prices for known
+              products.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              variant="outline"
+              onClick={() => priceInputRef.current?.click()}
+              size="sm"
+              className="w-full rounded"
+            >
+              <FolderOpen className="mr-2 h-4 w-4" />
+              Choose Price List PDF(s)
+            </Button>
+            <input
+              ref={priceInputRef}
+              type="file"
+              multiple
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) addPriceFiles(e.target.files);
+                e.currentTarget.value = "";
+              }}
+            />
+            <ScrollArea className="h-40 rounded border bg-muted/10 p-2">
+              {priceFiles.length === 0 ? (
+                <div className="p-4 text-center text-xs text-muted-foreground">
+                  No price list selected.
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {priceFiles.map((f) => (
+                    <li
+                      key={f.id}
+                      className="flex items-center justify-between gap-2 rounded border bg-card px-2 py-1.5"
+                    >
+                      <span className="flex items-center gap-2 truncate text-sm">
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="truncate">{f.file.name}</span>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removePriceFile(f.id)}
+                        className="h-6 w-6"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <Button
+          onClick={() => callApi("parse")}
+          disabled={
+            !!busy || (!orderFiles.length && !priceFiles.length)
+          }
+          className="rounded"
+        >
+          {busy === "parsing" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-4 w-4" />
+          )}
+          {busy === "parsing" ? "Parsing..." : "Parse & Preview"}
+        </Button>
+        <Button
+          variant="default"
+          onClick={() => callApi("import")}
+          disabled={!preview || !!busy}
+          className="rounded"
+        >
+          {busy === "importing" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {busy === "importing" ? "Saving..." : "Save to Database"}
+        </Button>
+      </div>
+
+      {busy === "importing" && progress && (
+        <ImportProgressPanel progress={progress} />
+      )}
+
+      {preview && !importResult && busy !== "importing" && (
+        <PreviewPanel preview={preview} />
+      )}
+
+      {importResult && <ImportResultPanel result={importResult} />}
+    </div>
+  );
+}
+
+function ImportProgressPanel({ progress }: { progress: ImportProgress }) {
+  const pct =
+    progress.total > 0
+      ? Math.min(100, Math.round((progress.done / progress.total) * 100))
+      : 0;
+  return (
+    <Card className="rounded border shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Saving to database…
+        </CardTitle>
+        <CardDescription>
+          {progress.done} / {progress.total} steps · {pct}%{" "}
+          {progress.phase ? `· ${progress.phase}` : ""}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="h-2 w-full overflow-hidden rounded bg-muted">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="text-xs text-muted-foreground truncate">
+          {progress.message}
+        </div>
+        <ScrollArea className="h-48 rounded border bg-muted/10 p-2">
+          <ul className="space-y-0.5 text-[11px] font-mono leading-tight">
+            {progress.log.slice(-200).map((line, i) => (
+              <li key={i} className="truncate">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PreviewPanel({ preview }: { preview: ParseResponse }) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <Card className="rounded border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Palette className="h-4 w-4" /> Detected Colours
+            <Badge variant="secondary" className="rounded-full text-xs">
+              {preview.summary.uniqueColors}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Deduplicated by colour + base. Each row will become a
+            ProductColorVariant under the shared "Paint Tint Catalogue"
+            placeholder.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-96 rounded border bg-muted/10">
+            <Table>
+              <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur">
+                <TableRow>
+                  <TableHead className="px-3 py-1.5 text-xs">Colour</TableHead>
+                  <TableHead className="px-3 py-1.5 text-xs">Base</TableHead>
+                  <TableHead className="px-3 py-1.5 text-xs">Code</TableHead>
+                  <TableHead className="px-3 py-1.5 text-xs">Suppliers</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {preview.colors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-xs py-6">
+                      No colours detected.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  preview.colors.map((c) => (
+                    <TableRow key={`${c.colorName}|${c.baseType}`}>
+                      <TableCell className="px-3 py-1.5 text-sm font-medium">
+                        {c.colorName}
+                        {c.isTinted && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 h-4 text-[10px]"
+                          >
+                            Tinted
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-3 py-1.5">
+                        <Badge
+                          className={`${BASE_TYPE_COLORS[c.baseType]} font-medium`}
+                        >
+                          {BASE_TYPE_LABELS[c.baseType]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs text-muted-foreground">
+                        {c.colorCode ?? "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs">
+                        {c.suppliers.join(", ") || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Suppliers & Prices</CardTitle>
+          <CardDescription>
+            Suppliers will be auto-created if missing. Price-list rows are
+            matched to existing procurement products where possible.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Stat label="Order PDFs" value={preview.summary.orderPdfs} />
+            <Stat label="Price PDFs" value={preview.summary.priceListPdfs} />
+            <Stat
+              label="Suppliers detected"
+              value={preview.summary.suppliersDetected}
+            />
+            <Stat label="Price rows" value={preview.summary.priceRows} />
+            <Stat
+              label="Parse failures"
+              value={preview.summary.parseFailures}
+            />
+          </div>
+          <div>
+            <div className="text-sm font-medium mb-2">Suppliers</div>
+            <ScrollArea className="h-32 rounded border bg-muted/10 p-2">
+              {preview.suppliers.length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  No suppliers detected.
+                </div>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {preview.suppliers.map((s) => (
+                    <li key={s.normalisedName}>
+                      <span className="font-medium">{s.normalisedName}</span>
+                      {s.vendorCode && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({s.vendorCode})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </ScrollArea>
+          </div>
+          {preview.prices.length > 0 && (
+            <div>
+              <div className="text-sm font-medium mb-2">
+                Price rows (preview)
+              </div>
+              <ScrollArea className="h-40 rounded border bg-muted/10 p-2">
+                <ul className="space-y-1 text-xs">
+                  {preview.prices.slice(0, 50).map((p, i) => (
+                    <li key={i} className="truncate">
+                      <Badge variant="outline" className="mr-2 text-[10px]">
+                        {p.brand}
+                      </Badge>
+                      <span className="font-medium">
+                        {p.productCode ?? p.productLabel}
+                      </span>{" "}
+                      — {BASE_TYPE_LABELS[p.baseType]}{" "}
+                      {p.unitSizeL ? `${p.unitSizeL}L` : ""} :{" "}
+                      {p.priceZar != null ? `R ${p.priceZar.toFixed(2)}` : "—"}
+                    </li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            </div>
+          )}
+          {preview.parseFailures.length > 0 && (
+            <div>
+              <div className="text-sm font-medium mb-2 flex items-center gap-1 text-amber-700">
+                <AlertTriangle className="h-3.5 w-3.5" /> Failures
+              </div>
+              <ul className="space-y-1 text-xs text-amber-700">
+                {preview.parseFailures.map((f) => (
+                  <li key={f.fileName}>
+                    {f.fileName}: {f.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ImportResultPanel({ result }: { result: ImportResponse }) {
+  return (
+    <Card className="rounded border shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg">Import Result</CardTitle>
+        <CardDescription>
+          {result.summary.variantsCreated} new colour variants created,{" "}
+          {result.summary.variantsSkipped} already existed.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
+          <Stat label="Colours created" value={result.summary.variantsCreated} />
+          <Stat label="Colours skipped" value={result.summary.variantsSkipped} />
+          <Stat
+            label="Suppliers touched"
+            value={result.summary.suppliersTouched}
+          />
+          <Stat
+            label="Order price links"
+            value={result.summary.orderPriceLinksCreated}
+          />
+          <Stat
+            label="Price-list imported"
+            value={result.summary.priceListImported}
+          />
+          <Stat
+            label="Price-list unmatched"
+            value={result.summary.priceListUnmatched}
+          />
+        </div>
+        {result.unmatchedPriceLabels.length > 0 && (
+          <div>
+            <div className="text-sm font-medium mb-2">
+              Unmatched price-list rows
+            </div>
+            <ScrollArea className="h-32 rounded border bg-muted/10 p-2">
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {result.unmatchedPriceLabels.map((l, i) => (
+                  <li key={i}>{l}</li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </div>
+        )}
+        {result.parseFailures.length > 0 && (
+          <div>
+            <div className="text-sm font-medium mb-2 flex items-center gap-1 text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5" /> Failures
+            </div>
+            <ul className="space-y-1 text-xs text-amber-700">
+              {result.parseFailures.map((f) => (
+                <li key={f.fileName}>
+                  {f.fileName}: {f.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded border bg-muted/20 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="text-lg font-semibold">{value}</div>
     </div>
   );
 }

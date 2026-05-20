@@ -69,6 +69,7 @@ export async function GET(req: Request) {
     const productType = url.searchParams.get(
       "productType",
     ) as ProductType | null;
+    const productTypeRaw = url.searchParams.get("productType");
     const includeInactive = url.searchParams.get("includeInactive") === "true";
     const debugConsole = url.searchParams.get("debugConsole") === "true";
 
@@ -99,7 +100,94 @@ export async function GET(req: Request) {
     if (supplierId) where.supplierId = supplierId;
     if (productType) where.productType = productType;
 
-    const [total, products] = await Promise.all([
+    const materialsOnly =
+      url.searchParams.get("materialsOnly") === "true" ||
+      productTypeRaw === "MATERIAL";
+
+    if (materialsOnly) {
+      const matWhere: any = {};
+      if (!includeInactive) matWhere.isActive = true;
+      if (q) matWhere.name = { contains: q, mode: "insensitive" };
+      if (supplierId) matWhere.supplierId = supplierId;
+
+      const [totalCount, materials] = await Promise.all([
+        prisma.material.count({ where: matWhere }),
+        prisma.material.findMany({
+          where: matWhere,
+          orderBy: { name: "asc" },
+          skip,
+          take: limit,
+          include: {
+            supplier: { select: { id: true, name: true } },
+            prices: {
+              where: { isActive: true },
+              select: {
+                id: true,
+                price: true,
+                uom: true,
+                unitSize: true,
+                supplierId: true,
+                supplier: { select: { id: true, name: true } },
+              },
+            },
+          },
+        }),
+      ]);
+
+      const mapped = materials.map((m: any) => {
+        const sizes = (m.prices ?? [])
+          .map((p: any) => {
+            if (p.unitSize != null && p.uom) return `${p.unitSize}${p.uom}`;
+            return null;
+          })
+          .filter(Boolean) as string[];
+        return {
+          id: m.id,
+          name: m.name,
+          sku: null,
+          description: null,
+          thumbnailUrl: null,
+          isActive: m.isActive,
+          productType: "MATERIAL",
+          isReturnable: m.isReturnable,
+          isDeductible: true,
+          deductionSplits: 1,
+          colors: m.colors ?? [],
+          sizes: Array.from(new Set(sizes)),
+          stockQty: m.stockQty ?? 0,
+          variantStocks: [],
+          category: null,
+          supplier: m.supplier ?? null,
+          supplierPrices: (m.prices ?? []).map((sp: any) => ({
+            id: sp.id,
+            price: decimalToNumber(sp.price),
+            uom: sp.uom,
+            unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
+            supplierId: sp.supplierId,
+            supplier: sp.supplier,
+            isActive: true,
+          })),
+          _count: { orderItems: 0, supplierPrices: (m.prices ?? []).length },
+        };
+      });
+
+      const hasMore = skip + mapped.length < totalCount;
+
+      return NextResponse.json(
+        {
+          ok: true,
+          data: mapped.map((p) => ({ ...serialise(p), deployedQty: 0 })),
+          page,
+          limit,
+          total: totalCount,
+          hasMore,
+        },
+        { headers: CORS },
+      );
+    }
+
+    // fetch procurementProduct rows
+    const [ppTotal, ppProducts] = await Promise.all([
       prisma.procurementProduct.count({ where }),
       prisma.procurementProduct.findMany({
         where,
@@ -134,9 +222,87 @@ export async function GET(req: Request) {
       }),
     ]);
 
+    // If requesting MATERIALs, also fetch from the Material table and merge
+    let products: any[] = ppProducts;
+    let total = ppTotal;
+
+    if (!productType || productTypeRaw === "MATERIAL") {
+      // build material where clause similar to procurementProduct
+      const matWhere: any = {};
+      if (!includeInactive) matWhere.isActive = true;
+      if (q) matWhere.name = { contains: q, mode: "insensitive" };
+      if (supplierId) matWhere.supplierId = supplierId;
+
+      const materials = await prisma.material.findMany({
+        where: matWhere,
+        include: {
+          supplier: { select: { id: true, name: true } },
+          prices: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              price: true,
+              uom: true,
+              unitSize: true,
+              supplierId: true,
+              supplier: { select: { id: true, name: true } },
+            },
+          },
+        },
+      });
+
+      // map materials to procurement product shape
+      const mapped = materials.map((m: any) => {
+        const sizes = (m.prices ?? [])
+          .map((p: any) => {
+            if (p.unitSize != null && p.uom) return `${p.unitSize}${p.uom}`;
+            return null;
+          })
+          .filter(Boolean) as string[];
+        return {
+          id: m.id,
+          name: m.name,
+          sku: null,
+          description: null,
+          thumbnailUrl: null,
+          isActive: m.isActive,
+          productType: "MATERIAL",
+          isReturnable: m.isReturnable,
+          isDeductible: true,
+          deductionSplits: 1,
+          colors: m.colors ?? [],
+          sizes: Array.from(new Set(sizes)),
+          stockQty: m.stockQty ?? 0,
+          variantStocks: [],
+          category: null,
+          supplier: m.supplier ?? null,
+          supplierPrices: (m.prices ?? []).map((sp: any) => ({
+            id: sp.id,
+            price: decimalToNumber(sp.price),
+            uom: sp.uom,
+            unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
+            supplierId: sp.supplierId,
+            supplier: sp.supplier,
+            isActive: true,
+          })),
+          _count: { orderItems: 0, supplierPrices: (m.prices ?? []).length },
+        };
+      });
+
+      // merge and sort by name
+      products = [...products, ...mapped].sort((a, b) =>
+        String(a.name).localeCompare(String(b.name)),
+      );
+      total = products.length;
+
+      // apply pagination slice
+      const paged = products.slice(skip, skip + limit);
+      products = paged;
+    }
+
     const hasMore = skip + products.length < total;
 
-    if (debugConsole && (!productType || productType === "MATERIAL")) {
+    if (debugConsole && (!productType || productTypeRaw === "MATERIAL")) {
       console.log(
         "SERVER DEBUG: procurement-material-products",
         JSON.stringify(
@@ -145,7 +311,7 @@ export async function GET(req: Request) {
             name: p.name,
             sku: p.sku,
             supplier: p.supplier,
-            supplierPrices: p.supplierPrices?.map((sp) => ({
+            supplierPrices: p.supplierPrices?.map((sp: any) => ({
               id: sp.id,
               price: decimalToNumber(sp.price),
               uom: sp.uom,

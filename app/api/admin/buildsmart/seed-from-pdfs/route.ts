@@ -183,6 +183,26 @@ async function seedFromPdfs(req: NextRequest) {
     );
   }
 
+  function deriveOrderUnit(unit: string | null | undefined): {
+    uom: string | null;
+    unitSize: number | null;
+  } {
+    const raw = String(unit ?? "").trim();
+    const unitMatch = raw.match(/(\d+(?:\.\d+)?)([A-Za-z]+)/);
+    if (unitMatch) {
+      const unitSize = Number(unitMatch[1]);
+      const code = unitMatch[2].toUpperCase();
+      return {
+        unitSize: Number.isFinite(unitSize) ? unitSize : null,
+        uom: code === "L" || code === "KG" ? code : "UNIT",
+      };
+    }
+    if (/each/i.test(raw)) {
+      return { uom: "EACH", unitSize: 1 };
+    }
+    return { uom: null, unitSize: null };
+  }
+
   // ── Load sites for siteCode → siteId resolution ──
   const allSites = await prisma.site.findMany({
     where: { isActive: true },
@@ -393,13 +413,17 @@ async function seedFromPdfs(req: NextRequest) {
       const product = match.matched ? (match.product as Product) : undefined;
 
       if (product) {
+        const orderUnit = deriveOrderUnit(item.unit);
         matchedItems.push({
           productId: product.id,
           sku: product.sku ?? "",
           quantity: item.quantity,
           unitPriceAtOrder: null,
-          uomAtOrder: product.uom ?? "UNIT",
-          unitSizeAtOrder: product.unitSize?.toString() ?? "1.000",
+          uomAtOrder: (orderUnit.uom as any) ?? product.uom ?? "UNIT",
+          unitSizeAtOrder:
+            orderUnit.unitSize != null
+              ? String(orderUnit.unitSize)
+              : product.unitSize?.toString() ?? "1.000",
           note: item.rawDescription,
         });
       } else {
@@ -461,21 +485,9 @@ async function seedFromPdfs(req: NextRequest) {
         continue;
       }
 
-      // Derive basic UOM + unit size from the unit string, e.g. "20L" → (20, "L").
-      let derivedUom: string | null = null;
-      let derivedUnitSize: number | null = null;
-
-      const unitMatch = item.unit.match(/(\d+)([A-Za-z]+)/);
-      if (unitMatch) {
-        derivedUnitSize = Number(unitMatch[1]);
-        const code = unitMatch[2].toUpperCase();
-        if (code === "L") derivedUom = "L";
-        else if (code === "KG") derivedUom = "KG";
-        else derivedUom = "UNIT";
-      } else if (/each/i.test(item.unit)) {
-        derivedUom = "EACH";
-        derivedUnitSize = 1;
-      }
+      const { uom: derivedUom, unitSize: derivedUnitSize } = deriveOrderUnit(
+        item.unit,
+      );
 
       const parsedProduct = parseBuildSmartProduct(item.rawDescription.trim());
       const name =
@@ -518,8 +530,6 @@ async function seedFromPdfs(req: NextRequest) {
               name,
               normalizedName: normalizeImportedProductName(name).toLowerCase(),
               sku: sku && !isNumericCostCode(sku) ? sku : null,
-              uom: derivedUom as any,
-              unitSize: derivedUnitSize ?? undefined,
               description: `BuildSmart import (PO ${order.orderNumber})`,
               supplier: { connect: { id: resolvedSupplierId } },
             },
@@ -549,12 +559,12 @@ async function seedFromPdfs(req: NextRequest) {
         sku: product.sku ?? "",
         quantity: item.quantity,
         unitPriceAtOrder: null,
-        uomAtOrder: (product.uom as any) ?? derivedUom ?? "UNIT",
+        uomAtOrder: (derivedUom as any) ?? product.uom ?? "UNIT",
         unitSizeAtOrder:
-          product.unitSize != null
-            ? String(product.unitSize)
-            : derivedUnitSize != null
-              ? String(derivedUnitSize)
+          derivedUnitSize != null
+            ? String(derivedUnitSize)
+            : product.unitSize != null
+              ? String(product.unitSize)
               : "1",
         note: item.rawDescription,
       });

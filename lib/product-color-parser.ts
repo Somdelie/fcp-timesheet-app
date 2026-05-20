@@ -79,8 +79,7 @@ const TINT_COLORS = [
 // ── Noise patterns for cleanProductName ─────────────────────────────────────
 // Applied in the order listed; trim after each significant removal.
 
-const LEADING_SIZE_RE =
-  /^\d+(?:\.\d+)?\s*(?:L|KG|G|ML|LTR|M2|M3|MM|CM|M)\s+/i;
+const LEADING_SIZE_RE = /^\d+(?:\.\d+)?\s*(?:L|KG|G|ML|LTR|M2|M3|MM|CM|M)\s+/i;
 
 const LEADING_QTY_RE = /^\d{1,3}\s+/; // short bare number at start
 
@@ -96,6 +95,8 @@ const TRAILING_3DIGIT_RE = /\s+\d{3,}\s*$/;
 const TRAILING_SIZE_RE =
   /\s+\d+(?:\.\d+)?\s*(?:KG|G|L|ML|LTR|M2|M3|MM|CM|M)\s*$/i;
 const TRAILING_PRICE_RE = /\s+R\s?\d+[.,]?\d*\s*$/i;
+const TRAILING_DASH_COLOR_CODE_RE =
+  /^(?<product>.+?)\s+[-–—]\s+(?<color>[A-Za-z][A-Za-z0-9\s]{1,80}?)\s+(?<code>(?:\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}|[A-Z0-9]{1,5}(?:-[A-Z0-9]{1,5}){1,2}))\s*$/i;
 
 const PROTECTED_WORDS = ["mix masala", "masala mix"];
 
@@ -125,7 +126,10 @@ export function cleanProductName(rawName: string): string {
 
   // 3. Remove embedded prices (must precede leading-qty removal so that a
   //    bare leading price like "764.10" is gone before step 4 fires)
-  name = name.replace(EMBEDDED_PRICE_RE, "").replace(/\s{2,}/g, " ").trim();
+  name = name
+    .replace(EMBEDDED_PRICE_RE, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
   // 4. Remove leading short bare quantity (e.g. "1 ", "2 ") that remains
   //    after price removal — stop at the product name proper
@@ -166,16 +170,32 @@ export function cleanProductName(rawName: string): string {
  *   1. Detect the BASE TYPE from keywords (pastel, white, clear, neutral, deep)
  *   2. Detect the specific TINT COLOR (offshore 50, grey, sandstone, …)
  *
- * If a specific tint is found, it becomes the colorName.
- * If only a base-type keyword is found, that keyword becomes the colorName.
- * Both detected terms are removed from the returned cleanName.
+ * CRITICAL: Only return a colorName if we found BOTH a base-type keyword AND
+ * an actual color (either from TINT_COLORS or from the uppercase pattern).
+ * This prevents false positives like "acetone" being treated as a color.
+ *
+ * If a specific tint is found, it becomes the colorName (alongside baseType).
+ * If only an uppercase pattern is found with a base-type, use that.
+ * Otherwise, colorName is null (not a paint color).
  */
 export function extractColorVariant(rawDescription: string): {
   cleanName: string;
   colorName: string | null;
   baseType: ColorBaseType;
   isTinted: boolean;
+  colorCode?: string | null;
 } {
+  const dashColorMatch = rawDescription.match(TRAILING_DASH_COLOR_CODE_RE);
+  if (dashColorMatch?.groups) {
+    return {
+      cleanName: dashColorMatch.groups.product.trim(),
+      colorName: dashColorMatch.groups.color.trim().toUpperCase(),
+      baseType: "DEEP",
+      isTinted: true,
+      colorCode: dashColorMatch.groups.code.trim().toUpperCase(),
+    };
+  }
+
   const lower = rawDescription.toLowerCase();
 
   // 1. Detect base type
@@ -192,6 +212,7 @@ export function extractColorVariant(rawDescription: string): {
   // 2. Detect specific tint color (more granular than base type)
   let colorName: string | null = null;
   let isTinted = false;
+  let colorCode: string | null = null;
   for (const tint of TINT_COLORS) {
     if (lower.includes(tint)) {
       colorName = tint;
@@ -200,10 +221,33 @@ export function extractColorVariant(rawDescription: string): {
     }
   }
 
-  // 3. If no specific tint found, fall back to the base-type term as the color name
-  if (!colorName && baseTypeTerm) {
-    colorName = baseTypeTerm;
+  // 2b. Heuristic: detect trailing UPPERCASE color name followed by code
+  // Examples: "SMOKEY WINGS B6-E1-3"  -> name: "smokey wings", code: "B6-E1-3"
+  //           "SERIOUS 37" -> name: "serious", code: "37"
+  if (!colorName) {
+    const m = rawDescription.match(
+      /([A-Z][A-Z\s]{1,80}?)\s+([A-Z0-9]+(?:-[A-Z0-9]+)*)\s*$/,
+    );
+    if (m) {
+      const candidateName = m[1].trim();
+      const candidateCode = m[2].trim();
+      // require candidateName to be mostly uppercase (heuristic)
+      const uppercaseRatio =
+        candidateName.replace(/[^A-Z\s]/g, "").length / candidateName.length;
+      if (uppercaseRatio > 0.6) {
+        colorName = candidateName.toLowerCase();
+        colorCode = candidateCode;
+        isTinted = true;
+      }
+    }
+  }
+
+  // 3. CRITICAL: Only return colorName if we detected a base-type keyword.
+  // This prevents false positives (e.g., "acetone" as a color).
+  if (colorName && !baseTypeTerm) {
+    colorName = null;
     isTinted = false;
+    colorCode = null;
   }
 
   // 4. Remove detected terms from the raw description
@@ -226,7 +270,7 @@ export function extractColorVariant(rawDescription: string): {
     cleanName = cleanName
       .replace(
         new RegExp(
-          `\\b${baseTypeTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+          `\\b${baseTypeTerm.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`,
           "gi",
         ),
         "",
@@ -235,7 +279,7 @@ export function extractColorVariant(rawDescription: string): {
       .trim();
   }
 
-  return { cleanName, colorName, baseType, isTinted };
+  return { cleanName, colorName, baseType, isTinted, colorCode };
 }
 
 // ── parseBuildSmartProduct ───────────────────────────────────────────────────
@@ -262,6 +306,7 @@ export function parseBuildSmartProduct(rawDescription: string): {
   baseType: ColorBaseType;
   isTinted: boolean;
   sku: string | null;
+  colorCode?: string | null;
 } {
   const productCode = inferBuildSmartProductCode(rawDescription);
 
@@ -269,7 +314,9 @@ export function parseBuildSmartProduct(rawDescription: string): {
   // Plain numeric BuildSmart prefixes are cost codes, not product SKUs.
   const skuMatch = rawDescription.match(/^(\d{6,10})\s+(.+)$/);
   const numericPrefix = skuMatch ? skuMatch[1] : null;
-  const sku = productCode ?? (numericPrefix && !isNumericCostCode(numericPrefix) ? numericPrefix : null);
+  const sku =
+    productCode ??
+    (numericPrefix && !isNumericCostCode(numericPrefix) ? numericPrefix : null);
   const withoutSku = skuMatch ? skuMatch[2] : rawDescription;
 
   // Step 2: extract color variant (operates on the full remaining text so it
@@ -279,12 +326,13 @@ export function parseBuildSmartProduct(rawDescription: string): {
     colorName,
     baseType,
     isTinted,
+    colorCode,
   } = extractColorVariant(withoutSku);
 
   // Step 3: clean remaining noise
   const cleanName = cleanProductName(afterColor);
 
-  return { cleanName, colorName, baseType, isTinted, sku };
+  return { cleanName, colorName, baseType, isTinted, sku, colorCode };
 }
 
 // ── normalizeProductName ─────────────────────────────────────────────────────

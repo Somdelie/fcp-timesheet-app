@@ -61,7 +61,10 @@ export default function ProcurementPage() {
 
       {/* Products panel */}
       <div className="min-w-0 flex-1">
-        <ProcurementProductsPage supplierId={selectedSupplierId} />
+        <ProcurementProductsPage
+          defaultProductType="MATERIAL"
+          supplierId={selectedSupplierId}
+        />
       </div>
     </div>
   );

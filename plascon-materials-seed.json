@@ -1,0 +1,830 @@
+[
+  {
+    "name": "UC2 WOOD PRIMER - PINK",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PP700 PROF PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PGS1 PROF W/BASE GYPSUM & PLASTER PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "UC170 PLASCOPRIME -170 - MILD STEEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GIP METALCARE GALVANISED IRON PRIMER - YELLOW",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EMS18 PLASCOSAFE - 18 - PRIMER RED OXIDE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WUP1 MULTI-SURFACE PRIMER - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PEM600 -WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TCP1000 - PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SMOOTH RIPPLE FINISH - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PEM800 PROF MATT-WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PEM 900 WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TSA 1010 PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TSA 2010 DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TSA 3010 TRANSPARENT",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PEM950 PROF SUPER MATT - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TPM1000 PROF SUPER MATT T/BASE -PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TPM2000 PROF SUPER MATT T/BASE - DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PEM 1000 LOW SHEEN WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TLS1000 PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TLS2000 DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TLS3010 TRANSPARENT",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EPL30 POLVIN SUPER ACRYLIC - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TAP1000 PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TAP2000 DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TAP3000 TRANSPARENT",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PES 1 PROF ELASTOSHIELD - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TED1000 PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TED2000 DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DOUBLE VELVET - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TDV 1000 PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TDV 2000 DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CAS 1 CASHMERE - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TCA1000 PATEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TCA2000 DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PWC 520",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PSB600 PROF DAMP PLASTER PAINT",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PU800 ALL PURPOSE UNDERCOAT",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "NY1 SUPER UNIVERSAL ENAMEL - SUPER WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "G - SUPER UNIVERSAL G/ENAMEL - G2,G7,G15",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SUPER UNIVERSAL G/ENAMEL - G13",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TGE - PASTEL BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TGE - DEEP BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TGE - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "VLO - VELVAGLO WHITE & BLACK",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TVG 1000 PASTEL - SOLVENT BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TVG 2000 DEEP - SOLVENT BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TVG 3010 TRANSPARENT- SOLVENT BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "VLW 1 WATERBASE VELVAGLO - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "VLW2 WATERBASE VELVAGLO - BLACK",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TVW WATERBASE VELVAGLO - PASTEL BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TVW -WATERBASE VELVAGLO - DEEP BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TVW -WATERBASE VELVAGLO - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PSI1 PLASCON SKIMCOAT INTERIOR - 23KG",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "BBO - MICATEX - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TMX1010 - PASTEL BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TMX2050 - DEEP BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TMX3050 - TRANSPARENT BASE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRP PLASCON NUROOF COOL - WHITE & ALL COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TRP PLASCON NUROOF COOL - KHAKI DAWN",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WAA 1 WALL & ALL - WHITE",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TWA1000 - PASTEL",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TWA2000 - DEEP",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TWA3000 - TRANSPARENT",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "FPR - WOODCARE WOOD PRES -CLEAR & ALL COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WSP 1 EXT WOODCARE SUNPROOF - GLOSS - CLEAR",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WOODGARD RUBBOL CLEAR & ALL COLOURS",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "X33-38 WOODCARE ULTRA VARNISH - GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "X44 WOODCARE ULTRA",
+    "productType": "MATERIAL",
+    "brand": "Plascon",
+    "colors": [],
+    "sizes": [
+      "5L",
+      "20L"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  }
+]

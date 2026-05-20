@@ -1,0 +1,1090 @@
+[
+  {
+    "name": "ANCHOR GROUT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "BASECOAT - PASTE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "BRICKWASH",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMBOND",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMCOTE BRUSHED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMCOTE SKIMMED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMFORCE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMKEY",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMLAM",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMPLASTER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMWASH FIRST COAT GREY",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CEMWASH",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "COLOUR HARDENER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "COLOURCEM",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CONCRETE PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CONCRETE HARDENER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "COUNTERTOP MIX",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETEBOND",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECARE POLISH STANDARD",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECARE POLISH MATT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECARE MOP & SHINE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECARE STRIP & CLEAN",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECOTE TWIN PACK",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECOTE POWDER PART 1",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETECOTE CATALYST PART 2",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETESEAL WATER-BASED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETESEAL 2K SOLVENT-BASED GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETESEAL 2K SOLVENT-BASED MATT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "CRETESTAIN",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DECOCRETE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DENSIFIER - POTASSIUM-BASED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "DIRECT-TO-METAL PAINT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EIFS BASECOAT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "ELASTOBOND",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EXPOSED AGGREGATE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "EXPOSED AGGREGATE SURFACE RETARDER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "FLEXBOND",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLASS FIBRE MESH 10mm",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "GLASS FIBRE MESH 5mm",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MATCRETE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MATFLEX",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MORTAR MIX - COLOURED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MOULD RUBBER LATEX",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MOULD RUBBER THICKENER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MULTIPURPOSE SOLVENT-BASED SEALER GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MULTIPURPOSE SOLVENT-BASED SEALER MATT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MUILTIPURPOSE WATER-BASED SEALER GLOSS",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "MULTIPURPOSE WATER-BASED SEALER SUPER MATT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMASTOP",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PERMASTOP ACCELERATOR",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "POLYPROPYLENE FIBRE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "POLYPROPYLENE MEMBRANE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "PRIMERCOTE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RELEASE AGENT - PIGMENTED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "RENOCRETE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SATINCRETE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SCULPTCRETE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SEALER PRIMER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SILICONSEAL SOLVENT-BASED SEALER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SILICONSEAL WATER-BASED SEALER",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SLIP RESISTANT ADDITIVE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "SUPERSCREED",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TERRAZO",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TEXCRETE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "TEXCRETE LITE",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "THERMOPLASTIC COATING & TPC ROOF",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATERPROOFING COMPOUND",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  },
+  {
+    "name": "WATER-REPELLENT CEMENT",
+    "productType": "MATERIAL",
+    "brand": "Cemcrete",
+    "colors": [],
+    "sizes": [
+      "1L",
+      "5L",
+      "20L",
+      "20KG",
+      "25KG",
+      "40KG"
+    ],
+    "stockQty": 0,
+    "isReturnable": false
+  }
+]

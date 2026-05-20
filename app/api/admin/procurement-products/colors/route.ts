@@ -11,7 +11,10 @@ async function getAuth(req?: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
   if (session?.user && (role === "ADMIN" || role === "OFFICE")) {
-    return { id: (session.user as any).id as string, role: role as "ADMIN" | "OFFICE" };
+    return {
+      id: (session.user as any).id as string,
+      role: role as "ADMIN" | "OFFICE",
+    };
   }
   return null;
 }
@@ -33,7 +36,8 @@ function serialiseVariant(v: any) {
  */
 export async function GET() {
   const auth = await getAuth();
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const variants = await prisma.productColorVariant.findMany({
     include: {
@@ -68,7 +72,8 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   const auth = await getAuth(req);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { productId, colorName, colorCode, baseType, isTinted } = body as {
@@ -121,11 +126,47 @@ export async function POST(req: Request) {
   } catch (e: any) {
     if (e?.code === "P2002") {
       return NextResponse.json(
-        { error: "A color variant with this product, name, and base type already exists" },
+        {
+          error:
+            "A color variant with this product, name, and base type already exists",
+        },
         { status: 409 },
       );
     }
     console.error("POST /colors error:", e);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const auth = await getAuth(req);
+  if (!auth)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const colorName = searchParams.get("colorName")?.trim();
+  const baseType = searchParams.get("baseType")?.trim() as
+    | ColorBaseType
+    | undefined;
+
+  if (!colorName || !baseType) {
+    return NextResponse.json(
+      { error: "colorName and baseType are required" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const deleted = await prisma.productColorVariant.deleteMany({
+      where: {
+        colorName,
+        baseType,
+      },
+    });
+
+    return NextResponse.json({ ok: true, count: deleted.count });
+  } catch (e) {
+    console.error("DELETE /colors error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

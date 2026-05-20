@@ -55,8 +55,13 @@ async function resolveProduct(
   // Explicit override mapping takes priority over parser
   const mapped = mapDescriptionToProduct(description);
 
-  const { cleanName, sku: parsedSku, colorName, baseType, isTinted } =
-    parseBuildSmartProduct(description.trim());
+  const {
+    cleanName,
+    sku: parsedSku,
+    colorName,
+    baseType,
+    isTinted,
+  } = parseBuildSmartProduct(description.trim());
   const productCode = parsedSku ?? inferBuildSmartProductCode(description);
 
   const canonicalName = mapped ?? cleanName;
@@ -72,10 +77,11 @@ async function resolveProduct(
     select: { id: true, sku: true, name: true, supplierId: true },
   });
 
-  let product =
-    productCode
-      ? products.find((p) => normalizeSkuKey(p.sku) === normalizeSkuKey(productCode))
-      : undefined;
+  let product = productCode
+    ? products.find(
+        (p) => normalizeSkuKey(p.sku) === normalizeSkuKey(productCode),
+      )
+    : undefined;
 
   product ??= products.find(
     (p) => p.name.toLowerCase() === canonicalName.toLowerCase(),
@@ -214,7 +220,8 @@ async function processOrderGroup(
 
   try {
     const orderDate = groupLines.reduce(
-      (earliest, l) => (l.transactionDate < earliest ? l.transactionDate : earliest),
+      (earliest, l) =>
+        l.transactionDate < earliest ? l.transactionDate : earliest,
       groupLines[0].transactionDate,
     );
     const totalAmount = groupLines
@@ -239,7 +246,13 @@ async function processOrderGroup(
         ? parseFloat(line.unitPrice)
         : parseFloat(line.totalAmount);
       const { uomAtOrder, unitSizeAtOrder } = parseUnitToken(line.unit ?? null);
-      itemData.push({ productId, quantity: qty, unitPriceAtOrder: unitPrice, uomAtOrder, unitSizeAtOrder });
+      itemData.push({
+        productId,
+        quantity: qty,
+        unitPriceAtOrder: unitPrice,
+        uomAtOrder,
+        unitSizeAtOrder,
+      });
     }
 
     let orderSupplierId: string | null = null;
@@ -323,7 +336,11 @@ function buildGroupsAndSiteMap(lines: ParsedMaterialLine[]) {
  */
 export async function* importMaterialOrdersStream(
   lines: ParsedMaterialLine[],
-): AsyncGenerator<{ total: number; done: number; result: MaterialOrderImportResult }> {
+): AsyncGenerator<{
+  total: number;
+  done: number;
+  result: MaterialOrderImportResult;
+}> {
   const { siteCodes, groups } = buildGroupsAndSiteMap(lines);
 
   const sites = await prisma.site.findMany({
