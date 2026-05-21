@@ -69,7 +69,11 @@ function serializeSite(s: any) {
     latitude: typeof s.latitude === "number" ? s.latitude : null,
     longitude: typeof s.longitude === "number" ? s.longitude : null,
     isActive: s.isActive,
-    jobStatus: (s.jobStatus ?? "NOT_STARTED") as "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD",
+    jobStatus: (s.jobStatus ?? "NOT_STARTED") as
+      | "NOT_STARTED"
+      | "ONGOING"
+      | "COMPLETED"
+      | "ON_HOLD",
     stageIndex: typeof s.stageIndex === "number" ? s.stageIndex : 0,
     stagePct: (() => {
       const raw = s.stagePct;
@@ -81,22 +85,33 @@ function serializeSite(s: any) {
     materials: Object.values(
       (s.siteProductOrders ?? []).reduce(
         (
-          acc: Record<string, { name: string; quantity: number; unitPrice: number; total: number }>,
+          acc: Record<
+            string,
+            { name: string; quantity: number; unitPrice: number; total: number }
+          >,
           order: any,
         ) => {
           for (const item of order.items ?? []) {
             const name: string = item.product?.name ?? "Unknown";
-            if (!acc[name]) acc[name] = { name, quantity: 0, unitPrice: 0, total: 0 };
+            if (!acc[name])
+              acc[name] = { name, quantity: 0, unitPrice: 0, total: 0 };
             acc[name].quantity += Number(item.quantity) || 0;
-            acc[name].unitPrice = Number(item.unitPriceAtOrder) || acc[name].unitPrice;
+            acc[name].unitPrice =
+              Number(item.unitPriceAtOrder) || acc[name].unitPrice;
             acc[name].total +=
-              (Number(item.unitPriceAtOrder) || 0) * (Number(item.quantity) || 0);
+              (Number(item.unitPriceAtOrder) || 0) *
+              (Number(item.quantity) || 0);
           }
           return acc;
         },
         {},
       ),
-    ).sort((a: any, b: any) => b.total - a.total) as { name: string; quantity: number; unitPrice: number; total: number }[],
+    ).sort((a: any, b: any) => b.total - a.total) as {
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+    }[],
     createdAt:
       s.createdAt instanceof Date
         ? s.createdAt.toISOString()
@@ -104,16 +119,25 @@ function serializeSite(s: any) {
     supervisorName,
     totalWages,
     totalMaterialCost,
-    claimDate: latestClaim?.claimDate instanceof Date
-      ? latestClaim.claimDate.toISOString()
-      : null,
+    claimDate:
+      latestClaim?.claimDate instanceof Date
+        ? latestClaim.claimDate.toISOString()
+        : null,
     claimAmountClaimed: latestClaim ? Number(latestClaim.amountClaimed) : 0,
     claimAmountReceived: latestClaim ? Number(latestClaim.amountReceived) : 0,
     claimOutstanding: latestClaim
-      ? Math.max(0, Number(latestClaim.amountClaimed) - Number(latestClaim.amountReceived))
+      ? Math.max(
+          0,
+          Number(latestClaim.amountClaimed) -
+            Number(latestClaim.amountReceived),
+        )
       : 0,
     claimStatus: (latestClaim?.status ?? null) as
-      | "DRAFT" | "SUBMITTED" | "PARTIALLY_RECEIVED" | "RECEIVED" | "CANCELLED"
+      | "DRAFT"
+      | "SUBMITTED"
+      | "PARTIALLY_RECEIVED"
+      | "RECEIVED"
+      | "CANCELLED"
       | null,
   };
 }
@@ -249,7 +273,11 @@ export async function listSites(input?: {
     }),
     prisma.historicalSiteCost.groupBy({
       by: ["siteId"],
-      where: { siteId: { in: siteIds }, category: { not: "LABOUR" }, ...histDateWhere },
+      where: {
+        siteId: { in: siteIds },
+        category: { not: "LABOUR" },
+        ...histDateWhere,
+      },
       _sum: { amount: true },
     }),
   ]);
@@ -268,7 +296,8 @@ export async function listSites(input?: {
       return {
         ...row,
         totalWages: row.totalWages + (histWagesMap.get(s.id) ?? 0),
-        totalMaterialCost: row.totalMaterialCost + (histMaterialMap.get(s.id) ?? 0),
+        totalMaterialCost:
+          row.totalMaterialCost + (histMaterialMap.get(s.id) ?? 0),
       };
     }),
   };
@@ -403,7 +432,7 @@ export async function updateSiteLocation(input: {
   const amountClaimed =
     input.amountClaimed === undefined
       ? undefined
-      : cleanNumber(input.amountClaimed) ?? 0;
+      : (cleanNumber(input.amountClaimed) ?? 0);
   const latitude =
     input.latitude === undefined ? undefined : cleanNumber(input.latitude);
   const longitude =
@@ -452,7 +481,9 @@ export async function updateSiteLocation(input: {
         ...(address !== undefined ? { address } : {}),
         ...(siteClaimDate !== undefined ? { siteClaimDate } : {}),
         ...(amountClaimed !== undefined ? { amountClaimed } : {}),
-        ...(input.jobStatus !== undefined ? { jobStatus: input.jobStatus } : {}),
+        ...(input.jobStatus !== undefined
+          ? { jobStatus: input.jobStatus }
+          : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -487,6 +518,13 @@ export async function updateSiteLocation(input: {
  * Fetch only ONGOING sites — used by the Job Progress board.
  * Avoids loading completed/not-started sites entirely.
  */
+function shouldExcludeLowJobWithoutCosts(site: any) {
+  const jobNumber = Number(String(site.code ?? "").trim());
+  if (!Number.isFinite(jobNumber)) return false;
+  if (jobNumber >= 6000) return false;
+  return (site.totalWages ?? 0) === 0 && (site.totalMaterialCost ?? 0) === 0;
+}
+
 export async function listOngoingSites() {
   const auth = await requireServerAuth();
   const scope = siteWhereFor(auth);
@@ -529,7 +567,11 @@ export async function listOngoingSites() {
     },
   });
 
-  return { ok: true as const, sites: sites.map(serializeSite) };
+  const filteredSites = sites
+    .map(serializeSite)
+    .filter((site) => !shouldExcludeLowJobWithoutCosts(site));
+
+  return { ok: true as const, sites: filteredSites };
 }
 
 /**

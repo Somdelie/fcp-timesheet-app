@@ -560,7 +560,7 @@ export default function SitesTable({
   foremanOptions = [],
 }: SitesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
-    { id: "siteClaimDate", desc: false },
+    { id: "code", desc: true },
   ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
@@ -610,6 +610,20 @@ export default function SitesTable({
       {
         id: "code",
         accessorKey: "code",
+        sortingFn: (rowA, rowB, columnId) => {
+          const aValue = rowA.getValue<string>(columnId) ?? "";
+          const bValue = rowB.getValue<string>(columnId) ?? "";
+          const aNumber = Number(aValue);
+          const bNumber = Number(bValue);
+
+          const aIsNumber = !Number.isNaN(aNumber);
+          const bIsNumber = !Number.isNaN(bNumber);
+
+          if (aIsNumber && bIsNumber) {
+            return aNumber - bNumber;
+          }
+          return String(aValue).localeCompare(String(bValue));
+        },
         size: 80,
         header: ({ column }) => {
           const isSorted = column.getIsSorted();
