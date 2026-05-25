@@ -64,6 +64,13 @@ export type IdName = { id: string; name: string };
 
 export type TimesheetStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "PAID";
 
+export type SupervisorPeriodOption = {
+  id: string; // YYYY-MM-DD_YYYY-MM-DD or DB ID
+  startISO: string;
+  endISO: string;
+  label?: string | null;
+};
+
 // lib/dtos.ts
 
 export type TimesheetDetailDto2 = {

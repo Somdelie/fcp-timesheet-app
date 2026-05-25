@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
         category: true,
         name: true,
         normalizedName: true,
+        stockQty: true,
       },
     });
 
@@ -152,6 +153,101 @@ export async function POST(req: NextRequest) {
     }
 
     const productsById = new Map(products.map((p) => [p.id, p] as const));
+
+    // Pre-check stock availability for PPE items to avoid negative stock
+    const destinationIsCapeTown =
+      String(data.destination ?? "JHB").toUpperCase() === "CAPE_TOWN";
+
+    // Determine which PPE products have Cape Town stock mappings (will not decrement local stock)
+    const capeTownMap = new Map<string, boolean>();
+    for (const p of products) {
+      if (p.category !== "PPE") continue;
+      let ctItem = await prisma.capeTownStockItem.findFirst({
+        where: { name: { equals: p.name, mode: "insensitive" } },
+      });
+      const lookupName = normalizeName(p.normalizedName || p.name);
+      if (!ctItem && lookupName) {
+        ctItem = await prisma.capeTownStockItem.findFirst({
+          where: { name: { contains: lookupName, mode: "insensitive" } },
+        });
+      }
+      capeTownMap.set(p.id, !!ctItem);
+    }
+
+    // Aggregate requested quantities per product and per variant (size+color)
+    const productReq = new Map<string, number>();
+    const variantReq = new Map<string, number>();
+    for (const item of data.items) {
+      const p = productsById.get(item.productId)!;
+      if (!p) continue;
+      if (p.category !== "PPE") continue;
+
+      // If destination is Cape Town and we have a CT mapping for this product, skip local stock checks
+      if (destinationIsCapeTown && capeTownMap.get(p.id)) continue;
+
+      // Sum per-product
+      productReq.set(
+        item.productId,
+        (productReq.get(item.productId) ?? 0) + item.quantity,
+      );
+
+      // Sum per-variant when size or color provided
+      const size = item.size?.trim() || "";
+      const color = item.color?.trim() || "";
+      if (size || color) {
+        const key = `${item.productId}||${size}||${color}`;
+        variantReq.set(key, (variantReq.get(key) ?? 0) + item.quantity);
+      }
+    }
+
+    // Check variant availability
+    if (variantReq.size > 0) {
+      const variantWhere = Array.from(variantReq.keys()).map((k) => {
+        const [productId, size, color] = k.split("||");
+        return {
+          productId,
+          size: size === "" ? null : size,
+          color: color === "" ? null : color,
+        } as any;
+      });
+
+      const variants = await prisma.stockItemVariant.findMany({
+        where: { OR: variantWhere },
+        select: { productId: true, size: true, color: true, qty: true },
+      });
+
+      const variantMap = new Map<string, number>();
+      for (const v of variants) {
+        const key = `${v.productId}||${v.size ?? ""}||${v.color ?? ""}`;
+        variantMap.set(key, v.qty ?? 0);
+      }
+
+      for (const [key, reqQty] of variantReq) {
+        const available = variantMap.get(key) ?? 0;
+        if (available < reqQty) {
+          const [productId, size, color] = key.split("||");
+          const prod = productsById.get(productId)!;
+          return NextResponse.json(
+            {
+              error: `Insufficient variant stock for ${prod.name} ${size || ""} ${color || ""}`,
+            },
+            { status: 400, headers: CORS_HEADERS },
+          );
+        }
+      }
+    }
+
+    // Check overall product availability
+    for (const [productId, reqQty] of productReq) {
+      const p = productsById.get(productId)!;
+      const avail = Number(p.stockQty ?? 0);
+      if (avail < reqQty) {
+        return NextResponse.json(
+          { error: `Insufficient stock for ${p.name}` },
+          { status: 400, headers: CORS_HEADERS },
+        );
+      }
+    }
 
     const order = await prisma.productOrder.create({
       data: {
@@ -177,9 +273,6 @@ export async function POST(req: NextRequest) {
       color: string | null;
       note: string | null;
     }[];
-
-    const destinationIsCapeTown =
-      String(data.destination ?? "JHB").toUpperCase() === "CAPE_TOWN";
 
     for (const item of data.items) {
       const p = productsById.get(item.productId)!;
