@@ -168,20 +168,38 @@ function PpeOrdersWrapper({ createTrigger }: { createTrigger?: number }) {
       fetch("/api/app/admin/foremen", { credentials: "include" }).then((r) =>
         r.json(),
       ),
+      fetch("/api/app/admin/users?role=ADMIN", { credentials: "include" }).then(
+        (r) => r.json(),
+      ),
       fetch("/api/app/admin/products?category=PPE", {
         credentials: "include",
       }).then((r) => r.json()),
     ])
-      .then(([fRes, pRes]) => {
-        setForemen(
-          ((fRes.foremen ?? []) as AdminForemanApiDto[]).map((f) => ({
+      .then(([fRes, aRes, pRes]) => {
+        const foremenList: AdminForemanApiDto[] = (fRes.foremen ??
+          []) as AdminForemanApiDto[];
+        const admins: {
+          id: string;
+          name?: string | null;
+          email?: string | null;
+        }[] = (aRes.users ?? []) as any[];
+
+        setForemen([
+          ...foremenList.map((f) => ({
             id: f.foremanId,
             userId: f.userId,
             name: f.name ?? "",
             email: f.email ?? "",
             type: "foreman" as const,
           })),
-        );
+          ...admins.map((u) => ({
+            id: u.id,
+            userId: u.id,
+            name: u.name ?? "",
+            email: u.email ?? "",
+            type: "admin" as const,
+          })),
+        ]);
         setProducts(pRes.products ?? []);
       })
       .catch(() => toast.error("Failed to load PPE order data"));
@@ -207,20 +225,38 @@ function ToolsOrdersWrapper({ createTrigger }: { createTrigger?: number }) {
       fetch("/api/app/admin/foremen", { credentials: "include" }).then((r) =>
         r.json(),
       ),
+      fetch("/api/app/admin/users?role=ADMIN", { credentials: "include" }).then(
+        (r) => r.json(),
+      ),
       fetch("/api/app/admin/products?category=TOOL", {
         credentials: "include",
       }).then((r) => r.json()),
     ])
-      .then(([fRes, pRes]) => {
-        setForemen(
-          ((fRes.foremen ?? []) as AdminForemanApiDto[]).map((f) => ({
+      .then(([fRes, aRes, pRes]) => {
+        const foremenList: AdminForemanApiDto[] = (fRes.foremen ??
+          []) as AdminForemanApiDto[];
+        const admins: {
+          id: string;
+          name?: string | null;
+          email?: string | null;
+        }[] = (aRes.users ?? []) as any[];
+
+        setForemen([
+          ...foremenList.map((f) => ({
             id: f.foremanId,
             userId: f.userId,
             name: f.name ?? "",
             email: f.email ?? "",
             type: "foreman" as const,
           })),
-        );
+          ...admins.map((u) => ({
+            id: u.id,
+            userId: u.id,
+            name: u.name ?? "",
+            email: u.email ?? "",
+            type: "admin" as const,
+          })),
+        ]);
         setProducts(pRes.products ?? []);
       })
       .catch(() => toast.error("Failed to load tools order data"));
