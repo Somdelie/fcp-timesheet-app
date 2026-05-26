@@ -83,6 +83,27 @@ function sanitizeColorsForExport(root: HTMLElement) {
     const style = el.style;
     const computed = window.getComputedStyle(el);
 
+    const fallbackForProp = (propName: string) => {
+      // Prefer deterministic safe colors (no lab/lch/oklch/oklab).
+      if (propName === "backgroundColor") return "#ffffff";
+      if (propName === "fill" || propName === "stroke") return "#000000";
+      if (
+        propName === "color" ||
+        propName === "outlineColor" ||
+        propName === "textDecorationColor"
+      )
+        return "#111827";
+      if (
+        propName === "borderColor" ||
+        propName === "borderTopColor" ||
+        propName === "borderRightColor" ||
+        propName === "borderBottomColor" ||
+        propName === "borderLeftColor"
+      )
+        return "#e5e7eb";
+      return "#000000";
+    };
+
     for (const prop of colorProps) {
       const kebabProp = prop.replace(/([A-Z])/g, "-$1").toLowerCase();
       const currentValue =
@@ -90,23 +111,31 @@ function sanitizeColorsForExport(root: HTMLElement) {
         computed.getPropertyValue(kebabProp);
 
       if (currentValue && unsupportedColorPattern.test(currentValue)) {
-        // Use computed style which returns resolved RGB
+        // Try to use computed style which *sometimes* returns resolved RGB.
         const resolvedColor = computed.getPropertyValue(kebabProp);
-        if (resolvedColor && !unsupportedColorPattern.test(resolvedColor)) {
+        if (
+          resolvedColor &&
+          !unsupportedColorPattern.test(resolvedColor) &&
+          resolvedColor.trim().length > 0
+        ) {
           style.setProperty(kebabProp, resolvedColor, "important");
         } else {
-          // Fallback: set to transparent or inherit
-          style.setProperty(kebabProp, "inherit", "important");
+          // Hard fallback: replace unsupported values with safe hex.
+          style.setProperty(kebabProp, fallbackForProp(prop), "important");
         }
       }
     }
 
-    // Handle CSS custom properties that might contain unsupported colors
+    // Handle CSS custom properties / inline styles that might contain unsupported colors
     const inlineStyle = el.getAttribute("style") || "";
     if (unsupportedColorPattern.test(inlineStyle)) {
       const sanitized = inlineStyle.replace(
         /:\s*(lab|lch|oklch|oklab|color)\([^)]+\)/gi,
-        ": inherit",
+        (match) => {
+          // Replace everything with a conservative safe value.
+          // (We don't know which property this colon belongs to here, so pick a neutral.)
+          return ": #000000";
+        },
       );
       el.setAttribute("style", sanitized);
     }
@@ -181,13 +210,13 @@ export async function exportDomToPdf(node: HTMLElement, opts: ExportOpts = {}) {
           if (el instanceof HTMLElement) {
             const style = el.getAttribute("style") || "";
             if (/\b(lab|lch|oklch|oklab|color)\s*\(/i.test(style)) {
-              el.setAttribute(
-                "style",
-                style.replace(
-                  /:\s*(lab|lch|oklch|oklab|color)\([^)]+\)/gi,
-                  ": inherit",
-                ),
+              // Replace unsupported color functions with a safe fallback.
+              // This avoids html2canvas attempting to parse `lab(...)`, etc.
+              const sanitized = style.replace(
+                /\b(lab|lch|oklch|oklab|color)\s*\([^)]+\)/gi,
+                "#000000",
               );
+              el.setAttribute("style", sanitized);
             }
           }
         });

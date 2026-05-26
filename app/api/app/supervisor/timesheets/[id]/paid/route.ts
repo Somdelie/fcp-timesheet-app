@@ -42,6 +42,7 @@ async function getAuth(req: Request) {
 async function assertSupervisorAccess(
   userId: string,
   foremanId: string,
+  siteId: string,
   startDate: Date,
   endExclusive: Date,
 ) {
@@ -59,11 +60,13 @@ async function assertSupervisorAccess(
   const siteIds = Array.from(new Set(siteAssignments.map((a) => a.siteId)));
   if (!siteIds.length)
     return { ok: false as const, status: 403, msg: "Forbidden" };
+  if (!siteIds.includes(siteId))
+    return { ok: false as const, status: 403, msg: "Forbidden" };
 
   const hasSiteDay = await prisma.siteDay.findFirst({
     where: {
       foremanId,
-      siteId: { in: siteIds },
+      siteId,
       workDate: { gte: startDate, lt: endExclusive },
     },
     select: { id: true },
@@ -98,8 +101,10 @@ export async function POST(
     );
   }
 
+  const siteId = parsed.siteId ?? new URL(req.url).searchParams.get("siteId");
+
   // Require siteId for per-site paid marking
-  if (!parsed.siteId) {
+  if (!siteId) {
     return NextResponse.json(
       {
         error:
@@ -118,6 +123,7 @@ export async function POST(
     const access = await assertSupervisorAccess(
       auth.userId,
       parsed.foremanId,
+      siteId,
       startDate,
       endExclusive,
     );
@@ -140,13 +146,13 @@ export async function POST(
       periodId_foremanId_siteId: {
         periodId: period.id,
         foremanId: parsed.foremanId,
-        siteId: parsed.siteId,
+        siteId,
       },
     },
     create: {
       period: { connect: { id: period.id } },
       foreman: { connect: { id: parsed.foremanId } },
-      site: parsed.siteId ? { connect: { id: parsed.siteId } } : undefined,
+      site: { connect: { id: siteId } },
     },
     update: {},
     select: { id: true, status: true },
@@ -173,7 +179,7 @@ export async function POST(
       select: { user: { select: { name: true } } },
     }),
     prisma.site.findUnique({
-      where: { id: parsed.siteId! },
+      where: { id: siteId },
       select: { id: true, name: true },
     }),
   ]);

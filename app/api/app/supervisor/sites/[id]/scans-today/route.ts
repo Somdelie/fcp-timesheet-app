@@ -4,6 +4,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isoFromDateUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,8 +74,14 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const todayISO = isoFromDateUTC(new Date());
-  const today = startOfDayUTC(todayISO);
+  const requestedDateISO =
+    new URL(req.url).searchParams.get("dateISO") ?? isoFromDateUTC(new Date());
+  const selectedDate = await validateSupervisorScanDate(requestedDateISO);
+  if (!selectedDate.ok) {
+    return NextResponse.json({ error: selectedDate.error }, { status: 400 });
+  }
+  const dateISO = selectedDate.dateISO;
+  const workDate = startOfDayUTC(dateISO);
   const now = new Date();
 
   // Fetch foremen currently assigned to this site
@@ -95,11 +102,11 @@ export async function GET(
     },
   });
 
-  // Fetch today's attendance scans for this site
+  // Fetch attendance scans for the selected site date.
   const scans = await prisma.attendanceScan.findMany({
     where: {
       siteId,
-      workDate: today,
+      workDate,
     },
     select: {
       id: true,
@@ -126,7 +133,7 @@ export async function GET(
 
   return NextResponse.json({
     ok: true,
-    dateISO: todayISO,
+    dateISO,
     siteId,
     foremen: foremanAssignments.map((fa) => ({
       id: fa.foreman.id,

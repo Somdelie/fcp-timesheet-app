@@ -868,27 +868,37 @@ export async function generateTimesheetPdf(
 
 export function downloadTimesheetPdf(pdfBytes: Uint8Array, filename: string) {
   try {
-    // Use a copy of the buffer to ensure compatibility
-    const blob = new Blob([pdfBytes.slice().buffer], {
-      type: "application/pdf",
-    });
+    // Ensure we pass an ArrayBuffer (not SharedArrayBuffer / ArrayBufferLike) to Blob
+    const bytesCopy = new Uint8Array(pdfBytes.length);
+    bytesCopy.set(pdfBytes);
+    const blob = new Blob([bytesCopy.buffer], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = filename || "timesheet.pdf";
+    a.style.display = "none";
+
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    // Important: revoke after a short delay so mobile webviews can finish reading the object URL
+    window.setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 1000);
   } catch (err) {
     console.error("PDF download failed:", err);
-    // Optionally, fallback to opening in a new window
+
+    // Fallback: open in a new tab/window (don’t revoke immediately)
     try {
-      const blob = new Blob([pdfBytes.slice().buffer], {
-        type: "application/pdf",
-      });
+      // Ensure we pass an ArrayBuffer (not SharedArrayBuffer / ArrayBufferLike) to Blob
+      const bytesCopy = new Uint8Array(pdfBytes.length);
+      bytesCopy.set(pdfBytes);
+      const blob = new Blob([bytesCopy.buffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (e) {
       console.error("All PDF download methods failed:", e);
       throw new Error(
@@ -941,7 +951,9 @@ export function generateTimesheetPrintHTML(
 
   const overtimeTotal = Number(meta?.overtimeTotal ?? 0);
   // Support both new split fields and legacy deductionsTotal
-  const cashDeductionsTotal = Number(meta?.cashDeductionsTotal ?? meta?.deductionsTotal ?? 0);
+  const cashDeductionsTotal = Number(
+    meta?.cashDeductionsTotal ?? meta?.deductionsTotal ?? 0,
+  );
   const productDeductionsTotal = Number(meta?.productDeductionsTotal ?? 0);
   const totalDeductionsAll = cashDeductionsTotal + productDeductionsTotal;
   // Site wages cost: gross wages − CASH deductions only (PPE/tools don't reduce site wages)

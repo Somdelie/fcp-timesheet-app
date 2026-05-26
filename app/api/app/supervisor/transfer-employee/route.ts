@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { isoFromDateUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -33,6 +34,7 @@ const BodySchema = z.object({
   fromSiteId: z.string().min(1),
   toSiteId: z.string().min(1),
   toForemanId: z.string().min(1),
+  workDateISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   reason: z.string().optional(),
 });
 
@@ -64,7 +66,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const { employeeId, fromSiteId, toSiteId, toForemanId, reason } = body.data;
+  const {
+    employeeId,
+    fromSiteId,
+    toSiteId,
+    toForemanId,
+    workDateISO,
+    reason,
+  } = body.data;
 
   if (fromSiteId === toSiteId) {
     return NextResponse.json(
@@ -159,11 +168,17 @@ export async function POST(req: Request) {
     }
   }
 
-  const todayISO = isoFromDateUTC(new Date());
-  const workDate = startOfDayUTC(todayISO);
+  const requestedDateISO = workDateISO ?? isoFromDateUTC(new Date());
+  if (role === "SUPERVISOR") {
+    const selectedDate = await validateSupervisorScanDate(requestedDateISO);
+    if (!selectedDate.ok) {
+      return NextResponse.json({ error: selectedDate.error }, { status: 400 });
+    }
+  }
+  const workDate = startOfDayUTC(requestedDateISO);
   const now = new Date();
 
-  // Find the existing scan at the source site for today
+  // Find the existing scan at the source site for the selected work date.
   const existingScan = await prisma.attendanceScan.findFirst({
     where: {
       employeeId,
@@ -177,13 +192,14 @@ export async function POST(req: Request) {
       team: true,
       scannedAt: true,
       scannedOutAt: true,
+      siteDay: { select: { isLocked: true } },
     },
   });
 
   if (!existingScan) {
     return NextResponse.json(
       {
-        error: `Employee ${employee.firstName} ${employee.lastName} has not been scanned in at ${fromSite.name} today`,
+        error: `Employee ${employee.firstName} ${employee.lastName} has not been scanned in at ${fromSite.name} on ${requestedDateISO}`,
       },
       { status: 404 },
     );
@@ -194,6 +210,12 @@ export async function POST(req: Request) {
       {
         error: `Employee ${employee.firstName} ${employee.lastName} has already been scanned out at ${fromSite.name}`,
       },
+      { status: 409 },
+    );
+  }
+  if (existingScan.siteDay.isLocked) {
+    return NextResponse.json(
+      { error: "This attendance day is locked and cannot be transferred." },
       { status: 409 },
     );
   }
@@ -223,7 +245,7 @@ export async function POST(req: Request) {
       foremanId: toForemanId,
       workDate,
     },
-    select: { id: true },
+    select: { id: true, isLocked: true },
   });
 
   if (!destinationSiteDay) {
@@ -234,7 +256,7 @@ export async function POST(req: Request) {
           foreman: { connect: { id: toForemanId } },
           workDate,
         },
-        select: { id: true },
+        select: { id: true, isLocked: true },
       });
     } catch (e: any) {
       if (e?.code === "P2002") {
@@ -244,7 +266,7 @@ export async function POST(req: Request) {
             foremanId: toForemanId,
             workDate,
           },
-          select: { id: true },
+          select: { id: true, isLocked: true },
         });
       }
       if (!destinationSiteDay) {
@@ -254,6 +276,12 @@ export async function POST(req: Request) {
         );
       }
     }
+  }
+  if (destinationSiteDay.isLocked) {
+    return NextResponse.json(
+      { error: "The destination attendance day is locked." },
+      { status: 409 },
+    );
   }
 
   // Calculate day rate for the employee at the destination site

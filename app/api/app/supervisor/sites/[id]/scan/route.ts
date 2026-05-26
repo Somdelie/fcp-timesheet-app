@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
+import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -36,10 +37,6 @@ function normalizeEmployeeCode(raw: string) {
     .replace(/\s+/g, "");
 }
 
-function isValidEmployeeCode(code: string) {
-  return /^EMP[_-][A-Z0-9]+$/.test(code);
-}
-
 async function getOrCreateSiteDay(opts: {
   siteId: string;
   foremanId: string;
@@ -51,7 +48,7 @@ async function getOrCreateSiteDay(opts: {
       siteId: opts.siteId,
       workDate: opts.workDate,
     },
-    select: { id: true },
+    select: { id: true, isLocked: true },
   });
 
   if (existing) return existing;
@@ -63,7 +60,7 @@ async function getOrCreateSiteDay(opts: {
         foreman: { connect: { id: opts.foremanId } },
         workDate: opts.workDate,
       },
-      select: { id: true },
+      select: { id: true, isLocked: true },
     });
   } catch (e: unknown) {
     const code =
@@ -77,7 +74,7 @@ async function getOrCreateSiteDay(opts: {
           siteId: opts.siteId,
           workDate: opts.workDate,
         },
-        select: { id: true },
+        select: { id: true, isLocked: true },
       });
       if (again) return again;
     }
@@ -117,10 +114,17 @@ export async function POST(
   const { foremanId, employeeCode, workDateISO, latitude, longitude, address } =
     body.data;
 
+  if (role === "SUPERVISOR") {
+    const selectedDate = await validateSupervisorScanDate(workDateISO);
+    if (!selectedDate.ok) {
+      return NextResponse.json({ error: selectedDate.error }, { status: 400 });
+    }
+  }
+
   const normalizedCode = normalizeEmployeeCode(employeeCode);
-  if (!isValidEmployeeCode(normalizedCode)) {
+  if (!normalizedCode) {
     return NextResponse.json(
-      { error: "Invalid employee code" },
+      { error: "Invalid employee QR value" },
       { status: 400 },
     );
   }
@@ -219,12 +223,18 @@ export async function POST(
     workDate,
   });
 
-  let siteDay: { id: string };
+  let siteDay: { id: string; isLocked: boolean };
   try {
     siteDay = await getOrCreateSiteDay({ siteId, foremanId, workDate });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message ?? "Failed to open site day" },
+      { status: 409 },
+    );
+  }
+  if (siteDay.isLocked) {
+    return NextResponse.json(
+      { error: "This site day is locked. No more scans can be added." },
       { status: 409 },
     );
   }

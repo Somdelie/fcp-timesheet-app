@@ -1,14 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
-import {
-  Bell,
-  CalendarClock,
-  DollarSign,
-  Clock,
-  CloudRain,
-  X,
-} from "lucide-react";
+import { Bell, CalendarClock, Clock, CloudRain, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -131,8 +124,7 @@ export function NotificationSheet() {
               )}
             </div>
             <SheetDescription>
-              Alerts for upcoming claim dates, cost thresholds, scheduled tasks,
-              and weather.
+              Alerts for upcoming claim dates, scheduled tasks, and weather.
             </SheetDescription>
           </SheetHeader>
 
@@ -191,34 +183,18 @@ function NotificationCard({
     ? "bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
     : isTask
       ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-      : isClaim
-        ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-        : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400";
+      : "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400";
 
   const icon = isWeather ? (
     <CloudRain className="h-4 w-4" />
   ) : isTask ? (
     <Clock className="h-4 w-4" />
-  ) : isClaim ? (
-    <CalendarClock className="h-4 w-4" />
   ) : (
-    <DollarSign className="h-4 w-4" />
+    <CalendarClock className="h-4 w-4" />
   );
 
-  const badgeLabel = isWeather
-    ? "Weather"
-    : isTask
-      ? "Task"
-      : isClaim
-        ? "Claim"
-        : "Cost";
-  const badgeVariant = isWeather
-    ? "outline"
-    : isTask
-      ? "outline"
-      : isClaim
-        ? "outline"
-        : "destructive";
+  const badgeLabel = isWeather ? "Weather" : isTask ? "Task" : "Claim";
+  const badgeVariant = isWeather ? "outline" : isTask ? "outline" : "outline";
 
   return (
     <div

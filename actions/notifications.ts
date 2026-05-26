@@ -5,7 +5,8 @@ import { requireServerAuth } from "@/lib/auth-server";
 
 export type NotificationItem = {
   id: string;
-  type: "CLAIM_DUE" | "COST_THRESHOLD" | "TASK_DUE" | "WEATHER_ALERT";
+
+  type: "CLAIM_DUE" | "TASK_DUE" | "WEATHER_ALERT";
   title: string;
   message: string;
   siteName: string;
@@ -45,21 +46,6 @@ export async function getNotifications(): Promise<NotificationItem[]> {
     select: { id: true, name: true, siteClaimDate: true },
   });
 
-  // 2. Sites where total costs (wages + materials) >= R150,000
-  const costSites = await prisma.site.findMany({
-    where: { isActive: true },
-    select: {
-      id: true,
-      name: true,
-      attendanceScans: { select: { dayRateAtScan: true } },
-      siteProductOrders: {
-        select: {
-          items: { select: { unitPriceAtOrder: true, quantity: true } },
-        },
-      },
-    },
-  });
-
   const notifications: NotificationItem[] = [];
 
   for (const site of claimDueSites) {
@@ -73,43 +59,7 @@ export async function getNotifications(): Promise<NotificationItem[]> {
     });
   }
 
-  const COST_THRESHOLD = 150_000;
-
-  for (const site of costSites) {
-    const totalWages = site.attendanceScans.reduce(
-      (sum, scan) => sum + (Number(scan.dayRateAtScan) || 0),
-      0,
-    );
-    const totalMaterialCost = site.siteProductOrders.reduce(
-      (sum, order) =>
-        sum +
-        (order.items ?? []).reduce(
-          (s2, item) =>
-            s2 + (Number(item.unitPriceAtOrder) || 0) * (item.quantity || 0),
-          0,
-        ),
-      0,
-    );
-    const totalCost = totalWages + totalMaterialCost;
-
-    if (totalCost >= COST_THRESHOLD) {
-      const formatted = new Intl.NumberFormat("en-ZA", {
-        style: "currency",
-        currency: "ZAR",
-      }).format(totalCost);
-
-      notifications.push({
-        id: `cost-${site.id}`,
-        type: "COST_THRESHOLD",
-        title: "Site Costs Reached R150,000",
-        message: `Site "${site.name}" has reached ${formatted} in total costs.`,
-        siteName: site.name,
-        siteId: site.id,
-      });
-    }
-  }
-
-  // 3. Scheduler tasks due within the next 20 minutes
+  // 2. Scheduler tasks due within the next 20 minutes
   const in20Min = new Date(now.getTime() + 20 * 60 * 1000);
 
   const todayStart = new Date(

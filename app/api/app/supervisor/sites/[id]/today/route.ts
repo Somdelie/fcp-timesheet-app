@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { verifyApiToken } from "@/lib/jwt";
 import { isoFromDateUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,18 +62,24 @@ export async function GET(
   if (!access)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const todayISO = isoFromDateUTC(new Date());
-  const today = startOfDayUTC(todayISO);
+  const requestedDateISO =
+    new URL(req.url).searchParams.get("dateISO") ?? isoFromDateUTC(new Date());
+  const selectedDate = await validateSupervisorScanDate(requestedDateISO);
+  if (!selectedDate.ok) {
+    return NextResponse.json({ error: selectedDate.error }, { status: 400 });
+  }
+  const dateISO = selectedDate.dateISO;
+  const workDate = startOfDayUTC(dateISO);
 
   // Get all siteDays for this site on this date (multiple foremen can work the same day)
   const siteDays = await prisma.siteDay.findMany({
-    where: { siteId, workDate: today },
+    where: { siteId, workDate },
     select: { id: true, isLocked: true, readyToSubmit: true, foremanId: true },
   });
 
-  // Count scans today for this site
+  // Count scans for the selected site date.
   const scannedCount = await prisma.attendanceScan.count({
-    where: { siteId, workDate: today },
+    where: { siteId, workDate },
   });
 
   // Who is assigned to site today (via foremanSiteAssignment)
@@ -92,7 +99,7 @@ export async function GET(
     ok: true,
     data: {
       siteId,
-      dateISO: todayISO,
+      dateISO,
       scannedCount,
       readyToSubmit: siteDays.some((s) => s.readyToSubmit) ? true : false,
       isLocked: siteDays.some((s) => s.isLocked) ? true : false,

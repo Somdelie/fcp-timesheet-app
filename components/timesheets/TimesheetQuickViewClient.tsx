@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { format, parseISO } from "date-fns";
 import { Printer, FileText, Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+import { exportDomToPdf } from "@/lib/exportDomToPdf";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,7 +23,7 @@ import {
 
 type SupervisorOption = { id: string; name: string | null; email: string };
 type PeriodOption = {
-  id: string; // YYYY-MM-DD_YYYY-MM-DD
+  id: string; // YYYY-MM-DD_YYYY-MM-DD__ or YYYY-MM-DD__YYYY-MM-DD depending on caller
   startISO: string;
   endISO: string;
   label?: string | null;
@@ -125,11 +126,46 @@ function periodSelectLabel(p: PeriodOption): string {
   return `${fmt(a)} – ${fmt(b)} (Sat–Fri)`;
 }
 
+function parsePeriodId(
+  periodId: string,
+): { startISO: string; endISO: string } | null {
+  // Expected from mobile: "YYYY-MM-DD__YYYY-MM-DD"
+  const parts = String(periodId ?? "").split(/_+/); // tolerate multiple underscores
+  if (parts.length < 2) return null;
+  const startISO = parts[0];
+  const endISO = parts[1];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startISO)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endISO)) return null;
+  return { startISO, endISO };
+}
+
+function normalizePeriodIdForSupervisorList(periodId: string): string {
+  // supervisor/timesheets expects query param `period` formatted as:
+  // "YYYY-MM-DD_YYYY-MM-DD" (single underscore)
+  const parsed = parsePeriodId(periodId);
+  if (!parsed) return periodId;
+  return `${parsed.startISO}_${parsed.endISO}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                           */
 /* ------------------------------------------------------------------ */
 
 export default function TimesheetQuickViewClient() {
+  const searchParams = useSearchParams();
+  const apiToken = searchParams.get("token");
+  const queryPeriodId = searchParams.get("periodId");
+  const supervisorMode = Boolean(apiToken);
+  const autoPrint = searchParams.get("autoprint") === "1";
+  const embeddedPreview = searchParams.get("embedded") === "1";
+  const hasAutoPrintedRef = useRef(false);
+
+  const authHeaders: Record<string, string> = useMemo(() => {
+    return apiToken
+      ? { Authorization: `Bearer ${apiToken}` }
+      : ({} as Record<string, string>);
+  }, [apiToken]);
+
   const [supervisors, setSupervisors] = useState<SupervisorOption[]>([]);
   const [periods, setPeriods] = useState<PeriodOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
@@ -145,8 +181,30 @@ export default function TimesheetQuickViewClient() {
   const [columns, setColumns] = useState<DetailColumn[]>([]);
   const [rows, setRows] = useState<ForemanSiteRow[]>([]);
 
-  /* Load supervisors + periods once */
+  const periodFromQuery = useMemo(() => {
+    if (!queryPeriodId) return null;
+    const parsed = parsePeriodId(queryPeriodId);
+    if (!parsed) return null;
+    return {
+      id: queryPeriodId,
+      startISO: parsed.startISO,
+      endISO: parsed.endISO,
+      label: null,
+    } satisfies PeriodOption;
+  }, [queryPeriodId]);
+
+  /* Load supervisors + periods once (ADMIN mode only) */
   useEffect(() => {
+    if (supervisorMode) {
+      // In supervisor mode we rely on periodId from query
+      setOptionsLoading(false);
+      if (periodFromQuery?.id) {
+        setSelectedPeriodId(periodFromQuery.id);
+        setSelectedPeriod(periodFromQuery);
+      }
+      return;
+    }
+
     Promise.all([
       fetch("/api/app/admin/supervisors", { credentials: "include" })
         .then((r) => r.json())
@@ -187,15 +245,16 @@ export default function TimesheetQuickViewClient() {
     ])
       .catch(() => toast.error("Failed to load options"))
       .finally(() => setOptionsLoading(false));
-  }, []);
+  }, [supervisorMode, periodFromQuery]);
 
   useEffect(() => {
+    if (supervisorMode) return;
     setSelectedPeriod(periods.find((p) => p.id === selectedPeriodId) ?? null);
-  }, [selectedPeriodId, periods]);
+  }, [selectedPeriodId, periods, supervisorMode]);
 
-  /* Load all foremen under the selected supervisor for the period */
+  /* Load all foremen under the selected supervisor for the period (ADMIN) */
   const load = useCallback(async () => {
-    if (!selectedSupervisorId || !selectedPeriodId) {
+    if (!selectedPeriodId) {
       setRows([]);
       setColumns([]);
       return;
@@ -206,8 +265,113 @@ export default function TimesheetQuickViewClient() {
     setColumns([]);
 
     try {
+      if (supervisorMode) {
+        const supervisorPeriodQuery =
+          normalizePeriodIdForSupervisorList(selectedPeriodId);
+
+        const listRes = await fetch(
+          `/api/app/supervisor/timesheets?period=${encodeURIComponent(
+            supervisorPeriodQuery,
+          )}`,
+          { headers: { ...authHeaders }, credentials: "include" },
+        );
+
+        const listData = await listRes.json();
+        if (!listRes.ok) {
+          throw new Error(listData.error ?? "Failed to load timesheets");
+        }
+
+        const supervisorRows: Array<{
+          id: string;
+          foremanName: string;
+          siteId: string | null;
+          siteCode: string | null;
+          siteName: string | null;
+          totalWorkerDays: number;
+          totalWorkerWages: number;
+          status: string;
+        }> = listData.timesheets ?? [];
+
+        if (supervisorRows.length === 0) {
+          toast.info("No timesheets found for this period");
+          setLoading(false);
+          return;
+        }
+
+        setSupervisorName("Supervisor");
+
+        /* Fetch per-(foreman, site) details in parallel */
+        const details = await Promise.all(
+          supervisorRows.map(async (row) => {
+            const siteId = row.siteId;
+            const qs = siteId ? `?siteId=${encodeURIComponent(siteId)}` : "";
+            const res = await fetch(
+              `/api/app/supervisor/timesheets/${row.id}${qs}`,
+              { headers: { ...authHeaders }, credentials: "include" },
+            );
+
+            const data = await res.json();
+            if (!res.ok) return null;
+
+            const ts = data.timesheet ?? data;
+            return {
+              listRow: row,
+              columns: (ts.columns ?? []) as DetailColumn[],
+              workerRows: (ts.rows ?? []) as DetailRow[],
+              // In supervisor mode we don't get isForeman flags; we'll render all employees as "team".
+            };
+          }),
+        );
+
+        const valid = details.filter(Boolean) as NonNullable<
+          (typeof details)[0]
+        >[];
+
+        if (valid.length === 0) {
+          toast.error("Could not load timesheet details");
+          setLoading(false);
+          return;
+        }
+
+        const cols = valid[0].columns;
+        setColumns(cols);
+
+        const displayRows: ForemanSiteRow[] = valid.map((d) => {
+          const dailyCounts = cols.map(
+            (_, dayIdx) => d.workerRows.filter((r) => r.present[dayIdx]).length,
+          );
+
+          const manDays = d.workerRows.reduce(
+            (s, r) => s + (r.daysWorked ?? 0),
+            0,
+          );
+
+          return {
+            foremanName: d.listRow.foremanName,
+            jobNo: d.listRow.siteCode ?? "",
+            siteName: d.listRow.siteName ?? "",
+            dailyCounts,
+            foremanPresence: Array(cols.length).fill(false),
+            foremanDays: 0,
+            manDays,
+          };
+        });
+
+        displayRows.sort((a, b) => {
+          const n = a.foremanName.localeCompare(b.foremanName);
+          return n !== 0 ? n : a.siteName.localeCompare(b.siteName);
+        });
+
+        setRows(displayRows);
+        return;
+      }
+
+      /* -------------------------- ADMIN MODE -------------------------- */
+
+      if (!selectedSupervisorId) return;
+
       const listRes = await fetch(
-        `/api/app/admin/timesheets?period=${selectedPeriodId}`,
+        `/api/app/admin/timesheets?period=${encodeURIComponent(selectedPeriodId)}`,
         { credentials: "include" },
       );
       const listData = await listRes.json();
@@ -267,13 +431,13 @@ export default function TimesheetQuickViewClient() {
       for (const d of valid) {
         const { listRow, workerRows, foremanEmployeeId } = d;
         const site = listRow.sites[0] ?? { code: null, name: "Unknown" };
-        // Use isForeman flag stamped by the API; fall back to ID match if the
-        // flag is absent (older API response shape).
+
         const foremanRow = workerRows.find(
           (r) =>
             r.isForeman ??
             (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false),
         );
+
         const teamRows = workerRows.filter(
           (r) =>
             !(
@@ -281,12 +445,15 @@ export default function TimesheetQuickViewClient() {
               (foremanEmployeeId ? r.employeeId === foremanEmployeeId : false)
             ),
         );
+
         const dailyCounts = cols.map(
           (_, dayIdx) => teamRows.filter((r) => r.present[dayIdx]).length,
         );
+
         const foremanPresence: boolean[] = foremanRow
           ? foremanRow.present
           : Array(cols.length).fill(false);
+
         displayRows.push({
           foremanName: listRow.foreman.name,
           jobNo: site.code ?? "",
@@ -294,7 +461,7 @@ export default function TimesheetQuickViewClient() {
           dailyCounts,
           foremanPresence,
           foremanDays: listRow.foremanDays ?? 0,
-          manDays: teamRows.reduce((s, r) => s + r.daysWorked, 0),
+          manDays: teamRows.reduce((s, r) => s + (r.daysWorked ?? 0), 0),
         });
       }
 
@@ -309,7 +476,13 @@ export default function TimesheetQuickViewClient() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSupervisorId, selectedPeriodId, supervisors]);
+  }, [
+    selectedPeriodId,
+    supervisorMode,
+    selectedSupervisorId,
+    supervisors,
+    authHeaders,
+  ]);
 
   useEffect(() => {
     load();
@@ -320,14 +493,53 @@ export default function TimesheetQuickViewClient() {
   const headerDate = selectedPeriod ? periodHeaderLabel(selectedPeriod) : "";
   const todayISO = new Date().toISOString().slice(0, 10);
 
+  const handleSavePdf = useCallback(async () => {
+    const printRoot = document.getElementById("ts-print-root");
+    if (!printRoot) return;
+
+    const startISO = selectedPeriod?.startISO ?? "";
+    const endISO = selectedPeriod?.endISO ?? "";
+
+    const filename =
+      startISO && endISO
+        ? `timesheet-${startISO}-${endISO}.pdf`
+        : "timesheet.pdf";
+
+    try {
+      await exportDomToPdf(printRoot, {
+        filename,
+        marginMm: 8,
+        scale: 2,
+        landscape: true,
+      });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to export PDF");
+    }
+  }, [selectedPeriod]);
+
   const handlePrint = useCallback(() => {
     const printRoot = document.getElementById("ts-print-root");
     if (!printRoot) return;
+
+    // Force light mode before printing (mobile browsers may ignore theme otherwise)
+    if (supervisorMode) {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+    }
+
+    const shouldClosePopup = autoPrint;
+    const doPrint = () => {
+      // Give the browser a tick to apply styles/classes.
+      setTimeout(() => window.print(), 0);
+    };
+
     const win = window.open("", "_blank");
     if (!win) {
-      window.print();
+      doPrint();
       return;
     }
+
+    // Best-effort: render a dedicated print document.
     win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Time Sheet</title><style>
 @page { size: A4 landscape; margin: 8mm 12mm; }
@@ -357,10 +569,41 @@ body { margin: 0; }
     win.document.close();
     win.focus();
     setTimeout(() => {
-      win.print();
-      win.close();
-    }, 200);
-  }, []);
+      try {
+        win.print();
+      } catch {
+        // ignore
+      }
+      try {
+        window.print();
+      } catch {
+        // ignore
+      }
+
+      // On mobile, closing the popup immediately can prevent the print/save
+      // dialog from appearing. Only close when we are auto-printing.
+      if (shouldClosePopup) {
+        try {
+          win.close();
+        } catch {
+          // ignore
+        }
+      }
+    }, 2000);
+  }, [supervisorMode, autoPrint]);
+
+  // If mobile opened this page with ?autoprint=1, auto-trigger the browser print
+  // once data is ready.
+  useEffect(() => {
+    if (!autoPrint) return;
+    if (!supervisorMode) return;
+    if (hasAutoPrintedRef.current) return;
+    if (loading) return;
+    if (!rows.length) return;
+
+    hasAutoPrintedRef.current = true;
+    handleSavePdf();
+  }, [autoPrint, supervisorMode, loading, rows.length, handleSavePdf]);
 
   return (
     <>
@@ -406,11 +649,11 @@ body { margin: 0; }
           .ts-th-jobno { text-align: left !important; min-width: 60px; }
           .ts-th-site  { text-align: left !important; min-width: 140px; }
           .ts-th-day   {
-  width: 42px;
-  min-width: 42px;
-  max-width: 42px;
-  padding: 2px !important;
-}
+            width: 42px;
+            min-width: 42px;
+            max-width: 42px;
+            padding: 2px !important;
+          }
           .ts-th-total { min-width: 52px; }
           .ts-td-name  { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
           .ts-td-jobno { text-align: left !important; min-width: 60px; font-size: 9px; color: #555; }
@@ -426,66 +669,104 @@ body { margin: 0; }
           .ts-tfoot-label { text-align: right !important; padding-right: 8px !important; letter-spacing: 0.5px; }
           .ts-dayhead-short { font-size: 8px; line-height: 1.2; font-weight: 400; }
           .ts-dayhead-num   { font-size: 10px; font-weight: 700; line-height: 1.3; }
+          .ts-embedded-preview {
+            min-width: 1180px;
+            width: max-content;
+            padding: 16px;
+            background: #ffffff;
+            color: #000000;
+          }
+          .ts-embedded-preview .ts-table {
+            min-width: 1120px;
+          }
         `,
         }}
       />
 
-      <div className="space-y-6">
+      <div className={embeddedPreview ? "" : "space-y-6"}>
         {/* ── Controls ── */}
-        <div className="ts-no-print flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1.5 lg:flex-1">
-            <Label>Supervisor</Label>
-            <Select
-              value={selectedSupervisorId}
-              onValueChange={setSelectedSupervisorId}
-              disabled={optionsLoading}
-            >
-              <SelectTrigger className="w-full lg:w-60">
-                <SelectValue
-                  placeholder={
-                    optionsLoading ? "Loading…" : "— select supervisor —"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="max-h-72">
-                {supervisors.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name || s.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div
+          className={`ts-no-print flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between ${
+            embeddedPreview ? "hidden" : ""
+          }`}
+        >
+          {!supervisorMode && (
+            <div className="space-y-1.5 lg:flex-1">
+              <Label>Supervisor</Label>
+              <Select
+                value={selectedSupervisorId}
+                onValueChange={setSelectedSupervisorId}
+                disabled={optionsLoading}
+              >
+                <SelectTrigger className="w-full lg:w-60">
+                  <SelectValue
+                    placeholder={
+                      optionsLoading ? "Loading…" : "— select supervisor —"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {supervisors.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name || s.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-1.5 lg:flex-1">
-            <Label>Fortnight Period</Label>
-            <Select
-              value={selectedPeriodId}
-              onValueChange={setSelectedPeriodId}
-              disabled={optionsLoading}
-            >
-              <SelectTrigger className="w-full lg:w-68">
-                <SelectValue placeholder="— select period —" />
-              </SelectTrigger>
-              <SelectContent className="max-h-72">
-                {periods.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {periodSelectLabel(p)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!supervisorMode ? (
+              <>
+                <Label>Fortnight Period</Label>
+                <Select
+                  value={selectedPeriodId}
+                  onValueChange={setSelectedPeriodId}
+                  disabled={optionsLoading}
+                >
+                  <SelectTrigger className="w-full lg:w-68">
+                    <SelectValue placeholder="— select period —" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {periods.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {periodSelectLabel(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            ) : (
+              <>
+                <Label>Fortnight Period</Label>
+                <div className="w-full lg:w-68">
+                  <div className="text-sm text-muted-foreground">
+                    {selectedPeriod
+                      ? periodSelectLabel(selectedPeriod)
+                      : "Loading…"}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {rows.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              className="gap-2 lg:self-end"
-            >
-              <Printer className="h-4 w-4" />
-              Print / Save PDF
-            </Button>
+            <div className="flex gap-3 lg:self-end">
+              <Button variant="outline" onClick={handlePrint} className="gap-2">
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleSavePdf}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Save PDF
+              </Button>
+            </div>
           )}
         </div>
 
@@ -498,18 +779,21 @@ body { margin: 0; }
         )}
 
         {/* ── Empty prompt ── */}
-        {!loading && !selectedSupervisorId && (
+        {!loading && !selectedPeriodId && (
           <div className="ts-no-print flex flex-col items-center gap-3 py-16 border rounded-lg bg-muted/20 text-muted-foreground">
             <FileText className="h-10 w-10 opacity-30" />
             <p className="text-sm">
-              Select a supervisor and period to generate the timesheet view.
+              Select a period to generate the timesheet view.
             </p>
           </div>
         )}
 
         {/* ── Sheet ── */}
         {!loading && rows.length > 0 && (
-          <div id="ts-print-root" className="overflow-x-auto">
+          <div
+            id="ts-print-root"
+            className={embeddedPreview ? "ts-embedded-preview" : "overflow-x-auto"}
+          >
             {/* Header row — matches the handwritten sheet layout */}
             <div className="ts-sheet-header">
               <div>
@@ -580,6 +864,8 @@ body { margin: 0; }
                             }
                           >
                             {isFuture ? null : hasActivity ? (
+                              // In supervisor mode we always have foremanPresence=false,
+                              // so this will just render `${count}`.
                               foremanIn ? (
                                 `${initial}+${count}`
                               ) : (

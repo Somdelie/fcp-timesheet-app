@@ -74,16 +74,12 @@ async function resolvePeriod(req: Request) {
     const startDate = startOfDayUTCFromISO(parsed.startISO);
     const endDate = startOfDayUTCFromISO(parsed.endISO);
 
-    const existing = await prisma.timesheetPeriod.findUnique({
+    const existing = await prisma.timesheetPeriod.upsert({
       where: { startDate_endDate: { startDate, endDate } },
+      create: { startDate, endDate },
+      update: {},
       select: { id: true, startDate: true, endDate: true },
     });
-
-    if (!existing) {
-      throw new Error(
-        `Timesheet period ${parsed.startISO}_${parsed.endISO} not found.`,
-      );
-    }
 
     return {
       periodId: existing.id,
