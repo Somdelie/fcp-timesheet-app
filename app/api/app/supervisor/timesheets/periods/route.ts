@@ -97,12 +97,12 @@ async function generateQuickViewPdf(input: {
   const pageWidth = 841.89;
   const pageHeight = 595.28;
   const margin = 24;
-  const headerHeight = 32;
+  const headerHeight = 40;
   const rowHeight = 24;
-  const nameWidth = 115;
-  const jobWidth = 56;
-  const siteWidth = 155;
-  const totalWidth = 52;
+  const nameWidth = 112;
+  const jobWidth = 60;
+  const siteWidth = 174;
+  const totalWidth = 48;
   const dayWidth =
     (pageWidth - margin * 2 - nameWidth - jobWidth - siteWidth - totalWidth * 2) /
     Math.max(input.columns.length, 1);
@@ -124,13 +124,18 @@ async function generateQuickViewPdf(input: {
     y: number,
     width: number,
     height: number,
-    options: { bold?: boolean; align?: "left" | "center" | "right"; fill?: ReturnType<typeof rgb> } = {},
+    options: {
+      bold?: boolean;
+      align?: "left" | "center" | "right";
+      fill?: ReturnType<typeof rgb>;
+      size?: number;
+    } = {},
   ) => {
     const textFont = options.bold ? bold : font;
-    const size = 8;
+    const size = options.size ?? 8;
     const value = truncate(text, width - 8, textFont, size);
     if (options.fill) page.drawRectangle({ x, y, width, height, color: options.fill });
-    page.drawRectangle({ x, y, width, height, borderColor: rgb(0.7, 0.72, 0.76), borderWidth: 0.6 });
+    page.drawRectangle({ x, y, width, height, borderColor: rgb(0.64, 0.66, 0.69), borderWidth: 0.65 });
     const textWidth = textFont.widthOfTextAtSize(value, size);
     const textX =
       options.align === "right"
@@ -144,37 +149,64 @@ async function generateQuickViewPdf(input: {
   let y = 0;
   const beginPage = () => {
     page = pdf.addPage([pageWidth, pageHeight]);
-    page.drawText("TIME SHEET", { x: pageWidth / 2 - 48, y: pageHeight - margin - 4, size: 16, font: bold, color: rgb(0.08, 0.1, 0.14) });
-    page.drawText(`Date: ${dateLabel}`, { x: margin, y: pageHeight - margin - 3, size: 10, font, color: rgb(0.3, 0.33, 0.38) });
-    const manager = truncate(`Contract Manager: ${input.supervisorName}`, 230, font, 10);
-    page.drawText(manager, { x: pageWidth - margin - font.widthOfTextAtSize(manager, 10), y: pageHeight - margin - 3, size: 10, font, color: rgb(0.3, 0.33, 0.38) });
-    y = pageHeight - margin - 34;
+    const title = "TIME SHEET";
+    const titleWidth = bold.widthOfTextAtSize(title, 14);
+    const titleX = (pageWidth - titleWidth) / 2;
+    page.drawText(title, { x: titleX, y: pageHeight - margin - 8, size: 14, font: bold, color: rgb(0.08, 0.1, 0.14) });
+    page.drawLine({
+      start: { x: titleX, y: pageHeight - margin - 10 },
+      end: { x: titleX + titleWidth, y: pageHeight - margin - 10 },
+      thickness: 0.8,
+      color: rgb(0.08, 0.1, 0.14),
+    });
+    page.drawText(`Date: ${dateLabel}`, { x: margin, y: pageHeight - margin - 7, size: 9, font, color: rgb(0.2, 0.23, 0.27) });
+    const manager = truncate(`Contract Manager: ${input.supervisorName}`, 240, font, 9);
+    page.drawText(manager, { x: pageWidth - margin - font.widthOfTextAtSize(manager, 9), y: pageHeight - margin - 7, size: 9, font, color: rgb(0.2, 0.23, 0.27) });
+    y = pageHeight - margin - 38;
     let x = margin;
-    const header = rgb(0.93, 0.94, 0.96);
+    const header = rgb(0.91, 0.92, 0.94);
     cell(page, "Name", x, y - headerHeight, nameWidth, headerHeight, { bold: true, fill: header }); x += nameWidth;
     cell(page, "Job No", x, y - headerHeight, jobWidth, headerHeight, { bold: true, fill: header }); x += jobWidth;
     cell(page, "Site", x, y - headerHeight, siteWidth, headerHeight, { bold: true, fill: header }); x += siteWidth;
     input.columns.forEach((col) => {
-      cell(page, `${col.day} ${col.date}`, x, y - headerHeight, dayWidth, headerHeight, { bold: true, align: "center", fill: header });
+      page.drawRectangle({
+        x,
+        y: y - headerHeight,
+        width: dayWidth,
+        height: headerHeight,
+        color: header,
+        borderColor: rgb(0.64, 0.66, 0.69),
+        borderWidth: 0.65,
+      });
+      const day = truncate(col.day, dayWidth - 4, font, 6);
+      const dayX = x + (dayWidth - font.widthOfTextAtSize(day, 6)) / 2;
+      const dateX = x + (dayWidth - bold.widthOfTextAtSize(col.date, 8)) / 2;
+      page.drawText(day, { x: dayX, y: y - 15, size: 6, font, color: rgb(0.15, 0.17, 0.2) });
+      page.drawText(col.date, { x: dateX, y: y - 28, size: 8, font: bold, color: rgb(0.08, 0.1, 0.14) });
       x += dayWidth;
     });
-    cell(page, "F/man Days", x, y - headerHeight, totalWidth, headerHeight, { bold: true, align: "center", fill: header }); x += totalWidth;
-    cell(page, "Man Days", x, y - headerHeight, totalWidth, headerHeight, { bold: true, align: "center", fill: header });
+    page.drawRectangle({ x, y: y - headerHeight, width: totalWidth, height: headerHeight, color: header, borderColor: rgb(0.64, 0.66, 0.69), borderWidth: 0.65 });
+    page.drawText("F/man", { x: x + 12, y: y - 15, size: 7, font: bold, color: rgb(0.08, 0.1, 0.14) });
+    page.drawText("Days", { x: x + 14, y: y - 28, size: 7, font: bold, color: rgb(0.08, 0.1, 0.14) });
+    x += totalWidth;
+    page.drawRectangle({ x, y: y - headerHeight, width: totalWidth, height: headerHeight, color: header, borderColor: rgb(0.64, 0.66, 0.69), borderWidth: 0.65 });
+    page.drawText("Man", { x: x + 17, y: y - 15, size: 7, font: bold, color: rgb(0.08, 0.1, 0.14) });
+    page.drawText("Days", { x: x + 14, y: y - 28, size: 7, font: bold, color: rgb(0.08, 0.1, 0.14) });
     y -= headerHeight;
   };
   beginPage();
   for (const row of input.rows) {
     if (y - rowHeight < margin + rowHeight * 2) beginPage();
     let x = margin;
-    cell(page!, row.foremanName, x, y - rowHeight, nameWidth, rowHeight, { bold: true }); x += nameWidth;
-    cell(page!, row.jobNo, x, y - rowHeight, jobWidth, rowHeight); x += jobWidth;
-    cell(page!, row.siteName, x, y - rowHeight, siteWidth, rowHeight); x += siteWidth;
+    cell(page!, row.foremanName, x, y - rowHeight, nameWidth, rowHeight, { bold: true, size: 7 }); x += nameWidth;
+    cell(page!, row.jobNo, x, y - rowHeight, jobWidth, rowHeight, { size: 7 }); x += jobWidth;
+    cell(page!, row.siteName, x, y - rowHeight, siteWidth, rowHeight, { size: 7 }); x += siteWidth;
     const initial = foremanInitial(row.foremanName);
     row.dailyCounts.forEach((count, dayIdx) => {
       const future = input.columns[dayIdx]?.iso > todayISO;
       const present = row.foremanPresence[dayIdx] ?? false;
       const value = future ? "" : present ? `${initial}+${count}` : count > 0 ? String(count) : "/";
-      cell(page!, value, x, y - rowHeight, dayWidth, rowHeight, { bold: present || count > 0, align: "center" });
+      cell(page!, value, x, y - rowHeight, dayWidth, rowHeight, { bold: present || count > 0, align: "center", size: 7 });
       x += dayWidth;
     });
     cell(page!, row.foremanDays ? String(row.foremanDays) : "", x, y - rowHeight, totalWidth, rowHeight, { bold: true, align: "center" }); x += totalWidth;
