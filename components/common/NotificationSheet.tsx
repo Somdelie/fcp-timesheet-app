@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
-import { Bell, CalendarClock, Clock, CloudRain, X } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  CloudRain,
+  X,
+  XCircle,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -178,23 +186,59 @@ function NotificationCard({
   const isClaim = notification.type === "CLAIM_DUE";
   const isTask = notification.type === "TASK_DUE";
   const isWeather = notification.type === "WEATHER_ALERT";
+  const isPhotoRejected = notification.type === "PHOTO_REJECTED";
+  const isTimesheetSubmitted = notification.type === "TIMESHEET_SUBMITTED";
+  const isTimesheetApproved = notification.type === "TIMESHEET_APPROVED";
+  const isTimesheetRejected = notification.type === "TIMESHEET_REJECTED";
 
   const iconBg = isWeather
     ? "bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
-    : isTask
-      ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-      : "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400";
+    : isTimesheetRejected
+      ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+      : isPhotoRejected
+        ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+        : isTimesheetApproved
+          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+          : isTimesheetSubmitted
+            ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+            : isTask
+              ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+              : "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400";
 
   const icon = isWeather ? (
     <CloudRain className="h-4 w-4" />
+  ) : isTimesheetRejected ? (
+    <XCircle className="h-4 w-4" />
+  ) : isPhotoRejected ? (
+    <XCircle className="h-4 w-4" />
+  ) : isTimesheetApproved ? (
+    <CheckCircle2 className="h-4 w-4" />
+  ) : isTimesheetSubmitted ? (
+    <Clock className="h-4 w-4" />
   ) : isTask ? (
     <Clock className="h-4 w-4" />
   ) : (
     <CalendarClock className="h-4 w-4" />
   );
 
-  const badgeLabel = isWeather ? "Weather" : isTask ? "Task" : "Claim";
-  const badgeVariant = isWeather ? "outline" : isTask ? "outline" : "outline";
+  const badgeLabel = isWeather
+    ? "Weather"
+    : isTimesheetRejected
+      ? "Rejected"
+      : isPhotoRejected
+        ? "Photo issue"
+        : isTimesheetApproved
+          ? "Approved"
+          : isTimesheetSubmitted
+            ? "Pending"
+            : isTask
+              ? "Task"
+              : isClaim
+                ? "Claim"
+                : "Alert";
+
+  const badgeVariant: "outline" | "destructive" =
+    isTimesheetRejected || isPhotoRejected ? "destructive" : "outline";
 
   return (
     <div

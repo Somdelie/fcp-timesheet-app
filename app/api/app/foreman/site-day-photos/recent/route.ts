@@ -29,12 +29,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    if (payload.role !== "FOREMAN") {
+    if (payload.role !== "FOREMAN" && payload.role !== "EMPLOYEE") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const url = new URL(req.url);
-    const forForemanId = url.searchParams.get("forForemanId");
+    const forForemanId =
+      url.searchParams.get("forForemanId") ||
+      req.headers.get("x-acting-foreman-id")?.trim() ||
+      null;
 
     const resolved = await resolveActingForeman(
       payload.sub,
@@ -50,7 +53,7 @@ export async function GET(req: Request) {
     const actingForemanId = resolved.foremanId!;
 
     const cutoff = new Date();
-    cutoff.setUTCDate(cutoff.getUTCDate() - 5);
+    cutoff.setUTCDate(cutoff.getUTCDate() - 7);
     cutoff.setUTCHours(0, 0, 0, 0);
 
     const photos = await prisma.siteDayPhoto.findMany({
@@ -60,19 +63,28 @@ export async function GET(req: Request) {
       },
       orderBy: [{ siteDay: { workDate: "desc" } }, { uploadedAt: "desc" }],
       select: {
+        id: true,
         imageUrl: true,
         uploadedAt: true,
+        verification: { select: { status: true, notes: true } },
         siteDay: {
           select: {
             workDate: true,
+            site: { select: { id: true, name: true } },
           },
         },
       },
     });
 
     const dto = photos.map((p) => ({
+      id: p.id,
       imageUrl: p.imageUrl,
       dateTakenISO: toISODateUTC(p.siteDay.workDate),
+      uploadedAtISO: p.uploadedAt.toISOString(),
+      siteId: p.siteDay.site.id,
+      siteName: p.siteDay.site.name,
+      verificationStatus: p.verification?.status ?? "PENDING",
+      verificationNotes: p.verification?.notes ?? null,
     }));
 
     return NextResponse.json({ photos: dto });

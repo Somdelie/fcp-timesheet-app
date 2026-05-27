@@ -6,9 +6,26 @@ import { requireServerAuth } from "@/lib/auth-server";
 export type NotificationItem = {
   id: string;
 
-  type: "CLAIM_DUE" | "TASK_DUE" | "WEATHER_ALERT";
+  // Mix of scheduled notifications (computed) and persisted DB notifications (Prisma NotificationType)
+  type:
+    | "CLAIM_DUE"
+    | "TASK_DUE"
+    | "WEATHER_ALERT"
+    | "PHOTO_REQUESTED"
+    | "PHOTO_REJECTED"
+    | "TIMESHEET_SUBMITTED"
+    | "TIMESHEET_APPROVED"
+    | "TIMESHEET_REJECTED"
+    | "SITE_FINISHED"
+    | "MATERIAL_ORDER"
+    | "PAINT_50_PERCENT"
+    | "PAINT_90_PERCENT"
+    | "GENERAL";
+
   title: string;
   message: string;
+
+  // UI currently doesn’t display these, but keep for future deep-linking / context.
   siteName: string;
   siteId: string;
 };
@@ -159,5 +176,33 @@ export async function getNotifications(): Promise<NotificationItem[]> {
   } catch {
     // Weather fetch failed – skip silently
   }
-  return notifications;
+
+  // 5. Persisted DB notifications (event-driven: photo rejection, timesheet submitted/rejected, etc.)
+  // These drive the in-app bell and are also sent via Expo push.
+  const dbNotifications = await prisma.notification.findMany({
+    where: { userId: auth.userId },
+    orderBy: [{ isRead: "asc" }, { createdAt: "desc" }],
+    take: 50,
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      message: true,
+      siteId: true,
+      isRead: true,
+      linkUrl: true,
+      site: { select: { id: true, name: true } },
+    },
+  });
+
+  const mappedDb = dbNotifications.map((n) => ({
+    id: `db-${n.id}`,
+    type: n.type as NotificationItem["type"],
+    title: n.title,
+    message: n.message,
+    siteName: n.site?.name ?? "",
+    siteId: n.siteId ?? "",
+  }));
+
+  return [...mappedDb, ...notifications];
 }

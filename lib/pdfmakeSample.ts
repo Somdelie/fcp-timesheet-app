@@ -5,7 +5,7 @@ pdfMake.vfs = pdfFonts.pdfMake.vfs;
 export function downloadSamplePdf() {
   const docDefinition = {
     content: [
-      { text: "Timesheet Report", style: "header" },
+      { text: "Attandance Report", style: "header" },
       { text: "✓ Present (SVG/Unicode supported)", margin: [0, 10] },
       { text: "X Absent", margin: [0, 0, 0, 10] },
       {

@@ -1,0 +1,1 @@
+ALTER TABLE "SiteDayPhoto" ADD COLUMN "capturedAt" TIMESTAMP(3);

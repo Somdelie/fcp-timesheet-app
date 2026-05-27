@@ -628,6 +628,7 @@ model SiteDayPhoto {
   siteDayId          String
   imageUrl           String
   uploadedAt         DateTime @default(now())
+  capturedAt         DateTime?
   uploadedByUserId   String?
   requestId          String?
   cloudinaryPublicId String?

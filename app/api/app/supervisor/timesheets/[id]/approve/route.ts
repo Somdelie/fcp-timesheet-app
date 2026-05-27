@@ -6,6 +6,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { parseTimesheetId } from "@/lib/timesheetId";
 import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
 import { writeAuditEvent } from "@/lib/audit";
+import { sendExpoPush } from "@/lib/expoPush";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -220,6 +221,57 @@ export async function POST(
       description: site?.name ? `${site.name} - ${foremanName}` : foremanName,
     },
   });
+
+  try {
+    const foremanRow = await prisma.foreman.findUnique({
+      where: { id: parsed.foremanId },
+      select: { userId: true },
+    });
+    const foremanUserId = foremanRow?.userId ?? null;
+
+    if (foremanUserId) {
+      const title = "Timesheet approved";
+      const message = site?.name
+        ? `${foremanName}, your timesheet for ${site.name} was approved.`
+        : `${foremanName}, your timesheet was approved.`;
+
+      await prisma.notification.create({
+        data: {
+          userId: foremanUserId,
+          type: "TIMESHEET_APPROVED",
+          title,
+          message,
+          siteId: site?.id ?? null,
+          linkUrl: null,
+        },
+      });
+
+      const pushTokens = await prisma.pushToken.findMany({
+        where: { userId: foremanUserId },
+        select: { token: true },
+      });
+
+      if (pushTokens.length > 0) {
+        await sendExpoPush(
+          pushTokens.map((token) => token.token),
+          {
+            title,
+            body: message,
+            data: {
+              type: "TIMESHEET_APPROVED",
+              siteId: site?.id ?? null,
+              timesheetId: ts.id,
+              foremanId: parsed.foremanId,
+              periodStartISO: parsed.startISO,
+              periodEndISO: parsed.endISO,
+            },
+          },
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Failed to send timesheet approval notification:", error);
+  }
 
   return NextResponse.json({ ok: true, ...updated }, { headers: CORS });
 }

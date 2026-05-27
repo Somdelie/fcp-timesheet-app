@@ -70,6 +70,7 @@ export interface TimesheetPdfMetadata {
   startISO?: string;
   endISO?: string;
   status?: string;
+  hideAmounts?: boolean;
 }
 
 export async function generateTimesheetPdf(
@@ -89,12 +90,20 @@ export async function generateTimesheetPdf(
   const rows = model.rows || [];
   const totals = model.totals;
   const foremanName = model.foremanName || metadata?.foremanName || "";
+  const hideAmounts = metadata?.hideAmounts === true;
 
   // Dynamic column widths based on number of days
   const nameColWidth = 140;
+  const summaryDaysWidth = 120;
+  const summaryPayWidth = hideAmounts ? 0 : 160;
   const dayColWidth = Math.min(
     45,
-    (pageWidth - margin * 2 - nameColWidth - 280) / Math.max(columns.length, 1),
+    (pageWidth -
+      margin * 2 -
+      nameColWidth -
+      summaryDaysWidth -
+      summaryPayWidth) /
+      Math.max(columns.length, 1),
   );
   const summaryColWidths = {
     fmanDays: 60,
@@ -104,7 +113,6 @@ export async function generateTimesheetPdf(
   };
 
   const headerHeight = 40;
-  const subHeaderHeight = 28;
   const rowHeight = 26;
   const fontSize = 9;
   const headerFontSize = 10;
@@ -115,14 +123,13 @@ export async function generateTimesheetPdf(
     columns.length * dayColWidth +
     summaryColWidths.fmanDays +
     summaryColWidths.manDays +
-    summaryColWidths.fmanPay +
-    summaryColWidths.teamPay;
+    (hideAmounts ? 0 : summaryColWidths.fmanPay + summaryColWidths.teamPay);
 
   let page = pdf.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
   // ============ TITLE SECTION ============
-  const title = "Timesheet Report";
+  const title = "Attandance Report";
   page.drawText(title, {
     x: margin,
     y: y - 18,
@@ -288,16 +295,20 @@ export async function generateTimesheetPdf(
         width: summaryColWidths.manDays,
         bg: colors.amberBg,
       },
-      {
-        label: "F/man Pay",
-        width: summaryColWidths.fmanPay,
-        bg: colors.emeraldBg,
-      },
-      {
-        label: "Team Pay",
-        width: summaryColWidths.teamPay,
-        bg: colors.emeraldBg,
-      },
+      ...(hideAmounts
+        ? []
+        : [
+            {
+              label: "F/man Pay",
+              width: summaryColWidths.fmanPay,
+              bg: colors.emeraldBg,
+            },
+            {
+              label: "Team Pay",
+              width: summaryColWidths.teamPay,
+              bg: colors.emeraldBg,
+            },
+          ]),
     ];
 
     for (const h of summaryHeaders) {
@@ -445,9 +456,6 @@ export async function generateTimesheetPdf(
     // Summary cells - separate foreman/team totals
     const foremanDays = isForeman ? row.daysWorked : 0;
     const teamDays = isForeman ? 0 : row.daysWorked;
-    const foremanPay = isForeman ? row.pay : 0;
-    const teamPay = isForeman ? 0 : row.pay;
-
     const summaryCells = [
       {
         value: foremanDays.toString(),
@@ -459,16 +467,20 @@ export async function generateTimesheetPdf(
         width: summaryColWidths.manDays,
         isZero: teamDays === 0,
       },
-      {
-        value: foremanPay > 0 ? formatCurrency(foremanPay) : "0",
-        width: summaryColWidths.fmanPay,
-        isZero: foremanPay === 0,
-      },
-      {
-        value: teamPay > 0 ? formatCurrency(teamPay) : "0",
-        width: summaryColWidths.teamPay,
-        isZero: teamPay === 0,
-      },
+      ...(hideAmounts
+        ? []
+        : [
+            {
+              value: isForeman && row.pay > 0 ? formatCurrency(row.pay) : "0",
+              width: summaryColWidths.fmanPay,
+              isZero: !isForeman || row.pay === 0,
+            },
+            {
+              value: !isForeman && row.pay > 0 ? formatCurrency(row.pay) : "0",
+              width: summaryColWidths.teamPay,
+              isZero: isForeman || row.pay === 0,
+            },
+          ]),
     ];
 
     for (const cell of summaryCells) {
@@ -557,7 +569,7 @@ export async function generateTimesheetPdf(
     xPos += nameColWidth;
 
     // Empty day cells
-    for (const _ of columns) {
+    columns.forEach(() => {
       pg.drawRectangle({
         x: xPos,
         y: rowY,
@@ -566,7 +578,7 @@ export async function generateTimesheetPdf(
         color: colors.totalRowBg,
       });
       xPos += dayColWidth;
-    }
+    });
 
     // Total summary cells
     const totalCells = [
@@ -578,14 +590,18 @@ export async function generateTimesheetPdf(
         value: (totals?.teamDays ?? 0).toString(),
         width: summaryColWidths.manDays,
       },
-      {
-        value: formatCurrency(totals?.foremanPay ?? 0),
-        width: summaryColWidths.fmanPay,
-      },
-      {
-        value: formatCurrency(totals?.teamPay ?? 0),
-        width: summaryColWidths.teamPay,
-      },
+      ...(hideAmounts
+        ? []
+        : [
+            {
+              value: formatCurrency(totals?.foremanPay ?? 0),
+              width: summaryColWidths.fmanPay,
+            },
+            {
+              value: formatCurrency(totals?.teamPay ?? 0),
+              width: summaryColWidths.teamPay,
+            },
+          ]),
     ];
 
     for (const cell of totalCells) {
@@ -705,6 +721,7 @@ export async function generateTimesheetPdf(
   const summaryCardWidth = (tableWidth - 24) / 3;
   const summaryCardHeight = 60;
   const summaryCardGap = 12;
+  const summaryDaysY = summaryCardStartY - (hideAmounts ? 40 : 32);
 
   // Card 1: FOREMAN
   const card1X = margin;
@@ -726,32 +743,34 @@ export async function generateTimesheetPdf(
   });
   page.drawText("Days", {
     x: card1X + 12,
-    y: summaryCardStartY - 32,
+    y: summaryDaysY,
     size: 9,
     font: font,
     color: colors.textSecondary,
   });
   page.drawText((totals?.foremanDays ?? 0).toString(), {
     x: card1X + summaryCardWidth - 50,
-    y: summaryCardStartY - 32,
+    y: summaryDaysY,
     size: 11,
     font: fontBold,
     color: colors.textPrimary,
   });
-  page.drawText("Pay", {
-    x: card1X + 12,
-    y: summaryCardStartY - 48,
-    size: 9,
-    font: font,
-    color: colors.textSecondary,
-  });
-  page.drawText(formatCurrency(totals?.foremanPay ?? 0), {
-    x: card1X + summaryCardWidth - 80,
-    y: summaryCardStartY - 48,
-    size: 11,
-    font: fontBold,
-    color: colors.textPrimary,
-  });
+  if (!hideAmounts) {
+    page.drawText("Pay", {
+      x: card1X + 12,
+      y: summaryCardStartY - 48,
+      size: 9,
+      font: font,
+      color: colors.textSecondary,
+    });
+    page.drawText(formatCurrency(totals?.foremanPay ?? 0), {
+      x: card1X + summaryCardWidth - 80,
+      y: summaryCardStartY - 48,
+      size: 11,
+      font: fontBold,
+      color: colors.textPrimary,
+    });
+  }
 
   // Card 2: TEAM
   const card2X = card1X + summaryCardWidth + summaryCardGap;
@@ -773,32 +792,34 @@ export async function generateTimesheetPdf(
   });
   page.drawText("Days", {
     x: card2X + 12,
-    y: summaryCardStartY - 32,
+    y: summaryDaysY,
     size: 9,
     font: font,
     color: colors.textSecondary,
   });
   page.drawText((totals?.teamDays ?? 0).toString(), {
     x: card2X + summaryCardWidth - 50,
-    y: summaryCardStartY - 32,
+    y: summaryDaysY,
     size: 11,
     font: fontBold,
     color: colors.textPrimary,
   });
-  page.drawText("Pay", {
-    x: card2X + 12,
-    y: summaryCardStartY - 48,
-    size: 9,
-    font: font,
-    color: colors.textSecondary,
-  });
-  page.drawText(formatCurrency(totals?.teamPay ?? 0), {
-    x: card2X + summaryCardWidth - 80,
-    y: summaryCardStartY - 48,
-    size: 11,
-    font: fontBold,
-    color: colors.textPrimary,
-  });
+  if (!hideAmounts) {
+    page.drawText("Pay", {
+      x: card2X + 12,
+      y: summaryCardStartY - 48,
+      size: 9,
+      font: font,
+      color: colors.textSecondary,
+    });
+    page.drawText(formatCurrency(totals?.teamPay ?? 0), {
+      x: card2X + summaryCardWidth - 80,
+      y: summaryCardStartY - 48,
+      size: 11,
+      font: fontBold,
+      color: colors.textPrimary,
+    });
+  }
 
   // Card 3: GRAND TOTAL (dark background)
   const card3X = card2X + summaryCardWidth + summaryCardGap;
@@ -820,32 +841,34 @@ export async function generateTimesheetPdf(
   });
   page.drawText("Days", {
     x: card3X + 12,
-    y: summaryCardStartY - 32,
+    y: summaryDaysY,
     size: 9,
     font: font,
     color: rgb(0.7, 0.7, 0.7),
   });
   page.drawText((totals?.totalDays ?? 0).toString(), {
     x: card3X + summaryCardWidth - 50,
-    y: summaryCardStartY - 32,
+    y: summaryDaysY,
     size: 11,
     font: fontBold,
     color: colors.textWhite,
   });
-  page.drawText("Pay", {
-    x: card3X + 12,
-    y: summaryCardStartY - 48,
-    size: 9,
-    font: font,
-    color: rgb(0.7, 0.7, 0.7),
-  });
-  page.drawText(formatCurrency(totals?.totalPay ?? 0), {
-    x: card3X + summaryCardWidth - 80,
-    y: summaryCardStartY - 48,
-    size: 11,
-    font: fontBold,
-    color: colors.textWhite,
-  });
+  if (!hideAmounts) {
+    page.drawText("Pay", {
+      x: card3X + 12,
+      y: summaryCardStartY - 48,
+      size: 9,
+      font: font,
+      color: rgb(0.7, 0.7, 0.7),
+    });
+    page.drawText(formatCurrency(totals?.totalPay ?? 0), {
+      x: card3X + summaryCardWidth - 80,
+      y: summaryCardStartY - 48,
+      size: 11,
+      font: fontBold,
+      color: colors.textWhite,
+    });
+  }
 
   // Page numbers
   const pages = pdf.getPages();
@@ -859,7 +882,7 @@ export async function generateTimesheetPdf(
     });
   });
 
-  pdf.setTitle("Timesheet Report");
+  pdf.setTitle("Attandance Report");
   pdf.setCreator("Office App");
   pdf.setProducer("pdf-lib");
 
@@ -1289,7 +1312,7 @@ export function generateTimesheetPrintHTML(
       <div class="content">
         <div class="header">
           <div>
-            <h1>Timesheet Report</h1>
+            <h1>Attandance Report</h1>
             <p class="subtitle">${meta?.startDate && meta?.endDate ? `${meta.startDate} to ${meta.endDate}` : "Export"}</p>
           </div>
           <div class="actions">

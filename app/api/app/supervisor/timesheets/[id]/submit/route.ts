@@ -6,6 +6,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { parseSupervisorTimesheetId } from "@/lib/timesheetId";
 import { startOfDayUTC } from "@/lib/dateUtc";
 import { writeAuditEvent } from "@/lib/audit";
+import { sendExpoPush } from "@/lib/expoPush";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -158,6 +159,76 @@ export async function POST(
           : foremanName,
       },
     });
+
+    // Persist in-app notification + send Expo push to supervisors assigned to the timesheet site
+    const siteId = siteDay?.site?.id ?? null;
+    const siteName = siteDay?.site?.name ?? null;
+
+    if (siteId && siteName) {
+      const title = "Timesheet submitted — Pending review";
+      const message = `${foremanName} submitted a timesheet for ${siteName}.`;
+
+      const now = new Date();
+
+      const assignedSupervisorSiteRows =
+        await prisma.supervisorSiteAssignment.findMany({
+          where: {
+            siteId,
+            startsOn: { lte: now },
+            OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+          },
+          select: { supervisorId: true },
+        });
+
+      const supervisorIds = Array.from(
+        new Set(assignedSupervisorSiteRows.map((r) => r.supervisorId)),
+      );
+
+      if (supervisorIds.length > 0) {
+        const supervisors = await prisma.supervisor.findMany({
+          where: { id: { in: supervisorIds } },
+          select: { userId: true },
+        });
+
+        const supervisorUserIds = supervisors.map((s) => s.userId);
+
+        if (supervisorUserIds.length > 0) {
+          await prisma.notification.createMany({
+            data: supervisorUserIds.map((userId) => ({
+              userId,
+              type: "TIMESHEET_SUBMITTED",
+              title,
+              message,
+              siteId,
+              linkUrl: null,
+            })),
+          });
+
+          const pushTokens = await prisma.pushToken.findMany({
+            where: { userId: { in: supervisorUserIds } },
+            select: { token: true },
+          });
+
+          if (pushTokens.length > 0) {
+            await sendExpoPush(
+              pushTokens.map((t) => t.token),
+              {
+                title,
+                body: message,
+                data: {
+                  type: "TIMESHEET_SUBMITTED",
+                  siteId,
+                  timesheetId: ts.id,
+                  foremanId: foreman.id,
+                  periodStartISO: parsed.startISO,
+                  periodEndISO: parsed.endISO,
+                },
+              },
+            );
+          }
+        }
+      }
+    }
 
     return NextResponse.json({ ok: true, ...updated });
   } catch (e: any) {

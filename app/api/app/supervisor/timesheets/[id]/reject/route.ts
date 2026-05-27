@@ -6,6 +6,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { parseTimesheetId } from "@/lib/timesheetId";
 import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
 import { writeAuditEvent } from "@/lib/audit";
+import { sendExpoPush } from "@/lib/expoPush";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -206,6 +207,59 @@ export async function POST(
       description: site?.name ? `${site.name} - ${foremanName}` : foremanName,
     },
   });
+
+  // Persist in-app notification + send Expo push to the foreman user
+  try {
+    const foremanRow = await prisma.foreman.findUnique({
+      where: { id: parsed.foremanId },
+      select: { userId: true },
+    });
+
+    const foremanUserId = foremanRow?.userId ?? null;
+
+    if (foremanUserId) {
+      const title = "Timesheet rejected";
+      const message = site?.name
+        ? `${foremanName}, your timesheet for ${site.name} was rejected by a supervisor.`
+        : `${foremanName}, your timesheet was rejected by a supervisor.`;
+
+      await prisma.notification.create({
+        data: {
+          userId: foremanUserId,
+          type: "TIMESHEET_REJECTED",
+          title,
+          message,
+          siteId: site?.id ?? null,
+          linkUrl: null,
+        },
+      });
+
+      const pushTokens = await prisma.pushToken.findMany({
+        where: { userId: foremanUserId },
+        select: { token: true },
+      });
+
+      if (pushTokens.length > 0) {
+        await sendExpoPush(
+          pushTokens.map((t) => t.token),
+          {
+            title,
+            body: message,
+            data: {
+              type: "TIMESHEET_REJECTED",
+              siteId: site?.id ?? null,
+              timesheetId: ts.id,
+              foremanId: parsed.foremanId,
+              periodStartISO: parsed.startISO,
+              periodEndISO: parsed.endISO,
+            },
+          },
+        );
+      }
+    }
+  } catch (e) {
+    console.error("Failed to send timesheet rejection notification:", e);
+  }
 
   return NextResponse.json({ ok: true, ...updated }, { headers: CORS });
 }
