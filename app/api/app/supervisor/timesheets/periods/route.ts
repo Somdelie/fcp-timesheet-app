@@ -4,9 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { addDaysUTC, startOfDayUTC, isoFromDateUTC } from "@/lib/dateUtc";
-// Assuming a server-side PDF generation utility
-import { generateSupervisorSummaryPdf } from "@/lib/generateSupervisorSummaryPdf"; // NEW UTILITY
-import puppeteer from "puppeteer";
+import { generateSupervisorSummaryPdf } from "@/lib/generateSupervisorSummaryPdf";
+import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from "pdf-lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,15 +40,6 @@ function decimalToNumber(v: unknown): number {
   if (typeof anyV?.toNumber === "function") return anyV.toNumber();
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
-}
-
-function escapeHTML(value: unknown) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 function weekdayShortUTC(iso: string) {
@@ -101,194 +91,110 @@ async function generateQuickViewPdf(input: {
   columns: QuickViewColumn[];
   rows: QuickViewRow[];
 }) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const pageWidth = 841.89;
+  const pageHeight = 595.28;
+  const margin = 24;
+  const headerHeight = 32;
+  const rowHeight = 24;
+  const nameWidth = 115;
+  const jobWidth = 56;
+  const siteWidth = 155;
+  const totalWidth = 52;
+  const dayWidth =
+    (pageWidth - margin * 2 - nameWidth - jobWidth - siteWidth - totalWidth * 2) /
+    Math.max(input.columns.length, 1);
   const totalForemanDays = input.rows.reduce((s, r) => s + r.foremanDays, 0);
   const totalManDays = input.rows.reduce((s, r) => s + r.manDays, 0);
   const todayISO = new Date().toISOString().slice(0, 10);
   const dateLabel = periodHeaderLabel(input.startISO, input.endISO);
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: A4 landscape; margin: 8mm; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      color: #000;
-      background: #fff;
-      font-family: Arial, sans-serif;
-      font-size: 10px;
+  const truncate = (value: string, width: number, textFont: PDFFont, size: number) => {
+    let result = value;
+    while (result && textFont.widthOfTextAtSize(result, size) > width) {
+      result = result.slice(0, -1);
     }
-    .sheet-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 10px;
-      font-size: 12px;
-    }
-    .title {
-      font-size: 15px;
-      font-weight: 700;
-      text-decoration: underline;
-      letter-spacing: 1.5px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-      font-size: 10px;
-    }
-    th {
-      border: 1.4px solid #222;
-      padding: 6px 5px;
-      background: #f2f2f2;
-      font-weight: 700;
-      text-align: center;
-      white-space: nowrap;
-    }
-    td {
-      height: 26px;
-      border: 1px solid #bbb;
-      padding: 4px;
-      text-align: center;
-      vertical-align: middle;
-    }
-    .name { width: 13.5%; text-align: left; white-space: nowrap; font-weight: 500; }
-    .job { width: 7.8%; text-align: left; color: #555; font-size: 9px; }
-    .site { width: 23.5%; text-align: left; white-space: nowrap; font-size: 9px; }
-    .day { width: 3.45%; padding: 2px; }
-    .total { width: 5.4%; font-weight: 700; }
-    .day-short { display: block; font-size: 8px; line-height: 1.15; font-weight: 400; }
-    .day-num { display: block; font-size: 10px; line-height: 1.25; font-weight: 700; }
-    .count { font-weight: 700; font-size: 9px; }
-    .slash {
-      width: 18px;
-      height: 12px;
-      margin: 0 auto;
-      position: relative;
-    }
-    .slash:before {
-      content: "";
-      position: absolute;
-      left: 1px;
-      top: 9px;
-      width: 18px;
-      border-top: 1.2px solid #000;
-      transform: rotate(-34deg);
-      transform-origin: left center;
-    }
-    tfoot td {
-      background: #f0f0f0;
-      font-weight: 700;
-      border-top: 2px solid #333;
-    }
-    .totals-label {
-      text-align: right;
-      padding-right: 8px;
-      letter-spacing: 0.5px;
-    }
-    .summary {
-      display: flex;
-      gap: 24px;
-      margin-top: 12px;
-      font-size: 13px;
-      color: #555;
-    }
-  </style>
-</head>
-<body>
-  <div class="sheet-header">
-    <div><span style="font-size: 11px;">Date:&nbsp;</span><strong>${escapeHTML(dateLabel)}</strong></div>
-    <div class="title">TIME SHEET</div>
-    <div><span style="font-size: 11px;">Contract Manager:&nbsp;</span><strong>${escapeHTML(input.supervisorName)}</strong></div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th class="name">Name</th>
-        <th class="job">Job No</th>
-        <th class="site">Site</th>
-        ${input.columns
-          .map(
-            (col) =>
-              `<th class="day"><span class="day-short">${escapeHTML(col.day)}</span><span class="day-num">${escapeHTML(col.date)}</span></th>`,
-          )
-          .join("")}
-        <th class="total">F/man<br/>Days</th>
-        <th class="total">Man<br/>Days</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${input.rows
-        .map((row) => {
-          const initial = foremanInitial(row.foremanName);
-          return `<tr>
-            <td class="name">${escapeHTML(row.foremanName)}</td>
-            <td class="job">${escapeHTML(row.jobNo)}</td>
-            <td class="site">${escapeHTML(row.siteName)}</td>
-            ${row.dailyCounts
-              .map((count, dayIdx) => {
-                const col = input.columns[dayIdx];
-                const isFuture = col ? col.iso > todayISO : false;
-                const foremanIn = row.foremanPresence[dayIdx] ?? false;
-                const hasActivity = count > 0 || foremanIn;
-                const value = foremanIn
-                  ? `${initial}+${count}`
-                  : count > 0
-                    ? String(count)
-                    : "";
-                return `<td class="${hasActivity ? "count" : ""}">${
-                  isFuture
-                    ? ""
-                    : hasActivity
-                      ? escapeHTML(value)
-                      : '<div class="slash"></div>'
-                }</td>`;
-              })
-              .join("")}
-            <td class="total">${row.foremanDays || ""}</td>
-            <td class="total">${row.manDays}</td>
-          </tr>`;
-        })
-        .join("")}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td class="totals-label" colspan="${3 + input.columns.length}">TOTALS</td>
-        <td class="total">${totalForemanDays}</td>
-        <td class="total">${totalManDays}</td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <div class="summary">
-    <span>Foremen: <strong>${input.rows.length}</strong></span>
-    <span>Foreman Days: <strong>${totalForemanDays}</strong></span>
-    <span>Total Man Days: <strong>${totalManDays}</strong></span>
-  </div>
-</body>
-</html>`;
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "load" });
-    const pdf = await page.pdf({
-      format: "A4",
-      landscape: true,
-      printBackground: true,
-      margin: { top: "8mm", right: "8mm", bottom: "8mm", left: "8mm" },
+    return result === value ? result : `${result.slice(0, -3)}...`;
+  };
+  const cell = (
+    page: PDFPage,
+    text: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    options: { bold?: boolean; align?: "left" | "center" | "right"; fill?: ReturnType<typeof rgb> } = {},
+  ) => {
+    const textFont = options.bold ? bold : font;
+    const size = 8;
+    const value = truncate(text, width - 8, textFont, size);
+    if (options.fill) page.drawRectangle({ x, y, width, height, color: options.fill });
+    page.drawRectangle({ x, y, width, height, borderColor: rgb(0.7, 0.72, 0.76), borderWidth: 0.6 });
+    const textWidth = textFont.widthOfTextAtSize(value, size);
+    const textX =
+      options.align === "right"
+        ? x + width - textWidth - 4
+        : options.align === "center"
+          ? x + (width - textWidth) / 2
+          : x + 4;
+    page.drawText(value, { x: textX, y: y + height / 2 - 3, size, font: textFont, color: rgb(0.08, 0.1, 0.14) });
+  };
+  let page: PDFPage = undefined as unknown as PDFPage;
+  let y = 0;
+  const beginPage = () => {
+    page = pdf.addPage([pageWidth, pageHeight]);
+    page.drawText("TIME SHEET", { x: pageWidth / 2 - 48, y: pageHeight - margin - 4, size: 16, font: bold, color: rgb(0.08, 0.1, 0.14) });
+    page.drawText(`Date: ${dateLabel}`, { x: margin, y: pageHeight - margin - 3, size: 10, font, color: rgb(0.3, 0.33, 0.38) });
+    const manager = truncate(`Contract Manager: ${input.supervisorName}`, 230, font, 10);
+    page.drawText(manager, { x: pageWidth - margin - font.widthOfTextAtSize(manager, 10), y: pageHeight - margin - 3, size: 10, font, color: rgb(0.3, 0.33, 0.38) });
+    y = pageHeight - margin - 34;
+    let x = margin;
+    const header = rgb(0.93, 0.94, 0.96);
+    cell(page, "Name", x, y - headerHeight, nameWidth, headerHeight, { bold: true, fill: header }); x += nameWidth;
+    cell(page, "Job No", x, y - headerHeight, jobWidth, headerHeight, { bold: true, fill: header }); x += jobWidth;
+    cell(page, "Site", x, y - headerHeight, siteWidth, headerHeight, { bold: true, fill: header }); x += siteWidth;
+    input.columns.forEach((col) => {
+      cell(page, `${col.day} ${col.date}`, x, y - headerHeight, dayWidth, headerHeight, { bold: true, align: "center", fill: header });
+      x += dayWidth;
     });
-    return Buffer.from(pdf);
-  } finally {
-    await browser.close();
+    cell(page, "F/man Days", x, y - headerHeight, totalWidth, headerHeight, { bold: true, align: "center", fill: header }); x += totalWidth;
+    cell(page, "Man Days", x, y - headerHeight, totalWidth, headerHeight, { bold: true, align: "center", fill: header });
+    y -= headerHeight;
+  };
+  beginPage();
+  for (const row of input.rows) {
+    if (y - rowHeight < margin + rowHeight * 2) beginPage();
+    let x = margin;
+    cell(page!, row.foremanName, x, y - rowHeight, nameWidth, rowHeight, { bold: true }); x += nameWidth;
+    cell(page!, row.jobNo, x, y - rowHeight, jobWidth, rowHeight); x += jobWidth;
+    cell(page!, row.siteName, x, y - rowHeight, siteWidth, rowHeight); x += siteWidth;
+    const initial = foremanInitial(row.foremanName);
+    row.dailyCounts.forEach((count, dayIdx) => {
+      const future = input.columns[dayIdx]?.iso > todayISO;
+      const present = row.foremanPresence[dayIdx] ?? false;
+      const value = future ? "" : present ? `${initial}+${count}` : count > 0 ? String(count) : "/";
+      cell(page!, value, x, y - rowHeight, dayWidth, rowHeight, { bold: present || count > 0, align: "center" });
+      x += dayWidth;
+    });
+    cell(page!, row.foremanDays ? String(row.foremanDays) : "", x, y - rowHeight, totalWidth, rowHeight, { bold: true, align: "center" }); x += totalWidth;
+    cell(page!, String(row.manDays), x, y - rowHeight, totalWidth, rowHeight, { bold: true, align: "center" });
+    y -= rowHeight;
   }
+  let x = margin;
+  const totalsLabelWidth = nameWidth + jobWidth + siteWidth + dayWidth * input.columns.length;
+  const totalsFill = rgb(0.9, 0.92, 0.94);
+  cell(page!, "TOTALS", x, y - rowHeight, totalsLabelWidth, rowHeight, { bold: true, align: "right", fill: totalsFill }); x += totalsLabelWidth;
+  cell(page!, String(totalForemanDays), x, y - rowHeight, totalWidth, rowHeight, { bold: true, align: "center", fill: totalsFill }); x += totalWidth;
+  cell(page!, String(totalManDays), x, y - rowHeight, totalWidth, rowHeight, { bold: true, align: "center", fill: totalsFill });
+  page!.drawText(`Foremen: ${input.rows.length}    Foreman Days: ${totalForemanDays}    Total Man Days: ${totalManDays}`, {
+    x: margin,
+    y: y - rowHeight - 22,
+    size: 10,
+    font: bold,
+    color: rgb(0.3, 0.33, 0.38),
+  });
+  return Buffer.from(await pdf.save());
 }
 
 export async function GET(req: Request) {
