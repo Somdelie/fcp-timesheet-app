@@ -25,7 +25,10 @@ import {
   Merge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { printSupervisorPlantList } from "@/lib/generatePlantListPrint";
+import {
+  printSupervisorPlantList,
+  printSupervisorPlantLists,
+} from "@/lib/generatePlantListPrint";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -161,6 +164,38 @@ function formatDate(iso: string) {
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+function groupAssignmentsByProductName(
+  assignments: Assignment[],
+): SupervisorAssignmentRow[] {
+  const grouped = new Map<string, Assignment[]>();
+  assignments.forEach((assignment) => {
+    const normalizedName = assignment.product.name.trim().toLowerCase();
+    const key = normalizedName || assignment.product.id;
+    const existing = grouped.get(key) ?? [];
+    existing.push(assignment);
+    grouped.set(key, existing);
+  });
+
+  return Array.from(grouped.values()).map((group) => {
+    const sorted = [...group].sort(
+      (a, b) =>
+        new Date(b.deployedOn).getTime() - new Date(a.deployedOn).getTime(),
+    );
+    const primary = sorted[0];
+    const totalQuantity = sorted.reduce(
+      (sum, assignment) => sum + assignment.quantity,
+      0,
+    );
+
+    return {
+      ...primary,
+      id: sorted.map((assignment) => assignment.id).join("__"),
+      quantity: totalQuantity,
+      childAssignments: sorted,
+    };
+  });
+}
+
 export default function PlantPage() {
   const [activeTab, setActiveTab] = useState("office");
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
@@ -220,6 +255,33 @@ export default function PlantPage() {
 
   const activeSupervisor = supervisors.find((s) => s.id === activeTab);
 
+  function handlePrintAllSupervisorLists() {
+    const lists = supervisors
+      .map((supervisor) => {
+        const items = groupAssignmentsByProductName(
+          supervisorAssignments.get(supervisor.id) ?? [],
+        )
+          .map((assignment) => ({
+            productName: assignment.product.name,
+            quantity: assignment.quantity,
+          }))
+          .sort((a, b) => a.productName.localeCompare(b.productName));
+
+        return {
+          supervisorName: supervisor.name ?? supervisor.id,
+          items,
+        };
+      })
+      .filter((list) => list.items.length > 0);
+
+    if (lists.length === 0) {
+      toast.info("No deployed equipment to print");
+      return;
+    }
+
+    printSupervisorPlantLists(lists, 4);
+  }
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <div className="rounded border border-muted/50 bg-card">
@@ -240,6 +302,16 @@ export default function PlantPage() {
             </PlantTab>
           ))}
           <div className="ml-auto flex items-center pr-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrintAllSupervisorLists}
+              className="mr-1 h-8 gap-1.5"
+              disabled={loading}
+            >
+              <Printer className="h-4 w-4" />
+              Print All x4
+            </Button>
             <Button variant="ghost" size="icon" onClick={load} className="h-8 w-8">
               <RotateCw className={cn("h-4 w-4", loading && "animate-spin")} />
             </Button>
@@ -801,35 +873,10 @@ function SupervisorTab({
     printSupervisorPlantList(supervisor.name ?? "Supervisor", items);
   }
 
-  const groupedAssignments = useMemo<SupervisorAssignmentRow[]>(() => {
-    const grouped = new Map<string, Assignment[]>();
-    assignments.forEach((assignment) => {
-      const normalizedName = assignment.product.name.trim().toLowerCase();
-      const key = normalizedName || assignment.product.id;
-      const existing = grouped.get(key) ?? [];
-      existing.push(assignment);
-      grouped.set(key, existing);
-    });
-
-    return Array.from(grouped.values()).map((group) => {
-      const sorted = [...group].sort(
-        (a, b) =>
-          new Date(b.deployedOn).getTime() - new Date(a.deployedOn).getTime(),
-      );
-      const primary = sorted[0];
-      const totalQuantity = sorted.reduce(
-        (sum, assignment) => sum + assignment.quantity,
-        0,
-      );
-
-      return {
-        ...primary,
-        id: sorted.map((assignment) => assignment.id).join("__"),
-        quantity: totalQuantity,
-        childAssignments: sorted,
-      };
-    });
-  }, [assignments]);
+  const groupedAssignments = useMemo(
+    () => groupAssignmentsByProductName(assignments),
+    [assignments],
+  );
 
   const processed = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -900,24 +947,10 @@ function SupervisorTab({
             <TableBody>
               {paged.map((a) => {
                 const isGrouped = (a.childAssignments?.length ?? 0) > 1;
-                const sitesLabel = a.childAssignments
-                  ?.map((assignment) =>
-                    assignment.site.code
-                      ? `${assignment.site.code} - ${assignment.site.name}`
-                      : assignment.site.name,
-                  )
-                  .join(", ");
 
                 return (
                   <TableRow key={a.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium border-r py-2">
-                      <div>{a.product.name}</div>
-                      {isGrouped && sitesLabel ? (
-                        <div className="mt-0.5 text-xs font-normal text-muted-foreground">
-                          {sitesLabel}
-                        </div>
-                      ) : null}
-                    </TableCell>
+                    <TableCell className="font-medium border-r py-2">{a.product.name}</TableCell>
                     <TableCell className="text-center border-r py-2">
                       <Badge variant="outline">{a.quantity}</Badge>
                     </TableCell>
