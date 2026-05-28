@@ -98,6 +98,10 @@ type Assignment = {
   }[];
 };
 
+type SupervisorAssignmentRow = Assignment & {
+  childAssignments?: Assignment[];
+};
+
 type Supervisor = {
   id: string;
   name: string | null;
@@ -747,6 +751,7 @@ function SupervisorTab({
 
   async function handleReprint(a: Assignment) {
     setReprinting(a.id);
+    const childAssignments = (a as SupervisorAssignmentRow).childAssignments ?? [a];
     const pad = (n: number) => String(n).padStart(2, "0");
     const deployed = new Date(a.deployedOn);
     const orderNumber =
@@ -757,7 +762,17 @@ function SupervisorTab({
       orderNumber,
       issuedDate,
       supervisorName: a.supervisorName ?? supervisor.name ?? "",
-      sites: [{ siteName: a.site.name, siteCode: a.site.code, items: [{ productName: a.product.name, quantity: a.quantity, note: a.note ?? undefined }] }],
+      sites: childAssignments.map((assignment) => ({
+        siteName: assignment.site.name,
+        siteCode: assignment.site.code,
+        items: [
+          {
+            productName: assignment.product.name,
+            quantity: assignment.quantity,
+            note: assignment.note ?? undefined,
+          },
+        ],
+      })),
     };
     try {
       const res = await fetch("/api/app/admin/plant-voucher/pdf", {
@@ -779,25 +794,55 @@ function SupervisorTab({
   }
 
   function handlePrintAll() {
-    const items = assignments.map((a) => ({
+    const items = groupedAssignments.map((a) => ({
       productName: a.product.name,
       quantity: a.quantity,
     }));
     printSupervisorPlantList(supervisor.name ?? "Supervisor", items);
   }
 
+  const groupedAssignments = useMemo<SupervisorAssignmentRow[]>(() => {
+    const grouped = new Map<string, Assignment[]>();
+    assignments.forEach((assignment) => {
+      const normalizedName = assignment.product.name.trim().toLowerCase();
+      const key = normalizedName || assignment.product.id;
+      const existing = grouped.get(key) ?? [];
+      existing.push(assignment);
+      grouped.set(key, existing);
+    });
+
+    return Array.from(grouped.values()).map((group) => {
+      const sorted = [...group].sort(
+        (a, b) =>
+          new Date(b.deployedOn).getTime() - new Date(a.deployedOn).getTime(),
+      );
+      const primary = sorted[0];
+      const totalQuantity = sorted.reduce(
+        (sum, assignment) => sum + assignment.quantity,
+        0,
+      );
+
+      return {
+        ...primary,
+        id: sorted.map((assignment) => assignment.id).join("__"),
+        quantity: totalQuantity,
+        childAssignments: sorted,
+      };
+    });
+  }, [assignments]);
+
   const processed = useMemo(() => {
     const term = search.trim().toLowerCase();
     const rows = term
-      ? assignments.filter((a) => a.product.name.toLowerCase().includes(term))
-      : assignments;
+      ? groupedAssignments.filter((a) => a.product.name.toLowerCase().includes(term))
+      : groupedAssignments;
     return [...rows].sort((a, b) => {
       const cmp = sortField === "name"
         ? a.product.name.localeCompare(b.product.name)
         : a.quantity - b.quantity;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [assignments, search, sortField, sortDir]);
+  }, [groupedAssignments, search, sortField, sortDir]);
 
   useEffect(() => { setPage(0); }, [search]);
 
@@ -853,30 +898,59 @@ function SupervisorTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.map((a) => (
-                <TableRow key={a.id} className="hover:bg-muted/20">
-                  <TableCell className="font-medium border-r py-2">{a.product.name}</TableCell>
-                  <TableCell className="text-center border-r py-2">
-                    <Badge variant="outline">{a.quantity}</Badge>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => openEdit(a)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        title="Reprint voucher"
-                        disabled={reprinting === a.id}
-                        onClick={() => handleReprint(a)}
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {paged.map((a) => {
+                const isGrouped = (a.childAssignments?.length ?? 0) > 1;
+                const sitesLabel = a.childAssignments
+                  ?.map((assignment) =>
+                    assignment.site.code
+                      ? `${assignment.site.code} - ${assignment.site.name}`
+                      : assignment.site.name,
+                  )
+                  .join(", ");
+
+                return (
+                  <TableRow key={a.id} className="hover:bg-muted/20">
+                    <TableCell className="font-medium border-r py-2">
+                      <div>{a.product.name}</div>
+                      {isGrouped && sitesLabel ? (
+                        <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+                          {sitesLabel}
+                        </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-center border-r py-2">
+                      <Badge variant="outline">{a.quantity}</Badge>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title={
+                            isGrouped
+                              ? "This total is across multiple sites"
+                              : "Edit"
+                          }
+                          disabled={isGrouped}
+                          onClick={() => openEdit(a)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Reprint voucher"
+                          disabled={reprinting === a.id}
+                          onClick={() => handleReprint(a)}
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
           <PaginationBar page={page} totalPages={totalPages} total={processed.length} onPage={setPage} />
@@ -1861,4 +1935,3 @@ export function PlantAssignmentsTab({
     </div>
   );
 }
-

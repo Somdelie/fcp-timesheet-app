@@ -360,6 +360,11 @@ export default function CapeTownStockPage({
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const handler = () => void fetchData();
+    document.addEventListener("capetown-stock:reload", handler);
+    return () => document.removeEventListener("capetown-stock:reload", handler);
+  }, [fetchData]);
   useEffect(() => { setPagination((p) => ({ ...p, pageIndex: 0 })); }, [search, activeTab]);
 
   // ── Derived ───────────────────────────────────────────────────────────────

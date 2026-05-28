@@ -138,6 +138,12 @@ const menuGroups: {
         roles: ["ADMIN"],
       },
       {
+        href: "/admin/print-cards",
+        label: "Print Cards",
+        icon: Printer,
+        roles: ["ADMIN"],
+      },
+      {
         href: "/admin/attendance",
         label: "Attendance",
         icon: ScanLine,

@@ -17,6 +17,11 @@ function sanitizePhone(
   return null;
 }
 
+function cleanPhotoUrl(value: unknown): string | null {
+  const url = String(value ?? "").trim();
+  return url || null;
+}
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -162,10 +167,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const { firstName, lastName, faceImageUrl, isActive, phone } = body;
+    const photoUrl = cleanPhotoUrl(faceImageUrl);
 
     if (!firstName || !lastName) {
       return NextResponse.json(
         { error: "firstName and lastName are required" },
+        { status: 400 },
+      );
+    }
+
+    if ((auth.role === "FOREMAN" || auth.role === "SUPERVISOR") && !photoUrl) {
+      return NextResponse.json(
+        { error: "Employee photo is required." },
         { status: 400 },
       );
     }
@@ -194,7 +207,7 @@ export async function POST(request: NextRequest) {
         lastName,
         phone: phone || null,
         defaultDayRate: dayRate,
-        faceImageUrl: faceImageUrl ?? null,
+        faceImageUrl: photoUrl,
         isActive: isActive !== false,
         qrCodeValue,
         createdByUser: createdByUserId

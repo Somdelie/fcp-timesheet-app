@@ -16,6 +16,11 @@ interface SelectedFile {
   file: File;
 }
 
+async function looksLikePdf(file: File) {
+  const header = await file.slice(0, 5).text();
+  return header === "%PDF-";
+}
+
 export default function PrintCardsPage() {
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -24,14 +29,31 @@ export default function PrintCardsPage() {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = useCallback((incoming: File[]) => {
+  const addFiles = useCallback(async (incoming: File[]) => {
     const pdfs = incoming.filter((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
     if (pdfs.length === 0) return;
     setSuccess(null);
     setError(null);
+
+    const validPdfs: File[] = [];
+    const invalidNames: string[] = [];
+
+    for (const file of pdfs) {
+      if (await looksLikePdf(file)) validPdfs.push(file);
+      else invalidNames.push(file.name);
+    }
+
+    if (invalidNames.length > 0) {
+      setError(
+        `These files are not valid PDFs: ${invalidNames.join(", ")}. Please re-download them from the employee card download button.`,
+      );
+    }
+
+    if (validPdfs.length === 0) return;
+
     setFiles((prev) => {
       const existingNames = new Set(prev.map((sf) => sf.file.name));
-      const newEntries: SelectedFile[] = pdfs
+      const newEntries: SelectedFile[] = validPdfs
         .filter((f) => !existingNames.has(f.name))
         .map((f) => ({ id: crypto.randomUUID(), file: f }));
       return [...prev, ...newEntries];
@@ -54,12 +76,12 @@ export default function PrintCardsPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    addFiles(Array.from(e.dataTransfer.files));
+    void addFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      addFiles(Array.from(e.target.files));
+      void addFiles(Array.from(e.target.files));
       e.target.value = "";
     }
   };
@@ -101,8 +123,8 @@ export default function PrintCardsPage() {
         count: files.length,
         sheets: Math.ceil(files.length / 8),
       });
-    } catch (err: any) {
-      setError(err?.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }

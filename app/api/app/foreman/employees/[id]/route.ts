@@ -10,6 +10,10 @@ function getBearer(req: Request) {
   const m = h.match(/^Bearer\s+(.+)$/i);
   return m?.[1] ?? null;
 }
+function cleanPhotoUrl(value: unknown) {
+  const url = String(value ?? "").trim();
+  return url || null;
+}
 
 /** Return a phone string only if it looks like a real phone number (not an email). */
 function sanitizePhone(
@@ -136,7 +140,7 @@ export async function DELETE(
 
     const employee = await prisma.employee.findUnique({
       where: { id },
-      select: { createdByUserId: true },
+      select: { createdByUserId: true, faceImageUrl: true },
     });
 
     if (!employee) {
@@ -194,7 +198,7 @@ export async function PUT(
     } = body;
     const employee = await prisma.employee.findUnique({
       where: { id },
-      select: { createdByUserId: true },
+      select: { createdByUserId: true, faceImageUrl: true },
     });
 
     if (!employee) {
@@ -210,6 +214,26 @@ export async function PUT(
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const nextFaceImageUrl =
+      faceImageUrl !== undefined
+        ? cleanPhotoUrl(faceImageUrl)
+        : cleanPhotoUrl(employee.faceImageUrl);
+
+    if (payload.role === "FOREMAN" && !nextFaceImageUrl) {
+      return NextResponse.json(
+        { error: "Employee photo is required." },
+        { status: 400 },
+      );
+    }
+
+    if (payload.role === "FOREMAN" && isActive === true && !nextFaceImageUrl) {
+      return NextResponse.json(
+        { error: "Employee photo is required before activating." },
+        { status: 400 },
+      );
+    }
+
     const updatedEmployee = await prisma.employee.update({
       where: { id },
       data: {
@@ -218,7 +242,7 @@ export async function PUT(
         ...(defaultDayRate !== undefined && {
           defaultDayRate: Number(defaultDayRate),
         }),
-        ...(faceImageUrl !== undefined && { faceImageUrl }),
+        ...(faceImageUrl !== undefined && { faceImageUrl: nextFaceImageUrl }),
         ...(isActive !== undefined && { isActive }),
         ...(phone !== undefined && { phone: (phone ?? "").trim() || null }),
       },

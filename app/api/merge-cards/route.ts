@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       role = payload.role;
     } else {
       const session = await getServerSession(authOptions);
-      role = (session?.user as any)?.role ?? null;
+      role = (session?.user as { role?: string } | undefined)?.role ?? null;
     }
 
     if (!role || role !== "ADMIN") {
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const buffers: Buffer[] = [];
+    const cardPdfs: { name: string; buffer: Buffer }[] = [];
     for (const file of files) {
       if (!(file instanceof File)) {
         return NextResponse.json(
@@ -59,10 +59,10 @@ export async function POST(req: Request) {
         );
       }
       const arrayBuffer = await file.arrayBuffer();
-      buffers.push(Buffer.from(arrayBuffer));
+      cardPdfs.push({ name: file.name, buffer: Buffer.from(arrayBuffer) });
     }
 
-    const mergedPdf = await mergeCardsForPrinting(buffers);
+    const mergedPdf = await mergeCardsForPrinting(cardPdfs);
     const timestamp = Date.now();
 
     return new Response(new Uint8Array(mergedPdf), {
@@ -73,10 +73,10 @@ export async function POST(req: Request) {
         "Cache-Control": "no-store",
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[merge-cards] error", err);
     return NextResponse.json(
-      { error: err?.message ?? "Failed to merge cards" },
+      { error: err instanceof Error ? err.message : "Failed to merge cards" },
       { status: 500 },
     );
   }

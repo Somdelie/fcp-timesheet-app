@@ -14,6 +14,10 @@ function getBearer(req: Request) {
 function clean(s: unknown) {
   return String(s ?? "").trim();
 }
+function cleanPhotoUrl(value: unknown) {
+  const url = clean(value);
+  return url || null;
+}
 
 /** Return a phone string only if it looks like a real phone number (not an email). */
 function sanitizePhone(
@@ -179,6 +183,7 @@ export async function POST(req: Request) {
     const lastName = clean(body.lastName);
     const phone = clean(body.phone) || null;
     const isActive = body.active !== undefined ? Boolean(body.active) : true;
+    const faceImageUrl = cleanPhotoUrl(body.faceImageUrl);
 
     if (!firstName)
       return NextResponse.json(
@@ -211,8 +216,8 @@ export async function POST(req: Request) {
               phone,
               qrCodeValue,
               defaultDayRate: dayRateStr as any,
-              faceImageUrl: null,
-              isActive,
+              faceImageUrl,
+              isActive: faceImageUrl ? isActive : false,
               createdByUser: { connect: { id: payload.sub } },
             },
             select: {
@@ -251,6 +256,7 @@ export async function POST(req: Request) {
           dayRate: Number(created.defaultDayRate),
           active: created.isActive,
           faceImageUrl: created.faceImageUrl ?? null,
+          requiresPhoto: !created.faceImageUrl,
         };
 
         return NextResponse.json({ employee: employeeDto }, { status: 201 });

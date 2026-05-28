@@ -23,10 +23,41 @@ const marginY = (A4_H - ROWS * cardH) / 2;
  * Back pages are mirror-flipped horizontally so duplex printing (Flip on Long Edge)
  * produces correctly aligned double-sided cards.
  */
+type InputPdf = Buffer | { name: string; buffer: Buffer };
+
+function pdfName(input: InputPdf, index: number) {
+  return Buffer.isBuffer(input) ? `File ${index + 1}` : input.name;
+}
+
+function pdfBuffer(input: InputPdf) {
+  return Buffer.isBuffer(input) ? input : input.buffer;
+}
+
+function assertPdfBuffer(input: InputPdf, index: number) {
+  const buffer = pdfBuffer(input);
+  const name = pdfName(input, index);
+  const header = buffer.subarray(0, 5).toString("latin1");
+
+  if (buffer.length === 0) {
+    throw new Error(`${name} is empty. Please re-download that card PDF.`);
+  }
+
+  if (header !== "%PDF-") {
+    throw new Error(
+      `${name} is not a valid PDF. Please re-download it from the employee card download button.`,
+    );
+  }
+
+  return buffer;
+}
+
 export async function mergeCardsForPrinting(
-  inputPdfBuffers: Buffer[],
+  inputPdfs: InputPdf[],
 ): Promise<Buffer> {
   const destDoc = await PDFDocument.create();
+  const inputPdfBuffers = inputPdfs.map((input, index) =>
+    assertPdfBuffer(input, index),
+  );
 
   for (
     let batchStart = 0;

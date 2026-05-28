@@ -67,12 +67,13 @@ export async function POST(
 
     const updated = await prisma.employee.update({
       where: { id: employeeId },
-      data: { faceImageUrl: url },
+      data: { faceImageUrl: url, isActive: true },
       select: {
         id: true,
         firstName: true,
         lastName: true,
         faceImageUrl: true,
+        isActive: true,
       },
     });
 
