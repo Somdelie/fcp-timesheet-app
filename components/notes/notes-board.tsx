@@ -200,7 +200,7 @@ export function NotesBoard() {
     });
   };
 
-  const handleUpdate = (
+  const handleUpdate = async (
     id: string,
     data: {
       title?: string;
@@ -211,21 +211,20 @@ export function NotesBoard() {
       background?: string;
     },
   ) => {
-    startTransition(async () => {
-      try {
-        await updateNote(id, data);
-        const refreshed = await refreshNotes();
-        const updated = refreshed.find((n) => n.id === id);
+    try {
+      await updateNote(id, data);
+      const refreshed = await refreshNotes();
+      const updated = refreshed.find((n) => n.id === id);
 
-        if (!updated) {
-          toast.error("Updated note could not be found.");
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to update note.");
-        await refreshNotes();
+      if (!updated) {
+        toast.error("Updated note could not be found.");
       }
-    });
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update note.");
+      await refreshNotes();
+      throw error;
+    }
   };
 
   const handleDelete = (id: string) => {

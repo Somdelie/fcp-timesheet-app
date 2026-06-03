@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { RichTextEditor } from "./rich-text-editor";
+import { ActiveCollaborators } from "./active-collaborators";
 import { formatRelative } from "./format-relative";
 import {
   type NoteItem,
@@ -61,6 +62,7 @@ import {
   searchUsers,
 } from "@/actions/notes";
 import { toast } from "react-toastify";
+import { useNoteCollaboration } from "@/hooks/useNoteCollaboration";
 
 const COLOR_PALETTE: { key: NoteColor; label: string; class: string }[] = [
   { key: "DEFAULT", label: "Slate", class: "bg-slate-400" },
@@ -99,6 +101,70 @@ const IMAGE_BG_STYLE: React.CSSProperties = {
   backgroundSize: "cover",
   backgroundPosition: "center",
 };
+
+const NOTE_DRAFT_STORAGE_PREFIX = "fcp-note-draft:";
+
+type NoteDraft = {
+  title: string;
+  content: string;
+  savedAt: number;
+};
+
+function getNoteDraftKey(noteId: string) {
+  return `${NOTE_DRAFT_STORAGE_PREFIX}${noteId}`;
+}
+
+function readNoteDraft(noteId: string): NoteDraft | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(getNoteDraftKey(noteId));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<NoteDraft>;
+    if (
+      typeof parsed.title !== "string" ||
+      typeof parsed.content !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      title: parsed.title,
+      content: parsed.content,
+      savedAt: typeof parsed.savedAt === "number" ? parsed.savedAt : Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeNoteDraft(noteId: string, draft: NoteDraft) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(getNoteDraftKey(noteId), JSON.stringify(draft));
+  } catch {
+    // Saving the note still works normally if browser storage is unavailable.
+  }
+}
+
+function clearNoteDraft(noteId: string) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem(getNoteDraftKey(noteId));
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+function isSameNoteDraft(
+  draft: Pick<NoteDraft, "title" | "content">,
+  note: Pick<NoteItem, "title" | "content">,
+) {
+  return draft.title === note.title && draft.content === note.content;
+}
 
 function BackgroundPicker({
   current,
@@ -188,17 +254,90 @@ export function NoteDetail({
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
+  // Get current user ID from session (you might need to adjust this based on your auth setup)
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  // Initialize collaboration hook
+  const { isConnected, activeUsers, updateCursorPosition, broadcastEdit } =
+    useNoteCollaboration(
+      note.id,
+      currentUserId,
+      !!currentUserId && note.canEdit,
+    );
+
+  // Get current user on mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (response.ok) {
+          const session = await response.json();
+          if (session?.user?.id) {
+            setCurrentUserId(session.user.id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to get current user:", err);
+      }
+    };
+
+    getCurrentUser();
+  }, []);
+
   const meta = colorMeta[note.color] ?? colorMeta.DEFAULT;
 
   useEffect(() => {
     if (!editing) {
+      const draft = readNoteDraft(note.id);
+
+      if (draft) {
+        if (
+          isSameNoteDraft(draft, {
+            title: note.title,
+            content: note.content,
+          })
+        ) {
+          clearNoteDraft(note.id);
+        } else {
+          setTitle(draft.title);
+          setContent(draft.content);
+          setEditing(true);
+          toast.info("Unsaved note draft restored.");
+          return;
+        }
+      }
+
       setTitle(note.title);
       setContent(note.content);
     }
   }, [note.id, note.title, note.content, editing]);
 
+  useEffect(() => {
+    if (!editing || !note.canEdit) return;
+
+    if (title === note.title && content === note.content) {
+      clearNoteDraft(note.id);
+      return;
+    }
+
+    writeNoteDraft(note.id, {
+      title,
+      content,
+      savedAt: Date.now(),
+    });
+  }, [
+    content,
+    editing,
+    note.canEdit,
+    note.content,
+    note.id,
+    note.title,
+    title,
+  ]);
+
   const save = async () => {
     await onUpdate(note.id, { title, content });
+    clearNoteDraft(note.id);
     setEditing(false);
   };
 
@@ -247,6 +386,7 @@ export function NoteDetail({
   const cancel = () => {
     setTitle(note.title);
     setContent(note.content);
+    clearNoteDraft(note.id);
     setEditing(false);
   };
 
@@ -332,34 +472,48 @@ export function NoteDetail({
                 </h1>
               )}
 
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className={cn("size-2 rounded-full", meta.class)} />
-                  <span>Updated {formatRelative(note.updatedAt)}</span>
+              <div className="mt-2 flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("size-2 rounded-full", meta.class)} />
+                    <span>Updated {formatRelative(note.updatedAt)}</span>
+                  </div>
+
+                  {note.isPinned && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-amber-600 dark:text-amber-400"
+                    >
+                      <Pin size={10} />
+                      Pinned
+                    </Badge>
+                  )}
+
+                  {note.isRoomNote && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Users size={10} />
+                      Shared
+                    </Badge>
+                  )}
+
+                  {note.isInvited && (
+                    <Badge variant="outline" className="gap-1">
+                      <UserPlus size={10} />
+                      Invite Pending
+                    </Badge>
+                  )}
                 </div>
 
-                {note.isPinned && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-amber-600 dark:text-amber-400"
-                  >
-                    <Pin size={10} />
-                    Pinned
-                  </Badge>
-                )}
-
-                {note.isRoomNote && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Users size={10} />
-                    Shared
-                  </Badge>
-                )}
-
-                {note.isInvited && (
-                  <Badge variant="outline" className="gap-1">
-                    <UserPlus size={10} />
-                    Invite Pending
-                  </Badge>
+                {/* Real-time collaborators display */}
+                {activeUsers.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <ActiveCollaborators
+                      collaborators={activeUsers}
+                      currentUserId={currentUserId}
+                      maxVisible={5}
+                      showLabel={true}
+                    />
+                  </div>
                 )}
               </div>
             </div>

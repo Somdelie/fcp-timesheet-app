@@ -86,6 +86,10 @@ model User {
   noteMemberships     NoteMember[]
   sentNoteInvites     NoteInvite[] @relation("NoteInviteSender")
   receivedNoteInvites NoteInvite[] @relation("NoteInviteRecipient")
+
+  // NEW: Real-time collaboration
+  notePresences   NotePresence[]
+  noteEditHistory NoteEditHistory[]
 }
 
 model PushToken {
@@ -624,10 +628,10 @@ model SiteDayPhotoRequest {
 }
 
 model SiteDayPhoto {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   siteDayId          String
   imageUrl           String
-  uploadedAt         DateTime @default(now())
+  uploadedAt         DateTime  @default(now())
   capturedAt         DateTime?
   uploadedByUserId   String?
   requestId          String?
@@ -2298,6 +2302,10 @@ model UserNote {
   members NoteMember[]
   invites NoteInvite[]
 
+  // NEW: Real-time collaboration
+  presences     NotePresence[]
+  editHistories NoteEditHistory[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2648,4 +2656,56 @@ enum CapeTownOrderStatus {
   ORDERED
   RECEIVED
   CANCELLED
+}
+
+//
+// ============================
+// REAL-TIME COLLABORATION
+// ============================
+
+// Track active users currently editing/viewing a note
+model NotePresence {
+  id String @id @default(cuid())
+
+  noteId String
+  note   UserNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cursorPosition Int? // Character position in the note
+  cursorLine     Int? // Line number (for structured content)
+  isActive       Boolean @default(true)
+
+  lastActivityAt DateTime @updatedAt // Auto-update on any activity
+  connectedAt    DateTime @default(now())
+
+  @@unique([noteId, userId])
+  @@index([noteId, isActive])
+  @@index([userId])
+  @@index([lastActivityAt])
+}
+
+// Track recent edits with user attribution for undo/history
+model NoteEditHistory {
+  id String @id @default(cuid())
+
+  noteId String
+  note   UserNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  previousContent String // Content before this edit
+  newContent      String // Content after this edit
+  changeType      String @default("text") // "text", "title", "color", etc.
+  operation       String @default("update") // "insert", "delete", "replace", "update"
+
+  startPosition Int? // Start position of change
+  endPosition   Int? // End position of change
+
+  createdAt DateTime @default(now())
+
+  @@index([noteId, createdAt])
+  @@index([userId])
 }
