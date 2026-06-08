@@ -114,11 +114,9 @@ export async function POST(
   const { foremanId, employeeCode, workDateISO, latitude, longitude, address } =
     body.data;
 
-  if (role === "SUPERVISOR") {
-    const selectedDate = await validateSupervisorScanDate(workDateISO);
-    if (!selectedDate.ok) {
-      return NextResponse.json({ error: selectedDate.error }, { status: 400 });
-    }
+  const selectedDate = await validateSupervisorScanDate(workDateISO);
+  if (!selectedDate.ok) {
+    return NextResponse.json({ error: selectedDate.error }, { status: 400 });
   }
 
   const normalizedCode = normalizeEmployeeCode(employeeCode);

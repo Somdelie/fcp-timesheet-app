@@ -82,17 +82,40 @@ export function useNoteCollaboration(
         }
       };
 
-      wsRef.current.onerror = (error) => {
-        console.error("Collaboration WebSocket error:", error);
+      wsRef.current.onerror = (ev: Event) => {
+        // Browser WebSocket `onerror` receives a generic Event with no useful
+        // properties. Log the event plus the WebSocket readyState to aid
+        // debugging instead of printing an empty object.
+        console.error("Collaboration WebSocket error event:", ev, {
+          readyState: wsRef.current?.readyState,
+          url: (wsRef.current as WebSocket | null)?.url,
+        });
         setIsConnected(false);
       };
 
-      wsRef.current.onclose = () => {
-        console.log("Collaboration service disconnected");
+      wsRef.current.onclose = (ev: CloseEvent) => {
+        // CloseEvent contains code/reason which are useful to diagnose
+        // server-side disconnects or protocol errors.
+        console.warn("Collaboration service disconnected", {
+          code: ev?.code,
+          reason: ev?.reason,
+          wasClean: ev?.wasClean,
+        });
         setIsConnected(false);
+
+        // Clear heartbeat interval when socket closes
+        try {
+          if (heartbeatTimeoutRef.current) {
+            clearInterval(heartbeatTimeoutRef.current as unknown as number);
+            heartbeatTimeoutRef.current = null;
+          }
+        } catch (e) {
+          /* ignore */
+        }
 
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
+          console.log("Reconnecting collaboration service...");
           connect();
         }, 3000);
       };

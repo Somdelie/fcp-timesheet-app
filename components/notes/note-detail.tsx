@@ -63,6 +63,7 @@ import {
 } from "@/actions/notes";
 import { toast } from "react-toastify";
 import { useNoteCollaboration } from "@/hooks/useNoteCollaboration";
+import { exportDomToPdf } from "@/lib/exportDomToPdf";
 
 const COLOR_PALETTE: { key: NoteColor; label: string; class: string }[] = [
   { key: "DEFAULT", label: "Slate", class: "bg-slate-400" },
@@ -343,41 +344,18 @@ export function NoteDetail({
 
   async function handleExportPdf() {
     if (!contentRef.current) return;
+    setExporting(true);
     try {
-      setExporting(true);
-      const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
-
-      const element = contentRef.current;
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("p", "pt", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      const imgProps: any = (pdf as any).getImageProperties(imgData);
-      const imgWidth = pdfWidth;
-      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-
       const fileName = `${note.title ? note.title.replace(/[^a-z0-9-_ ]/gi, "") : "note"}.pdf`;
-      pdf.save(fileName);
-    } catch (err) {
+      // Use shared export helper which handles color sanitization, pagination and CORS
+      await exportDomToPdf(contentRef.current, {
+        filename: fileName,
+        scale: 2,
+        landscape: false,
+      });
+    } catch (err: any) {
       console.error("Export PDF failed", err);
-      toast.error("Unable to export PDF");
+      toast.error(err?.message ?? "Unable to export PDF");
     } finally {
       setExporting(false);
     }

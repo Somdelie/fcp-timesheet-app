@@ -80,6 +80,24 @@ const CANONICAL_FAMILIES: CanonicalFamilyDefinition[] = [
     ],
   },
   {
+    key: "DULUX_TRADE_65",
+    canonicalName: "Trade 65",
+    brandHint: "dulux",
+    aliases: ["TRADE 65", "TRADE65", "DULUX TRADE 65", "DULUX TRADE65"],
+  },
+  {
+    key: "DULUX_WOODGUARD_TIMBAVARNISH",
+    canonicalName: "WOODGUARD TIMBAVARNISH - INT/EXT",
+    brandHint: "dulux",
+    aliases: [
+      "WOODGUARD TIMBAVARNISH",
+      "WOODGARD TIMBAVARNISH",
+      "WG TIMBAVARNISH",
+      "TIMBAVARNISH INT EXT",
+      "TIMBAVARNISH INT/EXT",
+    ],
+  },
+  {
     key: "DULUX_WATERBASED_PEARLGLO",
     canonicalName: "Waterbased Pearlglo",
     brandHint: "dulux",

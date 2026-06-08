@@ -120,11 +120,9 @@ export async function POST(
     address,
   } = body.data;
 
-  if (role === "SUPERVISOR") {
-    const selectedDate = await validateSupervisorScanDate(workDateISO);
-    if (!selectedDate.ok) {
-      return NextResponse.json({ error: selectedDate.error }, { status: 400 });
-    }
+  const selectedDate = await validateSupervisorScanDate(workDateISO);
+  if (!selectedDate.ok) {
+    return NextResponse.json({ error: selectedDate.error }, { status: 400 });
   }
 
   const normalizedCodes = employeeCodes.map(normalizeEmployeeCode);
