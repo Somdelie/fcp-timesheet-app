@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const MAX_FILES = 50;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;

@@ -7,6 +7,7 @@ import type { ParsedMaterialLine } from "@/lib/buildsmart-cost-parser";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
