@@ -99,10 +99,11 @@ export function detectBaseType(text: string): {
 // Colour code patterns:
 //   • Plascon  : 2-3 dash-separated segments, each 1-4 alnum (GR-B09, G1-E1-1, AL-YO3)
 //   • Dulux    : <digits><letters><digits>/<digits>           (68YR28/701, 06YY08/048, 00NN83/000)
-const DULUX_CODE_RE = /\b\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}\b/;
+const DULUX_CODE_RE = /\b(?:[A-Z]{2,6})?\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}\b/;
+const DULUX_COMPACT_CODE_RE = /\b\d{1,2}[A-Z]{1,3}\d{5,7}\b/;
 const PLASCON_CODE_RE = /\b[A-Z0-9]{1,4}(?:-[A-Z0-9]{1,4}){1,2}\b/;
 const COLOR_CODE_RE = new RegExp(
-  `(${DULUX_CODE_RE.source}|${PLASCON_CODE_RE.source})`,
+  `(${DULUX_CODE_RE.source}|${DULUX_COMPACT_CODE_RE.source}|${PLASCON_CODE_RE.source})`,
 );
 const COLOR_CODE_RE_GLOBAL = new RegExp(COLOR_CODE_RE.source, "g");
 
@@ -120,6 +121,26 @@ function cleanColorName(raw: string): string {
     .replace(/\s{2,}/g, " ")
     .trim()
     .toUpperCase();
+}
+
+function isUsefulColorName(colorName: string | null): colorName is string {
+  if (!colorName) return false;
+  const name = colorName.trim().toUpperCase();
+  if (name.length < 3) return false;
+  if (/^\d+[A-Z]*$/.test(name)) return false;
+  if (/^\d+\s*(?:MM|CM|M|ML|L|KG|G)$/.test(name)) return false;
+  if (/^(?:INT\/EXT|INTERIOR|EXTERIOR|PACK|EACH|BLANK)$/.test(name)) {
+    return false;
+  }
+  return true;
+}
+
+function normalizeColorCode(raw: string | null): string | null {
+  if (!raw) return null;
+  const code = raw.trim().toUpperCase();
+  const compactDulux = code.match(/^(\d{1,2}[A-Z]{1,3}\d{2,3})(\d{3,4})$/);
+  if (compactDulux) return `${compactDulux[1]}/${compactDulux[2]}`;
+  return code;
 }
 
 /**
@@ -140,7 +161,7 @@ export function extractColorAndBase(rawDescription: string): {
 
   // 1. Find base type anywhere in the text
   const baseHit = detectBaseType(text);
-  const baseType: ColorBaseType = baseHit.baseType ?? "DEEP";
+  const baseType: ColorBaseType = baseHit.baseType ?? "NEUTRAL";
 
   // 2. Isolate the color portion (text after a T/Base ... dash, if present)
   let colorPortion: string | null = null;
@@ -166,7 +187,7 @@ export function extractColorAndBase(rawDescription: string): {
   if (colorPortion) {
     const codeMatch = colorPortion.match(COLOR_CODE_RE);
     if (codeMatch) {
-      colorCode = codeMatch[1];
+      colorCode = normalizeColorCode(codeMatch[1]);
       colorName = cleanColorName(colorPortion);
     } else {
       colorName = cleanColorName(colorPortion);
@@ -183,7 +204,15 @@ export function extractColorAndBase(rawDescription: string): {
     isTinted = !isOnlyBaseLabel && !!colorCode;
   }
 
+  if (!isUsefulColorName(colorName)) {
+    colorName = null;
+    colorCode = null;
+    isTinted = false;
+  }
+
   // If we have no base hit AND no real color, return null colorName.
+  // When a color/code is present but the PDF has no base marker, store NEUTRAL
+  // as the internal "unspecified" bucket and render it blank in the UI.
   if (!baseHit.baseType && !colorName) {
     return { baseType, colorName: null, colorCode: null, isTinted: false };
   }

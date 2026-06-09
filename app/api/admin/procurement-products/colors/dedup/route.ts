@@ -6,6 +6,36 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MAIN_SUPPLIER_RULES = [
+  { pattern: /\bdulux\b/i, name: "Dulux" },
+  { pattern: /\bplascon\b/i, name: "Plascon" },
+  { pattern: /\bprominent\b/i, name: "Prominent" },
+  { pattern: /\bmidas\b/i, name: "Midas" },
+  { pattern: /\bversus\b/i, name: "Versus" },
+  { pattern: /\bmarmoran\b/i, name: "Marmoran" },
+  { pattern: /\bcemcrete\b/i, name: "Cemcrete" },
+  { pattern: /\burochem\b/i, name: "Urochem" },
+];
+
+function toMainSupplier(
+  supplier:
+    | {
+        id: string;
+        name: string;
+        parentSupplier?: { id: string; name: string } | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!supplier) return null;
+  if (supplier.parentSupplier) return supplier.parentSupplier;
+
+  const rule = MAIN_SUPPLIER_RULES.find((r) => r.pattern.test(supplier.name));
+  if (rule) return { id: `brand:${rule.name.toLowerCase()}`, name: rule.name };
+
+  return { id: supplier.id, name: supplier.name };
+}
+
 async function getAuth() {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
@@ -37,11 +67,23 @@ export async function GET() {
           name: true,
           sku: true,
           category: { select: { id: true, name: true } },
-          supplier: { select: { id: true, name: true } },
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+              parentSupplier: { select: { id: true, name: true } },
+            },
+          },
           supplierPrices: {
             where: { isActive: true },
             select: {
-              supplier: { select: { id: true, name: true } },
+              supplier: {
+                select: {
+                  id: true,
+                  name: true,
+                  parentSupplier: { select: { id: true, name: true } },
+                },
+              },
             },
             take: 1,
           },
@@ -59,7 +101,7 @@ export async function GET() {
 
     // Determine supplier name (prefer active supplier price, then product.supplier)
     const supplierFromPrice = v.product.supplierPrices?.[0]?.supplier;
-    const supplier = supplierFromPrice ?? v.product.supplier ?? null;
+    const supplier = toMainSupplier(supplierFromPrice ?? v.product.supplier);
 
     if (!entry) {
       map.set(key, {

@@ -53,6 +53,23 @@ function colorKey(colorName: string, baseType: ColorBaseType): ColorKey {
   return `${colorName.trim().toLowerCase()}||${baseType}`;
 }
 
+const MAIN_SUPPLIER_RULES = [
+  { pattern: /\bdulux\b/i, name: "Dulux" },
+  { pattern: /\bplascon\b/i, name: "Plascon" },
+  { pattern: /\bprominent\b/i, name: "Prominent" },
+  { pattern: /\bmidas\b/i, name: "Midas" },
+  { pattern: /\bversus\b/i, name: "Versus" },
+  { pattern: /\bmarmoran\b/i, name: "Marmoran" },
+  { pattern: /\bcemcrete\b/i, name: "Cemcrete" },
+  { pattern: /\burochem\b/i, name: "Urochem" },
+];
+
+function mainSupplierName(rawSupplierName: string): string | null {
+  const normalized = normalizeSupplierName(rawSupplierName);
+  const rule = MAIN_SUPPLIER_RULES.find((r) => r.pattern.test(normalized));
+  return rule?.name ?? null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     return await handle(req);
@@ -173,19 +190,19 @@ async function handle(req: NextRequest) {
     if (bucket.examples.length < 3) bucket.examples.push(c.rawDescription);
 
     if (c.vendorName) {
-      const norm = normalizeSupplierName(c.vendorName);
+      const norm = mainSupplierName(c.vendorName);
+      if (!norm) continue;
       bucket.suppliers.add(norm);
       let sup = supplierBuckets.get(norm);
       if (!sup) {
         sup = {
           normalisedName: norm,
           rawNames: new Set(),
-          vendorCode: c.vendorCode ?? null,
+          vendorCode: null,
         };
         supplierBuckets.set(norm, sup);
       }
       sup.rawNames.add(c.vendorName);
-      if (!sup.vendorCode && c.vendorCode) sup.vendorCode = c.vendorCode;
     }
   }
 
@@ -289,7 +306,7 @@ async function handle(req: NextRequest) {
             tick("suppliers", `Matched supplier ${s.normalisedName}`);
           } else {
             const created = await prisma.supplier.create({
-              data: { name: s.normalisedName },
+              data: { name: s.normalisedName, supplierType: "BRAND" },
               select: { id: true },
             });
             supplierIdByName.set(s.normalisedName, created.id);
@@ -398,7 +415,11 @@ async function handle(req: NextRequest) {
             tick("orderPriceLinks", "(skipped: no variant)");
             continue;
           }
-          const norm = normalizeSupplierName(c.vendorName);
+          const norm = mainSupplierName(c.vendorName);
+          if (!norm) {
+            tick("orderPriceLinks", "(skipped: no parent paint supplier)");
+            continue;
+          }
           const supplierId = supplierIdByName.get(norm);
           if (!supplierId) {
             tick("orderPriceLinks", "(skipped: no supplier)");

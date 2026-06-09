@@ -82,7 +82,7 @@ const BASE_TYPE_LABELS: Record<ColorBaseType, string> = {
   PASTEL: "T/Base Pastel",
   WHITE: "White Base",
   CLEAR: "Clear Base",
-  NEUTRAL: "Neutral Base",
+  NEUTRAL: "",
 };
 
 const BASE_TYPE_COLORS: Record<ColorBaseType, string> = {
@@ -119,6 +119,38 @@ function ColorSwatch({ colorCode }: { colorCode: string | null }) {
   );
 }
 
+function colorDisplayName(colorName: string, colorCode: string | null) {
+  const name = colorName.trim().toUpperCase();
+  const code = colorCode?.trim().toUpperCase();
+  if (!code || name.includes(code)) return name;
+  return `${name} ${code}`;
+}
+
+function isUnspecifiedBase(baseType: ColorBaseType, colorCode: string | null) {
+  return (
+    baseType === "NEUTRAL" ||
+    (baseType === "DEEP" && !!colorCode?.match(/^\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}$/i))
+  );
+}
+
+function BaseBadge({
+  baseType,
+  colorCode,
+}: {
+  baseType: ColorBaseType;
+  colorCode: string | null;
+}) {
+  const label = isUnspecifiedBase(baseType, colorCode)
+    ? ""
+    : BASE_TYPE_LABELS[baseType];
+  if (!label) return <Text className="text-muted-foreground">&nbsp;</Text>;
+  return (
+    <Badge className={`${BASE_TYPE_COLORS[baseType]} font-medium`}>
+      <Text>{label}</Text>
+    </Badge>
+  );
+}
+
 /* ── Page wrapper with tabs ─────────────────────────────────────── */
 
 export default function PaintColorsAdminPage() {
@@ -152,6 +184,7 @@ function PaintColorsListTab() {
   const [colors, setColors] = useState<DedupColor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("all");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
@@ -174,15 +207,22 @@ function PaintColorsListTab() {
     fetchColors();
   }, []);
 
-  // Filter colors by search
+  const supplierOptions = Array.from(
+    new Set(colors.map((c) => c.supplier?.name).filter(Boolean) as string[]),
+  ).sort((a, b) => a.localeCompare(b));
+
+  // Filter colors by search and main supplier
   const filtered = colors.filter((c) => {
     const searchLower = search.toLowerCase();
-    return (
+    const matchesSearch =
       c.colorName.toLowerCase().includes(searchLower) ||
       (c.colorCode && c.colorCode.toLowerCase().includes(searchLower)) ||
       c.baseType.toLowerCase().includes(searchLower) ||
-      (c.supplier?.name && c.supplier.name.toLowerCase().includes(searchLower))
-    );
+      (c.supplier?.name && c.supplier.name.toLowerCase().includes(searchLower));
+    const matchesSupplier =
+      supplierFilter === "all" || c.supplier?.name === supplierFilter;
+
+    return matchesSearch && matchesSupplier;
   });
 
   const pageCount = Math.max(
@@ -241,7 +281,7 @@ function PaintColorsListTab() {
       </div>
 
       {/* Search */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Input
           placeholder="Search by color name, code, base, or supplier..."
           value={search}
@@ -251,6 +291,25 @@ function PaintColorsListTab() {
           }}
           className="max-w-md"
         />
+        <Select
+          value={supplierFilter}
+          onValueChange={(value) => {
+            setSupplierFilter(value);
+            setPagination((p) => ({ ...p, pageIndex: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Supplier" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All suppliers</SelectItem>
+            {supplierOptions.map((supplier) => (
+              <SelectItem key={supplier} value={supplier}>
+                {supplier}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -299,7 +358,7 @@ function PaintColorsListTab() {
                           <div className="flex items-center gap-2">
                             <ColorSwatch colorCode={color.colorCode} />
                             <Text className="font-medium text-foreground">
-                              {color.colorName.toUpperCase()}
+                              {colorDisplayName(color.colorName, color.colorCode)}
                             </Text>
                             {color.isTinted && (
                               <Badge
@@ -314,11 +373,10 @@ function PaintColorsListTab() {
 
                         {/* Base Type */}
                         <TableCell className="border-r border-border px-3 py-1.5 align-middle">
-                          <Badge
-                            className={`${BASE_TYPE_COLORS[color.baseType]} font-medium`}
-                          >
-                            <Text>{BASE_TYPE_LABELS[color.baseType]}</Text>
-                          </Badge>
+                          <BaseBadge
+                            baseType={color.baseType}
+                            colorCode={color.colorCode}
+                          />
                         </TableCell>
 
                         {/* Supplier */}
@@ -558,7 +616,7 @@ function SeedFromPdfsTab() {
   const priceInputRef = useRef<HTMLInputElement | null>(null);
   const [orderFiles, setOrderFiles] = useState<PendingFile[]>([]);
   const [priceFiles, setPriceFiles] = useState<PendingFile[]>([]);
-  const [dragActive, setDragActive] = useState(false);
+  const [dragActive, setDragActive] = useState<"" | "orders" | "prices">("");
   const [busy, setBusy] = useState<"" | "parsing" | "importing">("");
   const [preview, setPreview] = useState<ParseResponse | null>(null);
   const [importResult, setImportResult] = useState<ImportResponse | null>(null);
@@ -598,6 +656,46 @@ function SeedFromPdfsTab() {
     });
     setPreview(null);
     setImportResult(null);
+  }
+
+  function handleDragEnter(
+    e: React.DragEvent<HTMLElement>,
+    target: "orders" | "prices",
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(target);
+  }
+
+  function handleDragOver(
+    e: React.DragEvent<HTMLElement>,
+    target: "orders" | "prices",
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+    setDragActive(target);
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextTarget = e.relatedTarget as Node | null;
+    if (nextTarget && e.currentTarget.contains(nextTarget)) return;
+    setDragActive("");
+  }
+
+  function handleDrop(
+    e: React.DragEvent<HTMLElement>,
+    target: "orders" | "prices",
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive("");
+    const files = e.dataTransfer.files;
+    if (!files?.length) return;
+    if (target === "orders") addOrderFiles(files);
+    else addPriceFiles(files);
   }
 
   function removeOrderFile(id: string) {
@@ -742,27 +840,13 @@ function SeedFromPdfsTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                setDragActive(false);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragActive(false);
-                if (e.dataTransfer.files?.length)
-                  addOrderFiles(e.dataTransfer.files);
-              }}
+              onDragEnter={(e) => handleDragEnter(e, "orders")}
+              onDragOver={(e) => handleDragOver(e, "orders")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "orders")}
               className={cn(
                 "rounded border-2 border-dashed p-6 text-center transition",
-                dragActive
+                dragActive === "orders"
                   ? "border-primary bg-primary/5"
                   : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
               )}
@@ -847,7 +931,27 @@ function SeedFromPdfsTab() {
               products.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent
+            className={cn(
+              "space-y-3 rounded border-2 border-dashed p-6 transition",
+              dragActive === "prices"
+                ? "border-primary bg-primary/5"
+                : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+            )}
+            onDragEnter={(e) => handleDragEnter(e, "prices")}
+            onDragOver={(e) => handleDragOver(e, "prices")}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, "prices")}
+          >
+            <div className="text-center">
+              <Upload className="mx-auto h-7 w-7 text-muted-foreground" />
+              <p className="mt-2 text-sm font-medium">
+                Drop price list PDF files here
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Or pick them from your computer.
+              </p>
+            </div>
             <Button
               variant="outline"
               onClick={() => priceInputRef.current?.click()}
@@ -1024,7 +1128,7 @@ function PreviewPanel({ preview }: { preview: ParseResponse }) {
                   preview.colors.map((c) => (
                     <TableRow key={`${c.colorName}|${c.baseType}`}>
                       <TableCell className="px-3 py-1.5 text-sm font-medium">
-                        {c.colorName}
+                        {colorDisplayName(c.colorName, c.colorCode)}
                         {c.isTinted && (
                           <Badge
                             variant="secondary"
@@ -1035,11 +1139,7 @@ function PreviewPanel({ preview }: { preview: ParseResponse }) {
                         )}
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
-                        <Badge
-                          className={`${BASE_TYPE_COLORS[c.baseType]} font-medium`}
-                        >
-                          {BASE_TYPE_LABELS[c.baseType]}
-                        </Badge>
+                        <BaseBadge baseType={c.baseType} colorCode={c.colorCode} />
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground">
                         {c.colorCode ?? "—"}

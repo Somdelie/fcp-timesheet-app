@@ -97,8 +97,64 @@ const TRAILING_SIZE_RE =
 const TRAILING_PRICE_RE = /\s+R\s?\d+[.,]?\d*\s*$/i;
 const TRAILING_DASH_COLOR_CODE_RE =
   /^(?<product>.+?)\s+[-–—]\s+(?<color>[A-Za-z][A-Za-z0-9\s]{1,80}?)\s+(?<code>(?:\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}|[A-Z0-9]{1,5}(?:-[A-Z0-9]{1,5}){1,2}))\s*$/i;
+const TBASE_COLOR_RE =
+  /^(?<product>.+?)\bT\/Base\s+(?<base>Pastel|Deep|Transparent|Transp|Clear|Neutral|Medium|Natural)\s*[-–—]\s*(?<colorPortion>.+?)\s*$/i;
+const TRAILING_DULUX_COLOR_CODE_RE =
+  /^(?<product>.+?)\s*[-–—]?\s+(?<color>[A-Za-z][A-Za-z0-9\s]{1,80}?)\s+(?<code>\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4})\s*$/i;
+const LEADING_PLASCON_COLOR_CODE_RE =
+  /^(?<code>[A-Z0-9]{1,5}(?:-[A-Z0-9]{1,5}){1,2})\s+(?<color>[A-Za-z][A-Za-z0-9\s]{1,80}?)\s*$/i;
+const TRAILING_PLASCON_COLOR_CODE_RE =
+  /^(?<color>[A-Za-z][A-Za-z0-9\s]{1,80}?)\s+(?<code>[A-Z0-9]{1,5}(?:-[A-Z0-9]{1,5}){1,2})\s*$/i;
 
 const PROTECTED_WORDS = ["mix masala", "masala mix"];
+
+function baseTypeFromTBaseLabel(label: string): ColorBaseType {
+  const normalized = label.trim().toLowerCase();
+  if (normalized === "pastel") return "PASTEL";
+  if (["transparent", "transp", "clear"].includes(normalized)) return "CLEAR";
+  if (["neutral", "medium", "natural"].includes(normalized)) return "NEUTRAL";
+  return "DEEP";
+}
+
+function extractColorNameAndCode(colorPortion: string): {
+  colorName: string;
+  colorCode: string | null;
+} {
+  const trimmed = colorPortion.trim();
+  const leadingCode = trimmed.match(LEADING_PLASCON_COLOR_CODE_RE);
+  if (leadingCode?.groups) {
+    return {
+      colorName: leadingCode.groups.color.trim().toUpperCase(),
+      colorCode: leadingCode.groups.code.trim().toUpperCase(),
+    };
+  }
+
+  const trailingDashCode = trimmed.match(TRAILING_DASH_COLOR_CODE_RE);
+  if (trailingDashCode?.groups) {
+    return {
+      colorName: trailingDashCode.groups.color.trim().toUpperCase(),
+      colorCode: trailingDashCode.groups.code.trim().toUpperCase(),
+    };
+  }
+
+  const trailingDuluxCode = trimmed.match(TRAILING_DULUX_COLOR_CODE_RE);
+  if (trailingDuluxCode?.groups) {
+    return {
+      colorName: trailingDuluxCode.groups.color.trim().toUpperCase(),
+      colorCode: trailingDuluxCode.groups.code.trim().toUpperCase(),
+    };
+  }
+
+  const trailingPlasconCode = trimmed.match(TRAILING_PLASCON_COLOR_CODE_RE);
+  if (trailingPlasconCode?.groups) {
+    return {
+      colorName: trailingPlasconCode.groups.color.trim().toUpperCase(),
+      colorCode: trailingPlasconCode.groups.code.trim().toUpperCase(),
+    };
+  }
+
+  return { colorName: trimmed.toUpperCase(), colorCode: null };
+}
 
 // ── cleanProductName ─────────────────────────────────────────────────────────
 
@@ -185,14 +241,41 @@ export function extractColorVariant(rawDescription: string): {
   isTinted: boolean;
   colorCode?: string | null;
 } {
+  const tbaseColorMatch = rawDescription.match(TBASE_COLOR_RE);
+  if (tbaseColorMatch?.groups) {
+    const { colorName, colorCode } = extractColorNameAndCode(
+      tbaseColorMatch.groups.colorPortion,
+    );
+    return {
+      cleanName: tbaseColorMatch.groups.product.trim(),
+      colorName,
+      baseType: baseTypeFromTBaseLabel(tbaseColorMatch.groups.base),
+      isTinted: true,
+      colorCode,
+    };
+  }
+
   const dashColorMatch = rawDescription.match(TRAILING_DASH_COLOR_CODE_RE);
   if (dashColorMatch?.groups) {
     return {
       cleanName: dashColorMatch.groups.product.trim(),
       colorName: dashColorMatch.groups.color.trim().toUpperCase(),
-      baseType: "DEEP",
+      baseType: "NEUTRAL",
       isTinted: true,
       colorCode: dashColorMatch.groups.code.trim().toUpperCase(),
+    };
+  }
+
+  const trailingDuluxColorMatch = rawDescription.match(
+    TRAILING_DULUX_COLOR_CODE_RE,
+  );
+  if (trailingDuluxColorMatch?.groups) {
+    return {
+      cleanName: trailingDuluxColorMatch.groups.product.trim(),
+      colorName: trailingDuluxColorMatch.groups.color.trim().toUpperCase(),
+      baseType: "NEUTRAL",
+      isTinted: true,
+      colorCode: trailingDuluxColorMatch.groups.code.trim().toUpperCase(),
     };
   }
 
