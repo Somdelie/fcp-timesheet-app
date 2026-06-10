@@ -723,10 +723,7 @@ export function NoteDetail({
                     </div>
                     <div className="flex-1 pt-1 text-center">
                       <p className="text-[15px] font-bold uppercase tracking-[0.8px] text-slate-950">
-                        Note
-                      </p>
-                      <p className="mt-1 text-[8px] tracking-[0.3px] text-slate-500">
-                        First Class Projects
+                        {title || "Untitled"}
                       </p>
                     </div>
                     <div className="w-[30%] pt-1 text-right">
