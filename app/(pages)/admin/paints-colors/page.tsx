@@ -129,7 +129,8 @@ function colorDisplayName(colorName: string, colorCode: string | null) {
 function isUnspecifiedBase(baseType: ColorBaseType, colorCode: string | null) {
   return (
     baseType === "NEUTRAL" ||
-    (baseType === "DEEP" && !!colorCode?.match(/^\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}$/i))
+    (baseType === "DEEP" &&
+      !!colorCode?.match(/^\d{1,2}[A-Z]{1,3}\d{1,3}\/\d{1,4}$/i))
   );
 }
 
@@ -157,30 +158,74 @@ export default function PaintColorsAdminPage() {
   return (
     <div className="flex flex-col h-full p-6 bg-background">
       <Tabs defaultValue="list" className="w-full">
-        <TabsList className="mb-4 rounded border bg-muted/40 p-1">
-          <TabsTrigger value="list" className="rounded">
-            <ListChecks className="mr-2 h-4 w-4" />
-            Colour List
-          </TabsTrigger>
-          <TabsTrigger value="seed" className="rounded">
-            <Upload className="mr-2 h-4 w-4" />
-            Seed from PDFs
-          </TabsTrigger>
-        </TabsList>
         <TabsContent value="list">
-          <PaintColorsListTab />
+          <PaintColorsListTab
+            tabsList={
+              <PaintColorsTabsList />
+            }
+          />
         </TabsContent>
         <TabsContent value="seed">
-          <SeedFromPdfsTab />
+          <SeedFromPdfsTab
+            tabsList={
+              <PaintColorsTabsList />
+            }
+          />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
+function interleaveColorsBySupplier(colors: DedupColor[]) {
+  const buckets = new Map<string, DedupColor[]>();
+  for (const color of colors) {
+    const supplier = color.supplier?.name ?? "Unassigned";
+    const bucket = buckets.get(supplier) ?? [];
+    bucket.push(color);
+    buckets.set(supplier, bucket);
+  }
+
+  const suppliers = Array.from(buckets.keys()).sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const result: DedupColor[] = [];
+  let index = 0;
+
+  while (result.length < colors.length) {
+    let added = false;
+    for (const supplier of suppliers) {
+      const color = buckets.get(supplier)?.[index];
+      if (color) {
+        result.push(color);
+        added = true;
+      }
+    }
+    if (!added) break;
+    index += 1;
+  }
+
+  return result;
+}
+
+function PaintColorsTabsList() {
+  return (
+    <TabsList className="rounded border bg-muted/40 p-1">
+      <TabsTrigger value="list" className="rounded">
+        <ListChecks className="mr-2 h-4 w-4" />
+        Colour List
+      </TabsTrigger>
+      <TabsTrigger value="seed" className="rounded">
+        <Upload className="mr-2 h-4 w-4" />
+        Seed from PDFs
+      </TabsTrigger>
+    </TabsList>
+  );
+}
+
 /* ── List tab ────────────────────────────────────────────────────── */
 
-function PaintColorsListTab() {
+function PaintColorsListTab({ tabsList }: { tabsList: React.ReactNode }) {
   const [colors, setColors] = useState<DedupColor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -225,14 +270,17 @@ function PaintColorsListTab() {
     return matchesSearch && matchesSupplier;
   });
 
+  const displayColors =
+    supplierFilter === "all" ? interleaveColorsBySupplier(filtered) : filtered;
+
   const pageCount = Math.max(
     1,
-    Math.ceil(filtered.length / pagination.pageSize),
+    Math.ceil(displayColors.length / pagination.pageSize),
   );
   const currentPageIndex = Math.min(pagination.pageIndex, pageCount - 1);
   const pageStart = currentPageIndex * pagination.pageSize;
-  const pageEnd = Math.min(pageStart + pagination.pageSize, filtered.length);
-  const paginatedColors = filtered.slice(pageStart, pageEnd);
+  const pageEnd = Math.min(pageStart + pagination.pageSize, displayColors.length);
+  const paginatedColors = displayColors.slice(pageStart, pageEnd);
 
   // Delete color (all variants with this colorName + baseType)
   const handleDelete = async (colorName: string, baseType: ColorBaseType) => {
@@ -272,12 +320,15 @@ function PaintColorsListTab() {
             <Text>Manage available paint colors and bases</Text>
           </p>
         </div>
-        <Link href="/admin/paints-colors/create">
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            <Text>New Color</Text>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {tabsList}
+          <Link href="/admin/paints-colors/create">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              <Text>New Color</Text>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
@@ -298,7 +349,7 @@ function PaintColorsListTab() {
             setPagination((p) => ({ ...p, pageIndex: 0 }));
           }}
         >
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-55">
             <SelectValue placeholder="Supplier" />
           </SelectTrigger>
           <SelectContent>
@@ -358,7 +409,10 @@ function PaintColorsListTab() {
                           <div className="flex items-center gap-2">
                             <ColorSwatch colorCode={color.colorCode} />
                             <Text className="font-medium text-foreground">
-                              {colorDisplayName(color.colorName, color.colorCode)}
+                              {colorDisplayName(
+                                color.colorName,
+                                color.colorCode,
+                              )}
                             </Text>
                             {color.isTinted && (
                               <Badge
@@ -598,7 +652,11 @@ type ImportResponse = {
     parseFailures: number;
   };
   createdVariants: { colorName: string; baseType: ColorBaseType; id: string }[];
-  skippedVariants: { colorName: string; baseType: ColorBaseType; reason: string }[];
+  skippedVariants: {
+    colorName: string;
+    baseType: ColorBaseType;
+    reason: string;
+  }[];
   parseFailures: { fileName: string; reason: string }[];
   unmatchedPriceLabels: string[];
 };
@@ -611,7 +669,12 @@ type ImportProgress = {
   log: string[];
 };
 
-function SeedFromPdfsTab() {
+type SeederBatch = {
+  orderFile?: PendingFile;
+  priceFile?: PendingFile;
+};
+
+function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
   const orderInputRef = useRef<HTMLInputElement | null>(null);
   const priceInputRef = useRef<HTMLInputElement | null>(null);
   const [orderFiles, setOrderFiles] = useState<PendingFile[]>([]);
@@ -715,6 +778,208 @@ function SeedFromPdfsTab() {
     setImportResult(null);
   }
 
+  async function postSeederBatch(
+    action: "parse" | "import",
+    batch: SeederBatch,
+  ) {
+    const fd = new FormData();
+    fd.append("action", action);
+    if (batch.orderFile) {
+      fd.append("pdfs", batch.orderFile.file, batch.orderFile.file.name);
+    }
+    if (batch.priceFile) {
+      fd.append("priceList", batch.priceFile.file, batch.priceFile.file.name);
+    }
+
+    const res = await fetch("/api/admin/paints-colors/seed-from-pdfs", {
+      method: "POST",
+      body: fd,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      let message = text;
+      try {
+        message = JSON.parse(text).error ?? text;
+      } catch {
+        // Netlify/platform errors often arrive as plain text or HTML.
+      }
+      throw new Error(message || `Request failed (${res.status})`);
+    }
+
+    return res;
+  }
+
+  function mergeParseResponses(responses: ParseResponse[]): ParseResponse {
+    const colorMap = new Map<string, ParsedColorPreview>();
+    const supplierMap = new Map<string, ParsedSupplierPreview>();
+
+    for (const response of responses) {
+      for (const color of response.colors) {
+        const key = `${color.colorName.trim().toLowerCase()}||${color.baseType}`;
+        const existing = colorMap.get(key);
+        if (!existing) {
+          colorMap.set(key, {
+            ...color,
+            suppliers: [...color.suppliers],
+            examples: [...color.examples],
+          });
+        } else {
+          if (!existing.colorCode && color.colorCode) existing.colorCode = color.colorCode;
+          if (color.isTinted) existing.isTinted = true;
+          existing.sourceCount += color.sourceCount;
+          existing.suppliers = Array.from(new Set([...existing.suppliers, ...color.suppliers]));
+          existing.examples = Array.from(new Set([...existing.examples, ...color.examples])).slice(0, 3);
+        }
+      }
+
+      for (const supplier of response.suppliers) {
+        const existing = supplierMap.get(supplier.normalisedName);
+        if (!existing) {
+          supplierMap.set(supplier.normalisedName, {
+            ...supplier,
+            rawNames: [...supplier.rawNames],
+          });
+        } else {
+          existing.rawNames = Array.from(new Set([...existing.rawNames, ...supplier.rawNames]));
+          if (!existing.vendorCode && supplier.vendorCode) existing.vendorCode = supplier.vendorCode;
+        }
+      }
+    }
+
+    const colors = Array.from(colorMap.values());
+    const suppliers = Array.from(supplierMap.values());
+    const prices = responses.flatMap((r) => r.prices);
+    const parseFailures = responses.flatMap((r) => r.parseFailures);
+
+    return {
+      action: "parse",
+      summary: {
+        orderPdfs: orderFiles.length,
+        priceListPdfs: priceFiles.length,
+        extractedColors: responses.reduce((n, r) => n + r.summary.extractedColors, 0),
+        uniqueColors: colors.length,
+        suppliersDetected: suppliers.length,
+        priceRows: prices.length,
+        parseFailures: parseFailures.length,
+      },
+      colors,
+      suppliers,
+      prices,
+      parseFailures,
+    };
+  }
+
+  async function readImportDone(res: Response): Promise<ImportResponse> {
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("Import response stream unavailable");
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let result: ImportResponse | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const event = JSON.parse(line);
+        if (event.type === "done") result = event as ImportResponse;
+        if (event.type === "error") throw new Error(event.error);
+      }
+    }
+
+    if (!result) throw new Error("No import result returned");
+    return result;
+  }
+
+  function mergeImportResponses(responses: ImportResponse[]): ImportResponse {
+    const parseFailures = responses.flatMap((r) => r.parseFailures);
+    return {
+      action: "import",
+      summary: {
+        orderPdfs: orderFiles.length,
+        priceListPdfs: priceFiles.length,
+        uniqueColors: preview?.summary.uniqueColors ?? 0,
+        variantsCreated: responses.reduce((n, r) => n + r.summary.variantsCreated, 0),
+        variantsSkipped: responses.reduce((n, r) => n + r.summary.variantsSkipped, 0),
+        suppliersTouched: responses.reduce((n, r) => n + r.summary.suppliersTouched, 0),
+        orderPriceLinksCreated: responses.reduce((n, r) => n + r.summary.orderPriceLinksCreated, 0),
+        priceListRows: responses.reduce((n, r) => n + r.summary.priceListRows, 0),
+        priceListImported: responses.reduce((n, r) => n + r.summary.priceListImported, 0),
+        priceListUnmatched: responses.reduce((n, r) => n + r.summary.priceListUnmatched, 0),
+        priceListDuplicateMatches: responses.reduce(
+          (n, r) => n + (r.summary.priceListDuplicateMatches ?? 0),
+          0,
+        ),
+        parseFailures: parseFailures.length,
+      },
+      createdVariants: responses.flatMap((r) => r.createdVariants),
+      skippedVariants: responses.flatMap((r) => r.skippedVariants),
+      parseFailures,
+      unmatchedPriceLabels: Array.from(new Set(responses.flatMap((r) => r.unmatchedPriceLabels))),
+    };
+  }
+
+  async function callApiBatched(action: "parse" | "import") {
+    const batches: SeederBatch[] = [
+      ...orderFiles.map((orderFile) => ({ orderFile })),
+      ...priceFiles.map((priceFile) => ({ priceFile })),
+    ];
+
+    setBusy(action === "parse" ? "parsing" : "importing");
+    try {
+      if (action === "parse") {
+        const responses: ParseResponse[] = [];
+        for (const batch of batches) {
+          const res = await postSeederBatch("parse", batch);
+          responses.push((await res.json()) as ParseResponse);
+        }
+        const merged = mergeParseResponses(responses);
+        setPreview(merged);
+        setImportResult(null);
+        toast.success(
+          `Parsed ${merged.summary.uniqueColors} unique colours from ${merged.summary.orderPdfs} PDF(s)`,
+        );
+      } else {
+        setProgress({
+          done: 0,
+          total: batches.length,
+          phase: "uploading",
+          message: "Uploading PDFs one at a time...",
+          log: [],
+        });
+        const responses: ImportResponse[] = [];
+        for (let i = 0; i < batches.length; i++) {
+          const file = batches[i].orderFile?.file ?? batches[i].priceFile?.file;
+          setProgress((current) => ({
+            done: i,
+            total: batches.length,
+            phase: "uploading",
+            message: `Uploading ${file?.name ?? `PDF ${i + 1}`}`,
+            log: current?.log ?? [],
+          }));
+          const res = await postSeederBatch("import", batches[i]);
+          responses.push(await readImportDone(res));
+        }
+        const merged = mergeImportResponses(responses);
+        setImportResult(merged);
+        setProgress((current) =>
+          current
+            ? { ...current, done: batches.length, message: "Import complete" }
+            : current,
+        );
+        toast.success(`Saved ${merged.summary.variantsCreated} new colour variants`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function callApi(action: "parse" | "import") {
     if (!orderFiles.length && !priceFiles.length) {
       toast.error("Add at least one PDF first");
@@ -724,9 +989,19 @@ function SeedFromPdfsTab() {
       toast.error("Run Parse before Save");
       return;
     }
+    if (orderFiles.length + priceFiles.length > 1) {
+      await callApiBatched(action);
+      return;
+    }
     setBusy(action === "parse" ? "parsing" : "importing");
     if (action === "import") {
-      setProgress({ done: 0, total: 0, phase: "starting", message: "Starting…", log: [] });
+      setProgress({
+        done: 0,
+        total: 0,
+        phase: "starting",
+        message: "Starting…",
+        log: [],
+      });
       setImportResult(null);
     }
     try {
@@ -740,8 +1015,14 @@ function SeedFromPdfsTab() {
         body: fd,
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).error ?? "Request failed");
+        const text = await res.text().catch(() => "");
+        let message = text;
+        try {
+          message = JSON.parse(text).error ?? text;
+        } catch {
+          // Platform errors may not be JSON.
+        }
+        throw new Error(message || `Request failed (${res.status})`);
       }
 
       if (action === "parse") {
@@ -824,9 +1105,12 @@ function SeedFromPdfsTab() {
             </Text>
           </p>
         </div>
-        <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-          <Text>PDF batch import</Text>
-        </Badge>
+        <div className="flex items-center gap-3">
+          {tabsList}
+          <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+            <Text>PDF batch import</Text>
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -1008,9 +1292,7 @@ function SeedFromPdfsTab() {
       <div className="flex flex-wrap gap-3">
         <Button
           onClick={() => callApi("parse")}
-          disabled={
-            !!busy || (!orderFiles.length && !priceFiles.length)
-          }
+          disabled={!!busy || (!orderFiles.length && !priceFiles.length)}
           className="rounded"
         >
           {busy === "parsing" ? (
@@ -1114,7 +1396,9 @@ function PreviewPanel({ preview }: { preview: ParseResponse }) {
                   <TableHead className="px-3 py-1.5 text-xs">Colour</TableHead>
                   <TableHead className="px-3 py-1.5 text-xs">Base</TableHead>
                   <TableHead className="px-3 py-1.5 text-xs">Code</TableHead>
-                  <TableHead className="px-3 py-1.5 text-xs">Suppliers</TableHead>
+                  <TableHead className="px-3 py-1.5 text-xs">
+                    Suppliers
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1139,7 +1423,10 @@ function PreviewPanel({ preview }: { preview: ParseResponse }) {
                         )}
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
-                        <BaseBadge baseType={c.baseType} colorCode={c.colorCode} />
+                        <BaseBadge
+                          baseType={c.baseType}
+                          colorCode={c.colorCode}
+                        />
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground">
                         {c.colorCode ?? "—"}
@@ -1257,8 +1544,14 @@ function ImportResultPanel({ result }: { result: ImportResponse }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
-          <Stat label="Colours created" value={result.summary.variantsCreated} />
-          <Stat label="Colours skipped" value={result.summary.variantsSkipped} />
+          <Stat
+            label="Colours created"
+            value={result.summary.variantsCreated}
+          />
+          <Stat
+            label="Colours skipped"
+            value={result.summary.variantsSkipped}
+          />
           <Stat
             label="Suppliers touched"
             value={result.summary.suppliersTouched}

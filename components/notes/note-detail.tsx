@@ -52,6 +52,7 @@ import {
 import { cn } from "@/lib/utils";
 import { RichTextEditor } from "./rich-text-editor";
 import { ActiveCollaborators } from "./active-collaborators";
+import { NoteAttachments } from "./note-attachments";
 import { formatRelative } from "./format-relative";
 import {
   type NoteItem,
@@ -244,6 +245,7 @@ export function NoteDetail({
   isPending,
 }: NoteDetailProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const exportRef = useRef<HTMLDivElement | null>(null);
   const [exporting, setExporting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(note.title);
@@ -343,15 +345,18 @@ export function NoteDetail({
   };
 
   async function handleExportPdf() {
-    if (!contentRef.current) return;
+    if (!exportRef.current) return;
     setExporting(true);
     try {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       const fileName = `${note.title ? note.title.replace(/[^a-z0-9-_ ]/gi, "") : "note"}.pdf`;
       // Use shared export helper which handles color sanitization, pagination and CORS
-      await exportDomToPdf(contentRef.current, {
+      await exportDomToPdf(exportRef.current, {
         filename: fileName,
+        marginMm: 14,
         scale: 2,
         landscape: false,
+        pageFrame: "ppe",
       });
     } catch (err: any) {
       console.error("Export PDF failed", err);
@@ -686,31 +691,71 @@ export function NoteDetail({
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <div
-            className="custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
             style={activeBg?.style ?? {}}
           >
             <div
               className={cn(
-                "flex-1 p-8 pb-12",
-                activeBg?.key && "flex items-start justify-center",
+                "flex min-h-0 flex-1 flex-col p-8 pb-12",
+                activeBg?.key && "items-center",
               )}
             >
               <div
+                ref={exportRef}
                 className={cn(
-                  activeBg?.key &&
-                    "w-full max-w-2xl rounded bg-white/90 p-8 shadow-2xl backdrop-blur-md dark:bg-black/75",
+                  exporting
+                    ? "min-h-[1120px] bg-white px-14 pb-16 pt-12 text-slate-950"
+                    : "flex min-h-0 w-full flex-1 flex-col",
+                  !exporting &&
+                    activeBg?.key &&
+                      "w-full max-w-2xl rounded bg-white/90 p-8 shadow-2xl backdrop-blur-md dark:bg-black/75",
                 )}
               >
+                {exporting && (
+                  <div className="mb-8 flex items-start justify-between gap-6 border-b border-[#666666] pb-5">
+                    <div className="w-[30%] pr-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/logo.png"
+                        alt="First Class Projects"
+                        className="h-auto w-[120px]"
+                      />
+                    </div>
+                    <div className="flex-1 pt-1 text-center">
+                      <p className="text-[15px] font-bold uppercase tracking-[0.8px] text-slate-950">
+                        Note
+                      </p>
+                      <p className="mt-1 text-[8px] tracking-[0.3px] text-slate-500">
+                        First Class Projects
+                      </p>
+                    </div>
+                    <div className="w-[30%] pt-1 text-right">
+                      <p className="text-[7.5px] uppercase tracking-[0.4px] text-slate-500">
+                        Exported
+                      </p>
+                      <p className="mt-1 text-[8px] text-slate-600">
+                        {new Date().toLocaleDateString("en-ZA")}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {editing ? (
                   <RichTextEditor
                     content={content}
                     onChange={setContent}
                     placeholder="Write your note…"
+                    className="min-h-0 flex-1"
+                    contentClassName="custom-scrollbar"
                   />
                 ) : (
                   <div
                     ref={contentRef}
-                    className="note-content prose prose-sm max-w-none cursor-text text-foreground/90 dark:prose-invert"
+                    className={cn(
+                      "note-content prose prose-sm max-w-none cursor-text",
+                      exporting
+                        ? "prose-slate text-slate-900"
+                        : "custom-scrollbar min-h-0 flex-1 overflow-y-auto text-foreground/90 dark:prose-invert",
+                    )}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
                       if (target.tagName === "IMG") {
@@ -723,6 +768,21 @@ export function NoteDetail({
                         "<p class='text-muted-foreground/60 italic'>Empty note — click edit to add content.</p>",
                     }}
                   />
+                )}
+                {!editing && note.attachments.length > 0 && (
+                  <div className="mt-6 border-t border-border/50 pt-5">
+                    <NoteAttachments
+                      attachments={note.attachments}
+                      noteId={note.id}
+                      onUploaded={(attachment) =>
+                        void onAttachmentUploaded(note.id, attachment)
+                      }
+                      onRemove={(attachmentId) =>
+                        void onAttachmentRemoved(note.id, attachmentId)
+                      }
+                      editable={false}
+                    />
+                  </div>
                 )}
               </div>
             </div>

@@ -61,6 +61,19 @@ export async function GET() {
   // Fetch all variants with product lightweight info and supplier
   const variants = await prisma.productColorVariant.findMany({
     include: {
+      supplierPrices: {
+        where: { isActive: true },
+        select: {
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+              parentSupplier: { select: { id: true, name: true } },
+            },
+          },
+        },
+        take: 1,
+      },
       product: {
         select: {
           id: true,
@@ -74,19 +87,6 @@ export async function GET() {
               parentSupplier: { select: { id: true, name: true } },
             },
           },
-          supplierPrices: {
-            where: { isActive: true },
-            select: {
-              supplier: {
-                select: {
-                  id: true,
-                  name: true,
-                  parentSupplier: { select: { id: true, name: true } },
-                },
-              },
-            },
-            take: 1,
-          },
         },
       },
     },
@@ -99,9 +99,11 @@ export async function GET() {
     const key = `${v.colorName.trim().toLowerCase()}||${v.baseType}`;
     const entry = map.get(key);
 
-    // Determine supplier name (prefer active supplier price, then product.supplier)
-    const supplierFromPrice = v.product.supplierPrices?.[0]?.supplier;
-    const supplier = toMainSupplier(supplierFromPrice ?? v.product.supplier);
+    // Determine supplier name from the color variant price first. The tint
+    // catalogue is a shared placeholder product, so product-level supplier
+    // prices can belong to a different color/brand.
+    const supplierFromVariantPrice = v.supplierPrices?.[0]?.supplier;
+    const supplier = toMainSupplier(supplierFromVariantPrice ?? v.product.supplier);
 
     if (!entry) {
       map.set(key, {

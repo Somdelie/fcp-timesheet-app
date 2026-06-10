@@ -30,6 +30,17 @@ const CURSOR_COLORS = [
   "#85C1E2",
 ];
 
+function getCollaborationWebSocketUrl(noteId: string) {
+  const configuredUrl = process.env.NEXT_PUBLIC_NOTES_COLLAB_WS_URL?.trim();
+  if (!configuredUrl || typeof window === "undefined") return null;
+
+  const baseUrl = configuredUrl.endsWith("/")
+    ? configuredUrl.slice(0, -1)
+    : configuredUrl;
+
+  return `${baseUrl}/api/notes/collaborate/${noteId}`;
+}
+
 /**
  * Hook to manage real-time collaboration for a note
  */
@@ -51,8 +62,11 @@ export function useNoteCollaboration(
     if (!enabled || !noteId || !userId) return;
 
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/api/notes/collaborate/${noteId}`;
+      const wsUrl = getCollaborationWebSocketUrl(noteId);
+      if (!wsUrl) {
+        setIsConnected(false);
+        return;
+      }
 
       wsRef.current = new WebSocket(wsUrl);
 
@@ -84,9 +98,10 @@ export function useNoteCollaboration(
 
       wsRef.current.onerror = (ev: Event) => {
         // Browser WebSocket `onerror` receives a generic Event with no useful
-        // properties. Log the event plus the WebSocket readyState to aid
-        // debugging instead of printing an empty object.
-        console.error("Collaboration WebSocket error event:", ev, {
+        // properties. Keep this as a warning so development error overlays do
+        // not block the notes UI when collaboration is unavailable.
+        console.warn("Collaboration WebSocket unavailable", {
+          eventType: ev.type,
           readyState: wsRef.current?.readyState,
           url: (wsRef.current as WebSocket | null)?.url,
         });
@@ -120,7 +135,7 @@ export function useNoteCollaboration(
         }, 3000);
       };
     } catch (err) {
-      console.error("Failed to connect collaboration service:", err);
+      console.warn("Failed to connect collaboration service:", err);
     }
   }, [enabled, noteId, userId]);
 

@@ -256,7 +256,11 @@ export default async function SiteManagePage({
 
           <SiteMaterialsPanel siteId={site.id} />
 
-          <SiteMaterialOrdersPanel siteId={site.id} />
+          <SiteMaterialOrdersPanel
+            siteId={site.id}
+            siteCode={site.code}
+            siteName={site.name}
+          />
 
           <SiteTotalsPanel siteId={site.id} />
 

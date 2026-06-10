@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 const TEXT_COLORS = [
   { name: "Default", value: "" },
@@ -51,6 +51,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   className?: string;
+  contentClassName?: string;
   editable?: boolean;
   minHeight?: string;
 }
@@ -60,6 +61,7 @@ export function RichTextEditor({
   onChange,
   placeholder = "Write something...",
   className,
+  contentClassName,
   editable = true,
   minHeight = "120px",
 }: RichTextEditorProps) {
@@ -132,12 +134,12 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        "rounded border border-border/50 bg-secondary/20 overflow-hidden transition-all focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/5",
+        "flex min-h-0 flex-col overflow-hidden rounded border border-border/50 bg-secondary/20 transition-all focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/5",
         className,
       )}
     >
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-border/40 bg-secondary/30 px-2 py-1.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-border/40 bg-secondary/30 px-2 py-1.5">
         <ToolbarButton
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -320,7 +322,13 @@ export function RichTextEditor({
       </div>
 
       {/* Editor */}
-      <EditorContent editor={editor} className="px-4 py-3" />
+      <EditorContent
+        editor={editor}
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto px-4 py-3",
+          contentClassName,
+        )}
+      />
     </div>
   );
 }

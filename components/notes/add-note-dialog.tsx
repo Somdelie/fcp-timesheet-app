@@ -73,7 +73,7 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
           <Plus className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg rounded border-border/50 bg-card p-0 overflow-hidden">
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded border-border/50 bg-card p-0 sm:max-w-lg">
         <div
           className={cn(
             "h-1 w-full",
@@ -82,7 +82,7 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
           )}
         />
 
-        <DialogHeader className="px-6">
+        <DialogHeader className="shrink-0 px-6">
           <DialogTitle className="text-xl font-semibold">
             Create Note
           </DialogTitle>
@@ -91,7 +91,10 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6 pb-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col gap-3 px-6 pb-4"
+        >
           <div className="space-y-2">
             <Label
               htmlFor="note-title"
@@ -108,7 +111,7 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="min-h-0 flex-1 space-y-2">
             <Label className="text-sm font-medium text-foreground/80">
               Content
             </Label>
@@ -116,7 +119,9 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
               content={content}
               onChange={setContent}
               placeholder="Write your note..."
-              minHeight="120px"
+              minHeight="220px"
+              className="h-full max-h-[46vh]"
+              contentClassName="custom-scrollbar"
             />
           </div>
 
@@ -161,7 +166,7 @@ export function AddNoteDialog({ onAdd }: AddNoteDialogProps) {
 
           <Button
             type="submit"
-            className="mt-2 h-11 rounded font-medium shadow-sm"
+            className="mt-2 h-11 shrink-0 rounded font-medium shadow-sm"
           >
             Create Note
           </Button>

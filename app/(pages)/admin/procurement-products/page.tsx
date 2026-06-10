@@ -1304,7 +1304,7 @@ export default function ProcurementProductsPage({
     : 0;
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4">
+    <div className="space-y-4">
       <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
         <div className="space-y-3">
           <div className="hidden">
