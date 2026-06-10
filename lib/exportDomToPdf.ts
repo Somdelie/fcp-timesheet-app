@@ -143,6 +143,33 @@ function copyResolvedColorsForExport(
   });
 }
 
+function preserveInlineTextColorsForExport(
+  sourceRoot: HTMLElement,
+  cloneRoot: HTMLElement,
+  view: Window = window,
+) {
+  const sourceEls = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll("*"))];
+  const cloneEls = [cloneRoot, ...Array.from(cloneRoot.querySelectorAll("*"))];
+
+  sourceEls.forEach((sourceEl, index) => {
+    const cloneEl = cloneEls[index];
+    if (!(sourceEl instanceof HTMLElement) || !(cloneEl instanceof HTMLElement))
+      return;
+
+    const inlineColor = sourceEl.style.getPropertyValue("color").trim();
+    if (!inlineColor) return;
+
+    const computedColor = view.getComputedStyle(sourceEl).color.trim();
+    cloneEl.style.setProperty(
+      "color",
+      computedColor && !MODERN_COLOR_PATTERN.test(computedColor)
+        ? computedColor
+        : inlineColor,
+      "important",
+    );
+  });
+}
+
 function sanitizeModernColorSyntax(root: HTMLElement) {
   function sanitizeElement(el: HTMLElement) {
     const inlineStyle = el.getAttribute("style") || "";
@@ -287,6 +314,7 @@ export async function exportDomToPdf(node: HTMLElement, opts: ExportOpts = {}) {
   forceExportStyles(clone);
   copyResolvedColorsForExport(node, clone);
   sanitizeModernColorSyntax(clone);
+  preserveInlineTextColorsForExport(node, clone);
 
   wrapper.appendChild(clone);
   host.appendChild(wrapper);
