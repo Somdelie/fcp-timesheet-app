@@ -130,6 +130,16 @@ export async function PATCH(
         : null;
     if (body.siteForeman !== undefined)
       data.siteForeman = body.siteForeman ? clean(body.siteForeman) : null;
+    if (body.fcpContractManager !== undefined)
+      data.fcpContractManager = body.fcpContractManager
+        ? clean(body.fcpContractManager)
+        : null;
+    if (body.fcpQs !== undefined)
+      data.fcpQs = body.fcpQs ? clean(body.fcpQs) : null;
+    if (body.fcpSiteForeman !== undefined)
+      data.fcpSiteForeman = body.fcpSiteForeman
+        ? clean(body.fcpSiteForeman)
+        : null;
     if (body.client !== undefined)
       data.client = body.client ? clean(body.client) : null;
     if (body.startDate !== undefined)

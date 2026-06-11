@@ -6,6 +6,8 @@ export interface ActiveCollaborator {
   userEmail: string;
   cursorPosition: number | null;
   isActive: boolean;
+  isTyping: boolean;
+  isEditing: boolean;
   lastActivityAt: Date;
 }
 
@@ -34,6 +36,8 @@ export class CollaborationService {
     userId: string,
     cursorPosition?: number,
     cursorLine?: number,
+    isTyping: boolean = false,
+    isEditing: boolean = false,
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -54,11 +58,15 @@ export class CollaborationService {
         cursorPosition: cursorPosition ?? null,
         cursorLine: cursorLine ?? null,
         isActive: true,
+        isTyping,
+        isEditing,
       },
       update: {
         cursorPosition: cursorPosition ?? null,
         cursorLine: cursorLine ?? null,
         isActive: true,
+        isTyping,
+        isEditing,
         lastActivityAt: new Date(),
       },
     });
@@ -105,6 +113,8 @@ export class CollaborationService {
       userEmail: p.user.email,
       cursorPosition: p.cursorPosition,
       isActive: p.isActive,
+      isTyping: p.isTyping,
+      isEditing: p.isEditing,
       lastActivityAt: p.lastActivityAt,
     }));
   }

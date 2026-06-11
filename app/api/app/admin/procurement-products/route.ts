@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
+import { canonicalPlantName } from "@/lib/procurement/plantName";
 import type { ProductUom, ProductType } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
@@ -47,6 +48,88 @@ function serialise(p: any) {
       unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
     })),
   };
+}
+
+async function findDuplicatePlantName(name: string, excludeId?: string) {
+  const canonicalName = canonicalPlantName(name);
+  if (!canonicalName) return null;
+
+  const plants = await prisma.procurementProduct.findMany({
+    where: {
+      productType: "PLANT",
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { id: true, name: true },
+  });
+
+  return (
+    plants.find((plant) => canonicalPlantName(plant.name) === canonicalName) ??
+    null
+  );
+}
+
+function mergePlantProducts(products: any[], deployedQtyMap: Map<string, number>) {
+  const groups = new Map<string, any[]>();
+
+  for (const product of products) {
+    const key = canonicalPlantName(product.name) || product.id;
+    groups.set(key, [...(groups.get(key) ?? []), product]);
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const sorted = [...group].sort((a, b) => {
+      const nameCompare = String(a.name).localeCompare(String(b.name));
+      if (nameCompare !== 0) return nameCompare;
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const primary = sorted[0];
+    const totalStock = group.reduce(
+      (sum, item) => sum + (Number(item.stockQty) || 0),
+      0,
+    );
+    const totalDeployed = group.reduce(
+      (sum, item) => sum + (deployedQtyMap.get(item.id) ?? 0),
+      0,
+    );
+    const orderItems = group.reduce(
+      (sum, item) => sum + (Number(item._count?.orderItems) || 0),
+      0,
+    );
+    const plantAssignments = group.reduce(
+      (sum, item) => sum + (Number(item._count?.plantAssignments) || 0),
+      0,
+    );
+
+    return {
+      ...primary,
+      duplicateCount: group.length,
+      duplicateIds: group.map((item) => item.id),
+      name: primary.name,
+      sku: primary.sku ?? group.find((item) => item.sku)?.sku ?? null,
+      description:
+        primary.description ??
+        group.find((item) => item.description)?.description ??
+        null,
+      thumbnailUrl:
+        primary.thumbnailUrl ??
+        group.find((item) => item.thumbnailUrl)?.thumbnailUrl ??
+        null,
+      isReturnable: group.some((item) => item.isReturnable),
+      colors: Array.from(
+        new Set(group.flatMap((item) => item.colors ?? []).filter(Boolean)),
+      ),
+      sizes: Array.from(
+        new Set(group.flatMap((item) => item.sizes ?? []).filter(Boolean)),
+      ),
+      stockQty: totalStock,
+      deployedQty: totalDeployed,
+      _count: {
+        ...(primary._count ?? {}),
+        orderItems,
+        plantAssignments,
+      },
+    };
+  });
 }
 
 /**
@@ -342,12 +425,22 @@ export async function GET(req: Request) {
       );
     }
 
+    if (productType === "PLANT") {
+      products = mergePlantProducts(products, deployedQtyMap).sort((a, b) =>
+        String(a.name).localeCompare(String(b.name)),
+      );
+      total = products.length;
+    }
+
     return NextResponse.json(
       {
         ok: true,
         data: products.map((p) => ({
           ...serialise(p),
-          deployedQty: deployedQtyMap.get(p.id) ?? 0,
+          deployedQty:
+            productType === "PLANT"
+              ? (p.deployedQty ?? 0)
+              : (deployedQtyMap.get(p.id) ?? 0),
         })),
         page,
         limit,
@@ -422,6 +515,16 @@ export async function POST(req: Request) {
         { error: "Name is required" },
         { status: 400, headers: CORS },
       );
+
+    if ((productType ?? "MATERIAL") === "PLANT") {
+      const duplicate = await findDuplicatePlantName(name);
+      if (duplicate) {
+        return NextResponse.json(
+          { error: `A plant item named "${duplicate.name}" already exists` },
+          { status: 409, headers: CORS },
+        );
+      }
+    }
 
     const computedStockQty = variantStocksInput?.length
       ? variantStocksInput.reduce((s, v) => s + (Number(v.qty) || 0), 0)

@@ -57,6 +57,7 @@ export default function CreateFinishingScheduleDialog({
 
   // ✅ NEW
   const [fcpContractManager, setFcpContractManager] = useState("");
+  const [fcpQs, setFcpQs] = useState("");
   const [fcpSiteForeman, setFcpSiteForeman] = useState("");
 
   const [client, setClient] = useState("");
@@ -73,6 +74,7 @@ export default function CreateFinishingScheduleDialog({
     setSiteForeman("");
 
     setFcpContractManager("");
+    setFcpQs("");
     setFcpSiteForeman("");
 
     setClient("");
@@ -100,6 +102,7 @@ export default function CreateFinishingScheduleDialog({
 
         // ✅ NEW
         fcpContractManager: fcpContractManager || null,
+        fcpQs: fcpQs || null,
         fcpSiteForeman: fcpSiteForeman || null,
 
         client: client || null,
@@ -211,6 +214,16 @@ export default function CreateFinishingScheduleDialog({
               />
             </div>
 
+            <div>
+              <Label>FCP QS</Label>
+              <Input
+                value={fcpQs}
+                onChange={(e) => setFcpQs(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>FCP Site Foreman</Label>
               <Input

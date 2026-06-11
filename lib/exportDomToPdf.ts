@@ -192,6 +192,51 @@ function sanitizeModernColorSyntax(root: HTMLElement) {
 
 async function prepareImagesForExport(root: HTMLElement) {
   const images = Array.from(root.querySelectorAll("img"));
+  const blobToDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+  const fetchImageAsDataUrl = async (url: string) => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const res = await fetch(url, {
+        mode: "cors",
+        signal: controller.signal,
+      });
+
+      if (!res.ok) return null;
+      return blobToDataUrl(await res.blob());
+    } catch {
+      return null;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
+
+  const waitForImage = (img: HTMLImageElement, timeoutMs = 5000) =>
+    new Promise<void>((resolve) => {
+      if (img.complete) {
+        resolve();
+        return;
+      }
+
+      const done = () => {
+        window.clearTimeout(timeout);
+        img.onload = null;
+        img.onerror = null;
+        resolve();
+      };
+
+      const timeout = window.setTimeout(done, timeoutMs);
+      img.onload = done;
+      img.onerror = done;
+    });
 
   await Promise.all(
     images.map(async (img) => {
@@ -202,15 +247,18 @@ async function prepareImagesForExport(root: HTMLElement) {
 
       try {
         if (!src.startsWith("data:")) {
-          const res = await fetch(src, { mode: "cors" });
-          if (res.ok) {
-            const blob = await res.blob();
-            img.src = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(String(reader.result));
-              reader.onerror = () => reject(reader.error);
-              reader.readAsDataURL(blob);
-            });
+          const proxiedSrc = `/api/export-image?url=${encodeURIComponent(src)}`;
+          const dataUrl =
+            (await fetchImageAsDataUrl(src)) ||
+            (await fetchImageAsDataUrl(proxiedSrc));
+
+          if (dataUrl) {
+            img.src = dataUrl;
+            img.removeAttribute("srcset");
+            img.removeAttribute("sizes");
+            img.style.display = "block";
+            img.style.maxWidth = "100%";
+            img.style.height = "auto";
           }
         }
       } catch {
@@ -218,11 +266,7 @@ async function prepareImagesForExport(root: HTMLElement) {
       }
 
       if (img.complete && img.naturalWidth > 0) return;
-
-      await new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-      });
+      await waitForImage(img);
     }),
   );
 }
@@ -260,6 +304,76 @@ function canvasHasVisibleContent(canvas: HTMLCanvasElement) {
   }
 
   return false;
+}
+
+function drawPreparedImagesOnCanvas(canvas: HTMLCanvasElement, root: HTMLElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const rootRect = root.getBoundingClientRect();
+  if (rootRect.width <= 0 || rootRect.height <= 0) return;
+
+  const scaleX = canvas.width / rootRect.width;
+  const scaleY = canvas.height / rootRect.height;
+
+  const hasVisiblePixels = (x: number, y: number, width: number, height: number) => {
+    const sampleX = Math.max(0, Math.floor(x));
+    const sampleY = Math.max(0, Math.floor(y));
+    const sampleW = Math.min(canvas.width - sampleX, Math.ceil(width));
+    const sampleH = Math.min(canvas.height - sampleY, Math.ceil(height));
+    if (sampleW <= 0 || sampleH <= 0) return true;
+
+    try {
+      const data = ctx.getImageData(sampleX, sampleY, sampleW, sampleH).data;
+      const step = Math.max(4, Math.floor(Math.sqrt((sampleW * sampleH) / 500)));
+      let visible = 0;
+      let sampled = 0;
+
+      for (let row = 0; row < sampleH; row += step) {
+        for (let col = 0; col < sampleW; col += step) {
+          const i = (row * sampleW + col) * 4;
+          sampled++;
+          if (
+            data[i + 3] > 0 &&
+            (data[i] < 245 || data[i + 1] < 245 || data[i + 2] < 245)
+          ) {
+            visible++;
+          }
+        }
+      }
+
+      return sampled > 0 && visible / sampled > 0.01;
+    } catch {
+      return true;
+    }
+  };
+
+  root.querySelectorAll("img").forEach((img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (!img.complete || img.naturalWidth <= 0 || img.naturalHeight <= 0)
+      return;
+    const src = img.currentSrc || img.src;
+    const isSameOrigin =
+      src.startsWith("data:") ||
+      src.startsWith(window.location.origin) ||
+      src.startsWith("/");
+    if (!isSameOrigin) return;
+
+    const rect = img.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const x = (rect.left - rootRect.left) * scaleX;
+    const y = (rect.top - rootRect.top) * scaleY;
+    const width = rect.width * scaleX;
+    const height = rect.height * scaleY;
+    if (hasVisiblePixels(x, y, width, height)) return;
+
+    try {
+      ctx.drawImage(img, x, y, width, height);
+    } catch {
+      // Keep the PDF export moving if one image cannot be drawn.
+    }
+  });
 }
 
 function drawPpePageFrame(pdf: jsPDF) {
@@ -354,13 +468,14 @@ export async function exportDomToPdf(node: HTMLElement, opts: ExportOpts = {}) {
           logging: false,
           windowWidth: pageNode.scrollWidth,
           windowHeight: pageNode.scrollHeight,
-          imageTimeout: 15000,
+          imageTimeout: 5000,
           onclone: (clonedDoc) => {
             injectColorOverrides(clonedDoc);
             sanitizeModernColorSyntax(clonedDoc.body);
           },
         });
 
+        drawPreparedImagesOnCanvas(canvas, pageNode);
         const imgData = canvasToImageData(canvas);
         const imgRatio = canvas.height / canvas.width;
         let imgW = usableW;
@@ -397,13 +512,15 @@ export async function exportDomToPdf(node: HTMLElement, opts: ExportOpts = {}) {
       logging: false,
       windowWidth: wrapper.scrollWidth,
       windowHeight: wrapper.scrollHeight,
-      imageTimeout: 15000,
+      imageTimeout: 5000,
       onclone: (clonedDoc) => {
         // Inject RGB color overrides to replace oklch/lab colors
         injectColorOverrides(clonedDoc);
         sanitizeModernColorSyntax(clonedDoc.body);
       },
     });
+
+    drawPreparedImagesOnCanvas(canvas, wrapper);
 
     const pdf = new jsPDF({
       orientation: landscape ? "landscape" : "portrait",

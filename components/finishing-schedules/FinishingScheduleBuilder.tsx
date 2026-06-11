@@ -85,6 +85,7 @@ type Schedule = {
   contractManager: string | null;
   siteForeman: string | null;
   fcpContractManager: string | null;
+  fcpQs: string | null;
   fcpSiteForeman: string | null;
   client: string | null;
   startDate: Date | string | null;
@@ -223,6 +224,10 @@ export default function FinishingScheduleBuilder({
             <div>
               <dt className="text-muted-foreground">FCP Contract Manager</dt>
               <dd className="font-medium">{schedule.fcpContractManager || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">FCP QS</dt>
+              <dd className="font-medium">{schedule.fcpQs || "—"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">FCP Site Foreman</dt>

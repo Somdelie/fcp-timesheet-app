@@ -255,18 +255,36 @@ export function NoteDetail({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const suppressCollabBroadcastRef = useRef(false);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   // Get current user ID from session (you might need to adjust this based on your auth setup)
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const hasCollaborators =
+    note.isRoomNote || note.members.length > 1 || note.invites.length > 0;
 
   // Initialize collaboration hook
   const { isConnected, activeUsers, updateCursorPosition, broadcastEdit } =
     useNoteCollaboration(
       note.id,
       currentUserId,
-      !!currentUserId && note.canEdit,
+      !!currentUserId && hasCollaborators,
+      {
+        isTyping: editing && isTyping,
+        isEditing: editing,
+        onRemoteNoteUpdate: (remoteNote) => {
+          suppressCollabBroadcastRef.current = true;
+          setTitle(remoteNote.title);
+          setContent(remoteNote.content);
+          clearNoteDraft(note.id);
+        },
+      },
     );
+  const remoteEditors = activeUsers.filter(
+    (user) => user.userId !== currentUserId && user.isEditing,
+  );
 
   // Get current user on mount
   useEffect(() => {
@@ -337,6 +355,63 @@ export function NoteDetail({
     note.title,
     title,
   ]);
+
+  useEffect(() => {
+    if (!editing || !note.canEdit || !currentUserId) return;
+
+    if (suppressCollabBroadcastRef.current) {
+      suppressCollabBroadcastRef.current = false;
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      updateCursorPosition(content.length);
+      void broadcastEdit("text", "update", { title, content });
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    broadcastEdit,
+    content,
+    currentUserId,
+    editing,
+    note.canEdit,
+    title,
+    updateCursorPosition,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current !== null) {
+        window.clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const markTyping = () => {
+    if (!editing || !note.canEdit) return;
+
+    setIsTyping(true);
+    if (typingTimeoutRef.current !== null) {
+      window.clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = window.setTimeout(() => {
+      setIsTyping(false);
+      typingTimeoutRef.current = null;
+    }, 2200);
+  };
+
+  const startEditing = () => {
+    const editor = remoteEditors[0];
+
+    if (editor) {
+      const firstName = editor.userName.split(" ")[0] || editor.userName;
+      toast.info(`${firstName} is editing. Ask them to close edit first.`);
+      return;
+    }
+
+    setEditing(true);
+  };
 
   const save = async () => {
     await onUpdate(note.id, { title, content });
@@ -437,7 +512,10 @@ export function NoteDetail({
               {editing && note.canEdit ? (
                 <Input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    markTyping();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -578,7 +656,7 @@ export function NoteDetail({
                         disabled={submitting}
                       />
                       <ToolButton
-                        onClick={() => setEditing(true)}
+                        onClick={startEditing}
                         icon={<Pencil size={16} />}
                         label="Edit"
                         disabled={submitting}
@@ -739,7 +817,10 @@ export function NoteDetail({
                 {editing ? (
                   <RichTextEditor
                     content={content}
-                    onChange={setContent}
+                    onChange={(nextContent) => {
+                      setContent(nextContent);
+                      markTyping();
+                    }}
                     placeholder="Write your note…"
                     className="min-h-0 flex-1"
                     contentClassName="custom-scrollbar"

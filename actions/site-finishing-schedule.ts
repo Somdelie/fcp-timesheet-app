@@ -93,6 +93,7 @@ export type CreateScheduleInput = {
 
   // ✅ NEW
   fcpContractManager?: string | null;
+  fcpQs?: string | null;
   fcpSiteForeman?: string | null;
 
   client?: string | null;
@@ -152,6 +153,7 @@ export async function createFinishingSchedule(input: CreateScheduleInput) {
       fcpContractManager: input.fcpContractManager
         ? clean(input.fcpContractManager)
         : null,
+      fcpQs: input.fcpQs ? clean(input.fcpQs) : null,
       fcpSiteForeman: input.fcpSiteForeman ? clean(input.fcpSiteForeman) : null,
 
       client: input.client ? clean(input.client) : null,
@@ -179,6 +181,7 @@ export async function updateFinishingSchedule(input: {
   contractManager?: string | null;
   siteForeman?: string | null;
   fcpContractManager?: string | null;
+  fcpQs?: string | null;
   fcpSiteForeman?: string | null;
   client?: string | null;
   startDate?: string | null;
@@ -231,6 +234,10 @@ export async function updateFinishingSchedule(input: {
               ? clean(input.fcpContractManager)
               : null,
           }
+        : {}),
+
+      ...(input.fcpQs !== undefined
+        ? { fcpQs: input.fcpQs ? clean(input.fcpQs) : null }
         : {}),
 
       ...(input.fcpSiteForeman !== undefined

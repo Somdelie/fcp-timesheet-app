@@ -73,7 +73,10 @@ type PlantItem = {
   colors: string[];
   sizes: string[];
   stockQty: number;
+  variantStocks?: { id: string; size: string | null; color: string | null; qty: number }[];
   deployedQty: number;
+  duplicateCount?: number;
+  duplicateIds?: string[];
   category: { id: string; name: string } | null;
   supplier: { id: string; name: string } | null;
   _count: { orderItems: number; plantAssignments: number };
@@ -81,6 +84,18 @@ type PlantItem = {
 
 type Category = { id: string; name: string };
 type Supplier = { id: string; name: string };
+
+function variantKey(size: string) {
+  return size.trim();
+}
+
+function buildSizeVariantStocks(sizes: string[], qtys: Record<string, string>) {
+  return sizes.map((size) => ({
+    size,
+    color: null,
+    qty: Math.max(0, Number(qtys[variantKey(size)]) || 0),
+  }));
+}
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                           */
@@ -108,6 +123,7 @@ export default function PlantListPage() {
     sizesRaw: "",
     colorsRaw: "",
     stockQty: 0,
+    variantQtys: {} as Record<string, string>,
   });
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -118,6 +134,15 @@ export default function PlantListPage() {
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const formSizes = parseTags(form.sizesRaw);
+  const hasSizeQtys = formSizes.some(
+    (size) => (form.variantQtys[variantKey(size)] ?? "").trim() !== "",
+  );
+  const sizeQtyTotal = formSizes.reduce(
+    (sum, size) => sum + (Number(form.variantQtys[variantKey(size)]) || 0),
+    0,
+  );
+  const displayedStockQty = hasSizeQtys ? sizeQtyTotal : form.stockQty;
 
   /* -------- load lookups -------- */
   useEffect(() => {
@@ -175,11 +200,16 @@ export default function PlantListPage() {
       sizesRaw: "",
       colorsRaw: "",
       stockQty: 0,
+      variantQtys: {},
     });
     setDialogOpen(true);
   }
 
   function openEdit(p: PlantItem) {
+    const variantQtys: Record<string, string> = {};
+    for (const variant of p.variantStocks ?? []) {
+      if (variant.size) variantQtys[variantKey(variant.size)] = String(variant.qty);
+    }
     setEditing(p);
     setForm({
       name: p.name,
@@ -192,6 +222,7 @@ export default function PlantListPage() {
       sizesRaw: (p.sizes ?? []).join(", "),
       colorsRaw: (p.colors ?? []).join(", "),
       stockQty: p.stockQty ?? 0,
+      variantQtys,
     });
     setDialogOpen(true);
   }
@@ -245,6 +276,17 @@ export default function PlantListPage() {
       toast.error("Name is required");
       return;
     }
+    const sizes = parseTags(form.sizesRaw);
+    const colors = parseTags(form.colorsRaw);
+    const hasSizeQtys = sizes.some(
+      (size) => (form.variantQtys[variantKey(size)] ?? "").trim() !== "",
+    );
+    const variantStocks = hasSizeQtys
+      ? buildSizeVariantStocks(sizes, form.variantQtys)
+      : undefined;
+    const stockQty = variantStocks
+      ? variantStocks.reduce((sum, variant) => sum + variant.qty, 0)
+      : form.stockQty;
     setSubmitting(true);
     try {
       const url = editing
@@ -264,9 +306,10 @@ export default function PlantListPage() {
           thumbnailUrl: form.thumbnailUrl || null,
           productType: "PLANT",
           isReturnable: form.isReturnable,
-          sizes: parseTags(form.sizesRaw),
-          colors: parseTags(form.colorsRaw),
-          stockQty: form.stockQty,
+          sizes,
+          colors,
+          stockQty,
+          ...(variantStocks ? { variantStocks } : {}),
         }),
       });
       const json = await res.json();
@@ -474,6 +517,12 @@ export default function PlantListPage() {
             variant="ghost"
             size="icon"
             onClick={() => openEdit(row.original)}
+            disabled={(row.original.duplicateCount ?? 1) > 1}
+            title={
+              (row.original.duplicateCount ?? 1) > 1
+                ? "Merged duplicate rows must be cleaned up before editing"
+                : "Edit"
+            }
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -482,9 +531,14 @@ export default function PlantListPage() {
             size="icon"
             className="text-destructive"
             onClick={() => setDeleteTarget(row.original)}
-            disabled={(row.original._count?.plantAssignments ?? 0) > 0}
-            title={
+            disabled={
+              (row.original.duplicateCount ?? 1) > 1 ||
               (row.original._count?.plantAssignments ?? 0) > 0
+            }
+            title={
+              (row.original.duplicateCount ?? 1) > 1
+                ? "Merged duplicate rows must be cleaned up before deleting"
+                : (row.original._count?.plantAssignments ?? 0) > 0
                 ? "Cannot delete: currently deployed"
                 : "Delete"
             }
@@ -905,6 +959,39 @@ export default function PlantListPage() {
               />
             </div>
 
+            {formSizes.length > 0 && (
+              <div className="space-y-2 rounded border border-border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-sm font-medium">Quantity by Size</label>
+                  <Badge variant="secondary">Total {displayedStockQty}</Badge>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {formSizes.map((size) => (
+                    <label key={size} className="space-y-1">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {size}
+                      </span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.variantQtys[variantKey(size)] ?? ""}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            variantQtys: {
+                              ...form.variantQtys,
+                              [variantKey(size)]: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Returnable */}
             <div className="space-y-1">
               <label className="text-sm font-medium">Return Policy</label>
@@ -928,10 +1015,11 @@ export default function PlantListPage() {
               <Input
                 type="number"
                 min={0}
-                value={form.stockQty}
+                value={displayedStockQty}
                 onChange={(e) =>
                   setForm({ ...form, stockQty: Math.max(0, Number(e.target.value)) })
                 }
+                disabled={hasSizeQtys}
                 placeholder="0"
               />
             </div>

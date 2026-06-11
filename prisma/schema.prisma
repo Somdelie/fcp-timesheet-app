@@ -1902,6 +1902,7 @@ model SiteFinishingSchedule {
   contractManager    String?
   siteForeman        String?
   fcpContractManager String?
+  fcpQs              String?
   fcpSiteForeman     String?
   client             String?
   startDate          DateTime?
@@ -2676,6 +2677,8 @@ model NotePresence {
   cursorPosition Int? // Character position in the note
   cursorLine     Int? // Line number (for structured content)
   isActive       Boolean @default(true)
+  isTyping       Boolean @default(false)
+  isEditing      Boolean @default(false)
 
   lastActivityAt DateTime @updatedAt // Auto-update on any activity
   connectedAt    DateTime @default(now())

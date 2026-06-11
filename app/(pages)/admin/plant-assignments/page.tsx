@@ -707,6 +707,8 @@ function SupervisorTab({
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Assignment | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("edit");
+  const [assignmentChoice, setAssignmentChoice] =
+    useState<SupervisorAssignmentRow | null>(null);
 
   // edit details
   const [editStatus, setEditStatus] = useState("");
@@ -753,6 +755,15 @@ function SupervisorTab({
     setTransferQty(1);
     setTransferNote("");
     setEditOpen(true);
+  }
+
+  function openRowEdit(a: SupervisorAssignmentRow) {
+    const childAssignments = a.childAssignments ?? [a];
+    if (childAssignments.length > 1) {
+      setAssignmentChoice(a);
+      return;
+    }
+    openEdit(childAssignments[0]);
   }
 
   async function handleEditDetails() {
@@ -962,11 +973,10 @@ function SupervisorTab({
                           className="h-7 w-7"
                           title={
                             isGrouped
-                              ? "This total is across multiple sites"
+                              ? "Choose the assignment to edit"
                               : "Edit"
                           }
-                          disabled={isGrouped}
-                          onClick={() => openEdit(a)}
+                          onClick={() => openRowEdit(a)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -989,6 +999,56 @@ function SupervisorTab({
           <PaginationBar page={page} totalPages={totalPages} total={processed.length} onPage={setPage} />
         </div>
       )}
+
+      {/* ── Grouped Assignment Chooser ── */}
+      <Dialog
+        open={!!assignmentChoice}
+        onOpenChange={(open) => {
+          if (!open) setAssignmentChoice(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{assignmentChoice?.product.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              This total is made up of multiple deployed assignments. Pick the
+              one you want to edit.
+            </p>
+            <div className="space-y-2">
+              {(assignmentChoice?.childAssignments ?? []).map((assignment) => (
+                <button
+                  key={assignment.id}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded border px-3 py-2 text-left transition-colors hover:bg-muted/50"
+                  onClick={() => {
+                    setAssignmentChoice(null);
+                    openEdit(assignment);
+                  }}
+                >
+                  <span>
+                    <span className="block text-sm font-medium">
+                      {assignment.site.code
+                        ? `${assignment.site.code} - ${assignment.site.name}`
+                        : assignment.site.name}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {formatDate(assignment.deployedOn)}
+                    </span>
+                  </span>
+                  <Badge variant="outline">{assignment.quantity}</Badge>
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignmentChoice(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Edit / Return / Transfer Dialog ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

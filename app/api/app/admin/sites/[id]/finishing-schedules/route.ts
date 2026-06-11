@@ -124,6 +124,13 @@ export async function POST(
           ? clean(body.contractManager)
           : null,
         siteForeman: body.siteForeman ? clean(body.siteForeman) : null,
+        fcpContractManager: body.fcpContractManager
+          ? clean(body.fcpContractManager)
+          : null,
+        fcpQs: body.fcpQs ? clean(body.fcpQs) : null,
+        fcpSiteForeman: body.fcpSiteForeman
+          ? clean(body.fcpSiteForeman)
+          : null,
         client: body.client ? clean(body.client) : null,
         startDate: body.startDate ? new Date(body.startDate) : null,
         completionDate: body.completionDate

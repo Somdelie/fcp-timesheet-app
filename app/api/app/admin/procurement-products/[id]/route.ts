@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
+import { canonicalPlantName } from "@/lib/procurement/plantName";
 import type { ProductUom, ProductType } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
@@ -35,6 +36,24 @@ async function getAuth(req: Request) {
       role: role as "ADMIN" | "OFFICE",
     };
   return null;
+}
+
+async function findDuplicatePlantName(name: string, excludeId: string) {
+  const canonicalName = canonicalPlantName(name);
+  if (!canonicalName) return null;
+
+  const plants = await prisma.procurementProduct.findMany({
+    where: {
+      productType: "PLANT",
+      id: { not: excludeId },
+    },
+    select: { id: true, name: true },
+  });
+
+  return (
+    plants.find((plant) => canonicalPlantName(plant.name) === canonicalName) ??
+    null
+  );
 }
 
 /**
@@ -271,6 +290,22 @@ export async function PATCH(
       ppData.deductionSplits = Number((body as any).deductionSplits) || 1;
     if (colors !== undefined) ppData.colors = colors;
     if ((body as any).sizes !== undefined) ppData.sizes = (body as any).sizes;
+
+    if (name !== undefined) {
+      const existingProduct = await prisma.procurementProduct.findUnique({
+        where: { id },
+        select: { productType: true },
+      });
+      if ((productType ?? existingProduct?.productType) === "PLANT") {
+        const duplicate = await findDuplicatePlantName(name, id);
+        if (duplicate) {
+          return NextResponse.json(
+            { error: `A plant item named "${duplicate.name}" already exists` },
+            { status: 409, headers: CORS },
+          );
+        }
+      }
+    }
 
     if (variantStocksInput !== undefined) {
       ppData.stockQty = variantStocksInput.reduce(

@@ -28,6 +28,7 @@ interface Props {
     contractManager: string | null;
     siteForeman: string | null;
     fcpContractManager: string | null;
+    fcpQs: string | null;
     fcpSiteForeman: string | null;
     client: string | null;
     startDate: Date | string | null;
@@ -56,6 +57,7 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
   );
   const [siteForeman, setSiteForeman] = useState(schedule.siteForeman ?? "");
   const [fcpContractManager, setFcpContractManager] = useState(schedule.fcpContractManager ?? "");
+  const [fcpQs, setFcpQs] = useState(schedule.fcpQs ?? "");
   const [fcpSiteForeman, setFcpSiteForeman] = useState(schedule.fcpSiteForeman ?? "");
   const [client, setClient] = useState(schedule.client ?? "");
   const [startDate, setStartDate] = useState(toDateStr(schedule.startDate));
@@ -77,6 +79,7 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
         contractManager: contractManager || null,
         siteForeman: siteForeman || null,
         fcpContractManager: fcpContractManager || null,
+        fcpQs: fcpQs || null,
         fcpSiteForeman: fcpSiteForeman || null,
         client: client || null,
         startDate: startDate || null,
@@ -161,6 +164,16 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
                 onChange={(e) => setFcpContractManager(e.target.value)}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eh-fcpQs">FCP QS</Label>
+              <Input
+                id="eh-fcpQs"
+                value={fcpQs}
+                onChange={(e) => setFcpQs(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="eh-fcpSiteForeman">FCP Site Foreman</Label>
               <Input
