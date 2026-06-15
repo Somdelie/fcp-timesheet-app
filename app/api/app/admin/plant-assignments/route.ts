@@ -37,7 +37,8 @@ async function getAuth(req: Request) {
 export async function GET(req: Request) {
   try {
     const auth = await getAuth(req);
-    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!auth)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const url = new URL(req.url);
     const siteId = url.searchParams.get("siteId");
@@ -83,10 +84,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const auth = await getAuth(req);
-    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!auth)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { siteId, productId, quantity, note, deployedOn, unitPrice, chargeToSite, reference, supervisorName } = body as {
+    const {
+      siteId,
+      productId,
+      quantity,
+      note,
+      deployedOn,
+      unitPrice,
+      chargeToSite,
+      reference,
+      supervisorName,
+      size,
+    } = body as {
       siteId: string;
       productId: string;
       quantity?: number;
@@ -96,10 +109,14 @@ export async function POST(req: Request) {
       chargeToSite?: boolean;
       reference?: string | null;
       supervisorName?: string | null;
+      size?: string | null;
     };
 
     if (!siteId || !productId)
-      return NextResponse.json({ error: "siteId and productId are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "siteId and productId are required" },
+        { status: 400 },
+      );
 
     // Duplicate reference check — block if any assignment with this reference already exists
     if (reference?.trim()) {
@@ -121,6 +138,7 @@ export async function POST(req: Request) {
         siteId,
         productId,
         quantity: quantity ?? 1,
+        size: size?.trim() || null,
         note: note?.trim() || null,
         supervisorName: supervisorName?.trim() || null,
         deployedOn: deployedOn ? new Date(deployedOn) : new Date(),

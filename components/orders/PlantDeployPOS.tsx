@@ -59,6 +59,8 @@ interface PlantDeployPOSProps {
 type CartItem = {
   productId: string;
   productName: string;
+  size: string | null;
+  sizes: string[];
   quantity: number;
   note: string;
   unitPrice: number | null;
@@ -187,6 +189,8 @@ export default function PlantDeployPOS({
         {
           productId: item.id,
           productName: item.name,
+          size: null,
+          sizes: item.sizes ?? [],
           quantity: 1,
           note: "",
           unitPrice: null,
@@ -318,6 +322,7 @@ export default function PlantDeployPOS({
                 selectedSupervisor?.name ?? selectedSupervisor?.email ?? null,
               siteId: siteCart.siteId,
               productId: item.productId,
+              size: item.size || undefined,
               quantity: item.quantity,
               note: item.note.trim() || undefined,
               unitPrice: item.unitPrice,
@@ -736,6 +741,9 @@ export default function PlantDeployPOS({
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
                         Item
                       </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20">
+                        Size
+                      </TableHead>
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20 text-right">
                         Qty
                       </TableHead>
@@ -749,70 +757,107 @@ export default function PlantDeployPOS({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activeCart.map((item, idx) => (
-                      <TableRow
-                        key={item.productId}
-                        className={`border-b border-border transition-colors ${
-                          idx % 2 === 0 ? "" : "bg-muted/20"
-                        }`}
-                      >
-                        <TableCell className="py-2.5 pl-5 text-sm font-medium text-foreground">
-                          {item.productName}
-                        </TableCell>
-                        <TableCell className="py-2 pr-2">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const n = Number(e.target.value);
-                              if (!Number.isFinite(n)) return;
-                              updateQuantity(
-                                item.productId,
-                                Math.max(1, Math.floor(n)),
-                              );
-                            }}
-                            className="h-7 w-16 text-sm text-right tabular-nums px-2"
-                          />
-                        </TableCell>
-                        <TableCell className="py-2 pr-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={item.unitPrice ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              updateUnitPrice(
-                                item.productId,
-                                val === "" ? null : Math.max(0, Number(val)),
-                              );
-                            }}
-                            placeholder="—"
-                            className="h-7 w-20 text-sm text-right tabular-nums px-2"
-                          />
-                        </TableCell>
-                        <TableCell className="py-2">
-                          <Input
-                            value={item.note}
-                            onChange={(e) =>
-                              updateNote(item.productId, e.target.value)
-                            }
-                            placeholder="Note…"
-                            className="h-7 text-xs px-2"
-                          />
-                        </TableCell>
-                        <TableCell className="py-2 pr-3 text-center">
-                          <button
-                            onClick={() => removeFromCart(item.productId)}
-                            className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
-                            aria-label="Remove item"
-                          >
-                            ×
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {activeCart.map((item, idx) => {
+                      const hasSizes = item.sizes.length > 0;
+                      return (
+                        <TableRow
+                          key={item.productId}
+                          className={`border-b border-border transition-colors ${
+                            idx % 2 === 0 ? "" : "bg-muted/20"
+                          }`}
+                        >
+                          <TableCell className="py-2.5 pl-5 text-sm font-medium text-foreground">
+                            {item.productName}
+                          </TableCell>
+                          <TableCell className="py-2 pr-2">
+                            {hasSizes ? (
+                              <div className="flex flex-wrap gap-0.5">
+                                {item.sizes.map((s) => (
+                                  <button
+                                    key={s}
+                                    onClick={() => {
+                                      updateSiteCart(activeSiteId, (prev) =>
+                                        prev.map((i) =>
+                                          i.productId === item.productId
+                                            ? {
+                                                ...i,
+                                                size: i.size === s ? null : s,
+                                              }
+                                            : i,
+                                        ),
+                                      );
+                                    }}
+                                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded border transition-all ${
+                                      item.size === s
+                                        ? "border-primary bg-primary text-primary-foreground"
+                                        : "border-border text-muted-foreground hover:border-primary/50"
+                                    }`}
+                                  >
+                                    {s}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2 pr-2">
+                            <Input
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isFinite(n)) return;
+                                updateQuantity(
+                                  item.productId,
+                                  Math.max(1, Math.floor(n)),
+                                );
+                              }}
+                              className="h-7 w-16 text-sm text-right tabular-nums px-2"
+                            />
+                          </TableCell>
+                          <TableCell className="py-2 pr-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={item.unitPrice ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateUnitPrice(
+                                  item.productId,
+                                  val === "" ? null : Math.max(0, Number(val)),
+                                );
+                              }}
+                              placeholder="—"
+                              className="h-7 w-20 text-sm text-right tabular-nums px-2"
+                            />
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Input
+                              value={item.note}
+                              onChange={(e) =>
+                                updateNote(item.productId, e.target.value)
+                              }
+                              placeholder="Note…"
+                              className="h-7 text-xs px-2"
+                            />
+                          </TableCell>
+                          <TableCell className="py-2 pr-3 text-center">
+                            <button
+                              onClick={() => removeFromCart(item.productId)}
+                              className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
+                              aria-label="Remove item"
+                            >
+                              ×
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

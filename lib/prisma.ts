@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
+import { normalizeDatabaseUrl } from "@/lib/database-url";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -13,7 +14,9 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: connectionString! });
+  const adapter = new PrismaPg({
+    connectionString: normalizeDatabaseUrl(connectionString!),
+  });
   return new PrismaClient({ adapter });
 }
 

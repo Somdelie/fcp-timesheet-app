@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS "SitePlantAssignment"
+ADD COLUMN IF NOT EXISTS "size" TEXT;

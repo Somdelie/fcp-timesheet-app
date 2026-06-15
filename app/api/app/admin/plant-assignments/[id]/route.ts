@@ -22,17 +22,27 @@ export async function PATCH(
 ) {
   try {
     const auth = await getAuth(req);
-    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!auth)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await ctx.params;
     const body = await req.json();
-    const { status, note, returnedOn, quantity, unitPrice, chargeToSite } = body as {
+    const {
+      status,
+      note,
+      returnedOn,
+      quantity,
+      unitPrice,
+      chargeToSite,
+      size,
+    } = body as {
       status?: PlantStatus;
       note?: string;
       returnedOn?: string;
       quantity?: number;
       unitPrice?: number | null;
       chargeToSite?: boolean;
+      size?: string | null;
     };
 
     const data: Record<string, unknown> = {};
@@ -41,10 +51,10 @@ export async function PATCH(
     if (quantity !== undefined) data.quantity = quantity;
     if (unitPrice !== undefined) data.unitPrice = unitPrice;
     if (chargeToSite !== undefined) data.chargeToSite = chargeToSite;
+    if (size !== undefined) data.size = size?.trim() || null;
     if (returnedOn !== undefined)
       data.returnedOn = returnedOn ? new Date(returnedOn) : null;
-    else if (status === "RETURNED" && !returnedOn)
-      data.returnedOn = new Date();
+    else if (status === "RETURNED" && !returnedOn) data.returnedOn = new Date();
 
     const updated = await prisma.sitePlantAssignment.update({
       where: { id },
@@ -71,7 +81,8 @@ export async function DELETE(
 ) {
   try {
     const auth = await getAuth(req);
-    if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!auth)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await ctx.params;
     await prisma.sitePlantAssignment.delete({ where: { id } });

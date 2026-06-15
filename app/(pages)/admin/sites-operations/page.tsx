@@ -5,8 +5,10 @@ import SitesMapPage from "@/app/(pages)/sites/map/page";
 import FinishingSchedulesPage from "@/app/(pages)/admin/finishing-schedules/page";
 import PaintPlanningPage from "@/app/(pages)/admin/paint-planning/page";
 import PrintCardsPage from "@/app/(pages)/admin/print-cards/page";
+import SiteProgramPage from "../site-program/page";
 
 const TABS = [
+  { value: "job-program", label: "Job Program" },
   { value: "job-progress", label: "Job Progress" },
   { value: "sites-map", label: "Sites Map" },
   { value: "finishing-schedules", label: "Finishing Schedules" },
@@ -29,8 +31,8 @@ export default async function SitesOperationsPage({
   const activeTab = isTabValue(sp?.tab) ? sp.tab : "job-progress";
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
-      <div className="rounded border border-muted/50 bg-card p-4">
+    <div className="">
+      <div className="">
         <div className="flex flex-wrap gap-1 border-b border-border">
           {TABS.map((tab) => (
             <Link
@@ -47,10 +49,13 @@ export default async function SitesOperationsPage({
           ))}
         </div>
 
-        <div className="mt-4">
+        <div className="mt-3">
+          {activeTab === "job-program" ? <SiteProgramPage /> : null}
           {activeTab === "job-progress" ? <JobProgressPage /> : null}
           {activeTab === "sites-map" ? <SitesMapPage /> : null}
-          {activeTab === "finishing-schedules" ? <FinishingSchedulesPage /> : null}
+          {activeTab === "finishing-schedules" ? (
+            <FinishingSchedulesPage />
+          ) : null}
           {activeTab === "paint-planning" ? <PaintPlanningPage /> : null}
           {activeTab === "print-cards" ? <PrintCardsPage /> : null}
         </div>

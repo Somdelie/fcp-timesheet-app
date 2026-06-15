@@ -25,22 +25,32 @@ CREATE INDEX IF NOT EXISTS "NotePresence_lastActivityAt_idx"
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'NotePresence_noteId_fkey'
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'UserNote'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'User'
   ) THEN
-    ALTER TABLE "NotePresence"
-      ADD CONSTRAINT "NotePresence_noteId_fkey"
-      FOREIGN KEY ("noteId") REFERENCES "UserNote"("id")
-      ON DELETE CASCADE ON UPDATE CASCADE;
-  END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'NotePresence_userId_fkey'
-  ) THEN
-    ALTER TABLE "NotePresence"
-      ADD CONSTRAINT "NotePresence_userId_fkey"
-      FOREIGN KEY ("userId") REFERENCES "User"("id")
-      ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'NotePresence_noteId_fkey'
+    ) THEN
+      ALTER TABLE "NotePresence"
+        ADD CONSTRAINT "NotePresence_noteId_fkey"
+        FOREIGN KEY ("noteId") REFERENCES "UserNote"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'NotePresence_userId_fkey'
+    ) THEN
+      ALTER TABLE "NotePresence"
+        ADD CONSTRAINT "NotePresence_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "User"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+
   END IF;
 END $$;
 
@@ -67,21 +77,31 @@ CREATE INDEX IF NOT EXISTS "NoteEditHistory_userId_idx"
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'NoteEditHistory_noteId_fkey'
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'UserNote'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'User'
   ) THEN
-    ALTER TABLE "NoteEditHistory"
-      ADD CONSTRAINT "NoteEditHistory_noteId_fkey"
-      FOREIGN KEY ("noteId") REFERENCES "UserNote"("id")
-      ON DELETE CASCADE ON UPDATE CASCADE;
-  END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'NoteEditHistory_userId_fkey'
-  ) THEN
-    ALTER TABLE "NoteEditHistory"
-      ADD CONSTRAINT "NoteEditHistory_userId_fkey"
-      FOREIGN KEY ("userId") REFERENCES "User"("id")
-      ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'NoteEditHistory_noteId_fkey'
+    ) THEN
+      ALTER TABLE "NoteEditHistory"
+        ADD CONSTRAINT "NoteEditHistory_noteId_fkey"
+        FOREIGN KEY ("noteId") REFERENCES "UserNote"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint WHERE conname = 'NoteEditHistory_userId_fkey'
+    ) THEN
+      ALTER TABLE "NoteEditHistory"
+        ADD CONSTRAINT "NoteEditHistory_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "User"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+
   END IF;
 END $$;

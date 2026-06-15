@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { normalizeDatabaseUrl } from "./lib/database-url";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -7,12 +8,14 @@ if (!DATABASE_URL) {
   );
 }
 
-export default {
+const prismaConfig = {
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: DATABASE_URL,
+    url: normalizeDatabaseUrl(DATABASE_URL),
   },
 };
+
+export default prismaConfig;

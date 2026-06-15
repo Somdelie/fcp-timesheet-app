@@ -90,6 +90,8 @@ model User {
   // NEW: Real-time collaboration
   notePresences   NotePresence[]
   noteEditHistory NoteEditHistory[]
+
+  siteProgrammes SiteProgramme[] @relation("SiteProgrammeCreatedBy")
 }
 
 model PushToken {
@@ -333,7 +335,8 @@ model Site {
   plantTransfersFrom PlantTransfer[] @relation("PlantTransferFromSite")
   plantTransfersTo   PlantTransfer[] @relation("PlantTransferToSite")
 
-  deductions Deduction[]
+  deductions     Deduction[]
+  siteProgrammes SiteProgramme[]
 
   @@index([isActive])
   @@index([name])
@@ -2440,6 +2443,9 @@ model SitePlantAssignment {
   product        ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
   assignedByUser User?              @relation("PlantAssignedByUser", fields: [assignedByUserId], references: [id], onDelete: SetNull)
 
+  // Size variant deployed (e.g. "3m", "5m")
+  size String?
+
   // Transfer history
   transfersOut PlantTransfer[] @relation("PlantTransferFromAssignment")
   transfersIn  PlantTransfer[] @relation("PlantTransferToAssignment")
@@ -2711,4 +2717,81 @@ model NoteEditHistory {
 
   @@index([noteId, createdAt])
   @@index([userId])
+}
+
+// ============================
+// SITE / JOB PROGRAMME PLANNER
+// ============================
+
+enum SiteProgrammeStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum SiteProgrammeItemStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  OVERSTAYED
+  CANCELLED
+}
+
+model SiteProgramme {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+
+  plannedStartDate  DateTime
+  plannedFinishDate DateTime
+
+  status SiteProgrammeStatus @default(DRAFT)
+
+  createdByUserId String?
+  createdByUser   User?   @relation("SiteProgrammeCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items SiteProgrammeItem[]
+
+  @@index([siteId])
+  @@index([status])
+  @@index([plannedStartDate])
+  @@index([plannedFinishDate])
+}
+
+model SiteProgrammeItem {
+  id String @id @default(cuid())
+
+  programmeId String
+  programme   SiteProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+
+  title       String
+  trade       String?
+  description String?
+
+  plannedStartDate  DateTime
+  plannedFinishDate DateTime
+
+  actualStartDate  DateTime?
+  actualFinishDate DateTime?
+
+  status SiteProgrammeItemStatus @default(PLANNED)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([programmeId])
+  @@index([plannedStartDate])
+  @@index([plannedFinishDate])
+  @@index([actualFinishDate])
+  @@index([status])
 }
