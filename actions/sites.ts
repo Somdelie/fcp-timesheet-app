@@ -40,6 +40,16 @@ function serializeSite(s: any) {
       sum + (Number(scan.dayRateAtScan) || 0),
     0,
   );
+  const daysWorked = new Set(
+    (s.attendanceScans ?? [])
+      .map((scan: { workDate?: unknown }) => {
+        const workDate = scan.workDate;
+        if (workDate instanceof Date) return workDate.toISOString().slice(0, 10);
+        if (workDate) return String(workDate).slice(0, 10);
+        return null;
+      })
+      .filter(Boolean),
+  ).size;
   // Calculate total material cost from order items
   const totalMaterialCost = (s.siteProductOrders ?? []).reduce(
     (sum: number, order: any) =>
@@ -117,6 +127,7 @@ function serializeSite(s: any) {
         ? s.createdAt.toISOString()
         : String(s.createdAt),
     supervisorName,
+    daysWorked,
     totalWages,
     totalMaterialCost,
     claimDate:
@@ -233,6 +244,7 @@ export async function listSites(input?: {
       attendanceScans: {
         where: hasDateFilter ? { workDate: dateFilter } : undefined,
         select: {
+          workDate: true,
           dayRateAtScan: true,
         },
       },
@@ -265,7 +277,8 @@ export async function listSites(input?: {
   const siteIds = sites.map((s) => s.id);
   const histDateWhere = hasDateFilter ? { transactionDate: dateFilter } : {};
 
-  const [histWages, histMaterial] = await Promise.all([
+  const [histWages, histMaterial, periodClaims, latestPeriodClaims] =
+    await Promise.all([
     prisma.historicalSiteCost.groupBy({
       by: ["siteId"],
       where: { siteId: { in: siteIds }, category: "LABOUR", ...histDateWhere },
@@ -280,6 +293,26 @@ export async function listSites(input?: {
       },
       _sum: { amount: true },
     }),
+    prisma.siteClaim.groupBy({
+      by: ["siteId"],
+      where: {
+        siteId: { in: siteIds },
+        ...(hasDateFilter ? { claimDate: dateFilter } : {}),
+      },
+      _sum: { amountClaimed: true, amountReceived: true },
+    }),
+    prisma.siteClaim.findMany({
+      where: {
+        siteId: { in: siteIds },
+        ...(hasDateFilter ? { claimDate: dateFilter } : {}),
+      },
+      orderBy: { claimDate: "desc" },
+      select: {
+        siteId: true,
+        claimDate: true,
+        status: true,
+      },
+    }),
   ]);
 
   const histWagesMap = new Map(
@@ -288,16 +321,65 @@ export async function listSites(input?: {
   const histMaterialMap = new Map(
     histMaterial.map((r) => [r.siteId, Number(r._sum.amount ?? 0)]),
   );
+  const periodClaimMap = new Map(
+    periodClaims.map((r) => [
+      r.siteId,
+      {
+        amountClaimed: Number(r._sum.amountClaimed ?? 0),
+        amountReceived: Number(r._sum.amountReceived ?? 0),
+      },
+    ]),
+  );
+  const latestPeriodClaimMap = new Map<
+    string,
+    {
+      claimDate: Date;
+      status:
+        | "DRAFT"
+        | "SUBMITTED"
+        | "PARTIALLY_RECEIVED"
+        | "RECEIVED"
+        | "CANCELLED";
+    }
+  >();
+  for (const claim of latestPeriodClaims) {
+    if (!latestPeriodClaimMap.has(claim.siteId)) {
+      latestPeriodClaimMap.set(claim.siteId, {
+        claimDate: claim.claimDate,
+        status: claim.status,
+      });
+    }
+  }
 
   return {
     ok: true as const,
     sites: sites.map((s) => {
       const row = serializeSite(s);
+      const periodClaim = periodClaimMap.get(s.id);
+      const latestPeriodClaim = latestPeriodClaimMap.get(s.id);
+      const amountClaimed = hasDateFilter
+        ? (periodClaim?.amountClaimed ?? 0)
+        : row.amountClaimed;
+      const amountReceived = hasDateFilter
+        ? (periodClaim?.amountReceived ?? 0)
+        : row.claimAmountReceived;
       return {
         ...row,
+        amountClaimed,
         totalWages: row.totalWages + (histWagesMap.get(s.id) ?? 0),
         totalMaterialCost:
           row.totalMaterialCost + (histMaterialMap.get(s.id) ?? 0),
+        claimDate: hasDateFilter
+          ? latestPeriodClaim?.claimDate.toISOString()
+          : row.claimDate,
+        claimAmountClaimed: hasDateFilter
+          ? amountClaimed
+          : row.claimAmountClaimed,
+        claimAmountReceived: amountReceived,
+        claimOutstanding: Math.max(0, amountClaimed - amountReceived),
+        claimStatus: hasDateFilter
+          ? (latestPeriodClaim?.status ?? null)
+          : row.claimStatus,
       };
     }),
   };

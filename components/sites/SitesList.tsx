@@ -10,9 +10,10 @@ import {
   Printer,
   CalendarDays,
   SlidersHorizontal,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { VisibilityState } from "@tanstack/react-table";
+import type { RowSelectionState, VisibilityState } from "@tanstack/react-table";
 import SitesTable, {
   SITE_TABLE_COLUMN_OPTIONS,
   type SiteRow,
@@ -29,7 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -47,6 +47,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import CreateSiteForm from "./CreateSiteForm";
 import { Input } from "../ui/input";
 
@@ -58,6 +63,84 @@ interface SitesListProps {
 
 const ALL_SUPERVISORS = "__all_supervisors__";
 const UNASSIGNED_SUPERVISOR = "__unassigned_supervisor__";
+
+function formatShortNumber(value: number) {
+  return value.toLocaleString("en-ZA", { maximumFractionDigits: 0 });
+}
+
+function hasFiniteRange(bounds: [number, number]) {
+  return Number.isFinite(bounds[0]) && Number.isFinite(bounds[1]);
+}
+
+function clampRange(value: [number, number], bounds: [number, number]) {
+  const min = Math.max(bounds[0], Math.min(value[0], bounds[1]));
+  const max = Math.max(min, Math.min(value[1], bounds[1]));
+  return [min, max] as [number, number];
+}
+
+function RangeSlider({
+  label,
+  value,
+  bounds,
+  step,
+  valuePrefix = "",
+  valueSuffix = "",
+  onChange,
+}: {
+  label: string;
+  value: [number, number];
+  bounds: [number, number];
+  step: number;
+  valuePrefix?: string;
+  valueSuffix?: string;
+  onChange: (value: [number, number]) => void;
+}) {
+  const [minBound, maxBound] = bounds;
+  const [minValue, maxValue] = value;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          {label}
+        </span>
+        <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+          {valuePrefix}
+          {formatShortNumber(minValue)}
+          {valueSuffix} - {valuePrefix}
+          {formatShortNumber(maxValue)}
+          {valueSuffix}
+        </span>
+      </div>
+      <div className="relative h-8">
+        <input
+          type="range"
+          min={minBound}
+          max={maxBound}
+          step={step}
+          value={minValue}
+          onChange={(e) => {
+            const next = Math.min(Number(e.target.value), maxValue);
+            onChange([next, maxValue]);
+          }}
+          className="absolute inset-x-0 top-2 h-2 w-full accent-primary"
+        />
+        <input
+          type="range"
+          min={minBound}
+          max={maxBound}
+          step={step}
+          value={maxValue}
+          onChange={(e) => {
+            const next = Math.max(Number(e.target.value), minValue);
+            onChange([minValue, next]);
+          }}
+          className="absolute inset-x-0 top-2 h-2 w-full accent-primary"
+        />
+      </div>
+    </div>
+  );
+}
 
 // pnpm prisma migrate deploy
 
@@ -91,15 +174,7 @@ export default function SitesList({
   const [photoNote, setPhotoNote] = React.useState<string>("");
   const [photoSubmitting, setPhotoSubmitting] = React.useState(false);
   const [pdfGenerating, setPdfGenerating] = React.useState(false);
-  const [selectedSites, setSelectedSites] = React.useState<SiteRow[]>([]);
-  const [exportColumns, setExportColumns] = React.useState<SitesPrintColumns>({
-    client: true,
-    supervisor: true,
-    wages: true,
-    material: true,
-    total: true,
-    created: true,
-  });
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [dateFilteredSites, setDateFilteredSites] = React.useState<
@@ -114,13 +189,50 @@ export default function SitesList({
   >("ONGOING");
   const [supervisorFilter, setSupervisorFilter] =
     React.useState(ALL_SUPERVISORS);
+  const [costRange, setCostRange] = React.useState<[number, number] | null>(
+    null,
+  );
+  const [profitPctRange, setProfitPctRange] = React.useState<
+    [number, number] | null
+  >(null);
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>(() =>
       Object.fromEntries(SITE_TABLE_COLUMN_OPTIONS.map(({ id }) => [id, true])),
     );
+  const exportColumns = React.useMemo<SitesPrintColumns>(
+    () => ({
+      code: columnVisibility.code !== false,
+      name: columnVisibility.name !== false,
+      client: columnVisibility.client !== false,
+      claimDate: columnVisibility.siteClaimDate !== false,
+      supervisor: columnVisibility.supervisorName !== false,
+      daysWorked: columnVisibility.daysWorked !== false,
+      wages: columnVisibility.totalWages !== false,
+      material: columnVisibility.totalMaterialCost !== false,
+      total: columnVisibility.totalCost !== false,
+      amountClaimed: columnVisibility.amountClaimed !== false,
+      paidToDate: columnVisibility.claimPaidToDate !== false,
+      outstanding: columnVisibility.claimOutstanding !== false,
+      profitLoss: columnVisibility.profitLoss !== false,
+      created: false,
+    }),
+    [columnVisibility],
+  );
 
   // The effective data set: if date range is applied use date-filtered data, otherwise initialSites
   const effectiveData = dateFilteredSites ?? initialSites;
+  const siteById = React.useMemo(
+    () => new Map(effectiveData.map((site) => [site.id, site])),
+    [effectiveData],
+  );
+  const selectedSites = React.useMemo(
+    () =>
+      Object.entries(rowSelection)
+        .filter(([, selected]) => selected)
+        .map(([id]) => siteById.get(id))
+        .filter((site): site is SiteRow => Boolean(site)),
+    [rowSelection, siteById],
+  );
 
   const supervisorFilterOptions = React.useMemo(() => {
     return Array.from(
@@ -149,7 +261,7 @@ export default function SitesList({
     }
     setDateLoading(true);
     try {
-      const res = await listSites({ q: "", show, take: 300, dateFrom, dateTo });
+      const res = await listSites({ q: query, show, dateFrom, dateTo });
       if (res.ok) setDateFilteredSites(res.sites);
     } catch {
       toast.error("Failed to filter by date");
@@ -228,10 +340,72 @@ export default function SitesList({
   }, [supervisorFiltered, claimFilter]);
 
   // Then apply job status filter
-  const filtered = React.useMemo(() => {
+  const statusFiltered = React.useMemo(() => {
     if (statusFilter === "all") return claimFiltered;
     return claimFiltered.filter((s) => s.jobStatus === statusFilter);
   }, [claimFiltered, statusFilter]);
+
+  const costBounds = React.useMemo<[number, number]>(() => {
+    const values = statusFiltered.map(
+      (site) => (site.totalWages ?? 0) + (site.totalMaterialCost ?? 0),
+    );
+    const max = Math.max(0, ...values);
+    return [0, Math.max(1000, Math.ceil(max / 1000) * 1000)];
+  }, [statusFiltered]);
+
+  const profitPctBounds = React.useMemo<[number, number]>(() => {
+    const values = statusFiltered
+      .map((site) => {
+        const totalCost =
+          (site.totalWages ?? 0) + (site.totalMaterialCost ?? 0);
+        const claimed = site.amountClaimed ?? 0;
+        return claimed > 0 ? ((claimed - totalCost) / claimed) * 100 : null;
+      })
+      .filter((value): value is number => value !== null);
+    if (values.length === 0) return [-100, 100];
+    const min = Math.floor(Math.min(...values) / 10) * 10;
+    const max = Math.ceil(Math.max(...values) / 10) * 10;
+    return [Math.min(-100, min), Math.max(100, max)];
+  }, [statusFiltered]);
+
+  const activeCostRange = costRange ? clampRange(costRange, costBounds) : costBounds;
+  const activeProfitPctRange = profitPctRange
+    ? clampRange(profitPctRange, profitPctBounds)
+    : profitPctBounds;
+  const activeRangeFilterCount =
+    (costRange ? 1 : 0) + (profitPctRange ? 1 : 0);
+  const activeFilterCount =
+    activeRangeFilterCount + (dateFilteredSites !== null ? 1 : 0);
+
+  const filtered = React.useMemo(() => {
+    return statusFiltered.filter((site) => {
+      const totalCost =
+        (site.totalWages ?? 0) + (site.totalMaterialCost ?? 0);
+      const claimed = site.amountClaimed ?? 0;
+      const profitPct =
+        claimed > 0 ? ((claimed - totalCost) / claimed) * 100 : null;
+
+      if (costRange && totalCost < activeCostRange[0]) return false;
+      if (costRange && totalCost > activeCostRange[1]) return false;
+      if (
+        profitPctRange &&
+        (profitPct === null || profitPct < activeProfitPctRange[0])
+      )
+        return false;
+      if (
+        profitPctRange &&
+        (profitPct === null || profitPct > activeProfitPctRange[1])
+      )
+        return false;
+      return true;
+    });
+  }, [
+    statusFiltered,
+    costRange,
+    profitPctRange,
+    activeCostRange,
+    activeProfitPctRange,
+  ]);
 
   async function handleSubmitPhotoRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -278,7 +452,7 @@ export default function SitesList({
       {/* Header */}
 
       <div className="mb-2 rounded border border-zinc-200/50 bg-white/80 backdrop-blur-sm px-3 py-2 shadow-sm transition-all hover:shadow-md dark:border-zinc-700/50 dark:bg-card/40">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative w-48">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
@@ -321,46 +495,108 @@ export default function SitesList({
 
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
 
-          {/* From */}
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="h-8 w-34 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
-            />
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 px-2 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
+              >
+                <Filter className="h-3.5 w-3.5" />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 space-y-5 p-4" align="end">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  <CalendarDays className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                  <span>Date range</span>
+                </div>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-8 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+                  />
+                  <span className="text-xs text-zinc-400">to</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="h-8 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  {dateFilteredSites !== null && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleClearDateRange}
+                      className="h-8 px-3 text-sm dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white"
+                    >
+                      Clear dates
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleApplyDateRange}
+                    disabled={dateLoading || (!dateFrom && !dateTo)}
+                    className="h-8 px-3 text-sm"
+                  >
+                    {dateLoading ? "Loading..." : "Apply dates"}
+                  </Button>
+                </div>
+              </div>
 
-          <span className="text-xs text-zinc-400">→</span>
+              <div className="border-t" />
 
-          {/* To */}
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="h-8 w-34 text-sm dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
-          />
+              {hasFiniteRange(costBounds) && (
+                <RangeSlider
+                  label="Total cost"
+                  bounds={costBounds}
+                  value={activeCostRange}
+                  step={1000}
+                  valuePrefix="R "
+                  onChange={setCostRange}
+                />
+              )}
 
-          <Button
-            size="sm"
-            onClick={handleApplyDateRange}
-            disabled={dateLoading || (!dateFrom && !dateTo)}
-            className="h-8 px-3 text-sm"
-          >
-            {dateLoading ? "Loading..." : "Apply"}
-          </Button>
+              {hasFiniteRange(profitPctBounds) && (
+                <RangeSlider
+                  label="Profit / Loss"
+                  bounds={profitPctBounds}
+                  value={activeProfitPctRange}
+                  step={1}
+                  valueSuffix="%"
+                  onChange={setProfitPctRange}
+                />
+              )}
 
-          {dateFilteredSites !== null && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleClearDateRange}
-              className="h-8 px-3 text-sm dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white"
-            >
-              Clear
-            </Button>
-          )}
+              <div className="flex justify-end border-t pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCostRange(null);
+                    setProfitPctRange(null);
+                  }}
+                  disabled={activeRangeFilterCount === 0}
+                >
+                  Reset ranges
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           {/* Claim date filter */}
           {/* <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
@@ -394,17 +630,21 @@ export default function SitesList({
           {/* Actions */}
           <div className="flex items-center gap-1.5 ml-auto">
             {selectedSites.length > 0 && (
-              <span className="text-xs font-medium text-primary mr-1">
+              <button
+                type="button"
+                onClick={() => setRowSelection({})}
+                className="mr-1 text-xs font-medium text-primary hover:underline"
+              >
                 {selectedSites.length} site
                 {selectedSites.length === 1 ? "" : "s"} selected
-              </span>
+              </button>
             )}
             <Button
               variant="outline"
               size="sm"
               className="h-8 w-8 p-0 dark:border-zinc-700/50 dark:bg-zinc-800/50 dark:text-white dark:hover:bg-zinc-700/50"
               onClick={handleDownloadPdf}
-              disabled={pdfGenerating || filtered.length === 0}
+              disabled={pdfGenerating || getSitesForExport().length === 0}
               title={
                 selectedSites.length > 0
                   ? `Download ${selectedSites.length} selected`
@@ -425,7 +665,7 @@ export default function SitesList({
                 }
                 printSites(exportSites, exportColumns);
               }}
-              disabled={filtered.length === 0}
+              disabled={getSitesForExport().length === 0}
               title={
                 selectedSites.length > 0
                   ? `Print ${selectedSites.length} selected`
@@ -534,7 +774,8 @@ export default function SitesList({
             setPhotoSite(site);
             setPhotoDialogOpen(true);
           }}
-          onSelectionChange={setSelectedSites}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
           columnVisibility={columnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
           supervisorOptions={supervisorOptions}

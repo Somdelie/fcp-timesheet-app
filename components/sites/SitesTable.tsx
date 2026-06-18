@@ -103,6 +103,7 @@ export type SiteRow = {
   createdAt: string;
   supervisorName: string | null;
   totalWages: number;
+  daysWorked: number;
   totalMaterialCost: number;
   jobStatus: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
   claimDate: string | null;
@@ -125,6 +126,7 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "client", label: "Client" },
   { id: "siteClaimDate", label: "Claim Date" },
   { id: "supervisorName", label: "Supervisor" },
+  { id: "daysWorked", label: "Days Worked" },
   { id: "totalWages", label: "Total Wages" },
   { id: "totalMaterialCost", label: "Total Material Cost" },
   { id: "totalCost", label: "Total Cost" },
@@ -441,15 +443,15 @@ function SiteRowActions({
 
       {/* Site Products Dialog */}
       <Dialog open={showProductsDialog} onOpenChange={setShowProductsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-6xl max-h-[85vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Site Products — {site.name}</DialogTitle>
             <DialogDescription>
               Materials expected to be used on this job site.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 min-h-0 overflow-auto rounded-md border border-slate-200 dark:border-slate-700">
             {loadingProducts ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
@@ -459,7 +461,7 @@ function SiteRowActions({
                 No materials assigned to this site yet.
               </p>
             ) : (
-              <Table className="border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
+              <Table className="min-w-[900px] border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
                 <TableHeader>
                   <TableRow>
                     <TableHead>SKU</TableHead>
@@ -507,7 +509,7 @@ function SiteRowActions({
             )}
           </div>
 
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="shrink-0 sm:justify-between">
             <Button
               variant="outline"
               onClick={() => setShowProductsDialog(false)}
@@ -542,7 +544,8 @@ interface SitesTableProps {
   data: SiteRow[];
   role: string;
   onRequestPhoto: (site: SiteRow) => void;
-  onSelectionChange?: (selectedSites: SiteRow[]) => void;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   columnVisibility?: VisibilityState;
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>;
   supervisorOptions?: Array<{ id: string; name: string; email: string }>;
@@ -553,7 +556,8 @@ export default function SitesTable({
   data,
   role,
   onRequestPhoto,
-  onSelectionChange,
+  rowSelection: controlledRowSelection,
+  onRowSelectionChange,
   columnVisibility,
   onColumnVisibilityChange,
   supervisorOptions = [],
@@ -562,21 +566,15 @@ export default function SitesTable({
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "code", desc: true },
   ]);
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [internalRowSelection, setInternalRowSelection] =
+    React.useState<RowSelectionState>({});
+  const rowSelection = controlledRowSelection ?? internalRowSelection;
+  const handleRowSelectionChange =
+    onRowSelectionChange ?? setInternalRowSelection;
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
-
-  // Notify parent of selection changes
-  React.useEffect(() => {
-    if (!onSelectionChange) return;
-    const selectedRows = Object.keys(rowSelection)
-      .filter((k) => rowSelection[k])
-      .map((k) => data[Number(k)])
-      .filter(Boolean);
-    onSelectionChange(selectedRows);
-  }, [rowSelection, data, onSelectionChange]);
 
   const columns: ColumnDef<SiteRow>[] = React.useMemo(
     () => [
@@ -751,6 +749,35 @@ export default function SitesTable({
         cell: ({ row }) => (
           <span className="text-sm capitalize">
             {row.original.supervisorName ?? "—"}
+          </span>
+        ),
+      },
+      {
+        id: "daysWorked",
+        accessorKey: "daysWorked",
+        size: 120,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <CalendarDays className="h-4 w-4 text-cyan-600" />
+              Days Worked
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">
+            {row.original.daysWorked ?? 0}
           </span>
         ),
       },
@@ -998,9 +1025,10 @@ export default function SitesTable({
     },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
     onColumnVisibilityChange,
     enableRowSelection: true,
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

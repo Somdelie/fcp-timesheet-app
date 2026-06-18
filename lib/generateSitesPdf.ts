@@ -14,18 +14,31 @@ export type SiteForPdf = {
   location: string | null;
   isActive: boolean;
   createdAt: string;
+  siteClaimDate?: string | null;
   supervisorName?: string | null;
+  daysWorked?: number;
   totalWages?: number;
   totalMaterialCost?: number;
+  amountClaimed?: number;
+  claimAmountReceived?: number;
+  claimOutstanding?: number;
   jobStatus?: string | null;
 };
 
 export type SitesPrintColumns = {
+  code?: boolean;
+  name?: boolean;
   client?: boolean;
+  claimDate?: boolean;
   supervisor?: boolean;
+  daysWorked?: boolean;
   wages?: boolean;
   material?: boolean;
   total?: boolean;
+  amountClaimed?: boolean;
+  paidToDate?: boolean;
+  outstanding?: boolean;
+  profitLoss?: boolean;
   created?: boolean;
 };
 
@@ -93,11 +106,170 @@ type ColumnKey =
   | "code"
   | "name"
   | "client"
+  | "claimDate"
   | "supervisor"
+  | "daysWorked"
   | "wages"
   | "material"
   | "total"
+  | "amountClaimed"
+  | "paidToDate"
+  | "outstanding"
+  | "profitLoss"
   | "created";
+
+type ColumnDef = {
+  key: ColumnKey;
+  label: string;
+  className: string;
+  width: number;
+  align?: "left" | "right";
+  total?: (sites: SiteForPdf[]) => number | null;
+  value: (site: SiteForPdf) => string;
+};
+
+function getProfitLoss(site: SiteForPdf) {
+  const claimed = site.amountClaimed ?? 0;
+  if (claimed === 0) return null;
+  return claimed - ((site.totalWages ?? 0) + (site.totalMaterialCost ?? 0));
+}
+
+function getProfitLossText(site: SiteForPdf) {
+  const value = getProfitLoss(site);
+  if (value === null) return "-";
+  const prefix = value >= 0 ? "+" : "";
+  return `${prefix}${formatCurrencyPdf(value)}`;
+}
+
+function getSiteColumnDefs(): Record<ColumnKey, ColumnDef> {
+  return {
+    code: {
+      key: "code",
+      label: "Job #",
+      className: "code-col",
+      width: 55,
+      value: (site) => site.code || "-",
+    },
+    name: {
+      key: "name",
+      label: "Name",
+      className: "name-col",
+      width: 118,
+      value: (site) => site.name,
+    },
+    client: {
+      key: "client",
+      label: "Client",
+      className: "client-col",
+      width: 82,
+      value: (site) => site.client || "-",
+    },
+    claimDate: {
+      key: "claimDate",
+      label: "Claim Date",
+      className: "claim-date-col",
+      width: 62,
+      value: (site) => (site.siteClaimDate ? formatDate(site.siteClaimDate) : "-"),
+    },
+    supervisor: {
+      key: "supervisor",
+      label: "Supervisor",
+      className: "supervisor-col",
+      width: 90,
+      value: (site) => site.supervisorName || "-",
+    },
+    daysWorked: {
+      key: "daysWorked",
+      label: "Days",
+      className: "days-col",
+      width: 42,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (site.daysWorked ?? 0), 0),
+      value: (site) => String(site.daysWorked ?? 0),
+    },
+    wages: {
+      key: "wages",
+      label: "Wages",
+      className: "wages-col",
+      width: 74,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (site.totalWages ?? 0), 0),
+      value: (site) => formatCurrencyPdf(site.totalWages ?? 0),
+    },
+    material: {
+      key: "material",
+      label: "Material",
+      className: "material-col",
+      width: 78,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (site.totalMaterialCost ?? 0), 0),
+      value: (site) => formatCurrencyPdf(site.totalMaterialCost ?? 0),
+    },
+    total: {
+      key: "total",
+      label: "Total Cost",
+      className: "total-col",
+      width: 78,
+      align: "right",
+      total: (sites) =>
+        sites.reduce(
+          (sum, site) => sum + (site.totalWages ?? 0) + (site.totalMaterialCost ?? 0),
+          0,
+        ),
+      value: (site) =>
+        formatCurrencyPdf((site.totalWages ?? 0) + (site.totalMaterialCost ?? 0)),
+    },
+    amountClaimed: {
+      key: "amountClaimed",
+      label: "Claimed",
+      className: "claimed-col",
+      width: 78,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (site.amountClaimed ?? 0), 0),
+      value: (site) => formatCurrencyPdf(site.amountClaimed ?? 0),
+    },
+    paidToDate: {
+      key: "paidToDate",
+      label: "Paid",
+      className: "paid-col",
+      width: 74,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (site.claimAmountReceived ?? 0), 0),
+      value: (site) =>
+        (site.claimAmountReceived ?? 0) > 0
+          ? formatCurrencyPdf(site.claimAmountReceived ?? 0)
+          : "-",
+    },
+    outstanding: {
+      key: "outstanding",
+      label: "Outstanding",
+      className: "outstanding-col",
+      width: 78,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (site.claimOutstanding ?? 0), 0),
+      value: (site) =>
+        (site.claimOutstanding ?? 0) > 0 || (site.amountClaimed ?? 0) > 0
+          ? formatCurrencyPdf(site.claimOutstanding ?? 0)
+          : "-",
+    },
+    profitLoss: {
+      key: "profitLoss",
+      label: "Profit / Loss",
+      className: "profit-col",
+      width: 78,
+      align: "right",
+      total: (sites) => sites.reduce((sum, site) => sum + (getProfitLoss(site) ?? 0), 0),
+      value: getProfitLossText,
+    },
+    created: {
+      key: "created",
+      label: "Created",
+      className: "created-col",
+      width: 62,
+      value: (site) => formatDate(site.createdAt),
+    },
+  };
+}
 
 export async function generateSitesPdf(
   sites: SiteForPdf[],
@@ -113,46 +285,70 @@ export async function generateSitesPdf(
   const pageHeight = 595.28;
   const margin = 32;
 
-  // Column widths for landscape
+  const colDefs = getSiteColumnDefs();
   const colWidths: Record<ColumnKey, number> = {
-    code: 80,
-    name: 140,
-    client: 100,
-    supervisor: 110,
-    wages: 90,
-    material: 90,
-    total: 90,
-    created: 78,
+    code: colDefs.code.width,
+    name: colDefs.name.width,
+    client: colDefs.client.width,
+    claimDate: colDefs.claimDate.width,
+    supervisor: colDefs.supervisor.width,
+    daysWorked: colDefs.daysWorked.width,
+    wages: colDefs.wages.width,
+    material: colDefs.material.width,
+    total: colDefs.total.width,
+    amountClaimed: colDefs.amountClaimed.width,
+    paidToDate: colDefs.paidToDate.width,
+    outstanding: colDefs.outstanding.width,
+    profitLoss: colDefs.profitLoss.width,
+    created: colDefs.created.width,
   };
 
   const enabledCols: Record<ColumnKey, boolean> = {
-    code: true,
-    name: true,
+    code: columns?.code ?? true,
+    name: columns?.name ?? true,
     client: columns?.client ?? true,
+    claimDate: columns?.claimDate ?? true,
     supervisor: columns?.supervisor ?? true,
+    daysWorked: columns?.daysWorked ?? true,
     wages: columns?.wages ?? true,
     material: columns?.material ?? true,
     total: columns?.total ?? true,
-    created: columns?.created ?? true,
+    amountClaimed: columns?.amountClaimed ?? true,
+    paidToDate: columns?.paidToDate ?? true,
+    outstanding: columns?.outstanding ?? true,
+    profitLoss: columns?.profitLoss ?? true,
+    created: columns?.created ?? false,
   };
 
   const columnOrder: ColumnKey[] = [
     "code",
     "name",
     "client",
+    "claimDate",
     "supervisor",
+    "daysWorked",
     "wages",
     "material",
     "total",
+    "amountClaimed",
+    "paidToDate",
+    "outstanding",
+    "profitLoss",
     "created",
   ];
 
   const activeColumns = columnOrder.filter((key) => enabledCols[key]);
-
-  const tableWidth = activeColumns.reduce(
-    (sum, key) => sum + colWidths[key],
+  const printableColumns =
+    activeColumns.length > 0 ? activeColumns : (["code", "name"] as ColumnKey[]);
+  const availableTableWidth = pageWidth - margin * 2;
+  const naturalTableWidth = printableColumns.reduce(
+    (sum, key) => sum + colDefs[key].width,
     0,
   );
+  const widthScale = Math.min(1, availableTableWidth / naturalTableWidth);
+  const colWidth = (key: ColumnKey) => colDefs[key].width * widthScale;
+
+  const tableWidth = Math.min(availableTableWidth, naturalTableWidth);
 
   const headerHeight = 36;
   const rowHeight = 32;
@@ -197,128 +393,25 @@ export async function generateSitesPdf(
       borderWidth: 1,
     });
 
-    let xPos = margin + 12;
+    let xPos = margin + 8;
     const textY = startY - headerHeight / 2 - 4;
 
-    for (const key of activeColumns) {
-      switch (key) {
-        case "code": {
-          pg.drawRectangle({
-            x: xPos,
-            y: textY + 1,
-            width: 8,
-            height: 8,
-            color: colors.indigo600,
-          });
-          pg.drawText("Job #", {
-            x: xPos + 12,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.code;
-          break;
-        }
-        case "name": {
-          pg.drawRectangle({
-            x: xPos,
-            y: textY + 1,
-            width: 8,
-            height: 8,
-            color: colors.sky600,
-          });
-          pg.drawText("Name", {
-            x: xPos + 12,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.name;
-          break;
-        }
-        case "client": {
-          pg.drawText("Client", {
-            x: xPos,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.client;
-          break;
-        }
-        case "supervisor": {
-          pg.drawText("Supervisor", {
-            x: xPos,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.supervisor;
-          break;
-        }
-        case "wages": {
-          pg.drawRectangle({
-            x: xPos,
-            y: textY + 1,
-            width: 8,
-            height: 8,
-            color: colors.emerald600,
-          });
-          pg.drawText("Wages", {
-            x: xPos + 12,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.wages;
-          break;
-        }
-        case "material": {
-          pg.drawRectangle({
-            x: xPos,
-            y: textY + 1,
-            width: 8,
-            height: 8,
-            color: colors.orange600,
-          });
-          pg.drawText("Material", {
-            x: xPos + 12,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.material;
-          break;
-        }
-        case "total": {
-          pg.drawText("Total Cost", {
-            x: xPos,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.total;
-          break;
-        }
-        case "created": {
-          pg.drawText("Created", {
-            x: xPos,
-            y: textY,
-            size: headerFontSize,
-            font: fontBold,
-            color: colors.textPrimary,
-          });
-          xPos += colWidths.created;
-          break;
-        }
-      }
+    for (const key of printableColumns) {
+      const width = colWidth(key);
+      const headerText = truncateText(
+        colDefs[key].label,
+        width - 10,
+        fontBold,
+        headerFontSize,
+      );
+      pg.drawText(headerText, {
+        x: xPos,
+        y: textY,
+        size: headerFontSize,
+        font: fontBold,
+        color: colors.textPrimary,
+      });
+      xPos += width;
     }
 
     return startY - headerHeight;
@@ -351,6 +444,25 @@ export async function generateSitesPdf(
 
     let xPos = margin + 12;
     const textY = rowY + rowHeight / 2 - 4;
+
+    for (const key of printableColumns) {
+      const width = colWidth(key);
+      const def = colDefs[key];
+      const textFont =
+        key === "code" ? fontMono : key === "name" || key === "total" ? fontBold : font;
+      const text = truncateText(def.value(site), width - 10, textFont, fontSize - 1);
+      const textWidth = textFont.widthOfTextAtSize(text, fontSize - 1);
+      pg.drawText(text, {
+        x: def.align === "right" ? xPos + width - textWidth - 8 : xPos,
+        y: textY,
+        size: fontSize - 1,
+        font: textFont,
+        color: colors.textPrimary,
+      });
+      xPos += width;
+    }
+
+    return rowY;
 
     for (const key of activeColumns) {
       switch (key) {
@@ -420,6 +532,17 @@ export async function generateSitesPdf(
             color: colors.textPrimary,
           });
           xPos += colWidths.supervisor;
+          break;
+        }
+        case "daysWorked": {
+          pg.drawText(String(site.daysWorked ?? 0), {
+            x: xPos + colWidths.daysWorked - 24,
+            y: textY,
+            size: fontSize - 1,
+            font: fontBold,
+            color: colors.textPrimary,
+          });
+          xPos += colWidths.daysWorked;
           break;
         }
         case "wages": {
@@ -508,9 +631,9 @@ export async function generateSitesPdf(
 
     // Vertical column dividers
     let colX = margin;
-    for (let i = 0; i < activeColumns.length - 1; i++) {
-      const key = activeColumns[i];
-      colX += colWidths[key];
+    for (let i = 0; i < printableColumns.length - 1; i++) {
+      const key = printableColumns[i];
+      colX += colWidth(key);
       pg.drawLine({
         start: { x: colX, y: topY },
         end: { x: colX, y: bottomY },
@@ -588,6 +711,42 @@ export function generateSitesPrintHTML(
   const formatCurrencyHtml = (n: number) =>
     `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const colDefs = getSiteColumnDefs();
+  const enabledCols: Record<ColumnKey, boolean> = {
+    code: columns?.code ?? true,
+    name: columns?.name ?? true,
+    client: columns?.client ?? true,
+    claimDate: columns?.claimDate ?? true,
+    supervisor: columns?.supervisor ?? false,
+    daysWorked: columns?.daysWorked ?? true,
+    wages: columns?.wages ?? true,
+    material: columns?.material ?? true,
+    total: columns?.total ?? true,
+    amountClaimed: columns?.amountClaimed ?? true,
+    paidToDate: columns?.paidToDate ?? true,
+    outstanding: columns?.outstanding ?? true,
+    profitLoss: columns?.profitLoss ?? true,
+    created: columns?.created ?? false,
+  };
+  const columnOrder: ColumnKey[] = [
+    "code",
+    "name",
+    "client",
+    "claimDate",
+    "supervisor",
+    "daysWorked",
+    "wages",
+    "material",
+    "total",
+    "amountClaimed",
+    "paidToDate",
+    "outstanding",
+    "profitLoss",
+    "created",
+  ];
+  const selectedColumns = columnOrder.filter((key) => enabledCols[key]);
+  const activeColumns =
+    selectedColumns.length > 0 ? selectedColumns : (["code", "name"] as ColumnKey[]);
   const showClient = columns?.client ?? true;
 
   // Only include ongoing sites that have at least some cost
@@ -612,11 +771,13 @@ export function generateSitesPrintHTML(
           const wages = site.totalWages ?? 0;
           const material = site.totalMaterialCost ?? 0;
           const total = wages + material;
+          const daysWorked = site.daysWorked ?? 0;
           return `
             <tr>
               <td class="code-col">${escapeHTML(site.code ?? "—")}</td>
               <td class="name-col">${escapeHTML(site.name)}</td>
               ${showClient ? `<td class="client-col">${escapeHTML(site.client ?? "—")}</td>` : ""}
+              <td class="days-col">${daysWorked}</td>
               <td class="wages-col">${formatCurrencyHtml(wages)}</td>
               <td class="material-col">${formatCurrencyHtml(material)}</td>
               <td class="total-col">${formatCurrencyHtml(total)}</td>
@@ -627,6 +788,7 @@ export function generateSitesPrintHTML(
       const totalWages = supervisorSites.reduce((s, x) => s + (x.totalWages ?? 0), 0);
       const totalMaterial = supervisorSites.reduce((s, x) => s + (x.totalMaterialCost ?? 0), 0);
       const totalCost = totalWages + totalMaterial;
+      const totalDaysWorked = supervisorSites.reduce((s, x) => s + (x.daysWorked ?? 0), 0);
       const colSpanBefore = showClient ? 3 : 2;
 
       return `
@@ -639,6 +801,7 @@ export function generateSitesPrintHTML(
                   <th class="code-col">Job #</th>
                   <th class="name-col">Name</th>
                   ${showClient ? '<th class="client-col">Client</th>' : ""}
+                  <th class="days-col">Days</th>
                   <th class="wages-col">Wages</th>
                   <th class="material-col">Material</th>
                   <th class="total-col">Total Cost</th>
@@ -648,6 +811,7 @@ export function generateSitesPrintHTML(
                 ${rows}
                 <tr class="totals-row">
                   <td colspan="${colSpanBefore}" class="totals-label">Total (${supervisorSites.length} job${supervisorSites.length === 1 ? "" : "s"})</td>
+                  <td class="days-col">${totalDaysWorked}</td>
                   <td class="wages-col">${formatCurrencyHtml(totalWages)}</td>
                   <td class="material-col">${formatCurrencyHtml(totalMaterial)}</td>
                   <td class="total-col">${formatCurrencyHtml(totalCost)}</td>
@@ -658,6 +822,65 @@ export function generateSitesPrintHTML(
         </div>`;
     })
     .join("");
+
+  const renderedSections = Array.from(grouped.entries())
+    .map(([supervisorName, supervisorSites], idx) => {
+      const headerCells = activeColumns
+        .map((key) => {
+          const def = colDefs[key];
+          return `<th class="${def.className}">${escapeHTML(def.label)}</th>`;
+        })
+        .join("");
+      const rows = supervisorSites
+        .map((site) => {
+          const cells = activeColumns
+            .map((key) => {
+              const def = colDefs[key];
+              const value = def.value(site).replace(/^R/, "R ");
+              return `<td class="${def.className}">${escapeHTML(value)}</td>`;
+            })
+            .join("");
+          return `<tr>${cells}</tr>`;
+        })
+        .join("");
+      const firstTotalIndex = activeColumns.findIndex(
+        (key) => typeof colDefs[key].total === "function",
+      );
+      const totalsRow =
+        firstTotalIndex === -1
+          ? ""
+          : (() => {
+              const beforeSpan = Math.max(1, firstTotalIndex);
+              const totalCells = activeColumns
+                .slice(firstTotalIndex)
+                .map((key) => {
+                  const def = colDefs[key];
+                  const total = def.total?.(supervisorSites);
+                  const value =
+                    total === null || total === undefined
+                      ? ""
+                      : key === "daysWorked"
+                        ? String(total)
+                        : formatCurrencyHtml(total);
+                  return `<td class="${def.className}">${escapeHTML(value)}</td>`;
+                })
+                .join("");
+              return `<tr class="totals-row"><td colspan="${beforeSpan}" class="totals-label">Total (${supervisorSites.length} job${supervisorSites.length === 1 ? "" : "s"})</td>${totalCells}</tr>`;
+            })();
+
+      return `
+        <div class="supervisor-section${idx > 0 ? " page-break" : ""}">
+          <h2 class="supervisor-name">${escapeHTML(supervisorName)}</h2>
+          <div class="table-container">
+            <table class="main-table">
+              <thead><tr>${headerCells}</tr></thead>
+              <tbody>${rows}${totalsRow}</tbody>
+            </table>
+          </div>
+        </div>`;
+    })
+    .join("");
+  void sections;
 
   return `
     <!DOCTYPE html>
@@ -735,10 +958,25 @@ export function generateSitesPrintHTML(
         }
         .main-table .code-col { font-family: monospace; width: 80px; }
         .main-table .name-col { font-weight: 500; }
-        .main-table .client-col { min-width: 100px; }
-        .main-table .wages-col { text-align: right; font-weight: 600; white-space: nowrap; }
-        .main-table .material-col { text-align: right; font-weight: 600; white-space: nowrap; }
-        .main-table .total-col { text-align: right; font-weight: 700; white-space: nowrap; }
+        .main-table .client-col,
+        .main-table .supervisor-col,
+        .main-table .claim-date-col,
+        .main-table .created-col { min-width: 90px; }
+        .main-table .days-col,
+        .main-table .wages-col,
+        .main-table .material-col,
+        .main-table .total-col,
+        .main-table .claimed-col,
+        .main-table .paid-col,
+        .main-table .outstanding-col,
+        .main-table .profit-col {
+          text-align: right;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+        .main-table .days-col,
+        .main-table .total-col,
+        .main-table .profit-col { font-weight: 700; }
         .main-table tbody tr:nth-child(even) { background: #fafafa; }
         .totals-row td {
           background: #f4f4f5 !important;
@@ -772,10 +1010,10 @@ export function generateSitesPrintHTML(
     <body>
       <div class="content">
         <div class="actions">
-          <button class="btn btn-primary" id="print-btn">🖨️ Print</button>
+          <button class="btn btn-primary" id="print-btn">Print</button>
           <button class="btn" id="close-btn">Close</button>
         </div>
-        ${sections}
+        ${renderedSections}
       </div>
       <script>
         document.getElementById('close-btn').addEventListener('click', function() { window.close(); });

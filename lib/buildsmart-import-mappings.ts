@@ -94,6 +94,19 @@ const PRODUCT_MAPPINGS: ProductMapping[] = [
     pattern: /prof\s+waterproofing\s+compound.*20\s*l/i,
     canonicalName: "Prof Waterproofing Compound 20L",
   },
+  {
+    pattern:
+      /(?:tls\s*0*1000|tls001000)?.*prof\.?\s+superior\s+(?:low\s+sheen|l\/s|ls)/i,
+    canonicalName: "Prof. Superior L/S White",
+  },
+  {
+    pattern: /(?:pp\s*0*700|pp700)?.*prof\.?\s+plaster\s+primer/i,
+    canonicalName: "PROF PLASTER PRIMER",
+  },
+  {
+    pattern: /^pp\s*0*700$/i,
+    canonicalName: "PROF PLASTER PRIMER",
+  },
 
   // ── DIY Savoy Consumables ──
   {
