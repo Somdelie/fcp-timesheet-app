@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { startOfDayUTC } from "@/lib/dateUtc";
 import { writeAuditEvent } from "@/lib/audit";
+import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -168,6 +169,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const blockedEmployees = await getBlockedAttendanceScanEmployeeIds({
+      siteId: String(siteId),
+      employeeIds: employees.map((employee) => employee.id),
+    });
+
     const createdScans: any[] = [];
     const skipped: Array<{
       employeeId: string;
@@ -180,6 +186,17 @@ export async function POST(req: Request) {
     for (const workDateInfo of parsedWorkDates) {
       for (const employee of employees) {
         const employeeName = `${employee.firstName} ${employee.lastName}`.trim();
+        const scanBlock = blockedEmployees.get(employee.id);
+        if (scanBlock) {
+          skipped.push({
+            employeeId: employee.id,
+            employeeName,
+            workDate: workDateInfo.label,
+            reason: scanBlock.message,
+          });
+          continue;
+        }
+
         const existingScan = await prisma.attendanceScan.findFirst({
           where: { employeeId: employee.id, workDate: workDateInfo.date },
           select: { id: true },

@@ -552,28 +552,34 @@ export default function AdminAttendanceScansPage() {
               value={activeTab || groupedScans[0]?.date}
               onValueChange={(v) => setActiveTab(v)}
             >
-              <TabsList className="mb-4 flex flex-wrap h-auto gap-1">
-                {groupedScans.map((group) => {
-                  const shortLabel = new Date(
-                    group.date + "T00:00:00Z",
-                  ).toLocaleDateString("en-GB", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  });
-                  return (
-                    <TabsTrigger key={group.date} value={group.date}>
-                      {shortLabel}
-                      <Badge
-                        variant="secondary"
-                        className="ml-1.5 h-5 px-1.5 text-xs"
+              <div className="mb-4 overflow-x-auto pb-2">
+                <TabsList className="flex h-auto min-w-max flex-nowrap justify-start gap-1">
+                  {groupedScans.map((group) => {
+                    const shortLabel = new Date(
+                      group.date + "T00:00:00Z",
+                    ).toLocaleDateString("en-GB", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    });
+                    return (
+                      <TabsTrigger
+                        key={group.date}
+                        value={group.date}
+                        className="shrink-0 whitespace-nowrap"
                       >
-                        {group.scans.length}
-                      </Badge>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+                        {shortLabel}
+                        <Badge
+                          variant="secondary"
+                          className="ml-1.5 h-5 px-1.5 text-xs"
+                        >
+                          {group.scans.length}
+                        </Badge>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </div>
 
               {groupedScans.map((group) => {
                 const pi = getPageIndex(group.date);

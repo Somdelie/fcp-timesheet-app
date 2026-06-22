@@ -4,6 +4,7 @@ import { requireServerAuth } from "@/lib/auth-server";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { z } from "zod";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
+import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -199,8 +200,18 @@ export async function POST(req: Request) {
   const byCode = new Map<string, (typeof employees)[number]>();
   for (const e of employees) byCode.set(String(e.qrCodeValue).toUpperCase(), e);
 
+  const blockedEmployees = await getBlockedAttendanceScanEmployeeIds({
+    siteId,
+    employeeIds: employees.map((employee) => employee.id),
+  });
+
   // Determine rejected (not found / inactive)
   const rejectedCodes: string[] = [];
+  const blockedEmployeeScans: Array<{
+    code: string;
+    name: string;
+    error: string;
+  }> = [];
   const deactivatedEmployees: Array<{
     code: string;
     name: string;
@@ -226,6 +237,15 @@ export async function POST(req: Request) {
       });
       continue;
     }
+    const scanBlock = blockedEmployees.get(emp.id);
+    if (scanBlock) {
+      blockedEmployeeScans.push({
+        code,
+        name: scanBlock.employeeName,
+        error: scanBlock.message,
+      });
+      continue;
+    }
     candidateEmployees.push({
       code,
       empId: emp.id,
@@ -240,6 +260,7 @@ export async function POST(req: Request) {
       invalidCodes,
       rejectedCodes,
       deactivatedEmployees,
+      blockedEmployeeScans,
     });
   }
 
@@ -270,6 +291,7 @@ export async function POST(req: Request) {
       invalidCodes,
       rejectedCodes,
       deactivatedEmployees,
+      blockedEmployeeScans,
     });
   }
 
@@ -346,5 +368,6 @@ export async function POST(req: Request) {
     invalidCodes,
     rejectedCodes,
     deactivatedEmployees,
+    blockedEmployeeScans,
   });
 }

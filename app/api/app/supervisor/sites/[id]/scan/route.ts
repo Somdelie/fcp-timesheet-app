@@ -4,6 +4,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
+import { getAttendanceScanBlock } from "@/lib/attendanceScanBlocks";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -212,6 +213,14 @@ export async function POST(
       },
       { status: 409 },
     );
+  }
+
+  const scanBlock = await getAttendanceScanBlock({
+    siteId,
+    employeeId: employee.id,
+  });
+  if (scanBlock) {
+    return NextResponse.json({ error: scanBlock.message }, { status: 409 });
   }
 
   const rateResult = await computeDayRateAtScan({

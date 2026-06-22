@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { isoFromDateUTC, startOfDayUTC } from "@/lib/dateUtc";
 import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
+import { getAttendanceScanBlock } from "@/lib/attendanceScanBlocks";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -122,6 +123,14 @@ export async function POST(req: Request) {
       { error: "Destination site not found" },
       { status: 404 },
     );
+  }
+
+  const scanBlock = await getAttendanceScanBlock({
+    siteId: toSiteId,
+    employeeId,
+  });
+  if (scanBlock) {
+    return NextResponse.json({ error: scanBlock.message }, { status: 409 });
   }
 
   // If the user is a supervisor, verify they have access to BOTH sites

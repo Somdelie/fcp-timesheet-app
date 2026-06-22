@@ -701,7 +701,9 @@ export default function SitesTable({
           );
         },
         cell: ({ row }) => (
-          <span className="text-sm">{row.original.client ?? "—"}</span>
+          <span className="text-sm uppercase">
+            {row.original.client ?? "—"}
+          </span>
         ),
       },
       {

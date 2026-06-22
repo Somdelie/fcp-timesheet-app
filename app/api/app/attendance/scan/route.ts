@@ -4,6 +4,7 @@ import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { requireServerAuth } from "@/lib/auth-server";
 import { z } from "zod";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
+import { getAttendanceScanBlock } from "@/lib/attendanceScanBlocks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -173,6 +174,14 @@ export async function POST(req: Request) {
       },
       { status: 409 },
     );
+  }
+
+  const scanBlock = await getAttendanceScanBlock({
+    siteId,
+    employeeId: employee.id,
+  });
+  if (scanBlock) {
+    return NextResponse.json({ error: scanBlock.message }, { status: 409 });
   }
 
   const rateResult = await computeDayRateAtScan({

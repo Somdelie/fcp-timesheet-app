@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { verifyApiToken } from "@/lib/jwt";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
+import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,8 +119,14 @@ export async function POST(req: Request) {
 
   const results: Array<{
     qrCodeValue: string;
-    status: "CREATED" | "ALREADY_SCANNED" | "UNKNOWN" | "INACTIVE";
+    status: "CREATED" | "ALREADY_SCANNED" | "UNKNOWN" | "INACTIVE" | "BLOCKED";
+    error?: string;
   }> = [];
+
+  const blockedEmployees = await getBlockedAttendanceScanEmployeeIds({
+    siteId,
+    employeeIds: employees.map((employee) => employee.id),
+  });
 
   for (const qr of uniqueQrValues) {
     const emp = byQr.get(qr as string);
@@ -130,6 +137,15 @@ export async function POST(req: Request) {
     }
     if (!emp.isActive) {
       results.push({ qrCodeValue: qr as string, status: "INACTIVE" });
+      continue;
+    }
+    const scanBlock = blockedEmployees.get(emp.id);
+    if (scanBlock) {
+      results.push({
+        qrCodeValue: qr as string,
+        status: "BLOCKED",
+        error: scanBlock.message,
+      });
       continue;
     }
 

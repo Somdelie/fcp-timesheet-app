@@ -4,6 +4,7 @@ import { verifyApiToken } from "@/lib/jwt";
 import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 import { validateSupervisorScanDate } from "@/lib/supervisorScanPeriod";
+import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -225,7 +226,17 @@ export async function POST(
     employees.map((e) => [String(e.qrCodeValue).toUpperCase(), e]),
   );
 
-  type ResultStatus = "CREATED" | "ALREADY_SCANNED" | "UNKNOWN" | "INACTIVE";
+  const blockedEmployees = await getBlockedAttendanceScanEmployeeIds({
+    siteId,
+    employeeIds: employees.map((employee) => employee.id),
+  });
+
+  type ResultStatus =
+    | "CREATED"
+    | "ALREADY_SCANNED"
+    | "UNKNOWN"
+    | "INACTIVE"
+    | "BLOCKED";
   const results: Array<{
     qrCodeValue: string;
     status: ResultStatus;
@@ -241,6 +252,15 @@ export async function POST(
     }
     if (!emp.isActive) {
       results.push({ qrCodeValue: code, status: "INACTIVE" });
+      continue;
+    }
+    const scanBlock = blockedEmployees.get(emp.id);
+    if (scanBlock) {
+      results.push({
+        qrCodeValue: code,
+        status: "BLOCKED",
+        error: scanBlock.message,
+      });
       continue;
     }
 

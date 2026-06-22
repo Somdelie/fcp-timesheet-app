@@ -350,7 +350,11 @@ export async function GET(req: NextRequest) {
 
     const supervisorSiteAssignments =
       await prisma.supervisorSiteAssignment.findMany({
-        where: { siteId: { in: siteIdsInPeriod } },
+        where: {
+          siteId: { in: siteIdsInPeriod },
+          OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+        },
+        orderBy: { startsOn: "desc" },
         select: {
           supervisor: {
             select: {

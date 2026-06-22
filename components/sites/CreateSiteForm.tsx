@@ -4,10 +4,26 @@ import { toast } from "react-toastify";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Field,
   FieldError,
@@ -15,6 +31,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -24,8 +45,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createSite } from "@/actions/sites";
+import { createSite, getNextSiteCode, listSiteClients } from "@/actions/sites";
 import SiteLocationPicker from "@/components/sites/SiteLocationPicker";
+import { cn } from "@/lib/utils";
 
 const NO_ASSIGNMENT = "__no_assignment__";
 
@@ -65,6 +87,10 @@ export default function CreateSiteForm({
 }: CreateSiteFormProps) {
   const [pending, startTransition] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [clientOpen, setClientOpen] = useState(false);
+  const [clientOptions, setClientOptions] = useState<string[]>([]);
+  const [addClientOpen, setAddClientOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
 
   const form = useForm<z.infer<typeof siteSchema>>({
     resolver: zodResolver(siteSchema),
@@ -86,6 +112,62 @@ export default function CreateSiteForm({
     assignmentType === "ADMIN" ? adminOptions : supervisorOptions;
   const assigneeLabel =
     assignmentType === "ADMIN" ? "Admin / Office" : "Supervisor";
+
+  const mergeClientOption = useCallback((clientName: string) => {
+    const cleanClientName = clientName.trim().replace(/\s+/g, " ").toUpperCase();
+    if (!cleanClientName) return;
+
+    setClientOptions((prev) => {
+      const exists = prev.some(
+        (client) => client.toLowerCase() === cleanClientName.toLowerCase(),
+      );
+      if (exists) return prev;
+
+      return [...prev, cleanClientName].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: "base" }),
+      );
+    });
+  }, []);
+
+  const fillNextSiteCode = useCallback(async (force = false) => {
+    const res = await getNextSiteCode();
+    if (!res.ok || !res.code) return;
+    const currentCode = form.getValues("code")?.trim();
+    if (force || !currentCode) {
+      form.setValue("code", res.code, { shouldDirty: false });
+    }
+  }, [form]);
+
+  const loadClientOptions = useCallback(async () => {
+    const res = await listSiteClients();
+    if (!res.ok) return;
+    setClientOptions(res.clients);
+  }, []);
+
+  function handleAddClient() {
+    const clientName = newClientName.trim().replace(/\s+/g, " ").toUpperCase();
+    if (!clientName) {
+      toast.error("Client name is required.");
+      return;
+    }
+    if (clientName.length > 120) {
+      toast.error("Client name must be 120 characters or less.");
+      return;
+    }
+
+    mergeClientOption(clientName);
+    form.setValue("client", clientName, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setNewClientName("");
+    setAddClientOpen(false);
+  }
+
+  useEffect(() => {
+    void fillNextSiteCode();
+    void loadClientOptions();
+  }, [fillNextSiteCode, loadClientOptions]);
 
   function onSubmit(values: z.infer<typeof siteSchema>) {
     startTransition(async () => {
@@ -121,6 +203,7 @@ export default function CreateSiteForm({
         assignmentType: "SUPERVISOR",
         assignmentUserId: "",
       });
+      await Promise.all([fillNextSiteCode(true), loadClientOptions()]);
       onSuccess?.();
     });
   }
@@ -143,7 +226,7 @@ export default function CreateSiteForm({
                 {...field}
                 id="code"
                 aria-invalid={fieldState.invalid}
-                placeholder="e.g. 6254"
+                placeholder="Next job number"
                 autoComplete="off"
                 disabled={pending}
                 className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
@@ -191,15 +274,88 @@ export default function CreateSiteForm({
                   (Optional)
                 </span>
               </FieldLabel>
-              <Input
-                {...field}
-                id="client"
-                aria-invalid={fieldState.invalid}
-                placeholder="e.g. Acme Corp"
-                autoComplete="off"
-                disabled={pending}
-                className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white dark:placeholder-zinc-500"
-              />
+              <div className="mt-1.5 flex gap-2">
+                <Popover open={clientOpen} onOpenChange={setClientOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientOpen}
+                      aria-invalid={fieldState.invalid}
+                      disabled={pending}
+                      className={cn(
+                        "min-w-0 flex-1 justify-between font-normal dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white",
+                        !field.value && "text-muted-foreground",
+                      )}
+                    >
+                      <span className="truncate">
+                        {field.value || "Select client"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="__no_client__"
+                            keywords={["none", "no client"]}
+                            onSelect={() => {
+                              field.onChange("");
+                              setClientOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !field.value ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            No client
+                          </CommandItem>
+                          {clientOptions.map((client) => (
+                            <CommandItem
+                              key={client}
+                              value={client}
+                              keywords={[client]}
+                              onSelect={() => {
+                                field.onChange(client);
+                                setClientOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value?.toLowerCase() ===
+                                    client.toLowerCase()
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {client}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={pending}
+                  onClick={() => setAddClientOpen(true)}
+                  title="Add client"
+                  aria-label="Add client"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -484,6 +640,48 @@ export default function CreateSiteForm({
           )}
         </div>
       </FieldGroup>
+
+      <Dialog
+        open={addClientOpen}
+        onOpenChange={(open) => {
+          setAddClientOpen(open);
+          if (!open) setNewClientName("");
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Client</DialogTitle>
+            <DialogDescription>
+              Add a client to the list and select it for this site.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newClientName}
+            onChange={(event) => setNewClientName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleAddClient();
+              }
+            }}
+            placeholder="Client name"
+            autoComplete="off"
+            maxLength={120}
+          />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddClientOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleAddClient}>
+              Add Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex gap-2 pt-2">
         <Button

@@ -390,6 +390,63 @@ export type SiteRow =
     ? T
     : never;
 
+export async function getNextSiteCode() {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Only admin can create sites." };
+  }
+
+  const sites = await prisma.site.findMany({
+    where: { code: { not: null } },
+    select: { code: true },
+  });
+
+  const maxCode = sites.reduce((max, site) => {
+    const code = clean(site.code);
+    if (!/^\d+$/.test(code)) return max;
+    return Math.max(max, Number(code));
+  }, 0);
+
+  return {
+    ok: true as const,
+    code: maxCode > 0 ? String(maxCode + 1) : "",
+  };
+}
+
+function formatClientName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+export async function listSiteClients() {
+  const auth = await requireServerAuth();
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Only admin can manage clients." };
+  }
+
+  const sites = await prisma.site.findMany({
+    where: { client: { not: null } },
+    select: { client: true },
+  });
+
+  const clientsByKey = new Map<string, string>();
+  for (const site of sites) {
+    const client = formatClientName(clean(site.client));
+    if (!client) continue;
+
+    const key = client.toLowerCase();
+    if (!clientsByKey.has(key)) {
+      clientsByKey.set(key, client);
+    }
+  }
+
+  return {
+    ok: true as const,
+    clients: Array.from(clientsByKey.values()).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" }),
+    ),
+  };
+}
+
 export async function createSite(input: {
   name: string;
   code?: string | null;

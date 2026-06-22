@@ -53,8 +53,12 @@ async function assertSupervisorAccess(
   if (!supervisor)
     return { ok: false as const, status: 404, msg: "Supervisor not found" };
 
+  const now = new Date();
   const siteAssignments = await prisma.supervisorSiteAssignment.findMany({
-    where: { supervisorId: supervisor.id },
+    where: {
+      supervisorId: supervisor.id,
+      OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+    },
     select: { siteId: true },
   });
   const siteIds = Array.from(new Set(siteAssignments.map((a) => a.siteId)));

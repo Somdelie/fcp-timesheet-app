@@ -83,8 +83,12 @@ export async function POST(
   }
 
   // Verify supervisor has access to sites where this foreman worked in this period
+  const now = new Date();
   const siteAssignments = await prisma.supervisorSiteAssignment.findMany({
-    where: { supervisorId: supervisor.id },
+    where: {
+      supervisorId: supervisor.id,
+      OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+    },
     select: { siteId: true },
   });
 
