@@ -350,10 +350,11 @@ export async function generateSitesPdf(
 
   const tableWidth = Math.min(availableTableWidth, naturalTableWidth);
 
-  const headerHeight = 36;
-  const rowHeight = 32;
-  const fontSize = 10;
-  const headerFontSize = 10;
+  const cellPadding = 4;
+  const headerHeight = 24;
+  const rowHeight = 22;
+  const fontSize = 7.5;
+  const headerFontSize = 7.2;
   const titleFontSize = 20;
 
   let page = pdf.addPage([pageWidth, pageHeight]);
@@ -393,19 +394,19 @@ export async function generateSitesPdf(
       borderWidth: 1,
     });
 
-    let xPos = margin + 8;
-    const textY = startY - headerHeight / 2 - 4;
+    let xPos = margin;
+    const textY = startY - headerHeight / 2 - 2.5;
 
     for (const key of printableColumns) {
       const width = colWidth(key);
       const headerText = truncateText(
         colDefs[key].label,
-        width - 10,
+        width - cellPadding * 2,
         fontBold,
         headerFontSize,
       );
       pg.drawText(headerText, {
-        x: xPos,
+        x: xPos + cellPadding,
         y: textY,
         size: headerFontSize,
         font: fontBold,
@@ -442,20 +443,28 @@ export async function generateSitesPdf(
       color: colors.borderLight,
     });
 
-    let xPos = margin + 12;
-    const textY = rowY + rowHeight / 2 - 4;
+    let xPos = margin;
+    const textY = rowY + rowHeight / 2 - 2.5;
 
     for (const key of printableColumns) {
       const width = colWidth(key);
       const def = colDefs[key];
       const textFont =
         key === "code" ? fontMono : key === "name" || key === "total" ? fontBold : font;
-      const text = truncateText(def.value(site), width - 10, textFont, fontSize - 1);
-      const textWidth = textFont.widthOfTextAtSize(text, fontSize - 1);
+      const text = truncateText(
+        def.value(site),
+        width - cellPadding * 2,
+        textFont,
+        fontSize,
+      );
+      const textWidth = textFont.widthOfTextAtSize(text, fontSize);
       pg.drawText(text, {
-        x: def.align === "right" ? xPos + width - textWidth - 8 : xPos,
+        x:
+          def.align === "right"
+            ? xPos + width - textWidth - cellPadding
+            : xPos + cellPadding,
         y: textY,
-        size: fontSize - 1,
+        size: fontSize,
         font: textFont,
         color: colors.textPrimary,
       });
@@ -942,26 +951,29 @@ export function generateSitesPrintHTML(
         table.main-table {
           width: 100%;
           border-collapse: collapse;
+          table-layout: fixed;
         }
         .main-table th, .main-table td {
           border: 1px solid #e4e4e7;
-          padding: 8px 12px;
+          padding: 5px 6px;
           text-align: left;
-          font-size: 12px;
+          font-size: 10px;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .main-table th {
           background: #52525b;
           font-weight: 600;
           color: white;
           text-transform: uppercase;
-          font-size: 11px;
+          font-size: 9px;
         }
-        .main-table .code-col { font-family: monospace; width: 80px; }
+        .main-table .code-col { font-family: monospace; width: 58px; }
         .main-table .name-col { font-weight: 500; }
         .main-table .client-col,
         .main-table .supervisor-col,
         .main-table .claim-date-col,
-        .main-table .created-col { min-width: 90px; }
+        .main-table .created-col { width: 80px; }
         .main-table .days-col,
         .main-table .wages-col,
         .main-table .material-col,
@@ -991,12 +1003,14 @@ export function generateSitesPrintHTML(
           .content { padding: 0; max-width: none; }
           .actions { display: none; }
           .main-table th, .main-table td {
-            padding: 6px 8px;
+            padding: 4px 5px;
+            font-size: 9px;
             border: 1px solid #aaa;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           .main-table th {
+            font-size: 8px;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }

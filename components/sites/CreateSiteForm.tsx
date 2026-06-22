@@ -15,8 +15,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createSite } from "@/actions/sites";
 import SiteLocationPicker from "@/components/sites/SiteLocationPicker";
+
+const NO_ASSIGNMENT = "__no_assignment__";
 
 const siteSchema = z.object({
   name: z
@@ -37,13 +48,21 @@ const siteSchema = z.object({
     .min(-180, "Longitude must be between -180 and 180.")
     .max(180, "Longitude must be between -180 and 180.")
     .optional(),
+  assignmentType: z.enum(["SUPERVISOR", "ADMIN"]),
+  assignmentUserId: z.string().optional(),
 });
 
 interface CreateSiteFormProps {
   onSuccess?: () => void;
+  supervisorOptions?: Array<{ id: string; name: string; email: string }>;
+  adminOptions?: Array<{ id: string; name: string; email: string }>;
 }
 
-export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
+export default function CreateSiteForm({
+  onSuccess,
+  supervisorOptions = [],
+  adminOptions = [],
+}: CreateSiteFormProps) {
   const [pending, startTransition] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -57,8 +76,16 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
       address: "",
       latitude: undefined,
       longitude: undefined,
+      assignmentType: "SUPERVISOR",
+      assignmentUserId: "",
     },
   });
+
+  const assignmentType = form.watch("assignmentType");
+  const assigneeOptions =
+    assignmentType === "ADMIN" ? adminOptions : supervisorOptions;
+  const assigneeLabel =
+    assignmentType === "ADMIN" ? "Admin / Office" : "Supervisor";
 
   function onSubmit(values: z.infer<typeof siteSchema>) {
     startTransition(async () => {
@@ -71,6 +98,10 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
         isActive: true,
+        assignmentType: values.assignmentUserId
+          ? values.assignmentType
+          : null,
+        assignmentUserId: values.assignmentUserId || null,
       });
 
       if (!res.ok) {
@@ -87,6 +118,8 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
         address: "",
         latitude: undefined,
         longitude: undefined,
+        assignmentType: "SUPERVISOR",
+        assignmentUserId: "",
       });
       onSuccess?.();
     });
@@ -227,6 +260,102 @@ export default function CreateSiteForm({ onSuccess }: CreateSiteFormProps) {
             </Field>
           )}
         />
+
+        <div className="col-span-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <Controller
+            name="assignmentType"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel
+                  htmlFor="assignmentType"
+                  className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+                >
+                  Managed By{" "}
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                    (Optional)
+                  </span>
+                </FieldLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    form.setValue("assignmentUserId", "", {
+                      shouldValidate: true,
+                    });
+                  }}
+                  disabled={pending}
+                >
+                  <SelectTrigger
+                    id="assignmentType"
+                    className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
+                    <SelectItem value="ADMIN">Admin / Office</SelectItem>
+                  </SelectContent>
+                </Select>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+
+          <Controller
+            name="assignmentUserId"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel
+                  htmlFor="assignmentUserId"
+                  className="text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+                >
+                  {assigneeLabel}
+                </FieldLabel>
+                <Select
+                  value={field.value || NO_ASSIGNMENT}
+                  onValueChange={(value) =>
+                    field.onChange(value === NO_ASSIGNMENT ? "" : value)
+                  }
+                  disabled={pending}
+                >
+                  <SelectTrigger
+                    id="assignmentUserId"
+                    className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50 dark:text-white"
+                  >
+                    <SelectValue placeholder={`Select ${assigneeLabel}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_ASSIGNMENT}>
+                      No assignment yet
+                    </SelectItem>
+                    <SelectGroup>
+                      <SelectLabel>{assigneeLabel}</SelectLabel>
+                      {assigneeOptions.length === 0 ? (
+                        <SelectItem value="__no_assignees__" disabled>
+                          No {assigneeLabel.toLowerCase()} users available
+                        </SelectItem>
+                      ) : (
+                        assigneeOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.name}
+                            {option.email ? ` (${option.email})` : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+        </div>
 
         <div className="col-span-2">
           <div className="flex items-center justify-between">

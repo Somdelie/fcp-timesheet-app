@@ -38,7 +38,11 @@ const employeeSchema = z.object({
   faceImageUrl: z.string().max(500, "Max 500 characters.").optional(),
 });
 
-export default function CreateEmployeeForm() {
+export default function CreateEmployeeForm({
+  onSaved,
+}: {
+  onSaved?: () => void | Promise<void>;
+}) {
   const router = useRouter();
   const sp = useSearchParams();
   const [pending, startTransition] = useTransition();
@@ -169,10 +173,7 @@ export default function CreateEmployeeForm() {
       // ✅ reset + close
       resetFormAndState();
       setOpen(false);
-
-      // Refresh the employees page so the new employee
-      // appears immediately in the server-rendered list.
-      router.refresh();
+      await onSaved?.();
     });
   }
 

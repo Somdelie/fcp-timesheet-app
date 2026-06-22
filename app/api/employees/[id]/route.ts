@@ -4,6 +4,7 @@ import { requireServerAuth, type ServerAuthUser } from "@/lib/auth-server";
 import { getApiAuthContext } from "@/lib/apiAuth";
 import { employeeWhereFor } from "@/lib/employee-scope";
 import { deleteImage } from "@/lib/cloudinary";
+import { revalidatePath } from "next/cache";
 
 /** Return a phone string only if it looks like a real phone number (not an email). */
 function sanitizePhone(
@@ -192,6 +193,9 @@ export async function DELETE(
       where: { id },
       data: { isActive: false },
     });
+
+    revalidatePath("/employees");
+    revalidatePath("/admin/people");
 
     return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
   } catch (error) {

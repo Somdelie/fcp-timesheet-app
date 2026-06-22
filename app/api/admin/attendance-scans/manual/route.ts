@@ -9,12 +9,6 @@ import { writeAuditEvent } from "@/lib/audit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/admin/attendance-scans/manual?date=YYYY-MM-DD
- *
- * Returns the list of employee IDs that already have an attendance scan for
- * the given date, so the UI can exclude them from the employee picker.
- */
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const user = session?.user as any;
@@ -49,8 +43,9 @@ export async function GET(req: Request) {
       select: { employeeId: true },
     });
 
-    const scannedEmployeeIds = scans.map((s) => s.employeeId);
-    return NextResponse.json({ scannedEmployeeIds });
+    return NextResponse.json({
+      scannedEmployeeIds: scans.map((scan) => scan.employeeId),
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Internal server error" },
@@ -59,15 +54,6 @@ export async function GET(req: Request) {
   }
 }
 
-/**
- * POST /api/admin/attendance-scans/manual
- *
- * Admin-only endpoint to create an attendance scan for a previous (or current)
- * day on behalf of a foreman. This handles cases where an employee wasn't
- * scanned (e.g. foreman forgot).
- *
- * Body: { siteId, foremanId, employeeId, workDate (YYYY-MM-DD), reason? }
- */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const user = session?.user as any;
@@ -86,49 +72,63 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { siteId, foremanId, employeeId, workDate: workDateStr, reason } = body;
+  const { siteId, foremanId, reason } = body;
+  const employeeIds: string[] = Array.isArray(body.employeeIds)
+    ? body.employeeIds.map(String).filter(Boolean)
+    : body.employeeId
+      ? [String(body.employeeId)]
+      : [];
+  const workDateStrings: string[] = Array.isArray(body.workDates)
+    ? body.workDates.map(String).filter(Boolean)
+    : body.workDate
+      ? [String(body.workDate)]
+      : [];
 
-  if (!siteId || !foremanId || !employeeId || !workDateStr) {
+  if (
+    !siteId ||
+    !foremanId ||
+    employeeIds.length === 0 ||
+    workDateStrings.length === 0
+  ) {
     return NextResponse.json(
-      { error: "siteId, foremanId, employeeId, and workDate are required" },
+      { error: "siteId, foremanId, employeeIds, and workDates are required" },
       { status: 400 },
     );
   }
 
-  // Parse and validate workDate (UTC midnight to match the rest of the codebase)
-  let workDate: Date;
-  try {
-    workDate = startOfDayUTC(workDateStr);
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid workDate format. Use YYYY-MM-DD." },
-      { status: 400 },
-    );
-  }
-
-  // Don't allow future dates
   const today = new Date();
   today.setHours(23, 59, 59, 999);
-  if (workDate > today) {
-    return NextResponse.json(
-      { error: "Cannot create scans for future dates." },
-      { status: 400 },
-    );
+
+  const parsedWorkDates: Array<{ label: string; date: Date }> = [];
+  for (const workDateStr of Array.from(new Set(workDateStrings))) {
+    try {
+      const date = startOfDayUTC(workDateStr);
+      if (date > today) {
+        return NextResponse.json(
+          { error: "Cannot create scans for future dates." },
+          { status: 400 },
+        );
+      }
+      parsedWorkDates.push({ label: workDateStr, date });
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid workDate format. Use YYYY-MM-DD." },
+        { status: 400 },
+      );
+    }
   }
 
   try {
-    // Verify site exists
     const site = await prisma.site.findUnique({
-      where: { id: siteId },
+      where: { id: String(siteId) },
       select: { id: true, name: true },
     });
     if (!site) {
       return NextResponse.json({ error: "Site not found" }, { status: 404 });
     }
 
-    // Verify foreman exists
     const foreman = await prisma.foreman.findUnique({
-      where: { id: foremanId },
+      where: { id: String(foremanId) },
       select: {
         id: true,
         user: { select: { id: true, name: true } },
@@ -138,9 +138,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Foreman not found" }, { status: 404 });
     }
 
-    // Verify employee exists and is active
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
+    const uniqueEmployeeIds: string[] = Array.from(new Set(employeeIds));
+    const employees = await prisma.employee.findMany({
+      where: { id: { in: uniqueEmployeeIds } },
       select: {
         id: true,
         firstName: true,
@@ -150,133 +150,168 @@ export async function POST(req: Request) {
         userId: true,
       },
     });
-    if (!employee) {
+
+    if (employees.length !== uniqueEmployeeIds.length) {
       return NextResponse.json(
-        { error: "Employee not found" },
+        { error: "One or more employees were not found." },
         { status: 404 },
       );
     }
-    if (!employee.isActive) {
+
+    const inactiveEmployee = employees.find((employee) => !employee.isActive);
+    if (inactiveEmployee) {
       return NextResponse.json(
         {
-          error: `Employee ${employee.firstName} ${employee.lastName} is deactivated.`,
+          error: `Employee ${inactiveEmployee.firstName} ${inactiveEmployee.lastName} is deactivated.`,
         },
         { status: 409 },
       );
     }
 
-    // Check if employee is already scanned for this date
-    const existingScan = await prisma.attendanceScan.findFirst({
-      where: { employeeId, workDate },
-      select: { id: true },
-    });
-    if (existingScan) {
-      return NextResponse.json(
-        { error: "Employee already has a scan for this date." },
-        { status: 409 },
-      );
-    }
+    const createdScans: any[] = [];
+    const skipped: Array<{
+      employeeId: string;
+      employeeName: string;
+      workDate: string;
+      reason: string;
+    }> = [];
+    const siteDayByDate = new Map<string, { id: string }>();
 
-    // Get company default day rate
-    // (not needed directly — computeDayRateAtScan fetches settings internally)
-
-    // Resolve the effective day rate using the new team-based logic
-    const rateResult = await computeDayRateAtScan({
-      employeeId: employee.id,
-      foremanId,
-      siteId,
-      workDate,
-    });
-
-    const effectiveRate = rateResult.dayRate;
-
-    // Get or create SiteDay for this foreman/site/date
-    let siteDay = await prisma.siteDay.findFirst({
-      where: { siteId, foremanId, workDate },
-      select: { id: true },
-    });
-
-    if (!siteDay) {
-      try {
-        siteDay = await prisma.siteDay.create({
-          data: {
-            site: { connect: { id: siteId } },
-            foreman: { connect: { id: foremanId } },
-            workDate,
-          },
+    for (const workDateInfo of parsedWorkDates) {
+      for (const employee of employees) {
+        const employeeName = `${employee.firstName} ${employee.lastName}`.trim();
+        const existingScan = await prisma.attendanceScan.findFirst({
+          where: { employeeId: employee.id, workDate: workDateInfo.date },
           select: { id: true },
         });
-      } catch (e: any) {
-        if (e?.code === "P2002") {
-          // Race condition - try to find again
-          siteDay = await prisma.siteDay.findFirst({
-            where: { siteId, foremanId, workDate },
+
+        if (existingScan) {
+          skipped.push({
+            employeeId: employee.id,
+            employeeName,
+            workDate: workDateInfo.label,
+            reason: "Already scanned for this date",
+          });
+          continue;
+        }
+
+        const rateResult = await computeDayRateAtScan({
+          employeeId: employee.id,
+          foremanId: String(foremanId),
+          siteId: String(siteId),
+          workDate: workDateInfo.date,
+        });
+
+        let siteDay: { id: string } | undefined = siteDayByDate.get(
+          workDateInfo.label,
+        );
+        if (!siteDay) {
+          const existingSiteDay = await prisma.siteDay.findFirst({
+            where: {
+              siteId: String(siteId),
+              foremanId: String(foremanId),
+              workDate: workDateInfo.date,
+            },
             select: { id: true },
           });
+          siteDay = existingSiteDay ?? undefined;
+
           if (!siteDay) {
-            return NextResponse.json(
-              { error: "Failed to create site day." },
-              { status: 500 },
-            );
+            try {
+              siteDay = await prisma.siteDay.create({
+                data: {
+                  site: { connect: { id: String(siteId) } },
+                  foreman: { connect: { id: String(foremanId) } },
+                  workDate: workDateInfo.date,
+                },
+                select: { id: true },
+              });
+            } catch (e: any) {
+              if (e?.code === "P2002") {
+                const racedSiteDay = await prisma.siteDay.findFirst({
+                  where: {
+                    siteId: String(siteId),
+                    foremanId: String(foremanId),
+                    workDate: workDateInfo.date,
+                  },
+                  select: { id: true },
+                });
+                siteDay = racedSiteDay ?? undefined;
+                if (!siteDay) throw new Error("Failed to create site day.");
+              } else {
+                throw e;
+              }
+            }
           }
-        } else {
-          throw e;
+
+          siteDayByDate.set(workDateInfo.label, siteDay);
         }
+
+        const scan = await prisma.attendanceScan.create({
+          data: {
+            siteDay: { connect: { id: siteDay.id } },
+            employee: { connect: { id: employee.id } },
+            workDate: workDateInfo.date,
+            site: { connect: { id: String(siteId) } },
+            dayRateAtScan: rateResult.dayRate as any,
+            team: rateResult.team,
+            qrPayload: employee.qrCodeValue ?? null,
+            scanType: "MANUAL",
+            manualReason:
+              reason || `Admin manual scan by ${user.name || user.email}`,
+          },
+          select: { id: true, scannedAt: true },
+        });
+
+        await writeAuditEvent({
+          actorUserId: user.id,
+          action: "MANUAL_SCAN",
+          entity: "AttendanceScan",
+          entityId: scan.id,
+          metadata: {
+            title: "Manual scan created",
+            description: `${employeeName} scanned at ${site.name} (${foreman.user.name}) for ${workDateInfo.label}`,
+            employeeId: employee.id,
+            employeeName,
+            siteId: site.id,
+            siteName: site.name,
+            foremanId: foreman.id,
+            foremanName: foreman.user.name,
+            workDate: workDateInfo.label,
+            reason: reason || null,
+            href: "/admin/attendance-scans",
+          },
+        });
+
+        createdScans.push({
+          id: scan.id,
+          scannedAt: scan.scannedAt.toISOString(),
+          employee: { id: employee.id, fullName: employeeName },
+          site: site.name,
+          foreman: foreman.user.name,
+          workDate: workDateInfo.label,
+        });
       }
     }
 
-    // Create the attendance scan
-    const scan = await prisma.attendanceScan.create({
-      data: {
-        siteDay: { connect: { id: siteDay.id } },
-        employee: { connect: { id: employee.id } },
-        workDate,
-        site: { connect: { id: siteId } },
-        dayRateAtScan: effectiveRate as any,
-        team: rateResult.team,
-        qrPayload: employee.qrCodeValue ?? null,
-        scanType: "MANUAL",
-        manualReason:
-          reason || `Admin manual scan by ${user.name || user.email}`,
-      },
-      select: { id: true, scannedAt: true },
-    });
-
-    // Log audit event for recent activity
-    const employeeName = `${employee.firstName} ${employee.lastName}`.trim();
-    await writeAuditEvent({
-      actorUserId: user.id,
-      action: "MANUAL_SCAN",
-      entity: "AttendanceScan",
-      entityId: scan.id,
-      metadata: {
-        title: "Manual scan created",
-        description: `${employeeName} scanned at ${site.name} (${foreman.user.name}) for ${workDateStr}`,
-        employeeId: employee.id,
-        employeeName,
-        siteId: site.id,
-        siteName: site.name,
-        foremanId: foreman.id,
-        foremanName: foreman.user.name,
-        workDate: workDateStr,
-        reason: reason || null,
-        href: "/admin/attendance-scans",
-      },
-    });
+    if (createdScans.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            skipped.length > 0
+              ? "No scans created. Selected employees are already scanned for the selected dates."
+              : "No scans were created.",
+          skipped,
+        },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json({
       ok: true,
-      scan: {
-        id: scan.id,
-        scannedAt: scan.scannedAt.toISOString(),
-        employee: {
-          id: employee.id,
-          fullName: `${employee.firstName} ${employee.lastName}`.trim(),
-        },
-        site: site.name,
-        foreman: foreman.user.name,
-        workDate: workDateStr,
-      },
+      scan: createdScans[0],
+      scans: createdScans,
+      skipped,
     });
   } catch (err: any) {
     console.error("[admin-manual-scan] Error:", err);

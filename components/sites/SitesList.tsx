@@ -58,6 +58,7 @@ import { Input } from "../ui/input";
 interface SitesListProps {
   initialSites: SiteRow[];
   supervisorOptions?: Array<{ id: string; name: string; email: string }>;
+  adminOptions?: Array<{ id: string; name: string; email: string }>;
   foremanOptions?: Array<{ id: string; name: string; email: string }>;
 }
 
@@ -155,6 +156,7 @@ function RangeSlider({
 export default function SitesList({
   initialSites,
   supervisorOptions = [],
+  adminOptions = [],
   foremanOptions = [],
 }: SitesListProps) {
   const router = useRouter();
@@ -741,6 +743,8 @@ export default function SitesList({
                   </DialogDescription>
                 </DialogHeader>
                 <CreateSiteForm
+                  supervisorOptions={supervisorOptions}
+                  adminOptions={adminOptions}
                   onSuccess={() => {
                     setIsDialogOpen(false);
                     router.refresh();

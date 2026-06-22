@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, RotateCw, X, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ export default function EmployeesList({
   const [error, setError] = useState(false);
 
   /** Load all employees + creators once on mount */
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
@@ -52,12 +52,11 @@ export default function EmployeesList({
     } finally {
       setLoading(false);
     }
-  };
+  }, [show]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show]);
+  }, [loadData]);
 
   /** Pure client-side filtering — instant, no server round-trips */
   const filtered = useMemo(() => {
@@ -152,7 +151,7 @@ export default function EmployeesList({
               {loading ? "Loading" : "Refresh"}
             </span>
           </Button>
-          <CreateEmployeeForm />
+          <CreateEmployeeForm onSaved={loadData} />
         </div>
       </div>
 
@@ -168,7 +167,7 @@ export default function EmployeesList({
         </div>
       ) : (
         <div className="overflow-x-auto w-full">
-          <EmployeesTable data={filtered} />
+          <EmployeesTable data={filtered} onChanged={loadData} />
         </div>
       )}
     </div>

@@ -399,6 +399,8 @@ export async function createSite(input: {
   latitude?: number | string | null;
   longitude?: number | string | null;
   isActive?: boolean;
+  assignmentType?: "SUPERVISOR" | "ADMIN" | null;
+  assignmentUserId?: string | null;
 }) {
   const auth = await requireServerAuth();
   if (auth.role !== "ADMIN") {
@@ -412,8 +414,16 @@ export async function createSite(input: {
   const address = clean(input.address) || null;
   const latitude = cleanNumber(input.latitude);
   const longitude = cleanNumber(input.longitude);
+  const assignmentType = input.assignmentType ?? null;
+  const assignmentUserId = clean(input.assignmentUserId) || null;
 
   if (!name) return { ok: false as const, error: "Site name is required." };
+  if (assignmentType && !["SUPERVISOR", "ADMIN"].includes(assignmentType)) {
+    return { ok: false as const, error: "Invalid assignment type." };
+  }
+  if (assignmentType && !assignmentUserId) {
+    return { ok: false as const, error: "Please select who manages this site." };
+  }
   if (latitude !== null && !isValidLatitude(latitude)) {
     return {
       ok: false as const,
@@ -428,29 +438,71 @@ export async function createSite(input: {
   }
 
   try {
-    const site = await prisma.site.create({
-      data: {
-        name,
-        code,
-        client,
-        location,
-        address,
-        latitude,
-        longitude,
-        isActive: input.isActive ?? true,
-      },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        client: true,
-        location: true,
-        address: true,
-        latitude: true,
-        longitude: true,
-        isActive: true,
-        createdAt: true,
-      },
+    const site = await prisma.$transaction(async (tx) => {
+      const created = await tx.site.create({
+        data: {
+          name,
+          code,
+          client,
+          location,
+          address,
+          latitude,
+          longitude,
+          isActive: input.isActive ?? true,
+        },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          client: true,
+          location: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+
+      if (assignmentType === "SUPERVISOR" && assignmentUserId) {
+        const supervisor = await tx.supervisor.findUnique({
+          where: { userId: assignmentUserId },
+          select: { id: true },
+        });
+
+        if (!supervisor) {
+          throw new Error("SUPERVISOR_NOT_FOUND");
+        }
+
+        await tx.supervisorSiteAssignment.create({
+          data: {
+            site: { connect: { id: created.id } },
+            supervisor: { connect: { id: supervisor.id } },
+            startsOn: new Date(),
+          },
+        });
+      }
+
+      if (assignmentType === "ADMIN" && assignmentUserId) {
+        const user = await tx.user.findUnique({
+          where: { id: assignmentUserId },
+          select: { id: true, role: true },
+        });
+
+        if (!user || !["ADMIN", "OFFICE"].includes(user.role)) {
+          throw new Error("ADMIN_NOT_FOUND");
+        }
+
+        await tx.adminSiteAssignment.create({
+          data: {
+            site: { connect: { id: created.id } },
+            user: { connect: { id: user.id } },
+            startsOn: new Date(),
+          },
+        });
+      }
+
+      return created;
     });
 
     await writeAuditEvent({
@@ -471,6 +523,12 @@ export async function createSite(input: {
       site: { ...site, createdAt: site.createdAt.toISOString() },
     };
   } catch (e: any) {
+    if (e?.message === "SUPERVISOR_NOT_FOUND") {
+      return { ok: false as const, error: "Supervisor not found." };
+    }
+    if (e?.message === "ADMIN_NOT_FOUND") {
+      return { ok: false as const, error: "Admin user not found." };
+    }
     if (String(e?.code) === "P2002") {
       return { ok: false as const, error: "Site code must be unique." };
     }

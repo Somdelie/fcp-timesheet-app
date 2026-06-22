@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -54,6 +55,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { currentFortnightSatFri } from "@/lib/fortnight";
 
 interface Scan {
   id: string;
@@ -110,6 +112,7 @@ function groupScansByDate(scans: Scan[]) {
 }
 
 export default function AdminAttendanceScansPage() {
+  const currentFortnight = currentFortnightSatFri();
   const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [sites, setSites] = useState<FilterOption[]>([]);
@@ -118,6 +121,9 @@ export default function AdminAttendanceScansPage() {
   const [selectedSiteId, setSelectedSiteId] = useState<string>("");
   const [selectedForemanId, setSelectedForemanId] = useState<string>("");
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState(currentFortnight.startISO);
+  const [dateTo, setDateTo] = useState(currentFortnight.endISO);
   const [siteOpen, setSiteOpen] = useState(false);
   const [foremanOpen, setForemanOpen] = useState(false);
   const [supervisorOpen, setSupervisorOpen] = useState(false);
@@ -129,6 +135,9 @@ export default function AdminAttendanceScansPage() {
     siteId?: string,
     foremanId?: string,
     supervisorId?: string,
+    employeeQuery?: string,
+    from?: string,
+    to?: string,
   ) => {
     // Cancel previous in-flight request
     abortRef.current?.abort();
@@ -141,6 +150,10 @@ export default function AdminAttendanceScansPage() {
       if (siteId) params.set("siteId", siteId);
       if (foremanId) params.set("foremanId", foremanId);
       if (supervisorId) params.set("supervisorId", supervisorId);
+      const q = employeeQuery?.trim();
+      if (q) params.set("q", q);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
       const url = `/api/admin/attendance-scans${params.toString() ? `?${params}` : ""}`;
       const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) {
@@ -164,25 +177,61 @@ export default function AdminAttendanceScansPage() {
     loadScans();
   }, []);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      loadScans(
+        selectedSiteId,
+        selectedForemanId,
+        selectedSupervisorId,
+        employeeSearch,
+        dateFrom,
+        dateTo,
+      );
+    }, 350);
+
+    return () => window.clearTimeout(t);
+  }, [employeeSearch, dateFrom, dateTo]);
+
   const handleSiteChange = (value: string) => {
     const newValue = value === selectedSiteId ? "" : value;
     setSelectedSiteId(newValue);
     setSiteOpen(false);
-    loadScans(newValue, selectedForemanId, selectedSupervisorId);
+    loadScans(
+      newValue,
+      selectedForemanId,
+      selectedSupervisorId,
+      employeeSearch,
+      dateFrom,
+      dateTo,
+    );
   };
 
   const handleForemanChange = (value: string) => {
     const newValue = value === selectedForemanId ? "" : value;
     setSelectedForemanId(newValue);
     setForemanOpen(false);
-    loadScans(selectedSiteId, newValue, selectedSupervisorId);
+    loadScans(
+      selectedSiteId,
+      newValue,
+      selectedSupervisorId,
+      employeeSearch,
+      dateFrom,
+      dateTo,
+    );
   };
 
   const handleSupervisorChange = (value: string) => {
     const newValue = value === selectedSupervisorId ? "" : value;
     setSelectedSupervisorId(newValue);
     setSupervisorOpen(false);
-    loadScans(selectedSiteId, selectedForemanId, newValue);
+    loadScans(
+      selectedSiteId,
+      selectedForemanId,
+      newValue,
+      employeeSearch,
+      dateFrom,
+      dateTo,
+    );
   };
 
   const groupedScans = groupScansByDate(scans);
@@ -256,6 +305,32 @@ export default function AdminAttendanceScansPage() {
         <CardContent>
           {/* Filters */}
           <div className="mb-6 flex flex-wrap gap-4">
+            <div className="w-full sm:w-72">
+              <Input
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                placeholder="Search employee name or code..."
+              />
+            </div>
+
+            <div className="w-full sm:w-40">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                aria-label="Attendance from date"
+              />
+            </div>
+
+            <div className="w-full sm:w-40">
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                aria-label="Attendance to date"
+              />
+            </div>
+
             <Popover open={siteOpen} onOpenChange={setSiteOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -287,6 +362,9 @@ export default function AdminAttendanceScansPage() {
                             "",
                             selectedForemanId,
                             selectedSupervisorId,
+                            employeeSearch,
+                            dateFrom,
+                            dateTo,
                           );
                         }}
                       >
@@ -349,7 +427,14 @@ export default function AdminAttendanceScansPage() {
                         onSelect={() => {
                           setSelectedForemanId("");
                           setForemanOpen(false);
-                          loadScans(selectedSiteId, "", selectedSupervisorId);
+                          loadScans(
+                            selectedSiteId,
+                            "",
+                            selectedSupervisorId,
+                            employeeSearch,
+                            dateFrom,
+                            dateTo,
+                          );
                         }}
                       >
                         <Check
@@ -411,7 +496,14 @@ export default function AdminAttendanceScansPage() {
                         onSelect={() => {
                           setSelectedSupervisorId("");
                           setSupervisorOpen(false);
-                          loadScans(selectedSiteId, selectedForemanId, "");
+                          loadScans(
+                            selectedSiteId,
+                            selectedForemanId,
+                            "",
+                            employeeSearch,
+                            dateFrom,
+                            dateTo,
+                          );
                         }}
                       >
                         <Check

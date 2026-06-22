@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import {
   Card,
@@ -26,7 +26,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Loader2, UserPlus } from "lucide-react";
+import {
+  CalendarPlus,
+  Check,
+  ChevronsUpDown,
+  Loader2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SiteOption {
@@ -48,38 +55,30 @@ interface EmployeeOption {
 }
 
 export default function AdminManualScanPage() {
-  // Options
   const [sites, setSites] = useState<SiteOption[]>([]);
   const [foremen, setForemen] = useState<ForemanOption[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
 
-  // Selected values
   const [selectedSiteId, setSelectedSiteId] = useState("");
   const [selectedForemanId, setSelectedForemanId] = useState("");
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-  const [workDate, setWorkDate] = useState("");
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [workDates, setWorkDates] = useState<string[]>([]);
+  const [dateInput, setDateInput] = useState("");
   const [reason, setReason] = useState("");
 
-  // Combobox open states
   const [siteOpen, setSiteOpen] = useState(false);
   const [foremanOpen, setForemanOpen] = useState(false);
   const [employeeOpen, setEmployeeOpen] = useState(false);
 
-  // Loading states
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [loadingForemen, setLoadingForemen] = useState(false);
   const [loadingScannedIds, setLoadingScannedIds] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Already-scanned employee IDs for the selected date
-  const [scannedEmployeeIds, setScannedEmployeeIds] = useState<Set<string>>(
-    new Set(),
-  );
-
-  // Recent scans
+  const [scannedEmployeeIdsByDate, setScannedEmployeeIdsByDate] = useState<
+    Record<string, string[]>
+  >({});
   const [recentScans, setRecentScans] = useState<any[]>([]);
 
-  // Load sites and employees on mount
   useEffect(() => {
     async function loadOptions() {
       try {
@@ -90,29 +89,29 @@ export default function AdminManualScanPage() {
 
         if (sitesRes.ok) {
           const sitesData = await sitesRes.json();
-          const siteList = (sitesData.sites ?? sitesData ?? []).map(
-            (s: any) => ({
-              id: s.id,
-              name: s.name,
-              code: s.code ?? null,
-            }),
+          setSites(
+            (sitesData.sites ?? sitesData ?? []).map((site: any) => ({
+              id: site.id,
+              name: site.name,
+              code: site.code ?? null,
+            })),
           );
-          setSites(siteList);
         }
 
         if (employeesRes.ok) {
-          const empData = await employeesRes.json();
-          const empList = (empData.employees ?? empData ?? []).map(
-            (e: any) => ({
-              id: e.id,
-              firstName: e.firstName,
-              lastName: e.lastName,
-              qrCodeValue: e.qrCodeValue ?? e.code ?? null,
-            }),
+          const employeeData = await employeesRes.json();
+          setEmployees(
+            (employeeData.employees ?? employeeData ?? []).map(
+              (employee: any) => ({
+                id: employee.id,
+                firstName: employee.firstName,
+                lastName: employee.lastName,
+                qrCodeValue: employee.qrCodeValue ?? employee.code ?? null,
+              }),
+            ),
           );
-          setEmployees(empList);
         }
-      } catch (err: any) {
+      } catch {
         toast.error("Failed to load options");
       } finally {
         setLoadingOptions(false);
@@ -122,35 +121,36 @@ export default function AdminManualScanPage() {
     loadOptions();
   }, []);
 
-  // Load scanned employee IDs when date changes
   useEffect(() => {
-    if (!workDate) {
-      setScannedEmployeeIds(new Set());
+    if (workDates.length === 0) {
+      setScannedEmployeeIdsByDate({});
       return;
     }
 
     async function loadScannedIds() {
       setLoadingScannedIds(true);
       try {
-        const res = await fetch(
-          `/api/admin/attendance-scans/manual?date=${workDate}`,
+        const entries = await Promise.all(
+          workDates.map(async (date) => {
+            const res = await fetch(
+              `/api/admin/attendance-scans/manual?date=${date}`,
+            );
+            if (!res.ok) return [date, []] as const;
+            const data = await res.json();
+            return [date, data.scannedEmployeeIds ?? []] as const;
+          }),
         );
-        if (res.ok) {
-          const data = await res.json();
-          setScannedEmployeeIds(new Set(data.scannedEmployeeIds ?? []));
-        }
+        setScannedEmployeeIdsByDate(Object.fromEntries(entries));
       } catch {
-        // silently fail – just show all employees
-        setScannedEmployeeIds(new Set());
+        setScannedEmployeeIdsByDate({});
       } finally {
         setLoadingScannedIds(false);
       }
     }
 
     loadScannedIds();
-  }, [workDate]);
+  }, [workDates]);
 
-  // Load foremen when site changes
   useEffect(() => {
     if (!selectedSiteId) {
       setForemen([]);
@@ -169,9 +169,9 @@ export default function AdminManualScanPage() {
           const assignments = data.assignments ?? data.foremen ?? data ?? [];
           const foremanList = (
             Array.isArray(assignments) ? assignments : []
-          ).map((f: any) => ({
-            id: f.foremanId ?? f.id,
-            name: f.foremanName ?? f.name ?? "Unknown",
+          ).map((foreman: any) => ({
+            id: foreman.foremanId ?? foreman.id,
+            name: foreman.foremanName ?? foreman.name ?? "Unknown",
           }));
           setForemen(foremanList);
           if (foremanList.length === 1) {
@@ -188,11 +188,60 @@ export default function AdminManualScanPage() {
     loadForemen();
   }, [selectedSiteId]);
 
+  const today = new Date();
+  const todayUtc = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  );
+  const todayStr = todayUtc.toISOString().split("T")[0];
+
+  const selectedSite = sites.find((site) => site.id === selectedSiteId);
+  const selectedForeman = foremen.find(
+    (foreman) => foreman.id === selectedForemanId,
+  );
+  const selectedEmployees = employees.filter((employee) =>
+    selectedEmployeeIds.includes(employee.id),
+  );
+  const scannedEmployeeIds = useMemo(
+    () => new Set(Object.values(scannedEmployeeIdsByDate).flat()),
+    [scannedEmployeeIdsByDate],
+  );
+  const availableEmployees =
+    workDates.length > 0
+      ? employees.filter((employee) =>
+          workDates.some(
+            (date) =>
+              !(scannedEmployeeIdsByDate[date] ?? []).includes(employee.id),
+          ),
+        )
+      : employees;
+
+  function addWorkDate() {
+    if (!dateInput) return;
+    if (workDates.includes(dateInput)) {
+      setDateInput("");
+      return;
+    }
+    setWorkDates((prev) => [...prev, dateInput].sort());
+    setDateInput("");
+  }
+
+  function toggleEmployee(employeeId: string) {
+    setSelectedEmployeeIds((prev) =>
+      prev.includes(employeeId)
+        ? prev.filter((id) => id !== employeeId)
+        : [...prev, employeeId],
+    );
+  }
+
   const handleSubmit = async () => {
     if (!selectedSiteId) return toast.error("Please select a site");
     if (!selectedForemanId) return toast.error("Please select a foreman");
-    if (!selectedEmployeeId) return toast.error("Please select an employee");
-    if (!workDate) return toast.error("Please select a date");
+    if (selectedEmployeeIds.length === 0) {
+      return toast.error("Please select at least one employee");
+    }
+    if (workDates.length === 0) {
+      return toast.error("Please select at least one date");
+    }
 
     setSubmitting(true);
     try {
@@ -202,8 +251,8 @@ export default function AdminManualScanPage() {
         body: JSON.stringify({
           siteId: selectedSiteId,
           foremanId: selectedForemanId,
-          employeeId: selectedEmployeeId,
-          workDate,
+          employeeIds: selectedEmployeeIds,
+          workDates,
           reason: reason.trim() || undefined,
         }),
       });
@@ -211,42 +260,37 @@ export default function AdminManualScanPage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create scan");
+        throw new Error(data.error || "Failed to create scans");
       }
 
+      const createdScans = (data.scans ?? [data.scan]).filter(Boolean);
+      const createdCount = createdScans.length;
+      const skippedCount = data.skipped?.length ?? 0;
       toast.success(
-        `Scan created for ${data.scan?.employee?.fullName ?? "employee"} on ${workDate}`,
+        skippedCount > 0
+          ? `${createdCount} scan${createdCount === 1 ? "" : "s"} created, ${skippedCount} skipped`
+          : `${createdCount} scan${createdCount === 1 ? "" : "s"} created`,
       );
 
-      setRecentScans((prev) => [data.scan, ...prev].slice(0, 10));
-
-      // Add this employee to the scanned set so they disappear from the list
-      setScannedEmployeeIds((prev) => new Set([...prev, selectedEmployeeId]));
-
-      // Reset employee and reason for quick re-use
-      setSelectedEmployeeId("");
+      setRecentScans((prev) => [...createdScans, ...prev].slice(0, 10));
+      setScannedEmployeeIdsByDate((prev) => {
+        const next = { ...prev };
+        for (const scan of createdScans) {
+          const date = scan.workDate;
+          const employeeId = scan.employee?.id;
+          if (!date || !employeeId) continue;
+          next[date] = Array.from(new Set([...(next[date] ?? []), employeeId]));
+        }
+        return next;
+      });
+      setSelectedEmployeeIds([]);
       setReason("");
     } catch (err: any) {
-      toast.error(err.message || "Failed to create scan");
+      toast.error(err.message || "Failed to create scans");
     } finally {
       setSubmitting(false);
     }
   };
-
-  const selectedSite = sites.find((s) => s.id === selectedSiteId);
-  const selectedForeman = foremen.find((f) => f.id === selectedForemanId);
-  const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
-
-  // Filter out employees who already have a scan for the selected date
-  const availableEmployees = workDate
-    ? employees.filter((e) => !scannedEmployeeIds.has(e.id))
-    : employees;
-
-  const today = new Date();
-  const todayUtc = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
-  );
-  const todayStr = todayUtc.toISOString().split("T")[0];
 
   if (loadingOptions) {
     return (
@@ -261,8 +305,8 @@ export default function AdminManualScanPage() {
       <div>
         <h1 className="text-2xl font-bold">Manual Employee Scan</h1>
         <p className="text-muted-foreground">
-          Create an attendance scan for an employee on a previous or current
-          day. Use this when a foreman forgot to scan an employee.
+          Create attendance scans for multiple employees across one or more
+          dates. Use this when a foreman forgot to scan employees.
         </p>
       </div>
 
@@ -270,14 +314,14 @@ export default function AdminManualScanPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            New Manual Scan
+            New Manual Scans
           </CardTitle>
           <CardDescription>
-            Select the site, foreman, employee, and date to create the scan
+            Select the site, foreman, dates, and employees to create scans in
+            batch.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Site */}
           <div className="space-y-2">
             <Label>Site *</Label>
             <Popover open={siteOpen} onOpenChange={setSiteOpen}>
@@ -328,7 +372,6 @@ export default function AdminManualScanPage() {
             </Popover>
           </div>
 
-          {/* Foreman */}
           <div className="space-y-2">
             <Label>Foreman *</Label>
             {loadingForemen ? (
@@ -361,24 +404,24 @@ export default function AdminManualScanPage() {
                     <CommandList>
                       <CommandEmpty>No foremen found.</CommandEmpty>
                       <CommandGroup>
-                        {foremen.map((f) => (
+                        {foremen.map((foreman) => (
                           <CommandItem
-                            key={f.id}
-                            value={f.name}
+                            key={foreman.id}
+                            value={foreman.name}
                             onSelect={() => {
-                              setSelectedForemanId(f.id);
+                              setSelectedForemanId(foreman.id);
                               setForemanOpen(false);
                             }}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedForemanId === f.id
+                                selectedForemanId === foreman.id
                                   ? "opacity-100"
                                   : "opacity-0",
                               )}
                             />
-                            {f.name}
+                            {foreman.name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -389,33 +432,57 @@ export default function AdminManualScanPage() {
             )}
           </div>
 
-          {/* Work Date — placed before Employee so scanned IDs load first */}
           <div className="space-y-2">
-            <Label>Work Date *</Label>
-            <Input
-              type="date"
-              value={workDate}
-              onChange={(e) => {
-                setWorkDate(e.target.value);
-                setSelectedEmployeeId("");
-              }}
-              max={todayStr}
-            />
+            <Label>Work Dates *</Label>
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={dateInput}
+                onChange={(e) => setDateInput(e.target.value)}
+                max={todayStr}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addWorkDate}
+                disabled={!dateInput}
+                className="gap-2"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                Add
+              </Button>
+            </div>
+            {workDates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {workDates.map((date) => (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() =>
+                      setWorkDates((prev) => prev.filter((d) => d !== date))
+                    }
+                    className="inline-flex items-center gap-1 rounded border bg-muted px-2 py-1 text-xs"
+                  >
+                    {date}
+                    <X className="h-3 w-3" />
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              Select any previous or current date. Employees already scanned on
-              this date will be hidden.
+              Add one or more previous/current dates. Existing scans will be
+              skipped automatically.
             </p>
           </div>
 
-          {/* Employee */}
           <div className="space-y-2">
             <Label>
-              Employee *
-              {workDate && !loadingScannedIds && (
+              Employees *
+              {workDates.length > 0 && !loadingScannedIds && (
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
                   ({availableEmployees.length} available
                   {scannedEmployeeIds.size > 0 &&
-                    `, ${scannedEmployeeIds.size} already scanned`}
+                    `, ${scannedEmployeeIds.size} already scanned on selected dates`}
                   )
                 </span>
               )}
@@ -432,9 +499,9 @@ export default function AdminManualScanPage() {
                   role="combobox"
                   className="w-full justify-between"
                 >
-                  {selectedEmployee
-                    ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
-                    : "Select an employee..."}
+                  {selectedEmployees.length > 0
+                    ? `${selectedEmployees.length} employee${selectedEmployees.length === 1 ? "" : "s"} selected`
+                    : "Select employees..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -444,27 +511,24 @@ export default function AdminManualScanPage() {
                   <CommandList>
                     <CommandEmpty>No employees found.</CommandEmpty>
                     <CommandGroup>
-                      {availableEmployees.map((emp) => (
+                      {availableEmployees.map((employee) => (
                         <CommandItem
-                          key={emp.id}
-                          value={`${emp.firstName} ${emp.lastName} ${emp.qrCodeValue ?? ""}`}
-                          onSelect={() => {
-                            setSelectedEmployeeId(emp.id);
-                            setEmployeeOpen(false);
-                          }}
+                          key={employee.id}
+                          value={`${employee.firstName} ${employee.lastName} ${employee.qrCodeValue ?? ""}`}
+                          onSelect={() => toggleEmployee(employee.id)}
                         >
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              selectedEmployeeId === emp.id
+                              selectedEmployeeIds.includes(employee.id)
                                 ? "opacity-100"
                                 : "opacity-0",
                             )}
                           />
-                          {emp.firstName} {emp.lastName}
-                          {emp.qrCodeValue && (
+                          {employee.firstName} {employee.lastName}
+                          {employee.qrCodeValue && (
                             <span className="ml-2 text-xs text-muted-foreground">
-                              ({emp.qrCodeValue})
+                              ({employee.qrCodeValue})
                             </span>
                           )}
                         </CommandItem>
@@ -474,47 +538,61 @@ export default function AdminManualScanPage() {
                 </Command>
               </PopoverContent>
             </Popover>
+            {selectedEmployees.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedEmployees.map((employee) => (
+                  <button
+                    key={employee.id}
+                    type="button"
+                    onClick={() => toggleEmployee(employee.id)}
+                    className="inline-flex items-center gap-1 rounded border bg-muted px-2 py-1 text-xs"
+                  >
+                    {employee.firstName} {employee.lastName}
+                    <X className="h-3 w-3" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Reason */}
           <div className="space-y-2">
             <Label>Reason (optional)</Label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Foreman forgot to scan the employee"
+              placeholder="e.g. Foreman forgot to scan the employees"
               rows={2}
             />
           </div>
 
-          {/* Submit */}
           <Button
             onClick={handleSubmit}
             disabled={
               submitting ||
               !selectedSiteId ||
               !selectedForemanId ||
-              !selectedEmployeeId ||
-              !workDate
+              selectedEmployeeIds.length === 0 ||
+              workDates.length === 0
             }
             className="w-full"
           >
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Scan...
+                Creating Scans...
               </>
             ) : (
               <>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Create Manual Scan
+                Create {selectedEmployeeIds.length * workDates.length || ""}{" "}
+                Manual Scan
+                {selectedEmployeeIds.length * workDates.length === 1 ? "" : "s"}
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Recent Manual Scans */}
       {recentScans.length > 0 && (
         <Card>
           <CardHeader>
@@ -522,9 +600,9 @@ export default function AdminManualScanPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentScans.map((scan, idx) => (
+              {recentScans.map((scan, index) => (
                 <div
-                  key={scan?.id ?? idx}
+                  key={scan?.id ?? index}
                   className="flex items-center justify-between rounded border p-3"
                 >
                   <div>
@@ -532,12 +610,11 @@ export default function AdminManualScanPage() {
                       {scan?.employee?.fullName ?? "Unknown"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {scan?.site ?? "Unknown site"} &bull;{" "}
-                      {scan?.foreman ?? "Unknown foreman"} &bull;{" "}
-                      {scan?.workDate}
+                      {scan?.site ?? "Unknown site"} -{" "}
+                      {scan?.foreman ?? "Unknown foreman"} - {scan?.workDate}
                     </p>
                   </div>
-                  <span className="text-xs text-green-600 font-medium">
+                  <span className="text-xs font-medium text-green-600">
                     Created
                   </span>
                 </div>

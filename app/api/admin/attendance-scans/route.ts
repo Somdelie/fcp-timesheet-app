@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { addDaysUTC } from "@/lib/dateUtc";
+import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { currentFortnightSatFri } from "@/lib/fortnight";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,14 +39,19 @@ export async function GET(req: Request) {
   const siteId = url.searchParams.get("siteId") || null;
   const foremanId = url.searchParams.get("foremanId") || null;
   const supervisorId = url.searchParams.get("supervisorId") || null;
+  const q = (url.searchParams.get("q") || "").trim();
   const dateStr = url.searchParams.get("date"); // YYYY-MM-DD
+  const fromStr = url.searchParams.get("from"); // YYYY-MM-DD
+  const toStr = url.searchParams.get("to"); // YYYY-MM-DD
 
   const now = new Date();
 
-  // Default to last 7 days of workDate (inclusive of today)
+  // Default to the current fortnight so attendance review matches timesheets.
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
-  const sevenDaysAgo = addDaysUTC(todayStart, -6);
+  const currentFortnight = currentFortnightSatFri(now);
+  const defaultStart = startOfDayUTC(currentFortnight.startISO);
+  const defaultEnd = startOfDayUTC(currentFortnight.endISO);
 
   // ── Resolve supervisor → site IDs at DB level ──────────────────────
   let supervisorSiteIds: string[] | null = null;
@@ -63,10 +69,14 @@ export async function GET(req: Request) {
 
   // ── Build DB where clause ───────────────────────────────────────────
   const whereClause: any = {
-    workDate: { gte: sevenDaysAgo, lt: addDaysUTC(todayStart, 1) },
+    workDate: { gte: defaultStart, lt: addDaysUTC(defaultEnd, 1) },
   };
 
-  if (dateStr) {
+  if (fromStr || toStr) {
+    const from = fromStr ? startOfDayUTC(fromStr) : defaultStart;
+    const to = toStr ? startOfDayUTC(toStr) : defaultEnd;
+    whereClause.workDate = { gte: from, lt: addDaysUTC(to, 1) };
+  } else if (dateStr) {
     const targetDate = new Date(`${dateStr}T00:00:00.000Z`);
     const nextDay = addDaysUTC(targetDate, 1);
     whereClause.workDate = { gte: targetDate, lt: nextDay };
@@ -83,6 +93,19 @@ export async function GET(req: Request) {
 
   if (foremanId) {
     whereClause.siteDay = { foremanId };
+  }
+
+  if (q) {
+    const terms = q.split(/\s+/).filter(Boolean);
+    whereClause.employee = {
+      AND: terms.map((term) => ({
+        OR: [
+          { firstName: { contains: term, mode: "insensitive" } },
+          { lastName: { contains: term, mode: "insensitive" } },
+          { qrCodeValue: { contains: term, mode: "insensitive" } },
+        ],
+      })),
+    };
   }
 
   const scans = await prisma.attendanceScan.findMany({

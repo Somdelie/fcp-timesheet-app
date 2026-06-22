@@ -8,6 +8,12 @@ import { deleteImage } from "@/lib/cloudinary";
 
 export type UserRole = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
 
+function revalidatePeoplePaths() {
+  revalidatePath("/users");
+  revalidatePath("/employees");
+  revalidatePath("/admin/people");
+}
+
 export async function createNewUser(input: {
   email: string;
   name: string;
@@ -134,12 +140,12 @@ export async function createNewUser(input: {
         }
       }
 
-      revalidatePath("/users");
+      revalidatePeoplePaths();
       return { ok: true as const, user: created };
     } catch (error: any) {
       // If secondary operations fail, user is still created
       console.error("Secondary operation failed:", error);
-      revalidatePath("/users");
+      revalidatePeoplePaths();
       return { ok: true as const, user: created };
     }
   } catch (e: any) {
@@ -299,7 +305,7 @@ export async function deleteUserById(id: string) {
     await prisma.account.deleteMany({ where: { userId: id } });
     await prisma.user.delete({ where: { id } });
 
-    revalidatePath("/users");
+    revalidatePeoplePaths();
     return { ok: true as const };
   } catch (e: any) {
     console.error("Error deleting user:", e);
@@ -354,7 +360,7 @@ export async function updateUser(input: {
       });
     }
 
-    revalidatePath("/users");
+    revalidatePeoplePaths();
     return { ok: true as const, user };
   } catch (e: any) {
     if (String(e?.code) === "P2002") {
@@ -401,7 +407,7 @@ export async function updateUserPassword(input: {
       },
     });
 
-    revalidatePath("/users");
+    revalidatePeoplePaths();
     return {
       ok: true as const,
       user,

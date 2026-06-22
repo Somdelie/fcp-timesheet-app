@@ -315,7 +315,7 @@ const columns: ColumnDef<Employee>[] = [
   {
     id: "actions",
     header: () => <div className="text-center">Actions</div>,
-    cell: ({ row }) => (
+    cell: ({ row, table }) => (
       <div className="text-center">
         <EmployeeRowActions
           id={row.original.id}
@@ -323,14 +323,29 @@ const columns: ColumnDef<Employee>[] = [
           lastName={row.original.lastName}
           qrCodeValue={row.original.qrCodeValue}
           isActive={row.original.isActive}
+          onChanged={
+            (
+              table.options.meta as
+                | { onChanged?: () => void | Promise<void> }
+                | undefined
+            )?.onChanged
+          }
         />
       </div>
     ),
   },
 ];
 
-export default function EmployeesTable({ data }: { data: Employee[] }) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+export default function EmployeesTable({
+  data,
+  onChanged,
+}: {
+  data: Employee[];
+  onChanged?: () => void | Promise<void>;
+}) {
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "createdAt", desc: true },
+  ]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
@@ -354,6 +369,7 @@ export default function EmployeesTable({ data }: { data: Employee[] }) {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: true,
+    meta: { onChanged },
   });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;

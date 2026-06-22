@@ -163,6 +163,15 @@ const MONTH_LABELS = [
   "Dec",
 ];
 
+const WAGE_RANGE_OPTIONS = [
+  { value: "ALL", label: "All amounts", min: 0, max: null },
+  { value: "0_30000", label: "Up to R30K", min: 0, max: 30000 },
+  { value: "30000_", label: "More than R30K", min: 30000, max: null },
+  { value: "30000_50000", label: "R30K - R50K", min: 30000, max: 50000 },
+  { value: "50000_100000", label: "R50K - R100K", min: 50000, max: 100000 },
+  { value: "100000_", label: "More than R100K", min: 100000, max: null },
+] as const;
+
 function ensureUniqueRowKeys<T extends { id: string; rowKey?: string }>(
   rows: T[],
 ): T[] {
@@ -359,6 +368,7 @@ export default function TimesheetsListClient({ mode }: Props) {
     useState<string>("ALL");
   const [analyticsSupervisorId, setAnalyticsSupervisorId] =
     useState<string>("ALL");
+  const [analyticsWageRange, setAnalyticsWageRange] = useState<string>("ALL");
   const [analyticsSearch, setAnalyticsSearch] = useState("");
   const [analyticsSearchDebounced, setAnalyticsSearchDebounced] = useState("");
   const [siteAnalyticsPagination, setSiteAnalyticsPagination] = useState({
@@ -1750,13 +1760,22 @@ export default function TimesheetsListClient({ mode }: Props) {
   }, [analyticsOpen, mode, loadWageAnalytics]);
 
   const analyticsRowsFiltered = useMemo(() => {
+    const selectedRange =
+      WAGE_RANGE_OPTIONS.find((option) => option.value === analyticsWageRange) ??
+      WAGE_RANGE_OPTIONS[0];
     return analyticsRows.filter((r) => {
       if (analyticsMonth !== "ALL" && String(r.monthIndex) !== analyticsMonth) {
         return false;
       }
+      if (selectedRange.value !== "ALL" && r.wages <= selectedRange.min) {
+        return false;
+      }
+      if (selectedRange.max !== null && r.wages > selectedRange.max) {
+        return false;
+      }
       return true;
     });
-  }, [analyticsRows, analyticsMonth]);
+  }, [analyticsRows, analyticsMonth, analyticsWageRange]);
 
   const analyticsTotalWages = useMemo(
     () => analyticsRowsFiltered.reduce((sum, r) => sum + r.wages, 0),
@@ -1969,6 +1988,7 @@ export default function TimesheetsListClient({ mode }: Props) {
     analyticsMonth,
     analyticsFortnightId,
     analyticsSupervisorId,
+    analyticsWageRange,
     analyticsFromISO,
     analyticsToISO,
     analyticsSearchDebounced,
@@ -2173,6 +2193,62 @@ ${group.rows
       setPrintingAllSummaries(false);
     }
   }, [currentPeriod, foremanTotals, rowsAdmin]);
+
+  const handleDownloadSiteWagesPdf = useCallback(async () => {
+    const selectedRange =
+      WAGE_RANGE_OPTIONS.find((option) => option.value === analyticsWageRange) ??
+      WAGE_RANGE_OPTIONS[0];
+    const selectedPeriod =
+      analyticsFortnightId !== "ALL"
+        ? periods.find((p) => p.id === analyticsFortnightId)
+        : currentPeriod;
+
+    if (!selectedPeriod) {
+      toast.error("Select a fortnight before downloading");
+      return;
+    }
+
+    try {
+      setPrintingAllSummaries(true);
+
+      const url = new URL(
+        "/api/app/admin/reports/site-wages.pdf",
+        window.location.origin,
+      );
+      url.searchParams.set("from", selectedPeriod.startISO);
+      url.searchParams.set("to", selectedPeriod.endISO);
+      url.searchParams.set("min", String(selectedRange.min));
+      if (selectedRange.max !== null) {
+        url.searchParams.set("max", String(selectedRange.max));
+      }
+
+      const res = await fetch(url.toString(), {
+        cache: "no-store",
+        credentials: "include",
+        headers: { accept: "application/pdf" },
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to download PDF (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `site-wages-${selectedPeriod.startISO}-${selectedRange.value}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success("Site wages PDF downloaded");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message ?? "Failed to download site wages PDF");
+    } finally {
+      setPrintingAllSummaries(false);
+    }
+  }, [analyticsFortnightId, analyticsWageRange, currentPeriod, periods]);
 
   const openDetail = useCallback(
     async (id: string, siteId?: string | null) => {
@@ -3159,6 +3235,26 @@ ${group.rows
                   </div>
                   <div className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
+                      Amount range
+                    </div>
+                    <Select
+                      value={analyticsWageRange}
+                      onValueChange={setAnalyticsWageRange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All amounts" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WAGE_RANGE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
                       Search (Job code / site / foreman)
                     </div>
                     <Input
@@ -3179,11 +3275,11 @@ ${group.rows
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={handleDownloadBreakdownPdf}
+                    onClick={handleDownloadSiteWagesPdf}
                     disabled={analyticsLoading || !analyticsRowsFiltered.length}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Download Breakdown
+                    Download Wages PDF
                   </Button>
                   <Badge variant="secondary" className="ml-auto">
                     Total wages: {money(analyticsTotalWages)}

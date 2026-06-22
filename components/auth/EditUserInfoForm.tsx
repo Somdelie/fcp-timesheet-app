@@ -2,7 +2,6 @@
 
 // components/auth/EditUserInfoForm.tsx
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ const EditUserInfoForm = ({
   userInfo,
   currentUserRole,
 }: EditUserInfoFormProps) => {
-  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
   const [name, setName] = React.useState(userInfo.name);
@@ -81,7 +79,6 @@ const EditUserInfoForm = ({
             "User updated, but password update failed: " + pwdRes.error,
           );
           setOpen(false);
-          router.refresh();
           return;
         }
 
@@ -92,7 +89,6 @@ const EditUserInfoForm = ({
 
       setOpen(false);
       setPassword("");
-      router.refresh();
     });
   }
 

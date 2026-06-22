@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { verifyApiToken } from "@/lib/jwt";
 import { calcSiteCosts } from "@/lib/procurement";
+import { prisma } from "@/lib/prisma";
 import { startOfDayUTC, addDaysUTC } from "@/lib/dateUtc";
 import { currentFortnightSatFri } from "@/lib/fortnight";
 import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
@@ -55,7 +56,9 @@ async function embedLogo(pdf: PDFDocument) {
  * Query params:
  *   from      ISO date (default: current fortnight start)
  *   to        ISO date (default: current fortnight end)
- *   threshold minimum wages to include (default: 0 = all sites)
+ *   min       minimum wages to include (default: 0 = all sites with wages)
+ *   max       optional maximum wages to include
+ *   threshold legacy alias for min
  */
 export async function GET(req: Request) {
   try {
@@ -66,8 +69,15 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const fromParam = url.searchParams.get("from");
     const toParam = url.searchParams.get("to");
+    const minParam = url.searchParams.get("min");
+    const maxParam = url.searchParams.get("max");
     const thresholdParam = url.searchParams.get("threshold");
-    const threshold = thresholdParam ? parseFloat(thresholdParam) : 0;
+    const minWages = minParam
+      ? parseFloat(minParam)
+      : thresholdParam
+        ? parseFloat(thresholdParam)
+        : 0;
+    const maxWages = maxParam ? parseFloat(maxParam) : null;
 
     let start: Date;
     let endExclusive: Date;
@@ -91,8 +101,41 @@ export async function GET(req: Request) {
 
     const result = await calcSiteCosts(start, endExclusive);
     const rows = result.rows
-      .filter((r) => r.wagesCost > threshold)
+      .filter(
+        (r) =>
+          r.wagesCost > minWages &&
+          (maxWages === null || r.wagesCost <= maxWages),
+      )
       .sort((a, b) => b.wagesCost - a.wagesCost);
+
+    const siteMetaRows = await prisma.site.findMany({
+      where: { id: { in: rows.map((r) => r.siteId) } },
+      select: {
+        id: true,
+        client: true,
+        supervisorAssignments: {
+          orderBy: { startsOn: "desc" },
+          take: 1,
+          select: {
+            supervisor: {
+              select: {
+                user: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const siteMeta = new Map(
+      siteMetaRows.map((site) => [
+        site.id,
+        {
+          client: site.client,
+          supervisor:
+            site.supervisorAssignments[0]?.supervisor.user.name ?? null,
+        },
+      ]),
+    );
 
     // ── Build PDF ──────────────────────────────────────────────
     const pdf = await PDFDocument.create();
@@ -173,9 +216,15 @@ export async function GET(req: Request) {
 
     // Summary badge
     const totalWages = rows.reduce((s, r) => s + r.wagesCost, 0);
+    const rangeLabel =
+      maxWages !== null
+        ? `${fmt(minWages)} - ${fmt(maxWages)}`
+        : minWages > 0
+          ? `above ${fmt(minWages)}`
+          : "all wage totals";
     const summaryText =
-      threshold > 0
-        ? `${rows.length} site${rows.length !== 1 ? "s" : ""} with wages above ${fmt(threshold)}   |   Total: ${fmt(totalWages)}`
+      minWages > 0 || maxWages !== null
+        ? `${rows.length} site${rows.length !== 1 ? "s" : ""} with wages ${rangeLabel}   |   Total: ${fmt(totalWages)}`
         : `${rows.length} site${rows.length !== 1 ? "s" : ""}   |   Total wages: ${fmt(totalWages)}`;
 
     page.drawRectangle({ x: MARGIN, y: y - 18, width: COL_W, height: 22, color: LIGHT_BG, borderColor: DIVIDER, borderWidth: 1 });
@@ -184,12 +233,11 @@ export async function GET(req: Request) {
 
     // ── Table header ───────────────────────────────────────────
     const COL = {
-      num:      { x: MARGIN,          w: 24 },
-      site:     { x: MARGIN + 24,     w: 210 },
-      job:      { x: MARGIN + 234,    w: 60 },
-      location: { x: MARGIN + 294,    w: 110 },
-      scans:    { x: MARGIN + 404,    w: 46 },
-      wages:    { x: MARGIN + 450,    w: COL_W - 450 },
+      job:        { x: MARGIN,       w: 58 },
+      site:       { x: MARGIN + 58,  w: 174 },
+      supervisor: { x: MARGIN + 232, w: 108 },
+      client:     { x: MARGIN + 340, w: 96 },
+      wages:      { x: MARGIN + 436, w: COL_W - 436 },
     };
 
     ensureSpace(HEADER_H + ROW_H);
@@ -197,17 +245,16 @@ export async function GET(req: Request) {
     page.drawRectangle({ x: MARGIN, y: y - HEADER_H, width: COL_W, height: HEADER_H, color: DARK });
 
     const headers: [string, { x: number; w: number }][] = [
-      ["#", COL.num],
-      ["SITE NAME", COL.site],
       ["JOB NO.", COL.job],
-      ["LOCATION", COL.location],
-      ["SCANS", COL.scans],
-      ["WAGES", COL.wages],
+      ["SITE NAME", COL.site],
+      ["SUPERVISOR", COL.supervisor],
+      ["CLIENT", COL.client],
+      ["TOTAL WAGES", COL.wages],
     ];
 
     for (const [label, col] of headers) {
       const lw = boldFont.widthOfTextAtSize(label, 8);
-      const lx = label === "WAGES" || label === "SCANS"
+      const lx = label === "TOTAL WAGES"
         ? col.x + col.w - lw - 4    // right-align numbers
         : col.x + 4;
       page.drawText(label, { x: lx, y: y - HEADER_H + 9, size: 8, font: boldFont, color: WHITE });
@@ -226,9 +273,7 @@ export async function GET(req: Request) {
 
       const textY = y - ROW_H + 7;
 
-      // #
-      const numStr = String(i + 1);
-      page.drawText(numStr, { x: COL.num.x + 4, y: textY, size: 8, font: regularFont, color: GREY });
+      const meta = siteMeta.get(row.siteId);
 
       // Site name — truncate if too wide
       let siteName = row.siteName;
@@ -241,19 +286,21 @@ export async function GET(req: Request) {
       // Job no.
       page.drawText(row.siteCode || "—", { x: COL.job.x + 4, y: textY, size: 8, font: regularFont, color: GREY });
 
-      // Location
-      let loc = row.siteLocation || "—";
-      const origLoc = loc;
-      while (loc.length > 1 && regularFont.widthOfTextAtSize(loc, 8) > COL.location.w - 8) {
-        loc = loc.slice(0, -1);
+      let supervisor = meta?.supervisor || "-";
+      const origSupervisor = supervisor;
+      while (supervisor.length > 1 && regularFont.widthOfTextAtSize(supervisor, 8) > COL.supervisor.w - 8) {
+        supervisor = supervisor.slice(0, -1);
       }
-      if (loc !== origLoc) loc = loc.slice(0, -1) + "…";
-      page.drawText(loc, { x: COL.location.x + 4, y: textY, size: 8, font: regularFont, color: GREY });
+      if (supervisor !== origSupervisor) supervisor = supervisor.slice(0, -1) + "...";
+      page.drawText(supervisor, { x: COL.supervisor.x + 4, y: textY, size: 8, font: regularFont, color: GREY });
 
-      // Scans — right-aligned
-      const scansStr = String(row.scanCount ?? "");
-      const scansW = regularFont.widthOfTextAtSize(scansStr, 8);
-      page.drawText(scansStr, { x: COL.scans.x + COL.scans.w - scansW - 4, y: textY, size: 8, font: regularFont, color: GREY });
+      let client = meta?.client || "-";
+      const origClient = client;
+      while (client.length > 1 && regularFont.widthOfTextAtSize(client, 8) > COL.client.w - 8) {
+        client = client.slice(0, -1);
+      }
+      if (client !== origClient) client = client.slice(0, -1) + "...";
+      page.drawText(client, { x: COL.client.x + 4, y: textY, size: 8, font: regularFont, color: GREY });
 
       // Wages — right-aligned, bold green if large
       const wagesStr = fmt(row.wagesCost);

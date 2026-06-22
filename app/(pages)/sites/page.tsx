@@ -14,10 +14,15 @@ export default async function SitesPage({
   const q = sp?.q ?? "";
   const show = sp?.show ?? "active";
 
-  const [sitesRes, supervisors, foremen] = await Promise.all([
+  const [sitesRes, supervisors, admins, foremen] = await Promise.all([
     listSites({ q, show }),
     prisma.user.findMany({
       where: { role: "SUPERVISOR" },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "OFFICE"] } },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),
@@ -36,6 +41,12 @@ export default async function SitesPage({
     email: u.email ?? "",
   }));
 
+  const adminOptions = admins.map((u) => ({
+    id: u.id,
+    name: u.name ?? u.email ?? "Unknown",
+    email: u.email ?? "",
+  }));
+
   const foremanOptions = foremen.map((u) => ({
     id: u.id,
     name: u.name ?? u.email ?? "Unknown",
@@ -47,6 +58,7 @@ export default async function SitesPage({
       <SitesList
         initialSites={sites}
         supervisorOptions={supervisorOptions}
+        adminOptions={adminOptions}
         foremanOptions={foremanOptions}
       />
     </div>

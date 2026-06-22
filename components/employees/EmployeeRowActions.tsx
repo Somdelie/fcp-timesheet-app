@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   MoreHorizontal,
   Eye,
   Download,
   Trash2,
   CircleOff,
-  FolderOpen,
   Loader2,
 } from "lucide-react";
 
@@ -34,14 +32,15 @@ export default function EmployeeRowActions({
   lastName,
   qrCodeValue,
   isActive,
+  onChanged,
 }: {
   id: string;
   firstName: string;
   lastName: string;
   qrCodeValue: string;
   isActive: boolean;
+  onChanged?: () => void | Promise<void>;
 }) {
-  const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -52,7 +51,7 @@ export default function EmployeeRowActions({
       const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
       if (res.ok) {
         setShowDeleteDialog(false);
-        router.refresh();
+        await onChanged?.();
         return;
       }
       const data = await res.json().catch(() => ({}));

@@ -82,6 +82,11 @@ function generateEmployeeQrValue() {
   return token;
 }
 
+function revalidatePeoplePaths() {
+  revalidatePath("/employees");
+  revalidatePath("/admin/people");
+}
+
 export async function listEmployees(input?: {
   q?: string;
   show?: "active" | "all";
@@ -170,14 +175,14 @@ export async function listEmployees(input?: {
     }),
   ]);
 
-  // Merge: foremen first (sorted by name), then regular employees
+  // Merge and keep newest additions first by default.
   const foremanIds = new Set(foremenEmployees.map((e) => e.id));
-  const merged = [
-    ...foremenEmployees.sort((a, b) =>
-      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
-    ),
-    ...regularEmployees.filter((e) => !foremanIds.has(e.id)),
-  ];
+  const merged = [...foremenEmployees, ...regularEmployees]
+    .filter((e, index, arr) => {
+      if (!foremanIds.has(e.id)) return true;
+      return arr.findIndex((item) => item.id === e.id) === index;
+    })
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return {
     ok: true as const,
@@ -289,7 +294,7 @@ export async function createEmployee(input: {
             });
           }
         }
-        revalidatePath("/employees");
+        revalidatePeoplePaths();
         return employee;
       });
 
@@ -425,6 +430,8 @@ export async function updateEmployee(input: {
     });
   }
 
+  revalidatePeoplePaths();
+
   return { ok: true as const, employee: serializeEmployee(employee) };
 }
 
@@ -463,6 +470,8 @@ export async function deactivateEmployee(input: { id: string }) {
       },
     },
   });
+
+  revalidatePeoplePaths();
 
   return { ok: true as const, employee: serializeEmployee(employee) };
 }
@@ -548,7 +557,7 @@ export async function promoteEmployeeToForeman(input: { employeeId: string }) {
       };
     });
 
-    revalidatePath("/employees");
+    revalidatePeoplePaths();
     return {
       ok: true as const,
       message: `${employee.firstName} ${employee.lastName} has been promoted to foreman.`,
@@ -610,7 +619,7 @@ export async function removeEmployeeForemanLink(input: {
     },
   });
 
-  revalidatePath("/employees");
+  revalidatePeoplePaths();
   return { ok: true as const, message: "Employee foreman link removed." };
 }
 

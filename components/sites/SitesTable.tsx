@@ -461,14 +461,13 @@ function SiteRowActions({
                 No materials assigned to this site yet.
               </p>
             ) : (
-              <Table className="min-w-[900px] border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
+              <Table className="min-w-225 border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
                 <TableHeader>
                   <TableRow>
                     <TableHead>SKU</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Qty</TableHead>
-                    <TableHead>Computed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -497,11 +496,11 @@ function SiteRowActions({
                           ? getSiteMaterialQuantity(m)
                           : "—"}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
+                      {/* <TableCell className="text-xs text-slate-600">
                         {`${getSiteMaterialQuantity(m) ?? "—"} / ${
                           (m as any).orderedQuantity ?? 0
                         }`}
-                      </TableCell>
+                      </TableCell> */}
                     </TableRow>
                   ))}
                 </TableBody>
