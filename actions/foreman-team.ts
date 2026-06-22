@@ -4,9 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { writeAuditEvent } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
-import type { TeamType } from "@/generated/prisma/client";
-
-const VALID_TEAMS: TeamType[] = ["PAINTERS", "BUILDING", "SPECIAL_COATINGS", "CAPE_TOWN"];
 
 /**
  * Switch a foreman's default team.
@@ -18,7 +15,7 @@ const VALID_TEAMS: TeamType[] = ["PAINTERS", "BUILDING", "SPECIAL_COATINGS", "CA
  */
 export async function switchForemanTeam(input: {
   foremanId: string;
-  newTeam: TeamType;
+  newTeam: string;
 }) {
   const auth = await requireServerAuth();
 
@@ -30,15 +27,20 @@ export async function switchForemanTeam(input: {
   }
 
   const foremanId = String(input.foremanId ?? "").trim();
-  const newTeam = String(input.newTeam ?? "").trim() as TeamType;
+  const newTeam = String(input.newTeam ?? "").trim().toUpperCase();
 
   if (!foremanId) {
     return { ok: false as const, error: "foremanId is required." };
   }
-  if (!VALID_TEAMS.includes(newTeam)) {
+  const teamExists = await prisma.companyTeamRate.findUnique({
+    where: { code: newTeam },
+    select: { code: true },
+  });
+
+  if (!teamExists) {
     return {
       ok: false as const,
-      error: `Invalid team. Must be one of: ${VALID_TEAMS.join(", ")}`,
+      error: "Invalid team. Add it in Settings > Payroll first.",
     };
   }
 
@@ -90,6 +92,7 @@ export async function switchForemanTeam(input: {
 
   revalidatePath("/foreman");
   revalidatePath("/admin");
+  revalidatePath("/admin/foremen");
   revalidatePath("/employees");
 
   return {

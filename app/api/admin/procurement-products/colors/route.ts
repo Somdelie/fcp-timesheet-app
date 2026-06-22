@@ -34,10 +34,29 @@ function serialiseVariant(v: any) {
  * GET /api/admin/procurement-products/colors
  * Returns all ProductColorVariant records with product + active supplier prices.
  */
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await getAuth();
   if (!auth)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  if (searchParams.get("products") === "true") {
+    const products = await prisma.procurementProduct.findMany({
+      where: {
+        isActive: true,
+        productType: "MATERIAL",
+      },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        category: { select: { id: true, name: true } },
+      },
+    });
+
+    return NextResponse.json({ ok: true, products });
+  }
 
   const variants = await prisma.productColorVariant.findMany({
     include: {
@@ -134,6 +153,74 @@ export async function POST(req: Request) {
       );
     }
     console.error("POST /colors error:", e);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/admin/procurement-products/colors
+ * Body: { colorName, baseType, nextColorName?, colorCode?, nextBaseType?, isTinted? }
+ * Updates every variant in the deduplicated color group.
+ */
+export async function PATCH(req: Request) {
+  const auth = await getAuth(req);
+  if (!auth)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json();
+  const {
+    colorName,
+    baseType,
+    nextColorName,
+    colorCode,
+    nextBaseType,
+    isTinted,
+  } = body as {
+    colorName: string;
+    baseType: ColorBaseType;
+    nextColorName?: string;
+    colorCode?: string | null;
+    nextBaseType?: ColorBaseType;
+    isTinted?: boolean;
+  };
+
+  if (!colorName?.trim() || !baseType) {
+    return NextResponse.json(
+      { error: "colorName and baseType are required" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const updated = await prisma.productColorVariant.updateMany({
+      where: {
+        colorName,
+        baseType,
+      },
+      data: {
+        ...(nextColorName !== undefined
+          ? { colorName: nextColorName.trim() }
+          : {}),
+        ...(colorCode !== undefined
+          ? { colorCode: colorCode?.trim() || null }
+          : {}),
+        ...(nextBaseType !== undefined ? { baseType: nextBaseType } : {}),
+        ...(isTinted !== undefined ? { isTinted } : {}),
+      },
+    });
+
+    return NextResponse.json({ ok: true, count: updated.count });
+  } catch (e: any) {
+    if (e?.code === "P2002") {
+      return NextResponse.json(
+        {
+          error:
+            "A color variant with this product, name, and base type already exists",
+        },
+        { status: 409 },
+      );
+    }
+    console.error("PATCH /colors error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

@@ -29,14 +29,14 @@ export async function GET(req: Request) {
     const [
       metrics,
       weeklyAttendance,
-      topSiteWages,
+      fortnightSiteWages,
       siteActivity,
       photoVerification,
       recent,
     ] = await Promise.all([
       getDashboardMetrics(),
       getWeeklyAttendanceData(),
-      getTopSiteWages(),
+      getFortnightSiteWages(),
       getSiteActivityData(),
       getPhotoVerificationData(),
       getRecentActivity(),
@@ -46,7 +46,8 @@ export async function GET(req: Request) {
       {
         metrics,
         weeklyAttendance,
-        topSiteWages,
+        topSiteWages: fortnightSiteWages.sites.slice(0, 5),
+        fortnightSiteWages,
         siteActivity,
         photoVerification,
         recentActivity: recent,
@@ -153,7 +154,7 @@ async function getWeeklyAttendanceData() {
   });
 }
 
-async function getTopSiteWages() {
+async function getFortnightSiteWages() {
   // Determine current fortnight range
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
@@ -176,18 +177,72 @@ async function getTopSiteWages() {
     fnEnd = addDaysUTC(fnStart, 14);
   }
 
-  // Sum dayRateAtScan from attendance scans grouped by site (top 5)
-  const rows = await prisma.attendanceScan.groupBy({
-    by: ["siteId"],
-    where: {
-      workDate: { gte: fnStart, lt: fnEnd },
-    },
-    _sum: { dayRateAtScan: true },
-    orderBy: { _sum: { dayRateAtScan: "desc" } },
-    take: 5,
-  });
+  // Sum dayRateAtScan from attendance scans grouped by site for the full fortnight.
+  const [rows, scans] = await Promise.all([
+    prisma.attendanceScan.groupBy({
+      by: ["siteId"],
+      where: {
+        workDate: { gte: fnStart, lt: fnEnd },
+      },
+      _sum: { dayRateAtScan: true },
+      orderBy: { _sum: { dayRateAtScan: "desc" } },
+    }),
+    prisma.attendanceScan.findMany({
+      where: {
+        workDate: { gte: fnStart, lt: fnEnd },
+      },
+      select: {
+        employeeId: true,
+        workDate: true,
+        siteDay: { select: { foremanId: true } },
+      },
+    }),
+  ]);
 
-  if (rows.length === 0) return [];
+  const foremanIds = Array.from(
+    new Set(scans.map((scan) => scan.siteDay.foremanId)),
+  );
+  const foremanRecords =
+    foremanIds.length > 0
+      ? await prisma.foreman.findMany({
+          where: { id: { in: foremanIds } },
+          select: {
+            id: true,
+            user: { select: { employee: { select: { id: true } } } },
+          },
+        })
+      : [];
+  const foremanIdToEmployeeId = new Map<string, string>();
+  for (const foreman of foremanRecords) {
+    if (foreman.user?.employee?.id) {
+      foremanIdToEmployeeId.set(foreman.id, foreman.user.employee.id);
+    }
+  }
+
+  const foremanDayPairs = new Set<string>();
+  const manDayPairs = new Set<string>();
+  for (const scan of scans) {
+    const foremanId = scan.siteDay.foremanId;
+    const dateISO = toISODate(scan.workDate);
+    const pairKey = `${scan.employeeId}-${dateISO}`;
+    const foremanEmployeeId = foremanIdToEmployeeId.get(foremanId) ?? foremanId;
+
+    if (scan.employeeId === foremanEmployeeId) {
+      foremanDayPairs.add(pairKey);
+    } else {
+      manDayPairs.add(pairKey);
+    }
+  }
+
+  if (rows.length === 0) {
+    return {
+      startISO: toISODate(fnStart),
+      endISO: toISODate(addDaysUTC(fnEnd, -1)),
+      foremanDays: foremanDayPairs.size,
+      manDays: manDayPairs.size,
+      sites: [],
+    };
+  }
 
   const siteIds = rows.map((r) => r.siteId).filter(Boolean);
   const sites = await prisma.site.findMany({
@@ -196,10 +251,18 @@ async function getTopSiteWages() {
   });
   const nameMap = new Map(sites.map((s) => [s.id, s.name]));
 
-  return rows.map((r) => ({
-    site: nameMap.get(r.siteId) ?? "Unknown",
-    wages: Number(r._sum.dayRateAtScan ?? 0),
-  }));
+  return {
+    startISO: toISODate(fnStart),
+    endISO: toISODate(addDaysUTC(fnEnd, -1)),
+    foremanDays: foremanDayPairs.size,
+    manDays: manDayPairs.size,
+    sites: rows
+      .map((r) => ({
+        site: nameMap.get(r.siteId) ?? "Unknown",
+        wages: Number(r._sum.dayRateAtScan ?? 0),
+      }))
+      .filter((r) => r.wages > 0),
+  };
 }
 
 async function getSiteActivityData() {

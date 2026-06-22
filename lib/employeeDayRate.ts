@@ -1,5 +1,4 @@
 import { prisma } from "./prisma";
-import type { TeamType } from "@/generated/prisma/client";
 
 // ─── helpers ───────────────────────────────────────────────────────
 
@@ -38,14 +37,24 @@ type CompanySettingsRow = {
   defaultEmployeeDayRate: unknown;
 };
 
+type CompanyTeamRateRow = {
+  code: string;
+  dayRate: unknown;
+};
+
 /**
  * Return the team-specific default rate from CompanySettings.
  * Returns 0 if settings are missing or the team has no configured rate.
  */
 export function getTeamDefaultRate(
-  team: TeamType,
+  team: string,
   settings: CompanySettingsRow | null | undefined,
+  teamRates: CompanyTeamRateRow[] = [],
 ): number {
+  const configuredRate = teamRates.find((row) => row.code === team)?.dayRate;
+  const configured = toNum(configuredRate);
+  if (configured > 0) return configured;
+
   if (!settings) return 0;
   switch (team) {
     case "PAINTERS":
@@ -65,7 +74,7 @@ export function getTeamDefaultRate(
 
 export type ComputeDayRateResult = {
   dayRate: number;
-  team: TeamType | null;
+  team: string | null;
 };
 
 /**
@@ -96,7 +105,14 @@ export async function computeDayRateAtScan(opts: {
   workDateEnd.setUTCHours(23, 59, 59, 999);
 
   // Parallel: fetch overrides, foreman, employee, company settings
-  const [employeeOverrides, foremanSiteOverrides, foreman, employee, settings] =
+  const [
+    employeeOverrides,
+    foremanSiteOverrides,
+    foreman,
+    employee,
+    settings,
+    teamRates,
+  ] =
     await Promise.all([
       // 1) All candidate EmployeeDayRateOverride rows
       (prisma as any).employeeDayRateOverride.findMany({
@@ -133,7 +149,7 @@ export async function computeDayRateAtScan(opts: {
         select: { defaultDayRate: true, defaultTeam: true, userId: true },
       }) as Promise<{
         defaultDayRate: unknown;
-        defaultTeam: TeamType;
+        defaultTeam: string;
         userId: string | null;
       } | null>,
 
@@ -154,9 +170,16 @@ export async function computeDayRateAtScan(opts: {
           defaultCapeTownDayRate: true,
         },
       }) as Promise<CompanySettingsRow | null>,
+
+      (prisma as any).companyTeamRate.findMany({
+        select: {
+          code: true,
+          dayRate: true,
+        },
+      }) as Promise<CompanyTeamRateRow[]>,
     ]);
 
-  const team: TeamType | null = foreman?.defaultTeam ?? null;
+  const team: string | null = foreman?.defaultTeam ?? null;
 
   // Detect self-scan: the employee being scanned IS the foreman.
   // In this case skip the team default rate (Priority 3) — the foreman should
@@ -198,7 +221,7 @@ export async function computeDayRateAtScan(opts: {
   // Skipped when the scanned employee is the foreman themselves — they get
   // their personal rate (Priority 4/5), not the team rate for their workers.
   if (team && settings && !isForemansOwnScan) {
-    const teamRate = getTeamDefaultRate(team, settings);
+    const teamRate = getTeamDefaultRate(team, settings, teamRates);
     if (teamRate > 0) return { dayRate: teamRate, team };
   }
 

@@ -188,7 +188,7 @@ model Foreman {
 
   // ✅ NEW: default team for this foreman (used to choose team default day rate)
   // Default ensures existing rows migrate safely without DB reset.
-  defaultTeam TeamType @default(PAINTERS)
+  defaultTeam String @default("PAINTERS")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -550,7 +550,7 @@ model AttendanceScan {
 
   // ✅ NEW (optional): snapshot which team rate was used for this scan
   // Old rows will be NULL; new rows can store the team chosen (usually foreman.defaultTeam).
-  team TeamType?
+  team String?
 
   // Optional extra info
   qrPayload        String?
@@ -1052,6 +1052,20 @@ model CompanySettings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CompanyTeamRate {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  dayRate   Decimal  @default(250) @db.Decimal(12, 2)
+  isSystem  Boolean  @default(false)
+  sortOrder Int      @default(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([sortOrder, name])
 }
 
 model AuditEvent {

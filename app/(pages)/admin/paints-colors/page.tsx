@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   Plus,
@@ -21,7 +21,6 @@ import {
   ListChecks,
   FolderOpen,
 } from "lucide-react";
-import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +54,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +83,13 @@ type DedupColor = {
     category: { id: string; name: string } | null;
   }[];
   productCount: number;
+};
+
+type ColorProductOption = {
+  id: string;
+  name: string;
+  sku: string | null;
+  category?: { id: string; name: string } | null;
 };
 
 const BASE_TYPE_LABELS: Record<ColorBaseType, string> = {
@@ -232,24 +247,88 @@ function PaintColorsListTab({ tabsList }: { tabsList: React.ReactNode }) {
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [productOptions, setProductOptions] = useState<ColorProductOption[]>(
+    [],
+  );
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [createForm, setCreateForm] = useState<{
+    productId: string;
+    colorName: string;
+    colorCode: string;
+    baseType: ColorBaseType;
+    isTinted: boolean;
+  }>({
+    productId: "",
+    colorName: "",
+    colorCode: "",
+    baseType: "DEEP",
+    isTinted: false,
+  });
+  const [editOriginal, setEditOriginal] = useState<{
+    colorName: string;
+    baseType: ColorBaseType;
+  } | null>(null);
+  const [editForm, setEditForm] = useState<{
+    colorName: string;
+    colorCode: string;
+    baseType: ColorBaseType;
+    isTinted: boolean;
+  }>({
+    colorName: "",
+    colorCode: "",
+    baseType: "DEEP",
+    isTinted: false,
+  });
 
   // Fetch deduplicated colors
+  const fetchColors = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/procurement-products/colors/dedup");
+      if (!res.ok) throw new Error("Failed to fetch colors");
+      const data = await res.json();
+      setColors(data || []);
+    } catch (error) {
+      console.error("Error fetching colors:", error);
+      toast.error("Failed to load colors");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchColors = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/admin/procurement-products/colors/dedup");
-        if (!res.ok) throw new Error("Failed to fetch colors");
-        const data = await res.json();
-        setColors(data || []);
-      } catch (error) {
-        console.error("Error fetching colors:", error);
-        toast.error("Failed to load colors");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchColors();
+  }, [fetchColors]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function fetchProducts() {
+      try {
+        setLoadingProducts(true);
+        const res = await fetch(
+          "/api/admin/procurement-products/colors?products=true",
+        );
+        if (!res.ok) throw new Error("Failed to fetch products");
+        const data = await res.json();
+        if (!alive) return;
+        setProductOptions(data.products ?? []);
+      } catch (error) {
+        console.error("Error fetching color products:", error);
+        toast.error("Failed to load products");
+      } finally {
+        if (alive) setLoadingProducts(false);
+      }
+    }
+
+    fetchProducts();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const supplierOptions = Array.from(
@@ -281,6 +360,110 @@ function PaintColorsListTab({ tabsList }: { tabsList: React.ReactNode }) {
   const pageStart = currentPageIndex * pagination.pageSize;
   const pageEnd = Math.min(pageStart + pagination.pageSize, displayColors.length);
   const paginatedColors = displayColors.slice(pageStart, pageEnd);
+
+  const resetCreateForm = () => {
+    setCreateForm({
+      productId: "",
+      colorName: "",
+      colorCode: "",
+      baseType: "DEEP",
+      isTinted: false,
+    });
+  };
+
+  const handleCreateColor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.productId) {
+      toast.error("Please select a product.");
+      return;
+    }
+    if (!createForm.colorName.trim()) {
+      toast.error("Please enter a colour name.");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/procurement-products/colors", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          productId: createForm.productId,
+          colorName: createForm.colorName.trim(),
+          colorCode: createForm.colorCode.trim() || null,
+          baseType: createForm.baseType,
+          isTinted: createForm.isTinted,
+        }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to create colour.");
+      }
+
+      toast.success("Colour created!");
+      setCreateOpen(false);
+      resetCreateForm();
+      await fetchColors();
+    } catch (error: any) {
+      console.error("Error creating color:", error);
+      toast.error(error?.message || "Failed to create colour.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const openEditDialog = (color: DedupColor) => {
+    setEditOriginal({
+      colorName: color.colorName,
+      baseType: color.baseType,
+    });
+    setEditForm({
+      colorName: color.colorName,
+      colorCode: color.colorCode ?? "",
+      baseType: color.baseType,
+      isTinted: color.isTinted,
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditColor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editOriginal) return;
+    if (!editForm.colorName.trim()) {
+      toast.error("Please enter a colour name.");
+      return;
+    }
+
+    setEditing(true);
+    try {
+      const res = await fetch("/api/admin/procurement-products/colors", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          colorName: editOriginal.colorName,
+          baseType: editOriginal.baseType,
+          nextColorName: editForm.colorName.trim(),
+          colorCode: editForm.colorCode.trim() || null,
+          nextBaseType: editForm.baseType,
+          isTinted: editForm.isTinted,
+        }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to update colour.");
+      }
+
+      toast.success("Colour updated!");
+      setEditOpen(false);
+      setEditOriginal(null);
+      await fetchColors();
+    } catch (error: any) {
+      console.error("Error updating color:", error);
+      toast.error(error?.message || "Failed to update colour.");
+    } finally {
+      setEditing(false);
+    }
+  };
 
   // Delete color (all variants with this colorName + baseType)
   const handleDelete = async (colorName: string, baseType: ColorBaseType) => {
@@ -322,14 +505,248 @@ function PaintColorsListTab({ tabsList }: { tabsList: React.ReactNode }) {
         </div>
         <div className="flex items-center gap-3">
           {tabsList}
-          <Link href="/admin/paints-colors/create">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              <Text>New Color</Text>
-            </Button>
-          </Link>
+          <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4" />
+            <Text>New Color</Text>
+          </Button>
         </div>
       </div>
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) resetCreateForm();
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New Colour</DialogTitle>
+            <DialogDescription>
+              Add a new colour variant to an existing paint product.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateColor} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product</label>
+              <Select
+                value={createForm.productId}
+                onValueChange={(value) =>
+                  setCreateForm((prev) => ({ ...prev, productId: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productOptions.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                      {product.sku ? ` (${product.sku})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {productOptions.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {loadingProducts
+                    ? "Loading products..."
+                    : "No products are available yet."}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Colour Name</label>
+                <Input
+                  value={createForm.colorName}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      colorName: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Safari Tan"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Colour Code</label>
+                <Input
+                  value={createForm.colorCode}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      colorCode: e.target.value,
+                    }))
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Base Type</label>
+                <Select
+                  value={createForm.baseType}
+                  onValueChange={(value) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      baseType: value as ColorBaseType,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select base" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(BASE_TYPE_LABELS) as ColorBaseType[]).map(
+                      (base) => (
+                        <SelectItem key={base} value={base}>
+                          {BASE_TYPE_LABELS[base] || "Neutral"}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <label className="flex items-center gap-2 pt-7 text-sm font-medium">
+                <Checkbox
+                  checked={createForm.isTinted}
+                  onCheckedChange={(checked) =>
+                    setCreateForm((prev) => ({
+                      ...prev,
+                      isTinted: checked === true,
+                    }))
+                  }
+                />
+                Tinted colour
+              </label>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateOpen(false)}
+                disabled={creating}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  creating || loadingProducts || productOptions.length === 0
+                }
+              >
+                {creating ? "Creating..." : "Create Colour"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditOriginal(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Colour</DialogTitle>
+            <DialogDescription>
+              Update this colour group across all linked products.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditColor} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Colour Name</label>
+                <Input
+                  value={editForm.colorName}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      colorName: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Safari Tan"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Colour Code</label>
+                <Input
+                  value={editForm.colorCode}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      colorCode: e.target.value,
+                    }))
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Base Type</label>
+                <Select
+                  value={editForm.baseType}
+                  onValueChange={(value) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      baseType: value as ColorBaseType,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select base" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(BASE_TYPE_LABELS) as ColorBaseType[]).map(
+                      (base) => (
+                        <SelectItem key={base} value={base}>
+                          {BASE_TYPE_LABELS[base] || "Neutral"}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <label className="flex items-center gap-2 pt-7 text-sm font-medium">
+                <Checkbox
+                  checked={editForm.isTinted}
+                  onCheckedChange={(checked) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      isTinted: checked === true,
+                    }))
+                  }
+                />
+                Tinted colour
+              </label>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+                disabled={editing}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editing}>
+                {editing ? "Saving..." : "Save Colour"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Search */}
       <div className="flex flex-wrap gap-3">
@@ -457,13 +874,14 @@ function PaintColorsListTab({ tabsList }: { tabsList: React.ReactNode }) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link
-                                  href={`/admin/paints-colors/${encodeURIComponent(key)}`}
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  <Text>Edit</Text>
-                                </Link>
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  openEditDialog(color);
+                                }}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                <Text>Edit</Text>
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>

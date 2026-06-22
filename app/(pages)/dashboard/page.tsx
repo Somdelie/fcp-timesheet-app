@@ -10,6 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -53,6 +60,19 @@ type RecentActivityItem = {
   description: string;
   at: string; // ISO
   href?: string | null;
+};
+
+type SiteWageRow = {
+  site: string;
+  wages: number;
+};
+
+type FortnightSiteWages = {
+  startISO: string;
+  endISO: string;
+  foremanDays?: number;
+  manDays?: number;
+  sites: SiteWageRow[];
 };
 
 function formatRelativeTime(iso: string) {
@@ -129,6 +149,24 @@ function formatWageCurrency(val: number): string {
   return `R${val.toFixed(0)}`;
 }
 
+function formatWageTotal(val: number): string {
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    maximumFractionDigits: 0,
+  }).format(val);
+}
+
+function formatDateLabel(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-ZA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function TopSiteWagesChart({
   data,
 }: {
@@ -188,6 +226,8 @@ export default function HomePage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [weeklyData, setWeeklyData] = useState<any>(null);
   const [topWagesData, setTopWagesData] = useState<any>(null);
+  const [fortnightSiteWages, setFortnightSiteWages] =
+    useState<FortnightSiteWages | null>(null);
   const [siteData, setSiteData] = useState<any>(null);
   const [photoData, setPhotoData] = useState<any>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
@@ -200,9 +240,10 @@ export default function HomePage() {
     paid: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [siteWagesSheetOpen, setSiteWagesSheetOpen] = useState(false);
   const role = useUserRole();
 
-  const ADMIN_CACHE_KEY = "dashboard-admin-v2";
+  const ADMIN_CACHE_KEY = "dashboard-admin-v4";
   const SUP_CACHE_KEY = "dashboard-supervisor-v3";
 
   useEffect(() => {
@@ -226,6 +267,7 @@ export default function HomePage() {
                 setMetrics(json.metrics ?? null);
                 setWeeklyData(json.weeklyAttendance ?? null);
                 setTopWagesData(json.topSiteWages ?? null);
+                setFortnightSiteWages(json.fortnightSiteWages ?? null);
                 setSiteData(json.siteActivity ?? null);
                 setPhotoData(json.photoVerification ?? null);
                 setRecentActivity(
@@ -252,6 +294,7 @@ export default function HomePage() {
             metrics?: any;
             weeklyAttendance?: any;
             topSiteWages?: any;
+            fortnightSiteWages?: FortnightSiteWages;
             siteActivity?: any;
             photoVerification?: any;
             recentActivity?: RecentActivityItem[];
@@ -260,6 +303,7 @@ export default function HomePage() {
           setMetrics(json?.metrics ?? null);
           setWeeklyData(json?.weeklyAttendance ?? null);
           setTopWagesData(json?.topSiteWages ?? null);
+          setFortnightSiteWages(json?.fortnightSiteWages ?? null);
           setSiteData(json?.siteActivity ?? null);
           setPhotoData(json?.photoVerification ?? null);
           setRecentActivity(
@@ -357,6 +401,19 @@ export default function HomePage() {
 
   const weeklyAttendanceData = weeklyData || [];
   const topSiteWagesData = topWagesData || [];
+  const allFortnightSiteWages =
+    fortnightSiteWages?.sites ?? topSiteWagesData ?? [];
+  const fortnightTotalWages = allFortnightSiteWages.reduce(
+    (sum: number, row: SiteWageRow) => sum + row.wages,
+    0,
+  );
+  const foremanDays = fortnightSiteWages?.foremanDays ?? 0;
+  const manDays = fortnightSiteWages?.manDays ?? 0;
+  const fortnightLabel = fortnightSiteWages
+    ? `${formatDateLabel(fortnightSiteWages.startISO)} - ${formatDateLabel(
+        fortnightSiteWages.endISO,
+      )}`
+    : "Current fortnight";
   const siteActivityData = siteData || [];
   const photoVerificationData = photoData || [];
 
@@ -958,7 +1015,12 @@ export default function HomePage() {
                     icon: Users,
                     href: "/employees?create=employee",
                   },
-                  { label: "Create Site", icon: Building2, href: "/new" },
+                  {
+                    label: "Site Wages",
+                    icon: Building2,
+                    href: "/new",
+                    opensSiteWages: true,
+                  },
                   {
                     label: "Review Timesheets",
                     icon: ClipboardCheck,
@@ -976,6 +1038,24 @@ export default function HomePage() {
                   },
                 ].map((action, index) => {
                   const Icon = action.icon;
+                  if (action.opensSiteWages) {
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSiteWagesSheetOpen(true)}
+                        className="w-full flex items-center gap-3 p-3 rounded border border-border hover:bg-muted transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="font-medium text-foreground text-sm">
+                          {action.label}
+                        </span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <Link
                       key={index}
@@ -997,6 +1077,111 @@ export default function HomePage() {
           </Card>
         </div>
       </div>
+      <Sheet open={siteWagesSheetOpen} onOpenChange={setSiteWagesSheetOpen}>
+        <SheetContent
+          side="bottom"
+          className="h-[88vh] gap-0 rounded-t-2xl border-primary/30 p-0 sm:max-w-none"
+        >
+          <SheetHeader className="border-b px-5 py-4 sm:px-6">
+            <div className="flex flex-col gap-3 pr-8 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <SheetTitle className="text-xl font-bold">
+                  Fortnight Site Wages
+                </SheetTitle>
+                <SheetDescription>{fortnightLabel}</SheetDescription>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Foreman Days
+                  </p>
+                  <p className="text-lg font-bold text-primary tabular-nums">
+                    {foremanDays}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Man Days
+                  </p>
+                  <p className="text-lg font-bold text-primary tabular-nums">
+                    {manDays}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Total Wages
+                  </p>
+                  <p className="text-lg font-bold text-primary">
+                    {formatWageTotal(fortnightTotalWages)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">
+              <Card className="border border-primary/30 bg-card/95">
+                <CardHeader>
+                  <CardTitle>Total Wages By Site</CardTitle>
+                  <CardDescription>
+                    Sites with wages in this fortnight
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {allFortnightSiteWages.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No site wages found for this fortnight.
+                    </p>
+                  ) : (
+                    <div className="max-h-[46vh] overflow-y-auto pr-2">
+                      <TopSiteWagesChart data={allFortnightSiteWages} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border border-primary/30 bg-card/95">
+                <CardHeader>
+                  <CardTitle>All Sites</CardTitle>
+                  <CardDescription>
+                    {allFortnightSiteWages.length} site
+                    {allFortnightSiteWages.length === 1 ? "" : "s"} with wages
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {allFortnightSiteWages.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No sites to show.
+                    </p>
+                  ) : (
+                    <div className="max-h-[46vh] space-y-2 overflow-y-auto pr-2">
+                      {allFortnightSiteWages.map(
+                        (row: SiteWageRow, index: number) => (
+                          <div
+                            key={`${row.site}-${index}`}
+                            className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
+                          >
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary">
+                              {index + 1}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                              {row.site}
+                            </span>
+                            <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                              {formatWageTotal(row.wages)}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

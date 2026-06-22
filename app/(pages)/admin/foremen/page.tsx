@@ -19,6 +19,15 @@ export default async function AdminForemenPage() {
           createdAt: new Date(foreman.foreman.createdAt).toLocaleDateString(),
           supervisorId: foreman.foreman.supervisorLinks[0]?.supervisor.id ?? null,
           supervisorName: foreman.foreman.supervisorLinks[0]?.supervisor.user.name ?? null,
+          assistants: foreman.foreman.assistants.map((link) => ({
+            id: link.employee.id,
+            name:
+              link.employee.user?.name ??
+              `${link.employee.firstName} ${link.employee.lastName}`.trim(),
+            email: link.employee.user?.email ?? null,
+            qrCodeValue: link.employee.qrCodeValue,
+            startsOn: new Date(link.startsOn).toLocaleDateString(),
+          })),
         }
       : null,
     isAssistant: (foreman.employee?.assistantLinks?.length ?? 0) > 0,

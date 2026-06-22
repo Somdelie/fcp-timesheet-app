@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
   flexRender,
   getCoreRowModel,
@@ -69,6 +68,13 @@ export type ForemanRow = {
     createdAt: string;
     supervisorId: string | null;
     supervisorName: string | null;
+    assistants?: Array<{
+      id: string;
+      name: string;
+      email: string | null;
+      qrCodeValue: string;
+      startsOn: string;
+    }>;
   } | null;
   isAssistant: boolean;
 };
@@ -90,6 +96,11 @@ const TEAM_COLORS: Record<string, string> = {
     "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
+type TeamOption = {
+  value: string;
+  label: string;
+};
+
 function formatDate(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -107,28 +118,37 @@ function formatMoney(s: string | null) {
   return `R ${n.toFixed(2)}`;
 }
 
-interface ForemenTableProps {
-  data: ForemanRow[];
-  onView: (foreman: ForemanRow) => void;
-  onAddAssistant?: (foreman: ForemanRow) => void;
-  onSwitchTeam?: (foreman: ForemanRow) => void;
-  onEditBank?: (foreman: ForemanRow) => void;
+interface ForemenTableProps<TForeman extends ForemanRow> {
+  data: TForeman[];
+  teamOptions?: TeamOption[];
+  onView: (foreman: TForeman) => void;
+  onAddAssistant?: (foreman: TForeman) => void;
+  onSwitchTeam?: (foreman: TForeman) => void;
+  onEditBank?: (foreman: TForeman) => void;
 }
 
-export default function ForemenTable({
+export default function ForemenTable<TForeman extends ForemanRow>({
   data,
+  teamOptions = [],
   onView,
   onAddAssistant,
   onSwitchTeam,
   onEditBank,
-}: ForemenTableProps) {
+}: ForemenTableProps<TForeman>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
+  const teamLabels = React.useMemo(
+    () => ({
+      ...TEAM_LABELS,
+      ...Object.fromEntries(teamOptions.map((team) => [team.value, team.label])),
+    }),
+    [teamOptions],
+  );
 
-  const columns: ColumnDef<ForemanRow>[] = React.useMemo(
+  const columns: ColumnDef<TForeman>[] = React.useMemo(
     () => [
       {
         id: "name",
@@ -240,7 +260,7 @@ export default function ForemenTable({
               variant="secondary"
               className={`text-[11px] font-medium ${TEAM_COLORS[team] ?? ""}`}
             >
-              {TEAM_LABELS[team] ?? team}
+              {teamLabels[team] ?? team}
             </Badge>
           );
         },
@@ -346,7 +366,7 @@ export default function ForemenTable({
         ),
       },
     ],
-    [onView, onAddAssistant, onSwitchTeam],
+    [onView, onAddAssistant, onSwitchTeam, onEditBank, teamLabels],
   );
 
   const table = useReactTable({

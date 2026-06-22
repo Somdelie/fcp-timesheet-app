@@ -17,6 +17,7 @@ import {
   Loader,
   LogIn,
   Globe,
+  Plus,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -43,11 +44,34 @@ import {
 
 import {
   getCompanySettings,
+  deleteTeamRate,
   updateCompanySettings,
   updateTeamDefaultRates,
+  verifyTeamRateConfirmationCode,
 } from "@/actions/company-settings";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+
+type TeamRateFormRow = {
+  code: string;
+  name: string;
+  dayRate: string;
+  isSystem: boolean;
+  sortOrder: number;
+  isNew?: boolean;
+};
+
+type TeamRateConfirmState =
+  | { action: "save"; team?: never }
+  | { action: "delete"; team: TeamRateFormRow };
 
 type FortnightResult = {
   startISO: string;
@@ -63,6 +87,14 @@ function utcDateFromISO(iso: string) {
 
 function toISODateUTC(d: Date) {
   return d.toISOString().slice(0, 10);
+}
+
+function normalizeTeamCode(name: string) {
+  return name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function isSaturdayISO(iso: string) {
@@ -113,12 +145,14 @@ export default function SettingsPage() {
   const [year, setYear] = useState<number>(nowYearUTC);
 
   const [defaultEmployeeDayRate, setDefaultEmployeeDayRate] = useState("");
-  const [defaultPainterDayRate, setDefaultPainterDayRate] = useState("");
-  const [defaultBuildingDayRate, setDefaultBuildingDayRate] = useState("");
-  const [defaultSpecialCoatingsDayRate, setDefaultSpecialCoatingsDayRate] =
-    useState("");
-  const [defaultCapeTownDayRate, setDefaultCapeTownDayRate] = useState("");
+  const [teamRates, setTeamRates] = useState<TeamRateFormRow[]>([]);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamDayRate, setNewTeamDayRate] = useState("250");
   const [isSavingTeamRates, setIsSavingTeamRates] = useState(false);
+  const [teamRateConfirm, setTeamRateConfirm] =
+    useState<TeamRateConfirmState | null>(null);
+  const [teamRateConfirmCode, setTeamRateConfirmCode] = useState("");
+  const [isConfirmingTeamRate, setIsConfirmingTeamRate] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
   // Timesheet anchor (source of truth from DB) + admin input
@@ -148,17 +182,26 @@ export default function SettingsPage() {
           setDefaultEmployeeDayRate(
             String(res.settings.defaultEmployeeDayRate),
           );
-          setDefaultPainterDayRate(
-            String(res.settings.defaultPainterDayRate ?? "0"),
-          );
-          setDefaultBuildingDayRate(
-            String(res.settings.defaultBuildingDayRate ?? "0"),
-          );
-          setDefaultSpecialCoatingsDayRate(
-            String(res.settings.defaultSpecialCoatingsDayRate ?? "0"),
-          );
-          setDefaultCapeTownDayRate(
-            String(res.settings.defaultCapeTownDayRate ?? "0"),
+          setTeamRates(
+            res.settings.teamRates?.length
+              ? res.settings.teamRates.map((team) => ({
+                  code: team.code,
+                  name: team.name,
+                  dayRate: String(team.dayRate),
+                  isSystem: team.isSystem,
+                  sortOrder: team.sortOrder,
+                  isNew: false,
+                }))
+              : [
+                  {
+                    code: "PAINTERS",
+                    name: "Painters",
+                    dayRate: "250",
+                    isSystem: true,
+                    sortOrder: 10,
+                    isNew: false,
+                  },
+                ],
           );
         }
       } catch (err) {
@@ -245,41 +288,148 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveTeamRates = async () => {
-    const painters = Number(defaultPainterDayRate.trim());
-    const building = Number(defaultBuildingDayRate.trim());
-    const specialCoatings = Number(defaultSpecialCoatingsDayRate.trim());
-    const capeTown = Number(defaultCapeTownDayRate.trim());
+  const validateTeamRateForm = () => {
+    const invalidRate = teamRates.some((team) => {
+      const rate = Number(team.dayRate.trim());
+      return !Number.isFinite(rate) || rate < 0;
+    });
 
-    if (
-      !Number.isFinite(painters) ||
-      painters < 0 ||
-      !Number.isFinite(building) ||
-      building < 0 ||
-      !Number.isFinite(specialCoatings) ||
-      specialCoatings < 0 ||
-      !Number.isFinite(capeTown) ||
-      capeTown < 0
-    ) {
+    if (invalidRate || teamRates.some((team) => !team.name.trim())) {
       toast.error("Please enter valid team rates (0 or above).");
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const saveTeamRates = async (confirmationCode: string) => {
     setIsSavingTeamRates(true);
     try {
       const res = await updateTeamDefaultRates({
-        defaultPainterDayRate: defaultPainterDayRate.trim(),
-        defaultBuildingDayRate: defaultBuildingDayRate.trim(),
-        defaultSpecialCoatingsDayRate: defaultSpecialCoatingsDayRate.trim(),
-        defaultCapeTownDayRate: defaultCapeTownDayRate.trim(),
+        teamRates: teamRates.map((team) => ({
+          code: team.code,
+          name: team.name.trim(),
+          dayRate: team.dayRate.trim(),
+          isSystem: team.isSystem,
+          sortOrder: team.sortOrder,
+        })),
+        confirmationCode,
       });
-      if (res.ok) toast.success("Team default rates updated!");
-      else toast.error(res.error || "Failed to save team rates.");
+      if (res.ok) {
+        setTeamRates(
+          res.settings.teamRates.map((team) => ({
+            code: team.code,
+            name: team.name,
+            dayRate: String(team.dayRate),
+            isSystem: team.isSystem,
+            sortOrder: team.sortOrder,
+            isNew: false,
+          })),
+        );
+        toast.success("Team default rates updated!");
+        return true;
+      } else toast.error(res.error || "Failed to save team rates.");
     } catch (err) {
       console.error("Error saving team rates:", err);
       toast.error("Failed to save team rates.");
     } finally {
       setIsSavingTeamRates(false);
+    }
+
+    return false;
+  };
+
+  const handleSaveTeamRates = () => {
+    if (!validateTeamRateForm()) return;
+    setTeamRateConfirm({ action: "save" });
+    setTeamRateConfirmCode("");
+  };
+
+  const handleAddTeamRate = () => {
+    const name = newTeamName.trim();
+    const code = normalizeTeamCode(name);
+    const rate = Number(newTeamDayRate.trim());
+
+    if (!name || !code) {
+      toast.error("Enter a team name.");
+      return;
+    }
+    if (!Number.isFinite(rate) || rate < 0) {
+      toast.error("Enter a valid team rate.");
+      return;
+    }
+    if (teamRates.some((team) => team.code === code)) {
+      toast.error("That team already exists.");
+      return;
+    }
+
+    setTeamRates((prev) => [
+      ...prev,
+      {
+        code,
+        name,
+        dayRate: newTeamDayRate.trim() || "250",
+        isSystem: false,
+        sortOrder: (prev.length + 1) * 10,
+        isNew: true,
+      },
+    ]);
+    setNewTeamName("");
+    setNewTeamDayRate("250");
+  };
+
+  const handleOpenDeleteTeamRate = (team: TeamRateFormRow) => {
+    setTeamRateConfirm({ action: "delete", team });
+    setTeamRateConfirmCode("");
+  };
+
+  const handleConfirmTeamRateAction = async () => {
+    if (!teamRateConfirm) return;
+
+    setIsConfirmingTeamRate(true);
+    try {
+      if (teamRateConfirm.action === "save") {
+        const saved = await saveTeamRates(teamRateConfirmCode);
+        if (!saved) return;
+        setTeamRateConfirm(null);
+        setTeamRateConfirmCode("");
+        return;
+      }
+
+      if (teamRateConfirm.team.isNew) {
+        const res = await verifyTeamRateConfirmationCode({
+          confirmationCode: teamRateConfirmCode,
+        });
+        if (!res.ok) {
+          toast.error(res.error || "Invalid confirmation code.");
+          return;
+        }
+        setTeamRates((prev) =>
+          prev.filter((team) => team.code !== teamRateConfirm.team.code),
+        );
+        toast.success("Team removed.");
+      } else {
+        const res = await deleteTeamRate({
+          code: teamRateConfirm.team.code,
+          confirmationCode: teamRateConfirmCode,
+        });
+        if (!res.ok) {
+          toast.error(res.error || "Failed to delete team.");
+          return;
+        }
+        setTeamRates((prev) =>
+          prev.filter((team) => team.code !== teamRateConfirm.team.code),
+        );
+        toast.success("Team deleted.");
+      }
+
+      setTeamRateConfirm(null);
+      setTeamRateConfirmCode("");
+    } catch (err) {
+      console.error("Error confirming team rate action:", err);
+      toast.error("Failed to confirm action.");
+    } finally {
+      setIsConfirmingTeamRate(false);
     }
   };
 
@@ -821,65 +971,101 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="painterRate">Painters Rate (R)</Label>
-                    <Input
-                      id="painterRate"
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g., 350.00"
-                      value={defaultPainterDayRate}
-                      onChange={(e) => setDefaultPainterDayRate(e.target.value)}
-                      disabled={isLoadingSettings}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="buildingRate">Building Rate (R)</Label>
-                    <Input
-                      id="buildingRate"
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g., 400.00"
-                      value={defaultBuildingDayRate}
-                      onChange={(e) =>
-                        setDefaultBuildingDayRate(e.target.value)
-                      }
-                      disabled={isLoadingSettings}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="specialCoatingsRate">
-                      Special Coatings Rate (R)
-                    </Label>
-                    <Input
-                      id="specialCoatingsRate"
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g., 450.00"
-                      value={defaultSpecialCoatingsDayRate}
-                      onChange={(e) =>
-                        setDefaultSpecialCoatingsDayRate(e.target.value)
-                      }
-                      disabled={isLoadingSettings}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="capeTownRate">
-                      Cape Town Rate (R)
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Applied when a foreman is switched to Cape Town. All
-                      workers he scans will receive this rate.
-                    </p>
-                    <Input
-                      id="capeTownRate"
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g., 500.00"
-                      value={defaultCapeTownDayRate}
-                      onChange={(e) => setDefaultCapeTownDayRate(e.target.value)}
-                      disabled={isLoadingSettings}
-                    />
+                  {teamRates.map((team, index) => (
+                    <div
+                      key={team.code}
+                      className="grid gap-3 md:grid-cols-[1fr_180px_auto] md:items-end"
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor={`team-${team.code}`}>
+                          {team.name} Rate (R)
+                        </Label>
+                        <Input
+                          id={`team-${team.code}`}
+                          value={team.name}
+                          onChange={(e) =>
+                            setTeamRates((prev) =>
+                              prev.map((row, rowIndex) =>
+                                rowIndex === index
+                                  ? { ...row, name: e.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          disabled={isLoadingSettings}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`team-rate-${team.code}`}>
+                          Day Rate
+                        </Label>
+                        <Input
+                          id={`team-rate-${team.code}`}
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g., 250.00"
+                          value={team.dayRate}
+                          onChange={(e) =>
+                            setTeamRates((prev) =>
+                              prev.map((row, rowIndex) =>
+                                rowIndex === index
+                                  ? { ...row, dayRate: e.target.value }
+                                  : row,
+                              ),
+                            )
+                          }
+                          disabled={isLoadingSettings}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={`Delete ${team.name}`}
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleOpenDeleteTeamRate(team)}
+                        disabled={isLoadingSettings || isSavingTeamRates}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  <div className="rounded border border-dashed p-4">
+                    <div className="grid gap-3 md:grid-cols-[1fr_180px_auto] md:items-end">
+                      <div className="space-y-2">
+                        <Label htmlFor="newTeamName">New Team</Label>
+                        <Input
+                          id="newTeamName"
+                          placeholder="e.g., Waterproofing"
+                          value={newTeamName}
+                          onChange={(e) => setNewTeamName(e.target.value)}
+                          disabled={isLoadingSettings}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newTeamRate">Default Rate</Label>
+                        <Input
+                          id="newTeamRate"
+                          type="number"
+                          step="0.01"
+                          placeholder="250"
+                          value={newTeamDayRate}
+                          onChange={(e) => setNewTeamDayRate(e.target.value)}
+                          disabled={isLoadingSettings}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={handleAddTeamRate}
+                        disabled={isLoadingSettings}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Team
+                      </Button>
+                    </div>
                   </div>
 
                   <Separator />
@@ -896,6 +1082,77 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <Dialog
+            open={teamRateConfirm !== null}
+            onOpenChange={(open) => {
+              if (isConfirmingTeamRate) return;
+              if (!open) {
+                setTeamRateConfirm(null);
+                setTeamRateConfirmCode("");
+              }
+            }}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {teamRateConfirm?.action === "delete"
+                    ? "Delete Team"
+                    : "Confirm Team Changes"}
+                </DialogTitle>
+                <DialogDescription>
+                  {teamRateConfirm?.action === "delete"
+                    ? `Enter the confirmation code to delete ${teamRateConfirm.team.name}.`
+                    : "Enter the confirmation code to save team edits."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="teamRateConfirmationCode">
+                  Confirmation Code
+                </Label>
+                <Input
+                  id="teamRateConfirmationCode"
+                  type="password"
+                  autoComplete="off"
+                  value={teamRateConfirmCode}
+                  onChange={(e) => setTeamRateConfirmCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleConfirmTeamRateAction();
+                  }}
+                  disabled={isConfirmingTeamRate}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setTeamRateConfirm(null);
+                    setTeamRateConfirmCode("");
+                  }}
+                  disabled={isConfirmingTeamRate}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant={
+                    teamRateConfirm?.action === "delete"
+                      ? "destructive"
+                      : "default"
+                  }
+                  onClick={handleConfirmTeamRateAction}
+                  disabled={isConfirmingTeamRate || !teamRateConfirmCode.trim()}
+                >
+                  {isConfirmingTeamRate
+                    ? "Checking..."
+                    : teamRateConfirm?.action === "delete"
+                      ? "Delete Team"
+                      : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* System */}
           <TabsContent value="system" className="space-y-6">

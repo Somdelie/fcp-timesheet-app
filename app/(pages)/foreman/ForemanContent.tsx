@@ -1,7 +1,7 @@
 "use client";
 
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -49,24 +49,28 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import ForemenTable, {
-  type ForemanRow,
-} from "@/components/foremen/ForemenTable";
+import ForemenTable from "@/components/foremen/ForemenTable";
 import {
   actionAdminListEmployees,
   actionAdminCreateAssistant,
 } from "@/actions/admin";
 import { switchForemanTeam } from "@/actions/foreman-team";
+import { getTeamRateOptions } from "@/actions/company-settings";
 import { updateForeman } from "@/actions/foreman-update";
 import { SA_BANKS } from "@/lib/sa-banks";
 import type { AdminEmployee } from "@/lib/apiClient";
 
-const TEAM_OPTIONS = [
+type TeamOption = {
+  value: string;
+  label: string;
+};
+
+const DEFAULT_TEAM_OPTIONS: TeamOption[] = [
   { value: "PAINTERS", label: "Painters" },
   { value: "BUILDING", label: "Building" },
   { value: "SPECIAL_COATINGS", label: "Special Coatings" },
   { value: "CAPE_TOWN", label: "Cape Town" },
-] as const;
+];
 
 const TEAM_LABELS: Record<string, string> = {
   PAINTERS: "Painters",
@@ -116,6 +120,7 @@ export function ForemanContent({
 }) {
   const { setBreadcrumbs } = useBreadcrumbs();
   const router = useRouter();
+  const [teamOptions, setTeamOptions] = useState(DEFAULT_TEAM_OPTIONS);
   const [selectedForeman, setSelectedForeman] = useState<Foreman | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -163,10 +168,34 @@ export function ForemanContent({
   );
   const [teamDialogValue, setTeamDialogValue] = useState<string>("");
   const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
+  const teamLabels = useMemo(
+    () => ({
+      ...TEAM_LABELS,
+      ...Object.fromEntries(teamOptions.map((team) => [team.value, team.label])),
+    }),
+    [teamOptions],
+  );
 
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/" }, { label: "Foremen" }]);
   }, [setBreadcrumbs]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadTeamOptions() {
+      const res = await getTeamRateOptions();
+      if (!alive || !res.ok) return;
+      setTeamOptions(
+        res.teams.map((team) => ({ value: team.code, label: team.name })),
+      );
+    }
+
+    loadTeamOptions();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const openDialog = (foreman: Foreman) => {
     setSelectedForeman(foreman);
@@ -387,7 +416,7 @@ export function ForemanContent({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">All Teams</SelectItem>
-                  {TEAM_OPTIONS.map((t) => (
+                  {teamOptions.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
                       {t.label}
                     </SelectItem>
@@ -459,6 +488,7 @@ export function ForemanContent({
         ) : (
           <ForemenTable
             data={filtered}
+            teamOptions={teamOptions}
             onView={openDialog}
             onAddAssistant={handleOpenAddAssistant}
             onSwitchTeam={handleOpenSwitchTeam}
@@ -560,7 +590,7 @@ export function ForemanContent({
                       <span
                         className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${TEAM_COLORS[selectedForeman.foreman.defaultTeam] ?? ""}`}
                       >
-                        {TEAM_LABELS[selectedForeman.foreman.defaultTeam] ??
+                        {teamLabels[selectedForeman.foreman.defaultTeam] ??
                           selectedForeman.foreman.defaultTeam}
                       </span>
                     </div>
@@ -993,7 +1023,7 @@ export function ForemanContent({
                   <SelectValue placeholder="Select a team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEAM_OPTIONS.map((opt) => (
+                  {teamOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>

@@ -11,19 +11,93 @@ export type CompanySettingsDTO = {
   defaultBuildingDayRate: string;
   defaultSpecialCoatingsDayRate: string;
   defaultCapeTownDayRate: string;
+  teamRates: CompanyTeamRateDTO[];
   updatedAt: string;
 };
 
-function serializeSettings(s: any): CompanySettingsDTO {
+export type CompanyTeamRateDTO = {
+  id: string;
+  code: string;
+  name: string;
+  dayRate: string;
+  isSystem: boolean;
+  sortOrder: number;
+};
+
+const SYSTEM_TEAM_RATES = [
+  { code: "PAINTERS", name: "Painters", dayRate: "250.00", sortOrder: 10 },
+  { code: "BUILDING", name: "Building", dayRate: "300.00", sortOrder: 20 },
+  {
+    code: "SPECIAL_COATINGS",
+    name: "Special Coatings",
+    dayRate: "270.00",
+    sortOrder: 30,
+  },
+  { code: "CAPE_TOWN", name: "Cape Town", dayRate: "270.00", sortOrder: 40 },
+] as const;
+
+const TEAM_RATE_CONFIRMATION_CODE = "@FCP_2026";
+
+function isValidTeamRateConfirmationCode(code: unknown) {
+  return String(code ?? "") === TEAM_RATE_CONFIRMATION_CODE;
+}
+
+function normalizeTeamCode(name: string) {
+  return name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function serializeTeamRate(t: any): CompanyTeamRateDTO {
+  return {
+    id: t.id,
+    code: t.code,
+    name: t.name,
+    dayRate: String(t.dayRate),
+    isSystem: Boolean(t.isSystem),
+    sortOrder: Number(t.sortOrder ?? 100),
+  };
+}
+
+async function ensureSystemTeamRates() {
+  const existing = await prisma.companyTeamRate.findMany({
+    select: { code: true },
+  });
+  const existingCodes = new Set(existing.map((row) => row.code));
+
+  for (const team of SYSTEM_TEAM_RATES) {
+    if (existingCodes.has(team.code)) continue;
+
+    await prisma.companyTeamRate.create({
+      data: {
+        code: team.code,
+        name: team.name,
+        dayRate: team.dayRate as any,
+        isSystem: true,
+        sortOrder: team.sortOrder,
+      },
+    });
+  }
+
+  await prisma.companyTeamRate.updateMany({
+    where: { code: "PAINTERS", dayRate: 0 as any },
+    data: { dayRate: "250.00" as any },
+  });
+}
+
+function serializeSettings(s: any, teamRates: any[] = []): CompanySettingsDTO {
   return {
     id: s.id,
     defaultEmployeeDayRate: String(s.defaultEmployeeDayRate),
-    defaultPainterDayRate: String(s.defaultPainterDayRate ?? "0"),
+    defaultPainterDayRate: String(s.defaultPainterDayRate ?? "250"),
     defaultBuildingDayRate: String(s.defaultBuildingDayRate ?? "0"),
     defaultSpecialCoatingsDayRate: String(
       s.defaultSpecialCoatingsDayRate ?? "0",
     ),
     defaultCapeTownDayRate: String(s.defaultCapeTownDayRate ?? "0"),
+    teamRates: teamRates.map(serializeTeamRate),
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()
@@ -59,11 +133,17 @@ export async function getCompanySettings() {
       data: {
         id: "singleton",
         defaultEmployeeDayRate: 0,
+        defaultPainterDayRate: 250,
       },
     });
   }
 
-  return { ok: true as const, settings: serializeSettings(settings) };
+  await ensureSystemTeamRates();
+  const teamRates = await prisma.companyTeamRate.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  return { ok: true as const, settings: serializeSettings(settings, teamRates) };
 }
 
 export async function updateCompanySettings(input: {
@@ -158,6 +238,14 @@ export async function updateTeamDefaultRates(input: {
   defaultBuildingDayRate?: string | number;
   defaultSpecialCoatingsDayRate?: string | number;
   defaultCapeTownDayRate?: string | number;
+  teamRates?: Array<{
+    code?: string;
+    name: string;
+    dayRate: string | number;
+    isSystem?: boolean;
+    sortOrder?: number;
+  }>;
+  confirmationCode?: string;
 }) {
   const auth = await requireServerAuth();
 
@@ -166,6 +254,14 @@ export async function updateTeamDefaultRates(input: {
   }
 
   const data: Record<string, unknown> = {};
+  const teamRateInputs = input.teamRates ?? [];
+
+  if (
+    teamRateInputs.length > 0 &&
+    !isValidTeamRateConfirmationCode(input.confirmationCode)
+  ) {
+    return { ok: false as const, error: "Invalid confirmation code." };
+  }
 
   if (input.defaultPainterDayRate !== undefined) {
     const v = parseMoneyAllowZero(input.defaultPainterDayRate);
@@ -196,19 +292,158 @@ export async function updateTeamDefaultRates(input: {
   }
 
   if (Object.keys(data).length === 0) {
+    if (teamRateInputs.length === 0) {
+      return { ok: false as const, error: "No team rates provided." };
+    }
+  }
+
+  const normalizedTeamRates = teamRateInputs.map((team, index) => {
+    const name = String(team.name ?? "").trim();
+    const code = normalizeTeamCode(String(team.code || name));
+    const dayRate = parseMoneyAllowZero(team.dayRate);
+    if (!name || !code) {
+      throw new Error("Team name is required.");
+    }
+    if (dayRate === null) {
+      throw new Error(`${name} day rate is invalid.`);
+    }
+    return {
+      code,
+      name,
+      dayRate,
+      isSystem: Boolean(team.isSystem),
+      sortOrder: Number(team.sortOrder ?? (index + 1) * 10),
+    };
+  });
+
+  const seenCodes = new Set<string>();
+  for (const team of normalizedTeamRates) {
+    if (seenCodes.has(team.code)) {
+      return { ok: false as const, error: `Duplicate team: ${team.name}` };
+    }
+    seenCodes.add(team.code);
+  }
+
+  if (Object.keys(data).length === 0 && normalizedTeamRates.length === 0) {
     return { ok: false as const, error: "No team rates provided." };
   }
 
-  const result = await prisma.companySettings.upsert({
-    where: { id: "singleton" },
-    update: data,
-    create: {
-      id: "singleton",
-      defaultEmployeeDayRate: 0,
-      ...data,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedSettings = await tx.companySettings.upsert({
+      where: { id: "singleton" },
+      update: data,
+      create: {
+        id: "singleton",
+        defaultEmployeeDayRate: 0,
+        defaultPainterDayRate: 250,
+        ...data,
+      },
+    });
+
+    for (const team of normalizedTeamRates) {
+      await tx.companyTeamRate.upsert({
+        where: { code: team.code },
+        update: {
+          name: team.name,
+          dayRate: team.dayRate as any,
+          sortOrder: team.sortOrder,
+        },
+        create: {
+          code: team.code,
+          name: team.name,
+          dayRate: team.dayRate as any,
+          isSystem: team.isSystem,
+          sortOrder: team.sortOrder,
+        },
+      });
+    }
+
+    return updatedSettings;
   });
 
   revalidatePath("/settings");
-  return { ok: true as const, settings: serializeSettings(result) };
+  revalidatePath("/foreman");
+  revalidatePath("/admin/foremen");
+
+  const teamRates = await prisma.companyTeamRate.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  return { ok: true as const, settings: serializeSettings(result, teamRates) };
+}
+
+export async function verifyTeamRateConfirmationCode(input: {
+  confirmationCode: string;
+}) {
+  const auth = await requireServerAuth();
+
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Unauthorized. Admin only." };
+  }
+
+  if (!isValidTeamRateConfirmationCode(input.confirmationCode)) {
+    return { ok: false as const, error: "Invalid confirmation code." };
+  }
+
+  return { ok: true as const };
+}
+
+export async function deleteTeamRate(input: {
+  code: string;
+  confirmationCode: string;
+}) {
+  const auth = await requireServerAuth();
+
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Unauthorized. Admin only." };
+  }
+  if (!isValidTeamRateConfirmationCode(input.confirmationCode)) {
+    return { ok: false as const, error: "Invalid confirmation code." };
+  }
+
+  const code = normalizeTeamCode(input.code);
+  if (!code) {
+    return { ok: false as const, error: "Team code is required." };
+  }
+
+  const team = await prisma.companyTeamRate.findUnique({
+    where: { code },
+    select: { code: true, name: true },
+  });
+  if (!team) {
+    return { ok: false as const, error: "Team not found." };
+  }
+
+  const assignedForemen = await prisma.foreman.count({
+    where: { defaultTeam: code },
+  });
+  if (assignedForemen > 0) {
+    return {
+      ok: false as const,
+      error: `Cannot delete ${team.name}. ${assignedForemen} foreman(s) still use this team.`,
+    };
+  }
+
+  await prisma.companyTeamRate.delete({ where: { code } });
+
+  revalidatePath("/settings");
+  revalidatePath("/foreman");
+  revalidatePath("/admin/foremen");
+
+  return { ok: true as const };
+}
+
+export async function getTeamRateOptions() {
+  const auth = await requireServerAuth();
+
+  if (!["ADMIN", "SUPERVISOR", "FOREMAN"].includes(auth.role)) {
+    return { ok: false as const, error: "Unauthorized." };
+  }
+
+  await ensureSystemTeamRates();
+  const teams = await prisma.companyTeamRate.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  return { ok: true as const, teams: teams.map(serializeTeamRate) };
 }

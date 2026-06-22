@@ -140,9 +140,17 @@ export async function POST(req: NextRequest) {
           where: { id: existing.id },
           data: {
             claimDate: row.claimDate,
+            siteClaimDate: row.claimDate,
             amountClaimed: row.amountClaimed,
             amountReceived: row.amountReceived,
             status: row.claimStatus,
+          },
+        });
+        await prisma.site.update({
+          where: { id: site.id },
+          data: {
+            siteClaimDate: row.claimDate,
+            amountClaimed: row.amountClaimed,
           },
         });
         results.push({ ...row, importStatus: "UPDATED" });
@@ -151,9 +159,17 @@ export async function POST(req: NextRequest) {
           data: {
             siteId: site.id,
             claimDate: row.claimDate,
+            siteClaimDate: row.claimDate,
             amountClaimed: row.amountClaimed,
             amountReceived: row.amountReceived,
             status: row.claimStatus,
+          },
+        });
+        await prisma.site.update({
+          where: { id: site.id },
+          data: {
+            siteClaimDate: row.claimDate,
+            amountClaimed: row.amountClaimed,
           },
         });
         results.push({ ...row, importStatus: "CREATED" });

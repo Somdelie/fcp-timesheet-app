@@ -264,6 +264,31 @@ export async function getAllForemen() {
               },
             },
           },
+          assistants: {
+            where: {
+              startsOn: { lte: now },
+              OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+            },
+            orderBy: { startsOn: "desc" },
+            select: {
+              startsOn: true,
+              employee: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  qrCodeValue: true,
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
       // Check if this user was promoted from an employee who is an assistant

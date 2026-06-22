@@ -1,7 +1,7 @@
 "use client";
 
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -28,6 +28,7 @@ import {
   Check,
   ChevronsUpDown,
   Landmark,
+  UserPlus,
 } from "lucide-react";
 import {
   Dialog,
@@ -49,25 +50,29 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import ForemenTable, {
-  type ForemanRow,
-} from "@/components/foremen/ForemenTable";
+import ForemenTable from "@/components/foremen/ForemenTable";
 import {
   actionAdminListEmployees,
   actionAdminCreateAssistant,
 } from "@/actions/admin";
 import { switchForemanTeam } from "@/actions/foreman-team";
+import { getTeamRateOptions } from "@/actions/company-settings";
 import { updateForemanBankName } from "@/actions/foreman-bank";
 import { updateForeman } from "@/actions/foreman-update";
 import { SA_BANKS } from "@/lib/sa-banks";
 import type { AdminEmployee } from "@/lib/apiClient";
 
-const TEAM_OPTIONS = [
+type TeamOption = {
+  value: string;
+  label: string;
+};
+
+const DEFAULT_TEAM_OPTIONS: TeamOption[] = [
   { value: "PAINTERS", label: "Painters" },
   { value: "BUILDING", label: "Building" },
   { value: "SPECIAL_COATINGS", label: "Special Coatings" },
   { value: "CAPE_TOWN", label: "Cape Town" },
-] as const;
+];
 
 const TEAM_LABELS: Record<string, string> = {
   PAINTERS: "Painters",
@@ -99,6 +104,13 @@ interface Foreman {
     createdAt: string;
     supervisorId: string | null;
     supervisorName: string | null;
+    assistants: Array<{
+      id: string;
+      name: string;
+      email: string | null;
+      qrCodeValue: string;
+      startsOn: string;
+    }>;
   } | null;
   isAssistant: boolean;
 }
@@ -106,6 +118,7 @@ interface Foreman {
 export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
   const { setBreadcrumbs } = useBreadcrumbs();
   const router = useRouter();
+  const [teamOptions, setTeamOptions] = useState(DEFAULT_TEAM_OPTIONS);
   const [selectedForeman, setSelectedForeman] = useState<Foreman | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -157,10 +170,34 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
     bankName: "",
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const teamLabels = useMemo(
+    () => ({
+      ...TEAM_LABELS,
+      ...Object.fromEntries(teamOptions.map((team) => [team.value, team.label])),
+    }),
+    [teamOptions],
+  );
 
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard", href: "/" }, { label: "Foremen" }]);
   }, [setBreadcrumbs]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadTeamOptions() {
+      const res = await getTeamRateOptions();
+      if (!alive || !res.ok) return;
+      setTeamOptions(
+        res.teams.map((team) => ({ value: team.code, label: team.name })),
+      );
+    }
+
+    loadTeamOptions();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const openDialog = (foreman: Foreman) => {
     setSelectedForeman(foreman);
@@ -413,6 +450,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
         ) : (
           <ForemenTable
             data={filtered}
+            teamOptions={teamOptions}
             onView={openDialog}
             onAddAssistant={handleOpenAddAssistant}
             onSwitchTeam={handleOpenSwitchTeam}
@@ -516,7 +554,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
                       <span
                         className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium ${TEAM_COLORS[selectedForeman.foreman.defaultTeam] ?? ""}`}
                       >
-                        {TEAM_LABELS[selectedForeman.foreman.defaultTeam] ??
+                        {teamLabels[selectedForeman.foreman.defaultTeam] ??
                           selectedForeman.foreman.defaultTeam}
                       </span>
                     </div>
@@ -571,8 +609,59 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
                 </div>
               </div>
 
+              {selectedForeman.foreman && (
+                <div className="col-span-2 border-t pt-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="p-2 bg-orange-50 rounded">
+                      <UserPlus size={18} className="text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground tracking-wider">
+                        ASSISTANTS
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedForeman.foreman.assistants.length} active
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedForeman.foreman.assistants.length === 0 ? (
+                    <div className="rounded border border-dashed p-3 text-sm text-muted-foreground">
+                      No assistants assigned.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedForeman.foreman.assistants.map((assistant) => (
+                        <div
+                          key={assistant.id}
+                          className="rounded border bg-muted/30 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-foreground">
+                                {assistant.name}
+                              </p>
+                              <p className="truncate text-sm text-muted-foreground">
+                                {assistant.email ?? "No login email"}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 dark:bg-orange-300/20 dark:text-orange-300">
+                              Assistant
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span>Code: {assistant.qrCodeValue}</span>
+                            <span>Since: {assistant.startsOn}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="col-span-2 flex gap-3 pt-4 border-t">
                 <Button
                   onClick={() => handleOpenEdit(selectedForeman)}
                   className="flex-1 bg-primary hover:bg-primary/90 text-white font-medium h-10 gap-2"
@@ -1001,7 +1090,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
                   <SelectValue placeholder="Select a team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEAM_OPTIONS.map((opt) => (
+                  {teamOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
