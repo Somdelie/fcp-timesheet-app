@@ -82,6 +82,7 @@ export async function GET(
         latitude: true,
         longitude: true,
         isActive: true,
+        specAvailable: true,
         createdAt: true,
       },
     });
@@ -155,6 +156,7 @@ export async function GET(
           latitude: site.latitude,
           longitude: site.longitude,
           isActive: site.isActive,
+          specAvailable: site.specAvailable,
           createdAt: site.createdAt.toISOString(),
         },
         totalProjectWages,
@@ -214,7 +216,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { name, code, location, address, latitude, longitude, isActive } =
+    const { name, code, location, address, latitude, longitude, isActive, specAvailable } =
       body;
 
     // Validate name if provided
@@ -262,6 +264,8 @@ export async function PATCH(
     if (longitude !== undefined)
       updateData.longitude = longitude !== null ? Number(longitude) : null;
     if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+    if (specAvailable !== undefined)
+      updateData.specAvailable = Boolean(specAvailable);
 
     const updatedSite = await prisma.site.update({
       where: { id },
@@ -275,6 +279,7 @@ export async function PATCH(
         latitude: true,
         longitude: true,
         isActive: true,
+        specAvailable: true,
         createdAt: true,
       },
     });
@@ -291,6 +296,7 @@ export async function PATCH(
           latitude: updatedSite.latitude,
           longitude: updatedSite.longitude,
           isActive: updatedSite.isActive,
+          specAvailable: updatedSite.specAvailable,
           createdAt: updatedSite.createdAt.toISOString(),
         },
       },

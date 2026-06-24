@@ -247,9 +247,9 @@ async function getFortnightSiteWages() {
   const siteIds = rows.map((r) => r.siteId).filter(Boolean);
   const sites = await prisma.site.findMany({
     where: { id: { in: siteIds } },
-    select: { id: true, name: true },
+    select: { id: true, code: true, name: true },
   });
-  const nameMap = new Map(sites.map((s) => [s.id, s.name]));
+  const siteMap = new Map(sites.map((s) => [s.id, s]));
 
   return {
     startISO: toISODate(fnStart),
@@ -258,7 +258,8 @@ async function getFortnightSiteWages() {
     manDays: manDayPairs.size,
     sites: rows
       .map((r) => ({
-        site: nameMap.get(r.siteId) ?? "Unknown",
+        code: siteMap.get(r.siteId)?.code ?? null,
+        site: siteMap.get(r.siteId)?.name ?? "Unknown",
         wages: Number(r._sum.dayRateAtScan ?? 0),
       }))
       .filter((r) => r.wages > 0),

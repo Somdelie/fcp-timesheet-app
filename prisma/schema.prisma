@@ -65,6 +65,7 @@ model User {
   approvedFinishingSchedules         SiteFinishingSchedule[]      @relation("FinishingScheduleApprovedBy")
   finalizedFortnightMeetings         FortnightMeeting[]           @relation("FortnightMeetingFinalizedBy")
   siteClaims                         SiteClaim[]                  @relation("SiteClaimCreatedBy")
+  paidOvertimeEntries                OvertimeEntry[]              @relation("OvertimeEntryPaidBy")
   paintPlans                         SitePaintPlan[]              @relation("PaintPlanCreatedBy")
   paintUsages                        SitePaintUsage[]             @relation("PaintUsageCreatedBy")
   notifications                      Notification[]
@@ -291,6 +292,7 @@ model Site {
   jobStatus  JobStatus @default(NOT_STARTED)
   stageIndex Int       @default(0)
   stagePct   Json      @default("{}")
+  specAvailable Boolean @default(false)
 
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 
@@ -318,6 +320,9 @@ model Site {
 
   // Materials expected to be used on this site
   siteMaterials SiteMaterial[]
+
+  // Paint colours detected/used on this site
+  paintColors SitePaintColor[]
 
   // Finishing schedule for this site
   finishingSchedules SiteFinishingSchedule[]
@@ -1306,6 +1311,7 @@ model Supplier {
   orders                 SiteProductOrder[]
   supplierProductPrices  SupplierProductPrice[]
   finishingScheduleItems SiteFinishingScheduleItem[] @relation("FinishingScheduleItemSupplier")
+  sitePaintColors        SitePaintColor[]
   materials              Material[]
   materialPrices         MaterialPrice[]
 
@@ -1357,7 +1363,8 @@ model ProcurementProduct {
   supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   // Prices can vary by supplier (and over time)
-  supplierPrices SupplierProductPrice[]
+  supplierPrices  SupplierProductPrice[]
+  sitePaintColors SitePaintColor[]
 
   // order items using this product
   orderItems SiteProductOrderItem[]
@@ -1421,7 +1428,8 @@ model ProductColorVariant {
 
   isTinted Boolean @default(false)
 
-  supplierPrices SupplierProductPrice[]
+  supplierPrices  SupplierProductPrice[]
+  sitePaintColors SitePaintColor[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1430,6 +1438,55 @@ model ProductColorVariant {
   @@index([productId])
   @@index([colorName])
   @@index([baseType])
+}
+
+// Site-specific paint colour catalogue, seeded from BuildSmart order PDFs.
+// This keeps "colours used on a site" separate from the global product colour
+// catalogue so finishing schedules can start from site-relevant colours.
+model SitePaintColor {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   ProcurementProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  colorVariantId String?
+  colorVariant   ProductColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: SetNull)
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  sourceOrderId String?
+  sourceOrder   SiteProductOrder? @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+
+  sourceOrderItemId String?
+  sourceOrderItem   SiteProductOrderItem? @relation(fields: [sourceOrderItemId], references: [id], onDelete: SetNull)
+
+  orderReference String?
+  sourceFile     String?
+  rawDescription String?
+
+  productSnapshot  String?
+  supplierSnapshot String?
+
+  colorName String
+  colorCode String?
+  baseType  ColorBaseType @default(NEUTRAL)
+  isTinted  Boolean       @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+  @@index([siteId, colorName])
+  @@index([siteId, baseType])
+  @@index([productId])
+  @@index([colorVariantId])
+  @@index([supplierId])
+  @@index([sourceOrderId])
+  @@index([sourceOrderItemId])
 }
 
 // Per-variant inventory tracking (size × color quantities)
@@ -1505,7 +1562,8 @@ model SiteProductOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items SiteProductOrderItem[]
+  items           SiteProductOrderItem[]
+  sitePaintColors SitePaintColor[]
 
   // Optional cached totals (safe because optional)
   totalCost Decimal? @db.Decimal(14, 2)
@@ -1541,6 +1599,8 @@ model SiteProductOrderItem {
 
   costCodeId String?
   costCode   SiteCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
+
+  sitePaintColors SitePaintColor[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1672,6 +1732,10 @@ model OvertimeEntry {
 
   note String?
 
+  paidAt       DateTime?
+  paidByUserId String?
+  paidByUser   User?     @relation("OvertimeEntryPaidBy", fields: [paidByUserId], references: [id], onDelete: SetNull)
+
   costCodeId String?
   costCode   SiteCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 
@@ -1685,6 +1749,8 @@ model OvertimeEntry {
   @@index([foremanId, workDate])
   @@index([overtimePriceId])
   @@index([createdByUserId])
+  @@index([paidAt])
+  @@index([paidByUserId])
   @@index([workDate])
   @@index([costCodeId])
 }
@@ -1907,6 +1973,10 @@ enum FinishingZone {
   EXTERNAL
 }
 
+enum FinishingScheduleStatus {
+  INITIAL
+}
+
 model SiteFinishingSchedule {
   id String @id @default(cuid())
 
@@ -1928,6 +1998,7 @@ model SiteFinishingSchedule {
   contactInfo        String?
 
   // Versioning / publishing
+  status           FinishingScheduleStatus @default(INITIAL)
   version          Int       @default(1)
   isActive         Boolean   @default(true)
   approvedAt       DateTime?

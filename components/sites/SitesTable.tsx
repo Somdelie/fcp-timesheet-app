@@ -100,6 +100,8 @@ export type SiteRow = {
   siteClaimDate: string | null;
   amountClaimed: number;
   isActive: boolean;
+  specAvailable: boolean;
+  hasFinishingSchedule: boolean;
   createdAt: string;
   supervisorName: string | null;
   totalWages: number;
@@ -123,10 +125,9 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "select", label: "Select" },
   { id: "code", label: "Job Number" },
   { id: "name", label: "Name" },
+  { id: "supervisorName", label: "Supervisor" },
   { id: "client", label: "Client" },
   { id: "siteClaimDate", label: "Claim Date" },
-  { id: "supervisorName", label: "Supervisor" },
-  { id: "daysWorked", label: "Days Worked" },
   { id: "totalWages", label: "Total Wages" },
   { id: "totalMaterialCost", label: "Total Material Cost" },
   { id: "totalCost", label: "Total Cost" },
@@ -134,6 +135,9 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "claimPaidToDate", label: "Paid to Date" },
   { id: "claimOutstanding", label: "Outstanding" },
   { id: "profitLoss", label: "Profit / Loss" },
+  { id: "hasFinishingSchedule", label: "Finishing Schedule" },
+  { id: "specAvailable", label: "Spec" },
+  { id: "daysWorked", label: "Days Worked" },
   { id: "actions", label: "Actions" },
 ] as const;
 
@@ -200,6 +204,21 @@ function StatusPill({ active }: { active: boolean }) {
       </span>
       {active ? "Active" : "Inactive"}
     </div>
+  );
+}
+
+function YesNoPill({ value }: { value: boolean }) {
+  return (
+    <span
+      className={classNames(
+        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
+        value
+          ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+          : "bg-zinc-200/60 text-zinc-600 dark:bg-zinc-700/50 dark:text-zinc-300",
+      )}
+    >
+      {value ? "Yes" : "No"}
+    </span>
   );
 }
 
@@ -415,6 +434,7 @@ function SiteRowActions({
         initialSiteClaimDate={site.siteClaimDate}
         initialAmountClaimed={site.amountClaimed}
         initialJobStatus={site.jobStatus}
+        initialSpecAvailable={site.specAvailable}
         canEditCoreDetails={role === "ADMIN"}
         supervisorOptions={supervisorOptions}
         foremanOptions={foremanOptions}
@@ -629,7 +649,7 @@ export default function SitesTable({
               className="flex items-center gap-1 hover:text-foreground transition-colors"
               onClick={() => column.toggleSorting(isSorted === "asc")}
             >
-              <Hash className="h-4 w-4 text-indigo-600" />
+              {/* <Hash className="h-4 w-4 text-indigo-600" /> */}
               Job#
               {isSorted === "asc" ? (
                 <ChevronUp className="h-4 w-4" />
@@ -674,6 +694,22 @@ export default function SitesTable({
             title={row.original.name}
           >
             {row.original.name}
+          </span>
+        ),
+      },
+      {
+        id: "supervisorName",
+        accessorKey: "supervisorName",
+        size: 180,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-violet-600" />
+            Supervisor
+          </div>
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm capitalize">
+            {row.original.supervisorName ?? "—"}
           </span>
         ),
       },
@@ -734,51 +770,6 @@ export default function SitesTable({
             {row.original.siteClaimDate
               ? formatDate(row.original.siteClaimDate)
               : "—"}
-          </span>
-        ),
-      },
-      {
-        id: "supervisorName",
-        accessorKey: "supervisorName",
-        size: 180,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-violet-600" />
-            Supervisor
-          </div>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm capitalize">
-            {row.original.supervisorName ?? "—"}
-          </span>
-        ),
-      },
-      {
-        id: "daysWorked",
-        accessorKey: "daysWorked",
-        size: 120,
-        header: ({ column }) => {
-          const isSorted = column.getIsSorted();
-          return (
-            <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => column.toggleSorting(isSorted === "asc")}
-            >
-              <CalendarDays className="h-4 w-4 text-cyan-600" />
-              Days Worked
-              {isSorted === "asc" ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : isSorted === "desc" ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">
-            {row.original.daysWorked ?? 0}
           </span>
         ),
       },
@@ -994,6 +985,87 @@ export default function SitesTable({
             </div>
           );
         },
+      },
+      {
+        id: "hasFinishingSchedule",
+        accessorKey: "hasFinishingSchedule",
+        size: 145,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
+              Finishing Sch
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <YesNoPill value={row.original.hasFinishingSchedule} />
+        ),
+      },
+      {
+        id: "specAvailable",
+        accessorKey: "specAvailable",
+        size: 95,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+              Spec
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => <YesNoPill value={row.original.specAvailable} />,
+      },
+      {
+        id: "daysWorked",
+        accessorKey: "daysWorked",
+        size: 120,
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted();
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() => column.toggleSorting(isSorted === "asc")}
+            >
+              <CalendarDays className="h-4 w-4 text-cyan-600" />
+              Days Worked
+              {isSorted === "asc" ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : isSorted === "desc" ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          );
+        },
+        cell: ({ row }) => (
+          <span className="block text-right text-sm font-bold text-slate-700 dark:text-slate-200">
+            {row.original.daysWorked ?? 0}
+          </span>
+        ),
       },
       {
         id: "actions",

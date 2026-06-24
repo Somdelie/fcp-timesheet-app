@@ -6,6 +6,8 @@ import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
 import { resolveUnitPrice } from "@/lib/procurement";
 import { Prisma } from "@/generated/prisma/client";
+import { ensureInitialFinishingScheduleForColourProduct } from "@/lib/procurement/finishingScheduleAutoInitial";
+import { ensureSitePaintColorFromOrderItem } from "@/lib/procurement/sitePaintColorSeeder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,6 +100,13 @@ export async function POST(
       }
     }
 
+    const supplier = supplierId
+      ? await prisma.supplier.findUnique({
+          where: { id: supplierId },
+          select: { name: true },
+        })
+      : null;
+
     // Create all orders in one transaction
     const orders = await prisma.$transaction(async (tx) => {
       const created = [];
@@ -119,7 +128,7 @@ export async function POST(
         let total = new Prisma.Decimal(0);
         for (const item of f.items) {
           const price = await getPrice(item.productId, item.uom, item.unitSize);
-          await tx.siteProductOrderItem.create({
+          const orderItem = await tx.siteProductOrderItem.create({
             data: {
               order: { connect: { id: order.id } },
               product: { connect: { id: item.productId } },
@@ -128,6 +137,21 @@ export async function POST(
               uomAtOrder: (item.uom as any) || null,
               unitSizeAtOrder: item.unitSize ?? null,
             },
+          });
+          await ensureInitialFinishingScheduleForColourProduct(tx, {
+            siteId,
+            productId: item.productId,
+          });
+          await ensureSitePaintColorFromOrderItem(tx, {
+            siteId,
+            productId: item.productId,
+            rawDescription: null,
+            supplierId: supplierId ?? null,
+            supplierName: supplier?.name ?? null,
+            sourceOrderId: order.id,
+            sourceOrderItemId: orderItem.id,
+            orderReference: order.reference,
+            sourceFile: "site product order batch",
           });
           total = total.add(price.mul(item.quantity));
         }

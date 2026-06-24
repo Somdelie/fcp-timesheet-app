@@ -198,9 +198,19 @@ export default function SitesList({
     [number, number] | null
   >(null);
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>(() =>
-      Object.fromEntries(SITE_TABLE_COLUMN_OPTIONS.map(({ id }) => [id, true])),
-    );
+    React.useState<VisibilityState>(() => {
+      const hiddenByDefault = new Set([
+        "daysWorked",
+        "claimOutstanding",
+        "claimPaidToDate",
+        "siteClaimDate",
+        "profitLoss",
+      ]);
+
+      return Object.fromEntries(
+        SITE_TABLE_COLUMN_OPTIONS.map(({ id }) => [id, !hiddenByDefault.has(id)]),
+      );
+    });
   const exportColumns = React.useMemo<SitesPrintColumns>(
     () => ({
       code: columnVisibility.code !== false,

@@ -44,6 +44,19 @@ type SiteMaterialOption = {
 
 type SupplierOption = { id: string; name: string };
 
+type SitePaintColorOption = {
+  id: string;
+  colorName: string;
+  colorCode: string | null;
+  baseType: string;
+  productId: string | null;
+  productSnapshot: string | null;
+  supplierId: string | null;
+  supplierSnapshot: string | null;
+  product: { id: string; name: string } | null;
+  supplier: { id: string; name: string } | null;
+};
+
 type ItemData = {
   id: string;
   zone: "INTERNAL" | "EXTERNAL";
@@ -59,6 +72,7 @@ type ItemData = {
 interface Props {
   item: ItemData;
   siteMaterials: SiteMaterialOption[];
+  sitePaintColors: SitePaintColorOption[];
   suppliers: SupplierOption[];
 }
 
@@ -66,7 +80,12 @@ interface Props {
 // Component
 // ============================================================================
 
-export default function EditItemDialog({ item, siteMaterials, suppliers }: Props) {
+export default function EditItemDialog({
+  item,
+  siteMaterials,
+  sitePaintColors,
+  suppliers,
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -98,6 +117,32 @@ export default function EditItemDialog({ item, siteMaterials, suppliers }: Props
     // Auto-fill product and supplier from site material
     setProduct(m.product.name);
     if (m.product.supplier) setSupplierId(m.product.supplier.id);
+  }
+
+  function paintColorLabel(c: SitePaintColorOption) {
+    const code = c.colorCode ? ` ${c.colorCode}` : "";
+    const base = c.baseType && c.baseType !== "NEUTRAL" ? ` (${c.baseType})` : "";
+    return `${c.colorName}${code}${base}`;
+  }
+
+  function handlePaintColorChange(id: string) {
+    if (id === "__none__") {
+      setColorCode("");
+      return;
+    }
+    const c = sitePaintColors.find((color) => color.id === id);
+    if (!c) return;
+    setColorCode(paintColorLabel(c));
+    const productName = c.product?.name ?? c.productSnapshot;
+    if (productName) setProduct(productName);
+    const colorSupplierId = c.supplier?.id ?? c.supplierId;
+    if (colorSupplierId) setSupplierId(colorSupplierId);
+    if (c.productId) {
+      const matchingMaterial = siteMaterials.find(
+        (m) => m.product.id === c.productId,
+      );
+      if (matchingMaterial) setMaterialId(matchingMaterial.id);
+    }
   }
 
   function resetToItem() {
@@ -239,6 +284,27 @@ export default function EditItemDialog({ item, siteMaterials, suppliers }: Props
           </div>
 
           {/* Colour code */}
+          {sitePaintColors.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Site Colour</Label>
+              <Select onValueChange={handlePaintColorChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select seeded site colour..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {sitePaintColors.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {paintColorLabel(c)}
+                      {(c.product?.name ?? c.productSnapshot) &&
+                        ` - ${c.product?.name ?? c.productSnapshot}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="ei-colorCode">Colour &amp; Code</Label>
             <Input

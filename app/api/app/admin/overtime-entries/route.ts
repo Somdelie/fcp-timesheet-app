@@ -58,12 +58,16 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const siteId = url.searchParams.get("siteId");
     const foremanId = url.searchParams.get("foremanId");
+    const supervisorId = url.searchParams.get("supervisorId");
+    const paid = url.searchParams.get("paid");
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
 
     const where: Record<string, unknown> = {};
     if (siteId) where.siteId = siteId;
     if (foremanId) where.foremanId = foremanId;
+    if (paid === "PAID") where.paidAt = { not: null };
+    if (paid === "UNPAID") where.paidAt = null;
     if (from || to) {
       const workDate: Record<string, unknown> = {};
       if (from) workDate.gte = new Date(`${from}T00:00:00.000Z`);
@@ -84,16 +88,48 @@ export async function GET(req: Request) {
         },
         overtimePrice: { select: { id: true, label: true, rate: true } },
         createdByUser: { select: { id: true, name: true } },
+        paidByUser: { select: { id: true, name: true } },
       },
     });
 
-    const data = entries.map((e) => ({
+    const siteIds = Array.from(new Set(entries.map((e) => e.siteId)));
+    const supervisorAssignments = siteIds.length
+      ? await prisma.supervisorSiteAssignment.findMany({
+          where: {
+            siteId: { in: siteIds },
+            OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
+          },
+          orderBy: { startsOn: "desc" },
+          select: {
+            siteId: true,
+            supervisor: {
+              select: {
+                userId: true,
+                user: { select: { name: true } },
+              },
+            },
+          },
+        })
+      : [];
+    const supervisorsBySite = new Map<string, { id: string; name: string }>();
+    for (const assignment of supervisorAssignments) {
+      if (!supervisorsBySite.has(assignment.siteId)) {
+        supervisorsBySite.set(assignment.siteId, {
+          id: assignment.supervisor.userId,
+          name: assignment.supervisor.user?.name ?? "Supervisor",
+        });
+      }
+    }
+
+    let data = entries.map((e) => ({
       id: e.id,
       siteId: e.siteId,
       siteName: e.site.name,
       siteCode: e.site.code ?? null,
       foremanId: e.foremanId,
       foremanName: e.foreman.user.name ?? "Unknown",
+      supervisorId: supervisorsBySite.get(e.siteId)?.id ?? null,
+      supervisorName: supervisorsBySite.get(e.siteId)?.name ?? null,
       workDate: e.workDate.toISOString().slice(0, 10),
       overtimePriceId: e.overtimePriceId,
       overtimePriceLabel: e.overtimePrice.label,
@@ -102,9 +138,14 @@ export async function GET(req: Request) {
       hoursWorked: decimalToNumber(e.hoursWorked),
       totalCost: decimalToNumber(e.totalCost),
       note: e.note,
+      paidAt: e.paidAt?.toISOString() ?? null,
+      paidBy: e.paidByUser?.name ?? null,
       createdBy: e.createdByUser?.name ?? null,
       createdAt: e.createdAt.toISOString(),
     }));
+    if (supervisorId && supervisorId !== "ALL") {
+      data = data.filter((entry) => entry.supervisorId === supervisorId);
+    }
 
     return NextResponse.json({ ok: true, data }, { headers: CORS });
   } catch (e: any) {

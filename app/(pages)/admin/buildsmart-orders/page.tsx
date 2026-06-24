@@ -171,8 +171,8 @@ export default function BuildsmartPdfSeedPage() {
         </TabsList>
         <TabsContent value="orders">
           <PdfOrdersTab
-            title="BuildSmart PDF Seeder"
-            description="Drop BuildSmart PO PDFs here. Each PO is saved once — if that order number already exists (from PDF Orders or Historical Materials), it is skipped."
+            title="Documents PDF Seeder"
+            description="Drop Documents PO PDFs here. Each PO is saved once — if that order number already exists (from PDF Orders or Historical Materials), it is skipped."
             badgeText="PDF batch import"
             apiUrlDefault="/api/admin/buildsmart/seed-from-pdfs"
           />
@@ -616,8 +616,7 @@ function PdfOrdersTab({
                   <MetricCard
                     label="Parsed"
                     value={
-                      result.summary.parsedOrders ??
-                      result.summary.queuedOrders
+                      result.summary.parsedOrders ?? result.summary.queuedOrders
                     }
                   />
                   <MetricCard

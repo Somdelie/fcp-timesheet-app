@@ -49,6 +49,7 @@ import {
   NotebookIcon,
   DollarSign,
   TriangleAlert,
+  Printer,
 } from "lucide-react";
 import { useUserRole } from "@/lib/user-role-context";
 import type { UserRole } from "@/lib/roles";
@@ -63,6 +64,7 @@ type RecentActivityItem = {
 };
 
 type SiteWageRow = {
+  code?: string | null;
   site: string;
   wages: number;
 };
@@ -167,10 +169,132 @@ function formatDateLabel(iso: string): string {
   });
 }
 
+function formatSiteWageLabel(item: { code?: string | null; site: string }) {
+  return item.code ? `${item.code} - ${item.site}` : item.site;
+}
+
+function escapePrintHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function printFortnightSiteWagesAnalytics({
+  rows,
+  label,
+  foremanDays,
+  manDays,
+  totalWages,
+}: {
+  rows: SiteWageRow[];
+  label: string;
+  foremanDays: number;
+  manDays: number;
+  totalWages: number;
+}) {
+  const max = Math.max(1, ...rows.map((row) => row.wages));
+  const chartRows = rows
+    .map((row, index) => {
+      const color = WAGE_COLORS[index % WAGE_COLORS.length];
+      const pct = Math.max(4, (row.wages / max) * 100);
+      const labelText = escapePrintHtml(formatSiteWageLabel(row));
+      return `
+        <div class="chart-row">
+          <div class="chart-label">
+            <span class="dot" style="background:${color}"></span>
+            <span>${labelText}</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+          </div>
+          <div class="amount">${escapePrintHtml(formatWageCurrency(row.wages))}</div>
+        </div>`;
+    })
+    .join("");
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Fortnight Site Wages</title>
+  <style>
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { margin: 0; background: #f8fafc; color: #0f172a; font-family: Arial, Helvetica, sans-serif; }
+    .page { padding: 24px; }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; border-bottom: 1px solid #dbe5ef; padding-bottom: 18px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: 25px; line-height: 1.1; }
+    .date { margin-top: 6px; color: #526783; font-size: 14px; }
+    .stats { display: flex; gap: 10px; }
+    .stat { min-width: 132px; border-radius: 10px; background: #e7f5ed; padding: 12px 14px; text-align: right; }
+    .stat-label { color: #657992; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .stat-value { margin-top: 5px; color: #16a34a; font-size: 22px; font-weight: 900; }
+    .grid { display: block; }
+    .card { border: 1px solid #a7e4bd; border-radius: 8px; background: #ffffff; padding: 22px; }
+    .card h2 { margin: 0; font-size: 18px; }
+    .subtitle { margin: 8px 0 28px; color: #526783; font-size: 14px; }
+    .chart { display: flex; flex-direction: column; border-top: 1px solid #dbe5ef; }
+    .chart-row { display: grid; grid-template-columns: 380px minmax(220px, 1fr) 82px; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid #dbe5ef; page-break-inside: avoid; }
+    .chart-label { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 13px; font-weight: 800; }
+    .chart-label span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dot { width: 11px; height: 11px; border-radius: 999px; flex: 0 0 auto; }
+    .bar-track { height: 25px; border-radius: 6px; background: #f2f6fb; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 6px; opacity: .9; }
+    .amount { text-align: right; color: #5b6f8b; font-size: 14px; font-weight: 900; }
+    .toolbar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px; background: #ffffff; border-bottom: 1px solid #dbe5ef; }
+    .btn { border: 0; border-radius: 8px; background: #16a34a; color: white; padding: 10px 14px; font-weight: 800; cursor: pointer; }
+    @media print {
+      body { background: #ffffff; }
+      .toolbar { display: none; }
+      .page { padding: 0; }
+      .card { break-inside: avoid; }
+      @page { size: A4 landscape; margin: 12mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar"><button class="btn" onclick="window.print()">Print Analytics</button></div>
+  <main class="page">
+    <section class="header">
+      <div>
+        <h1>Fortnight Site Wages</h1>
+        <div class="date">${escapePrintHtml(label)}</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Foreman Days</div><div class="stat-value">${foremanDays}</div></div>
+        <div class="stat"><div class="stat-label">Man Days</div><div class="stat-value">${manDays}</div></div>
+        <div class="stat"><div class="stat-label">Total Wages</div><div class="stat-value">${escapePrintHtml(formatWageTotal(totalWages))}</div></div>
+      </div>
+    </section>
+    <section class="grid">
+      <div class="card">
+        <h2>Total Wages By Site</h2>
+        <div class="subtitle">Sites with wages in this fortnight</div>
+        <div class="chart">${chartRows || '<p class="subtitle">No site wages found.</p>'}</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>`;
+
+  const printWindow = window.open("", "_blank", "width=1200,height=850");
+  if (!printWindow) return;
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 350);
+}
+
 function TopSiteWagesChart({
   data,
+  showCode = false,
+  labelClassName = "w-27.5 min-w-27.5",
 }: {
-  data: { site: string; wages: number }[];
+  data: { code?: string | null; site: string; wages: number }[];
+  showCode?: boolean;
+  labelClassName?: string;
 }) {
   const max = Math.max(1, ...data.map((s) => s.wages));
   return (
@@ -178,16 +302,21 @@ function TopSiteWagesChart({
       {data.map((item, idx) => {
         const pct = (item.wages / max) * 100;
         const color = WAGE_COLORS[idx % WAGE_COLORS.length];
+        const label = showCode ? formatSiteWageLabel(item) : item.site;
         return (
-          <div key={idx} className="flex items-center gap-3">
+          <div key={idx} className="flex items-center gap-4">
             {/* Label */}
-            <div className="flex items-center gap-2 w-27.5 min-w-27.5">
+            <div className={`flex items-center gap-2 ${labelClassName}`}>
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-sm font-semibold truncate text-foreground">
-                {item.site}
+              <span
+                className={`text-sm font-semibold leading-tight text-foreground ${
+                  showCode ? "whitespace-normal" : "truncate"
+                }`}
+              >
+                {label}
               </span>
             </div>
             {/* Bar */}
@@ -243,7 +372,7 @@ export default function HomePage() {
   const [siteWagesSheetOpen, setSiteWagesSheetOpen] = useState(false);
   const role = useUserRole();
 
-  const ADMIN_CACHE_KEY = "dashboard-admin-v4";
+  const ADMIN_CACHE_KEY = "dashboard-admin-v6";
   const SUP_CACHE_KEY = "dashboard-supervisor-v3";
 
   useEffect(() => {
@@ -1090,37 +1219,56 @@ export default function HomePage() {
                 </SheetTitle>
                 <SheetDescription>{fortnightLabel}</SheetDescription>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Foreman Days
-                  </p>
-                  <p className="text-lg font-bold text-primary tabular-nums">
-                    {foremanDays}
-                  </p>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Foreman Days
+                    </p>
+                    <p className="text-lg font-bold text-primary tabular-nums">
+                      {foremanDays}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Man Days
+                    </p>
+                    <p className="text-lg font-bold text-primary tabular-nums">
+                      {manDays}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Total Wages
+                    </p>
+                    <p className="text-lg font-bold text-primary">
+                      {formatWageTotal(fortnightTotalWages)}
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Man Days
-                  </p>
-                  <p className="text-lg font-bold text-primary tabular-nums">
-                    {manDays}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-primary/10 px-4 py-2 text-left sm:text-right">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Total Wages
-                  </p>
-                  <p className="text-lg font-bold text-primary">
-                    {formatWageTotal(fortnightTotalWages)}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded border border-primary/30 bg-background px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={allFortnightSiteWages.length === 0}
+                  onClick={() =>
+                    printFortnightSiteWagesAnalytics({
+                      rows: allFortnightSiteWages,
+                      label: fortnightLabel,
+                      foremanDays,
+                      manDays,
+                      totalWages: fortnightTotalWages,
+                    })
+                  }
+                >
+                  <Printer className="h-4 w-4" />
+                  Print Analytics
+                </button>
               </div>
             </div>
           </SheetHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.45fr)]">
               <Card className="border border-primary/30 bg-card/95">
                 <CardHeader>
                   <CardTitle>Total Wages By Site</CardTitle>
@@ -1135,7 +1283,11 @@ export default function HomePage() {
                     </p>
                   ) : (
                     <div className="max-h-[46vh] overflow-y-auto pr-2">
-                      <TopSiteWagesChart data={allFortnightSiteWages} />
+                      <TopSiteWagesChart
+                        data={allFortnightSiteWages}
+                        showCode
+                        labelClassName="w-[18.5rem] min-w-[18.5rem] xl:w-[22rem] xl:min-w-[22rem]"
+                      />
                     </div>
                   )}
                 </CardContent>
@@ -1162,11 +1314,11 @@ export default function HomePage() {
                             key={`${row.site}-${index}`}
                             className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
                           >
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary">
-                              {index + 1}
+                            <span className="flex h-7 min-w-10 shrink-0 items-center justify-center rounded bg-primary/10 px-2 text-xs font-bold text-primary">
+                              {row.code ?? index + 1}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                              {row.site}
+                              {formatSiteWageLabel(row)}
                             </span>
                             <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
                               {formatWageTotal(row.wages)}

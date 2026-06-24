@@ -63,6 +63,7 @@ const schema = z.object({
   jobStatus: z
     .enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"])
     .optional(),
+  specAvailable: z.boolean().optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -95,6 +96,7 @@ export default function EditSiteLocationDialog(props: {
   initialSiteClaimDate?: string | null;
   initialAmountClaimed?: number | null;
   initialJobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD" | null;
+  initialSpecAvailable?: boolean | null;
   canEditCoreDetails?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -114,6 +116,7 @@ export default function EditSiteLocationDialog(props: {
     initialSiteClaimDate,
     initialAmountClaimed,
     initialJobStatus,
+    initialSpecAvailable,
     canEditCoreDetails = false,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
@@ -151,6 +154,7 @@ export default function EditSiteLocationDialog(props: {
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
+      specAvailable: Boolean(initialSpecAvailable),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -174,6 +178,7 @@ export default function EditSiteLocationDialog(props: {
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
+      specAvailable: Boolean(initialSpecAvailable),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -195,6 +200,8 @@ export default function EditSiteLocationDialog(props: {
     initialLongitude,
     initialSiteClaimDate,
     initialAmountClaimed,
+    initialJobStatus,
+    initialSpecAvailable,
   ]);
 
   function onSubmit(values: z.infer<typeof schema>) {
@@ -213,6 +220,7 @@ export default function EditSiteLocationDialog(props: {
         siteClaimDate: values.siteClaimDate || null,
         amountClaimed: values.amountClaimed ?? 0,
         jobStatus: values.jobStatus,
+        specAvailable: Boolean(values.specAvailable),
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
       });
@@ -498,6 +506,31 @@ export default function EditSiteLocationDialog(props: {
                           {opt.label}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="specAvailable"
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Spec
+                  </FieldLabel>
+                  <Select
+                    value={field.value ? "yes" : "no"}
+                    onValueChange={(value) => field.onChange(value === "yes")}
+                    disabled={pending}
+                  >
+                    <SelectTrigger className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50">
+                      <SelectValue placeholder="Select spec status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>

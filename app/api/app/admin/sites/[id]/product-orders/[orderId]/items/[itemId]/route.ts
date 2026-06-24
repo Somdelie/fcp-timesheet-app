@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
 import { resolveUnitPrice, recalcOrderTotal } from "@/lib/procurement";
+import { ensureInitialFinishingScheduleForColourProduct } from "@/lib/procurement/finishingScheduleAutoInitial";
+import { ensureSitePaintColorFromOrderItem } from "@/lib/procurement/sitePaintColorSeeder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,7 +75,17 @@ export async function PATCH(
     // Verify chain: order belongs to site, item belongs to order
     const item = await prisma.siteProductOrderItem.findFirst({
       where: { id: itemId, orderId },
-      include: { order: { select: { siteId: true, supplierId: true } } },
+      include: {
+        order: {
+          select: {
+            id: true,
+            siteId: true,
+            supplierId: true,
+            reference: true,
+            supplier: { select: { name: true } },
+          },
+        },
+      },
     });
     if (!item || item.order.siteId !== siteId)
       return NextResponse.json(
@@ -103,6 +115,21 @@ export async function PATCH(
 
     // Recalculate order total
     const newTotal = await recalcOrderTotal(orderId);
+    await ensureInitialFinishingScheduleForColourProduct(prisma, {
+      siteId,
+      productId: item.productId,
+    });
+    await ensureSitePaintColorFromOrderItem(prisma, {
+      siteId,
+      productId: item.productId,
+      rawDescription: updated.note,
+      supplierId: item.order.supplierId,
+      supplierName: item.order.supplier?.name ?? null,
+      sourceOrderId: item.order.id,
+      sourceOrderItemId: updated.id,
+      orderReference: item.order.reference,
+      sourceFile: "site product order",
+    });
 
     return NextResponse.json(
       {

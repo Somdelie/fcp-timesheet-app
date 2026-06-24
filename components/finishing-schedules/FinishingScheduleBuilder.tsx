@@ -56,6 +56,19 @@ type SiteMaterialOption = {
 
 type SupplierOption = { id: string; name: string };
 
+type SitePaintColorOption = {
+  id: string;
+  colorName: string;
+  colorCode: string | null;
+  baseType: string;
+  productId: string | null;
+  productSnapshot: string | null;
+  supplierId: string | null;
+  supplierSnapshot: string | null;
+  product: { id: string; name: string } | null;
+  supplier: { id: string; name: string } | null;
+};
+
 type ScheduleItem = {
   id: string;
   zone: "INTERNAL" | "EXTERNAL";
@@ -101,6 +114,7 @@ type Schedule = {
 interface Props {
   schedule: Schedule;
   siteMaterials: SiteMaterialOption[];
+  sitePaintColors: SitePaintColorOption[];
   suppliers: SupplierOption[];
 }
 
@@ -125,6 +139,7 @@ function fmt(d: Date | string | null | undefined) {
 export default function FinishingScheduleBuilder({
   schedule,
   siteMaterials,
+  sitePaintColors,
   suppliers,
 }: Props) {
   const router = useRouter();
@@ -269,6 +284,7 @@ export default function FinishingScheduleBuilder({
                   <CreateItemDialog
                     areaId={area.id}
                     siteMaterials={siteMaterials}
+                    sitePaintColors={sitePaintColors}
                     suppliers={suppliers}
                   />
                   <EditAreaDialog area={area} />
@@ -323,6 +339,7 @@ export default function FinishingScheduleBuilder({
                                 areaId={area.id}
                                 allZoneItems={internalItems}
                                 siteMaterials={siteMaterials}
+                                sitePaintColors={sitePaintColors}
                                 suppliers={suppliers}
                                 onMove={handleMoveItem}
                               />
@@ -349,6 +366,7 @@ export default function FinishingScheduleBuilder({
                                 areaId={area.id}
                                 allZoneItems={externalItems}
                                 siteMaterials={siteMaterials}
+                                sitePaintColors={sitePaintColors}
                                 suppliers={suppliers}
                                 onMove={handleMoveItem}
                               />
@@ -379,6 +397,7 @@ function ItemRow({
   areaId,
   allZoneItems,
   siteMaterials,
+  sitePaintColors,
   suppliers,
   onMove,
 }: {
@@ -388,6 +407,7 @@ function ItemRow({
   areaId: string;
   allZoneItems: ScheduleItem[];
   siteMaterials: SiteMaterialOption[];
+  sitePaintColors: SitePaintColorOption[];
   suppliers: SupplierOption[];
   onMove: (
     areaId: string,
@@ -430,7 +450,12 @@ function ItemRow({
           >
             <ArrowDown className="h-3.5 w-3.5" />
           </Button>
-          <EditItemDialog item={item} siteMaterials={siteMaterials} suppliers={suppliers} />
+          <EditItemDialog
+            item={item}
+            siteMaterials={siteMaterials}
+            sitePaintColors={sitePaintColors}
+            suppliers={suppliers}
+          />
           <DeleteItemButton itemId={item.id} />
         </div>
       </TableCell>

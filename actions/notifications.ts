@@ -204,5 +204,29 @@ export async function getNotifications(): Promise<NotificationItem[]> {
     siteId: n.siteId ?? "",
   }));
 
-  return [...mappedDb, ...notifications];
+  // 6. Pending note invites (map to general notifications so they appear on the bell)
+  try {
+    const invites = await prisma.noteInvite.findMany({
+      where: { invitedUserId: auth.userId, status: "PENDING" },
+      include: {
+        invitedByUser: { select: { id: true, name: true } },
+        note: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const inviteNotifications = invites.map((inv) => ({
+      id: `invite-${inv.id}`,
+      type: "GENERAL" as NotificationItem["type"],
+      title: "Note collaboration invite",
+      message: `${inv.invitedByUser?.name ?? "Someone"} invited you to collaborate on \"${inv.note?.title ?? "a note"}\"`,
+      siteName: "",
+      siteId: inv.noteId,
+    }));
+
+    return [...mappedDb, ...inviteNotifications, ...notifications];
+  } catch (err) {
+    // If anything goes wrong fetching invites, fall back to db notifications + scheduled ones
+    return [...mappedDb, ...notifications];
+  }
 }

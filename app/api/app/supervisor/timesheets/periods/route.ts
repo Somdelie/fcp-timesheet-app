@@ -111,11 +111,20 @@ async function generateQuickViewPdf(input: {
   const todayISO = new Date().toISOString().slice(0, 10);
   const dateLabel = periodHeaderLabel(input.startISO, input.endISO);
   const truncate = (value: string, width: number, textFont: PDFFont, size: number) => {
+    if (textFont.widthOfTextAtSize(value, size) <= width) return value;
+
+    const ellipsis = "...";
+    const ellipsisWidth = textFont.widthOfTextAtSize(ellipsis, size);
+    if (ellipsisWidth > width) return "";
+
     let result = value;
-    while (result && textFont.widthOfTextAtSize(result, size) > width) {
+    while (
+      result &&
+      textFont.widthOfTextAtSize(`${result}${ellipsis}`, size) > width
+    ) {
       result = result.slice(0, -1);
     }
-    return result === value ? result : `${result.slice(0, -3)}...`;
+    return result ? `${result}${ellipsis}` : ellipsis;
   };
   const cell = (
     page: PDFPage,
@@ -206,7 +215,7 @@ async function generateQuickViewPdf(input: {
       const future = input.columns[dayIdx]?.iso > todayISO;
       const present = row.foremanPresence[dayIdx] ?? false;
       const value = future ? "" : present ? `${initial}+${count}` : count > 0 ? String(count) : "/";
-      cell(page!, value, x, y - rowHeight, dayWidth, rowHeight, { bold: present || count > 0, align: "center", size: 7 });
+      cell(page!, value, x, y - rowHeight, dayWidth, rowHeight, { bold: present || count > 0, align: "center", size: 6 });
       x += dayWidth;
     });
     cell(page!, row.foremanDays ? String(row.foremanDays) : "", x, y - rowHeight, totalWidth, rowHeight, { bold: true, align: "center" }); x += totalWidth;

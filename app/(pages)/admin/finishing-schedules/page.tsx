@@ -7,7 +7,8 @@ import FinishingSchedulesTable, {
 export const metadata = { title: "Finishing Schedules" };
 
 export default async function FinishingSchedulesPage() {
-  const [schedules, sites] = await Promise.all([
+  const now = new Date();
+  const [schedules, sites, suppliers] = await Promise.all([
     prisma.siteFinishingSchedule.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -22,10 +23,65 @@ export default async function FinishingSchedulesPage() {
     }),
     prisma.site.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, code: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        client: true,
+        supervisorAssignments: {
+          where: {
+            startsOn: { lte: now },
+            OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+          },
+          orderBy: { startsOn: "desc" },
+          take: 1,
+          select: {
+            supervisor: {
+              select: {
+                user: { select: { name: true, email: true } },
+              },
+            },
+          },
+        },
+        foremanAssignments: {
+          where: {
+            startsOn: { lte: now },
+            OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+          },
+          orderBy: { startsOn: "desc" },
+          take: 1,
+          select: {
+            foreman: {
+              select: {
+                user: { select: { name: true, email: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.supplier.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const siteOptions = sites.map((site) => {
+    const supervisor = site.supervisorAssignments[0]?.supervisor.user ?? null;
+    const foreman = site.foremanAssignments[0]?.foreman.user ?? null;
+
+    return {
+      id: site.id,
+      name: site.name,
+      code: site.code,
+      client: site.client,
+      contractNo: site.code,
+      fcpContractManager: supervisor?.name ?? supervisor?.email ?? null,
+      fcpSiteForeman: foreman?.name ?? foreman?.email ?? null,
+    };
+  });
 
   const rows: ScheduleRow[] = schedules.map((s) => ({
     id: s.id,
@@ -45,7 +101,10 @@ export default async function FinishingSchedulesPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           Finishing Schedules
         </h1>
-        <CreateFinishingScheduleDialog sites={sites} />
+        <CreateFinishingScheduleDialog
+          sites={siteOptions}
+          suppliers={suppliers}
+        />
       </div>
 
       <FinishingSchedulesTable data={rows} />

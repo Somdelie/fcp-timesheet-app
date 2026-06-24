@@ -32,6 +32,21 @@ export default async function FinishingScheduleDetailPage({
                 },
               },
             },
+            paintColors: {
+              orderBy: [{ colorName: "asc" }, { createdAt: "desc" }],
+              select: {
+                id: true,
+                colorName: true,
+                colorCode: true,
+                baseType: true,
+                productId: true,
+                productSnapshot: true,
+                supplierId: true,
+                supplierSnapshot: true,
+                product: { select: { id: true, name: true } },
+                supplier: { select: { id: true, name: true } },
+              },
+            },
           },
         },
         areas: {
@@ -57,6 +72,7 @@ export default async function FinishingScheduleDetailPage({
     <FinishingScheduleBuilder
       schedule={schedule}
       siteMaterials={schedule.site.siteMaterials}
+      sitePaintColors={schedule.site.paintColors}
       suppliers={suppliers}
     />
   );

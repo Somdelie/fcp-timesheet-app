@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
 import { resolveUnitPrice, recalcOrderTotal } from "@/lib/procurement";
+import { ensureInitialFinishingScheduleForColourProduct } from "@/lib/procurement/finishingScheduleAutoInitial";
+import { ensureSitePaintColorFromOrderItem } from "@/lib/procurement/sitePaintColorSeeder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,7 +142,12 @@ export async function POST(
     // Verify order belongs to this site
     const order = await prisma.siteProductOrder.findFirst({
       where: { id: orderId, siteId },
-      select: { id: true, supplierId: true },
+      select: {
+        id: true,
+        supplierId: true,
+        reference: true,
+        supplier: { select: { name: true } },
+      },
     });
     if (!order)
       return NextResponse.json(
@@ -192,6 +199,21 @@ export async function POST(
 
     // Recalculate order total
     const newTotal = await recalcOrderTotal(orderId);
+    await ensureInitialFinishingScheduleForColourProduct(prisma, {
+      siteId,
+      productId,
+    });
+    await ensureSitePaintColorFromOrderItem(prisma, {
+      siteId,
+      productId,
+      rawDescription: note || null,
+      supplierId: order.supplierId,
+      supplierName: order.supplier?.name ?? null,
+      sourceOrderId: order.id,
+      sourceOrderItemId: item.id,
+      orderReference: order.reference,
+      sourceFile: "site product order",
+    });
 
     return NextResponse.json(
       {

@@ -79,6 +79,9 @@ function serializeSite(s: any) {
     latitude: typeof s.latitude === "number" ? s.latitude : null,
     longitude: typeof s.longitude === "number" ? s.longitude : null,
     isActive: s.isActive,
+    specAvailable: Boolean(s.specAvailable),
+    hasFinishingSchedule: (s.finishingSchedules?.length ?? 0) > 0,
+    finishingScheduleStatus: s.finishingSchedules?.[0]?.status ?? null,
     jobStatus: (s.jobStatus ?? "NOT_STARTED") as
       | "NOT_STARTED"
       | "ONGOING"
@@ -224,6 +227,7 @@ export async function listSites(input?: {
       latitude: true,
       longitude: true,
       isActive: true,
+      specAvailable: true,
       jobStatus: true,
       stageIndex: true,
       stagePct: true,
@@ -269,6 +273,11 @@ export async function listSites(input?: {
           amountReceived: true,
           status: true,
         },
+      },
+      finishingSchedules: {
+        where: { isActive: true },
+        select: { id: true, status: true },
+        take: 1,
       },
     },
   });
@@ -603,6 +612,7 @@ export async function updateSiteLocation(input: {
   siteClaimDate?: string | null;
   amountClaimed?: number | string | null;
   jobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
+  specAvailable?: boolean | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
 }) {
@@ -634,6 +644,8 @@ export async function updateSiteLocation(input: {
     input.latitude === undefined ? undefined : cleanNumber(input.latitude);
   const longitude =
     input.longitude === undefined ? undefined : cleanNumber(input.longitude);
+  const specAvailable =
+    input.specAvailable === undefined ? undefined : Boolean(input.specAvailable);
 
   if ((name !== undefined || code !== undefined) && auth.role !== "ADMIN") {
     return {
@@ -681,6 +693,7 @@ export async function updateSiteLocation(input: {
         ...(input.jobStatus !== undefined
           ? { jobStatus: input.jobStatus }
           : {}),
+        ...(specAvailable !== undefined ? { specAvailable } : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -696,8 +709,14 @@ export async function updateSiteLocation(input: {
         latitude: true,
         longitude: true,
         isActive: true,
+        specAvailable: true,
         jobStatus: true,
         createdAt: true,
+        finishingSchedules: {
+          where: { isActive: true },
+          select: { id: true, status: true },
+          take: 1,
+        },
       },
     });
 
@@ -738,6 +757,7 @@ export async function listOngoingSites() {
       amountClaimed: true,
       siteClaimDate: true,
       isActive: true,
+      specAvailable: true,
       jobStatus: true,
       stageIndex: true,
       stagePct: true,
@@ -760,6 +780,11 @@ export async function listOngoingSites() {
             },
           },
         },
+      },
+      finishingSchedules: {
+        where: { isActive: true },
+        select: { id: true, status: true },
+        take: 1,
       },
     },
   });

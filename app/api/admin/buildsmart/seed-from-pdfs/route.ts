@@ -34,6 +34,8 @@ import {
   loadExistingOrderReferences,
   trackOrderReference,
 } from "@/lib/procurement/buildsmartOrderDedup";
+import { ensureInitialFinishingScheduleForColourProduct } from "@/lib/procurement/finishingScheduleAutoInitial";
+import { ensureSitePaintColorFromOrderItem } from "@/lib/procurement/sitePaintColorSeeder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -707,10 +709,42 @@ async function seedFromPdfs(req: NextRequest) {
           })),
         },
       },
+      select: {
+        id: true,
+        siteId: true,
+        supplierId: true,
+        reference: true,
+        supplier: { select: { name: true } },
+        items: {
+          select: {
+            id: true,
+            productId: true,
+            note: true,
+          },
+        },
+      },
     });
 
     // Recalculate and persist the order total
     await recalcOrderTotal(created.id);
+
+    for (const item of created.items) {
+      await ensureInitialFinishingScheduleForColourProduct(prisma, {
+        siteId: created.siteId,
+        productId: item.productId,
+      });
+      await ensureSitePaintColorFromOrderItem(prisma, {
+        siteId: created.siteId,
+        productId: item.productId,
+        rawDescription: item.note,
+        supplierId: created.supplierId,
+        supplierName: created.supplier?.name ?? null,
+        sourceOrderId: created.id,
+        sourceOrderItemId: item.id,
+        orderReference: created.reference,
+        sourceFile: "BuildSmart PDF import",
+      });
+    }
 
     trackOrderReference(existingOrderRefs, mo.reference);
     savedOrderIds.push(created.id);

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import {
   flexRender,
@@ -10,6 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -27,7 +28,6 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
-  Hash,
   User,
   CalendarDays,
   Tag,
@@ -35,11 +35,13 @@ import {
   Users,
   Timer,
   Calculator,
-  Search,
   Printer,
+  Pencil,
+  CreditCard,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -59,7 +61,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
@@ -98,6 +99,8 @@ type OvertimeEntry = {
   siteCode: string | null;
   foremanId: string;
   foremanName: string;
+  supervisorId: string | null;
+  supervisorName: string | null;
   workDate: string;
   overtimePriceId: string;
   overtimePriceLabel: string;
@@ -106,6 +109,8 @@ type OvertimeEntry = {
   hoursWorked: number;
   totalCost: number;
   note: string | null;
+  paidAt: string | null;
+  paidBy: string | null;
   createdBy: string | null;
   createdAt: string;
 };
@@ -129,6 +134,9 @@ export default function OvertimeEntriesPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [foremen, setForemen] = useState<ForemanDto[]>([]);
   const [prices, setPrices] = useState<OvertimePriceDto[]>([]);
+  const [supervisors, setSupervisors] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   // Entries
   const [entries, setEntries] = useState<OvertimeEntry[]>([]);
@@ -144,6 +152,7 @@ export default function OvertimeEntriesPage() {
   const [formHours, setFormHours] = useState("");
   const [formNote, setFormNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [siteOpen, setSiteOpen] = useState(false);
   const [foremanOpen, setForemanOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
@@ -153,36 +162,46 @@ export default function OvertimeEntriesPage() {
 
   // Filters
   const [filterSiteId, setFilterSiteId] = useState("all");
+  const [filterSupervisorId, setFilterSupervisorId] = useState("ALL");
+  const [filterPaid, setFilterPaid] = useState("ALL");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
   // Pagination
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
 
   /* ── Load lookups ── */
   useEffect(() => {
     async function load() {
       try {
-        const [sitesRes, foremenRes, pricesRes] = await Promise.all([
-          fetch("/api/app/admin/sites?fields=lite", {
-            credentials: "include",
-            headers: { accept: "application/json" },
-          }),
-          fetch("/api/app/admin/foremen", {
-            credentials: "include",
-            headers: { accept: "application/json" },
-          }),
-          fetch("/api/app/admin/overtime-prices?includeInactive=false", {
-            credentials: "include",
-            headers: { accept: "application/json" },
-          }),
-        ]);
-        const [sitesJson, foremenJson, pricesJson] = await Promise.all([
-          sitesRes.json().catch(() => null),
-          foremenRes.json().catch(() => null),
-          pricesRes.json().catch(() => null),
-        ]);
+        const [sitesRes, foremenRes, pricesRes, supervisorsRes] =
+          await Promise.all([
+            fetch("/api/app/admin/sites?fields=lite", {
+              credentials: "include",
+              headers: { accept: "application/json" },
+            }),
+            fetch("/api/app/admin/foremen", {
+              credentials: "include",
+              headers: { accept: "application/json" },
+            }),
+            fetch("/api/app/admin/overtime-prices?includeInactive=false", {
+              credentials: "include",
+              headers: { accept: "application/json" },
+            }),
+            fetch("/api/app/admin/supervisors", {
+              credentials: "include",
+              headers: { accept: "application/json" },
+            }),
+          ]);
+        const [sitesJson, foremenJson, pricesJson, supervisorsJson] =
+          await Promise.all([
+            sitesRes.json().catch(() => null),
+            foremenRes.json().catch(() => null),
+            pricesRes.json().catch(() => null),
+            supervisorsRes.json().catch(() => null),
+          ]);
         setSites(
           (sitesJson?.sites ?? sitesJson?.data ?? []).map((s: any) => ({
             id: s.id,
@@ -197,6 +216,12 @@ export default function OvertimeEntriesPage() {
           })),
         );
         setPrices(pricesJson?.data ?? []);
+        setSupervisors(
+          (supervisorsJson?.supervisors ?? []).map((s: any) => ({
+            id: s.id,
+            name: s.name ?? "Supervisor",
+          })),
+        );
       } catch {
         /* silently fail */
       }
@@ -211,6 +236,9 @@ export default function OvertimeEntriesPage() {
       const params = new URLSearchParams();
       if (filterSiteId && filterSiteId !== "all")
         params.set("siteId", filterSiteId);
+      if (filterSupervisorId && filterSupervisorId !== "ALL")
+        params.set("supervisorId", filterSupervisorId);
+      if (filterPaid && filterPaid !== "ALL") params.set("paid", filterPaid);
       if (filterFrom) params.set("from", filterFrom);
       if (filterTo) params.set("to", filterTo);
 
@@ -221,13 +249,14 @@ export default function OvertimeEntriesPage() {
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ?? "Failed to load");
       setEntries(json?.data ?? []);
+      setRowSelection({});
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to load overtime entries");
       setEntries([]);
     } finally {
       setLoading(false);
     }
-  }, [filterSiteId, filterFrom, filterTo]);
+  }, [filterSiteId, filterSupervisorId, filterPaid, filterFrom, filterTo]);
 
   useEffect(() => {
     loadEntries();
@@ -262,32 +291,58 @@ export default function OvertimeEntriesPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/app/admin/overtime-entries", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          accept: "application/json",
+      const res = await fetch(
+        editId
+          ? `/api/app/admin/overtime-entries/${editId}`
+          : "/api/app/admin/overtime-entries",
+        {
+          method: editId ? "PATCH" : "POST",
+          credentials: "include",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            siteId: formSiteId,
+            foremanId: formForemanId,
+            workDate: formDate,
+            overtimePriceId: formPriceId,
+            numberOfEmployees: Number(formEmployees),
+            hoursWorked: Number(formHours),
+            note: formNote.trim() || undefined,
+          }),
         },
-        body: JSON.stringify({
-          siteId: formSiteId,
-          foremanId: formForemanId,
-          workDate: formDate,
-          overtimePriceId: formPriceId,
-          numberOfEmployees: Number(formEmployees),
-          hoursWorked: Number(formHours),
-          note: formNote.trim() || undefined,
-        }),
-      });
+      );
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error ?? "Failed to create");
-      toast.success("Overtime entry created");
+      if (!res.ok) throw new Error(json?.error ?? "Failed to save");
+      toast.success(editId ? "Overtime entry updated" : "Overtime entry created");
       setSheetOpen(false);
+      setEditId(null);
       loadEntries();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to create");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handlePaid(entry: OvertimeEntry, paid: boolean) {
+    try {
+      const res = await fetch(`/api/app/admin/overtime-entries/${entry.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({ action: paid ? "MARK_PAID" : "MARK_UNPAID" }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ?? "Failed to update paid status");
+      toast.success(paid ? "Marked as paid" : "Marked as unpaid");
+      loadEntries();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update paid status");
     }
   }
 
@@ -317,19 +372,37 @@ export default function OvertimeEntriesPage() {
       ? selectedPrice.rate * Number(formEmployees) * Number(formHours)
       : 0;
 
-  const totalCostAll = useMemo(
-    () => entries.reduce((s, e) => s + e.totalCost, 0),
-    [entries],
-  );
-  const totalEmployeesAll = useMemo(
-    () => entries.reduce((s, e) => s + e.numberOfEmployees, 0),
-    [entries],
-  );
-
   /* ── Column defs (matches SitesTable pattern) ── */
-  const columns: ColumnDef<OvertimeEntry>[] = useMemo(
-    () => [
-      {
+  const columns: ColumnDef<OvertimeEntry>[] = [
+    {
+      id: "select",
+      size: 48,
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all overtime entries on this page"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select overtime entry"
+          />
+        </div>
+      ),
+      enableSorting: false,
+    },
+    {
         id: "workDate",
         accessorKey: "workDate",
         size: 120,
@@ -410,6 +483,22 @@ export default function OvertimeEntriesPage() {
         },
         cell: ({ row }) => (
           <span className="text-sm capitalize">{row.original.foremanName}</span>
+        ),
+      },
+      {
+        id: "supervisor",
+        accessorKey: "supervisorName",
+        size: 150,
+        header: () => (
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-cyan-600" />
+            Supervisor
+          </div>
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm capitalize">
+            {row.original.supervisorName ?? "-"}
+          </span>
         ),
       },
       {
@@ -504,14 +593,66 @@ export default function OvertimeEntriesPage() {
         ),
       },
       {
+        id: "paid",
+        accessorFn: (row) => (row.paidAt ? "Paid" : "Unpaid"),
+        size: 110,
+        header: () => <div className="text-center">Status</div>,
+        cell: ({ row }) => {
+          const paid = Boolean(row.original.paidAt);
+          return (
+            <div className="text-center">
+              <span
+                className={cn(
+                  "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                  paid
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-700",
+                )}
+                title={
+                  row.original.paidAt
+                    ? `Paid${row.original.paidBy ? ` by ${row.original.paidBy}` : ""}`
+                    : "Unpaid"
+                }
+              >
+                {paid ? "Paid" : "Unpaid"}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
         id: "actions",
-        size: 80,
+        size: 130,
         header: () => <div className="text-center">Actions</div>,
         cell: ({ row }) => (
-          <div className="text-center">
+          <div className="flex items-center justify-center gap-1">
             <Button
               variant="ghost"
               size="icon"
+              title="Edit overtime entry"
+              onClick={() => openEdit(row.original)}
+            >
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              title={row.original.paidAt ? "Mark unpaid" : "Mark paid"}
+              onClick={() => handlePaid(row.original, !row.original.paidAt)}
+            >
+              <CreditCard
+                className={cn(
+                  "h-4 w-4",
+                  row.original.paidAt
+                    ? "text-emerald-600"
+                    : "text-muted-foreground",
+                )}
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Delete overtime entry"
               onClick={() => setDeleteId(row.original.id)}
             >
               <Trash2 className="h-4 w-4 text-destructive" />
@@ -519,22 +660,27 @@ export default function OvertimeEntriesPage() {
           </div>
         ),
       },
-    ],
-    [],
-  );
+  ];
 
   const table = useReactTable({
     data: entries,
     columns,
-    state: { sorting, pagination },
+    state: { sorting, pagination, rowSelection },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
+  const selectedEntries = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original);
 
   function openSheet() {
+    setEditId(null);
     setFormSiteId(sites[0]?.id ?? "");
     setFormForemanId("");
     setFormDate("");
@@ -542,6 +688,18 @@ export default function OvertimeEntriesPage() {
     setFormEmployees("");
     setFormHours("");
     setFormNote("");
+    setSheetOpen(true);
+  }
+
+  function openEdit(entry: OvertimeEntry) {
+    setEditId(entry.id);
+    setFormSiteId(entry.siteId);
+    setFormForemanId(entry.foremanId);
+    setFormDate(entry.workDate);
+    setFormPriceId(entry.overtimePriceId);
+    setFormEmployees(String(entry.numberOfEmployees));
+    setFormHours(String(entry.hoursWorked));
+    setFormNote(entry.note ?? "");
     setSheetOpen(true);
   }
 
@@ -578,6 +736,45 @@ export default function OvertimeEntriesPage() {
                 </Select>
               </div>
               <div>
+                <Select
+                  value={filterSupervisorId}
+                  onValueChange={(v) => {
+                    setFilterSupervisorId(v);
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
+                >
+                  <SelectTrigger className="h-10 w-52">
+                    <SelectValue placeholder="All supervisors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All supervisors</SelectItem>
+                    {supervisors.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Select
+                  value={filterPaid}
+                  onValueChange={(v) => {
+                    setFilterPaid(v);
+                    setPagination((p) => ({ ...p, pageIndex: 0 }));
+                  }}
+                >
+                  <SelectTrigger className="h-10 w-36">
+                    <SelectValue placeholder="All status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All status</SelectItem>
+                    <SelectItem value="UNPAID">Unpaid</SelectItem>
+                    <SelectItem value="PAID">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Input
                   type="date"
                   value={filterFrom}
@@ -604,6 +801,8 @@ export default function OvertimeEntriesPage() {
                 className="h-10"
                 onClick={() => {
                   setFilterSiteId("all");
+                  setFilterSupervisorId("ALL");
+                  setFilterPaid("ALL");
                   setFilterFrom("");
                   setFilterTo("");
                   setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -619,13 +818,13 @@ export default function OvertimeEntriesPage() {
               variant="outline"
               className="gap-2"
               size="lg"
-              disabled={entries.length === 0}
+              disabled={selectedEntries.length === 0}
               onClick={() => {
                 const selectedSite =
                   filterSiteId !== "all"
                     ? sites.find((s) => s.id === filterSiteId)
                     : undefined;
-                printOvertimeEntries(entries, {
+                printOvertimeEntries(selectedEntries, {
                   filterSiteName: selectedSite
                     ? siteLabel(selectedSite.name, selectedSite.code)
                     : undefined,
@@ -635,7 +834,8 @@ export default function OvertimeEntriesPage() {
               }}
             >
               <Printer className="h-4 w-4" />
-              Print
+              Print Selected
+              {selectedEntries.length > 0 ? ` (${selectedEntries.length})` : ""}
             </Button>
             <Button className="gap-2" size="lg" onClick={openSheet}>
               <Plus className="h-4 w-4" />
@@ -837,11 +1037,13 @@ export default function OvertimeEntriesPage() {
                 <Clock className="h-4 w-4 text-background" />
               </div>
               <SheetTitle className="text-base font-semibold text-foreground tracking-tight">
-                Add Overtime Entry
+                {editId ? "Edit Overtime Entry" : "Add Overtime Entry"}
               </SheetTitle>
             </div>
             <p className="text-xs text-muted-foreground ml-11">
-              Fill in the details to log an overtime record.
+              {editId
+                ? "Update the overtime record values."
+                : "Fill in the details to log an overtime record."}
             </p>
           </div>
 
@@ -1172,7 +1374,7 @@ export default function OvertimeEntriesPage() {
                   Saving...
                 </span>
               ) : (
-                "Save Overtime Entry"
+                editId ? "Update Overtime Entry" : "Save Overtime Entry"
               )}
             </Button>
           </div>

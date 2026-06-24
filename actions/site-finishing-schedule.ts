@@ -81,6 +81,71 @@ export async function listFinishingSchedules(siteId: string) {
   return { ok: true as const, schedules };
 }
 
+export async function getFinishingScheduleSiteDefaults(siteId: string) {
+  await requireServerAuth();
+  const id = clean(siteId);
+  if (!id) return { ok: false as const, error: "Site ID is required." };
+
+  const now = new Date();
+  const site = await prisma.site.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      client: true,
+      supervisorAssignments: {
+        where: {
+          startsOn: { lte: now },
+          OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+        },
+        orderBy: { startsOn: "desc" },
+        take: 1,
+        select: {
+          supervisor: {
+            select: {
+              user: { select: { name: true, email: true } },
+            },
+          },
+        },
+      },
+      foremanAssignments: {
+        where: {
+          startsOn: { lte: now },
+          OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+        },
+        orderBy: { startsOn: "desc" },
+        take: 1,
+        select: {
+          foreman: {
+            select: {
+              user: { select: { name: true, email: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!site) return { ok: false as const, error: "Site not found." };
+
+  const supervisor = site.supervisorAssignments[0]?.supervisor.user ?? null;
+  const foreman = site.foremanAssignments[0]?.foreman.user ?? null;
+
+  return {
+    ok: true as const,
+    site: {
+      id: site.id,
+      name: site.name,
+      code: site.code,
+      client: site.client,
+      contractNo: site.code,
+      fcpContractManager: supervisor?.name ?? supervisor?.email ?? null,
+      fcpSiteForeman: foreman?.name ?? foreman?.email ?? null,
+    },
+  };
+}
+
 // ========================
 // CREATE
 // ========================
@@ -163,11 +228,64 @@ export async function createFinishingSchedule(input: CreateScheduleInput) {
         : null,
       drawingDetails: input.drawingDetails ? clean(input.drawingDetails) : null,
       contactInfo: input.contactInfo ? clean(input.contactInfo) : null,
+      areas: input.areas?.length
+        ? {
+            create: input.areas
+              .map((area, areaIndex) => ({
+                name: clean(area.name),
+                label: area.label ? clean(area.label) : null,
+                sortOrder: area.sortOrder ?? areaIndex,
+                items: area.items?.length
+                  ? {
+                      create: area.items
+                        .filter((item) => clean(item.position))
+                        .map((item, itemIndex) => ({
+                          zone: item.zone,
+                          position: clean(item.position),
+                          product: item.product ? clean(item.product) : null,
+                          colorCode: item.colorCode
+                            ? clean(item.colorCode)
+                            : null,
+                          supplier: item.supplier ? clean(item.supplier) : null,
+                          sortOrder: item.sortOrder ?? itemIndex,
+                          note: item.note ? clean(item.note) : null,
+                        })),
+                    }
+                  : undefined,
+              }))
+              .filter((area) => area.name),
+          }
+        : undefined,
     },
   });
 
   revalidatePath(`/sites/${siteId}`);
   return { ok: true as const, id: schedule.id };
+}
+
+export async function listSitePaintColorsForSchedule(siteId: string) {
+  await requireServerAuth();
+  const id = clean(siteId);
+  if (!id) return { ok: false as const, error: "Site ID is required." };
+
+  const colors = await prisma.sitePaintColor.findMany({
+    where: { siteId: id },
+    orderBy: [{ colorName: "asc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      colorName: true,
+      colorCode: true,
+      baseType: true,
+      productId: true,
+      productSnapshot: true,
+      supplierId: true,
+      supplierSnapshot: true,
+      product: { select: { id: true, name: true } },
+      supplier: { select: { id: true, name: true } },
+    },
+  });
+
+  return { ok: true as const, colors };
 }
 
 // ========================

@@ -8,6 +8,7 @@ import { BreadcrumbProvider } from "@/lib/breadcrumb-context";
 import type { UserRole } from "@/lib/roles";
 import { UserRoleProvider } from "@/lib/user-role-context";
 import { SchedulerAlertProvider } from "@/components/scheduler/SchedulerAlertProvider";
+import InvitePopup from "@/components/common/InvitePopup";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -24,7 +25,9 @@ function getBreakpoint() {
 
 export function AppShell({ children, role, userName }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [breakpoint, setBreakpoint] = useState<"mobile" | "tablet" | "desktop">("desktop");
+  const [breakpoint, setBreakpoint] = useState<"mobile" | "tablet" | "desktop">(
+    "desktop",
+  );
   const pathname = usePathname();
   const hasLoggedOpen = useRef(false);
 
@@ -89,6 +92,7 @@ export function AppShell({ children, role, userName }: AppShellProps) {
             />
             <main className="flex-1 overflow-auto w-full py-3 px-4 min-h-0">
               {children}
+              <InvitePopup />
             </main>
           </div>
         </div>

@@ -127,6 +127,7 @@ export async function GET(req: Request) {
         latitude: true,
         longitude: true,
         isActive: true,
+        specAvailable: true,
         createdAt: true,
         supervisorAssignments: {
           select: {
@@ -159,6 +160,11 @@ export async function GET(req: Request) {
               },
             },
           },
+        },
+        finishingSchedules: {
+          where: { isActive: true },
+          select: { id: true, status: true },
+          take: 1,
         },
       },
       orderBy: { createdAt: "desc" },
@@ -199,6 +205,9 @@ export async function GET(req: Request) {
             latitude: s.latitude,
             longitude: s.longitude,
             isActive: s.isActive,
+            specAvailable: Boolean(s.specAvailable),
+            hasFinishingSchedule: (s.finishingSchedules?.length ?? 0) > 0,
+            finishingScheduleStatus: s.finishingSchedules?.[0]?.status ?? null,
             createdAt: s.createdAt.toISOString(),
             supervisorName,
             totalWages,
