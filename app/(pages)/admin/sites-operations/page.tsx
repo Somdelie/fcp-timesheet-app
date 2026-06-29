@@ -8,7 +8,7 @@ import SiteProgramPage from "../site-program/page";
 
 const TABS = [
   { value: "finishing-schedules", label: "Finishing Schedules" },
-  { value: "job-program", label: "Job Program" },
+  { value: "job-program", label: "Sites Programs" },
   { value: "job-progress", label: "Job Progress" },
   { value: "paint-planning", label: "Paint Planning" },
   { value: "print-cards", label: "Print Cards" },
