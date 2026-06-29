@@ -1201,7 +1201,7 @@ export function JobProgramPlanner({
                             return (
                               <div
                                 key={`${item.id}-${day.toISOString()}`}
-                                className={`relative h-[164px] border-b border-r border-border ${
+                                className={`relative h-41 border-b border-r border-border ${
                                   weekStart
                                     ? "border-l-4 border-l-primary/70"
                                     : ""
@@ -1573,7 +1573,7 @@ function Field({
 
 function EmptyProgrammeState({ onCreate }: { onCreate: () => void }) {
   return (
-    <section className="flex h-full min-h-[420px] items-center justify-center rounded border border-dashed border-border bg-card p-8 text-center">
+    <section className="flex h-full min-h-105 items-center justify-center rounded border border-dashed border-border bg-card p-8 text-center">
       <div className="max-w-sm">
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded bg-muted text-muted-foreground">
           <FileText size={22} />
