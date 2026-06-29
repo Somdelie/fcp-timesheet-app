@@ -42,6 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Check,
   ChevronsUpDown,
@@ -90,10 +91,11 @@ export default function AdminTransferEmployeePage() {
   const [loadingScans, setLoadingScans] = useState(false);
   const [scannedInCount, setScannedInCount] = useState(0);
   const [scannedOutCount, setScannedOutCount] = useState(0);
+  const [selectedScanIds, setSelectedScanIds] = useState<string[]>([]);
 
   // Transfer dialog state
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [selectedScan, setSelectedScan] = useState<SiteScan | null>(null);
+  const [selectedScans, setSelectedScans] = useState<SiteScan[]>([]);
   const [destinationSiteId, setDestinationSiteId] = useState<string>("");
   const [destSiteOpen, setDestSiteOpen] = useState(false);
   const [destForemen, setDestForemen] = useState<ForemanOption[]>([]);
@@ -131,11 +133,17 @@ export default function AdminTransferEmployeePage() {
       if (!res.ok) throw new Error("Failed to load today's scans");
       const data = await res.json();
       setScans(data.scans || []);
+      setSelectedScanIds((ids) =>
+        ids.filter((id) =>
+          (data.scans || []).some((scan: SiteScan) => scan.id === id),
+        ),
+      );
       setScannedInCount(data.scannedInCount ?? 0);
       setScannedOutCount(data.scannedOutCount ?? 0);
     } catch (err: any) {
       toast.error(err.message || "Failed to load scans");
       setScans([]);
+      setSelectedScanIds([]);
     } finally {
       setLoadingScans(false);
     }
@@ -146,6 +154,7 @@ export default function AdminTransferEmployeePage() {
       loadScans(selectedSiteId);
     } else {
       setScans([]);
+      setSelectedScanIds([]);
       setScannedInCount(0);
       setScannedOutCount(0);
     }
@@ -193,10 +202,52 @@ export default function AdminTransferEmployeePage() {
 
   const scannedIn = filteredScans.filter((s) => !s.isScannedOut);
   const scannedOut = filteredScans.filter((s) => s.isScannedOut);
+  const selectedScanIdSet = new Set(selectedScanIds);
+  const selectedTransferScans = scans.filter(
+    (scan) => selectedScanIdSet.has(scan.id) && !scan.isScannedOut,
+  );
+  const selectedScan = selectedScans[0] as SiteScan;
+  const visibleSelectedCount = scannedIn.filter((scan) =>
+    selectedScanIdSet.has(scan.id),
+  ).length;
+  const allVisibleSelected =
+    scannedIn.length > 0 && visibleSelectedCount === scannedIn.length;
+  const someVisibleSelected =
+    visibleSelectedCount > 0 && visibleSelectedCount < scannedIn.length;
+
+  const toggleScanSelection = (scanId: string, checked: boolean) => {
+    setSelectedScanIds((ids) =>
+      checked
+        ? ids.includes(scanId)
+          ? ids
+          : [...ids, scanId]
+        : ids.filter((id) => id !== scanId),
+    );
+  };
+
+  const toggleVisibleSelection = (checked: boolean) => {
+    const visibleIds = scannedIn.map((scan) => scan.id);
+    setSelectedScanIds((ids) => {
+      if (!checked) return ids.filter((id) => !visibleIds.includes(id));
+      const next = new Set(ids);
+      visibleIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  };
 
   // Open transfer dialog
   const openTransfer = (scan: SiteScan) => {
-    setSelectedScan(scan);
+    setSelectedScans([scan]);
+    setDestinationSiteId("");
+    setSelectedForemanId("");
+    setDestForemen([]);
+    setTransferReason("");
+    setTransferDialogOpen(true);
+  };
+
+  const openBulkTransfer = () => {
+    if (selectedTransferScans.length === 0) return;
+    setSelectedScans(selectedTransferScans);
     setDestinationSiteId("");
     setSelectedForemanId("");
     setDestForemen([]);
@@ -207,7 +258,7 @@ export default function AdminTransferEmployeePage() {
   // Perform transfer
   const doTransfer = async () => {
     if (
-      !selectedScan ||
+      selectedScans.length === 0 ||
       !destinationSiteId ||
       !selectedSiteId ||
       !selectedForemanId
@@ -215,26 +266,52 @@ export default function AdminTransferEmployeePage() {
       return;
     setTransferring(true);
     try {
-      const res = await fetch("/api/app/supervisor/transfer-employee", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId: selectedScan.employeeId,
-          fromSiteId: selectedSiteId,
-          toSiteId: destinationSiteId,
-          toForemanId: selectedForemanId,
-          reason: transferReason.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
+      const failures: string[] = [];
+      const transferredIds: string[] = [];
+
+      for (const scan of selectedScans) {
+        const res = await fetch("/api/app/supervisor/transfer-employee", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeId: scan.employeeId,
+            fromSiteId: selectedSiteId,
+            toSiteId: destinationSiteId,
+            toForemanId: selectedForemanId,
+            reason: transferReason.trim() || undefined,
+          }),
+        });
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Transfer failed");
+        if (!res.ok) {
+          failures.push(`${scan.employeeName}: ${data.error || "Transfer failed"}`);
+        } else {
+          transferredIds.push(scan.id);
+        }
       }
-      const data = await res.json();
-      toast.success(data.message || "Transfer successful!");
-      setTransferDialogOpen(false);
-      setSelectedScan(null);
-      // Refresh scans
+
+      if (transferredIds.length > 0) {
+        toast.success(
+          transferredIds.length === 1
+            ? "Transfer successful!"
+            : `${transferredIds.length} employees transferred.`,
+        );
+        setSelectedScanIds((ids) =>
+          ids.filter((id) => !transferredIds.includes(id)),
+        );
+      }
+
+      if (failures.length > 0) {
+        toast.error(
+          failures.length === 1
+            ? failures[0]
+            : `${failures.length} transfers failed. ${failures[0]}`,
+        );
+      }
+
+      if (failures.length === 0) {
+        setTransferDialogOpen(false);
+        setSelectedScans([]);
+      }
       await loadScans(selectedSiteId);
     } catch (err: any) {
       toast.error(err.message || "Transfer failed");
@@ -378,13 +455,29 @@ export default function AdminTransferEmployeePage() {
       {selectedSiteId && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Employees on Site ({scannedIn.length})
-            </CardTitle>
-            <CardDescription>
-              These employees are currently scanned in and can be transferred.
-            </CardDescription>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Employees on Site ({scannedIn.length})
+                </CardTitle>
+                <CardDescription>
+                  These employees are currently scanned in and can be
+                  transferred.
+                </CardDescription>
+              </div>
+              <Button
+                onClick={openBulkTransfer}
+                disabled={selectedTransferScans.length === 0}
+                className="gap-2 md:self-center"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Transfer Selected
+                {selectedTransferScans.length > 0
+                  ? ` (${selectedTransferScans.length})`
+                  : ""}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {loadingScans ? (
@@ -400,6 +493,21 @@ export default function AdminTransferEmployeePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12 border">
+                        <Checkbox
+                          aria-label="Select all visible employees"
+                          checked={
+                            allVisibleSelected
+                              ? true
+                              : someVisibleSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            toggleVisibleSelection(checked === true)
+                          }
+                        />
+                      </TableHead>
                       <TableHead className="border">Employee</TableHead>
                       <TableHead className="border">Code</TableHead>
                       <TableHead className="border">Scanned In</TableHead>
@@ -413,6 +521,15 @@ export default function AdminTransferEmployeePage() {
                   <TableBody>
                     {scannedIn.map((scan) => (
                       <TableRow key={scan.id}>
+                        <TableCell className="border">
+                          <Checkbox
+                            aria-label={`Select ${scan.employeeName}`}
+                            checked={selectedScanIdSet.has(scan.id)}
+                            onCheckedChange={(checked) =>
+                              toggleScanSelection(scan.id, checked === true)
+                            }
+                          />
+                        </TableCell>
                         <TableCell className="border font-medium">
                           {scan.employeeName}
                         </TableCell>
@@ -531,7 +648,7 @@ export default function AdminTransferEmployeePage() {
         onOpenChange={(open) => {
           if (!open) {
             setTransferDialogOpen(false);
-            setSelectedScan(null);
+            setSelectedScans([]);
           }
         }}
       >
@@ -542,21 +659,38 @@ export default function AdminTransferEmployeePage() {
               Transfer Employee
             </DialogTitle>
             <DialogDescription>
-              Move this employee from <strong>{selectedSiteName}</strong> to
-              another site.
+              Move{" "}
+              {selectedScans.length === 1
+                ? "this employee"
+                : `${selectedScans.length} selected employees`}{" "}
+              from <strong>{selectedSiteName}</strong> to another site.
             </DialogDescription>
           </DialogHeader>
 
-          {selectedScan && (
+          {selectedScans.length > 0 && (
             <div className="space-y-4">
               {/* Employee info */}
               <div className="rounded border bg-muted/50 p-3">
-                <div className="font-semibold">{selectedScan.employeeName}</div>
+                <div className="font-semibold">
+                  {selectedScans.length === 1
+                    ? selectedScans[0].employeeName
+                    : `${selectedScans.length} employees selected`}
+                </div>
                 <div className="text-sm text-muted-foreground">
+                  {selectedScans.length === 1 ? (
+                    <>
                   {selectedScan.employeeCode} • Scanned in:{" "}
                   {new Date(selectedScan.scannedAt).toLocaleTimeString(
                     "en-GB",
                     { hour: "2-digit", minute: "2-digit" },
+                  )}
+                    </>
+                  ) : (
+                    <div className="mt-2 max-h-36 space-y-1 overflow-auto">
+                      {selectedScans.map((scan) => (
+                        <div key={scan.id}>{scan.employeeName}</div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -708,8 +842,13 @@ export default function AdminTransferEmployeePage() {
               {/* Summary */}
               {destinationSiteId && selectedForemanId && (
                 <div className="rounded border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 text-sm">
-                  <strong>{selectedScan.employeeName}</strong> will be
-                  transferred from <strong>{selectedSiteName}</strong> to{" "}
+                  <strong>
+                    {selectedScans.length === 1
+                      ? selectedScan.employeeName
+                      : `${selectedScans.length} employees`}
+                  </strong>{" "}
+                  will be transferred from <strong>{selectedSiteName}</strong>{" "}
+                  to{" "}
                   <strong>{destinationSiteName}</strong> under foreman{" "}
                   <strong>{selectedForemanName}</strong>. They will be able to
                   clock out at the new site.
@@ -740,7 +879,9 @@ export default function AdminTransferEmployeePage() {
               ) : (
                 <>
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
-                  Confirm Transfer
+                  {selectedScans.length === 1
+                    ? "Confirm Transfer"
+                    : `Transfer ${selectedScans.length}`}
                 </>
               )}
             </Button>

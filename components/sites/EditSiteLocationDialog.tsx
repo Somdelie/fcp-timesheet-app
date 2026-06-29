@@ -48,6 +48,7 @@ const JOB_STATUS_OPTIONS = [
 
 const SPEC_STATUS_OPTIONS = [
   { value: "NOT_REQUESTED", label: "Not requested" },
+  { value: "NOT_NEEDED", label: "Not Needed" },
   { value: "REQUESTED", label: "Requested" },
   { value: "RECEIVED", label: "Received" },
   { value: "ACTIONED", label: "Actioned" },
@@ -71,7 +72,7 @@ const schema = z.object({
     .enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"])
     .optional(),
   specStatus: z
-    .enum(["NOT_REQUESTED", "REQUESTED", "RECEIVED", "ACTIONED"])
+    .enum(["NOT_REQUESTED", "NOT_NEEDED", "REQUESTED", "RECEIVED", "ACTIONED"])
     .optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
@@ -107,6 +108,7 @@ export default function EditSiteLocationDialog(props: {
   initialJobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD" | null;
   initialSpecStatus?:
     | "NOT_REQUESTED"
+    | "NOT_NEEDED"
     | "REQUESTED"
     | "RECEIVED"
     | "ACTIONED"

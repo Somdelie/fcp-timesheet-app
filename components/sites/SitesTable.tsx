@@ -100,7 +100,12 @@ export type SiteRow = {
   siteClaimDate: string | null;
   amountClaimed: number;
   isActive: boolean;
-  specStatus: "NOT_REQUESTED" | "REQUESTED" | "RECEIVED" | "ACTIONED";
+  specStatus:
+    | "NOT_REQUESTED"
+    | "NOT_NEEDED"
+    | "REQUESTED"
+    | "RECEIVED"
+    | "ACTIONED";
   specAvailable: boolean;
   hasFinishingSchedule: boolean;
   createdAt: string;
@@ -228,6 +233,11 @@ const SPEC_STATUS_CONFIG = {
     label: "Not requested",
     className:
       "bg-zinc-200/60 text-zinc-600 dark:bg-zinc-700/50 dark:text-zinc-300",
+  },
+  NOT_NEEDED: {
+    label: "Not Needed",
+    className:
+      "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
   },
   REQUESTED: {
     label: "Requested",

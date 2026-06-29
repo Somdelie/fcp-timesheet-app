@@ -382,6 +382,7 @@ enum HistoricalCostSource {
 
 enum SpecStatus {
   NOT_REQUESTED
+  NOT_NEEDED
   REQUESTED
   RECEIVED
   ACTIONED

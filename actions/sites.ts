@@ -32,6 +32,7 @@ function isValidLongitude(n: number) {
 
 const SPEC_STATUSES = [
   "NOT_REQUESTED",
+  "NOT_NEEDED",
   "REQUESTED",
   "RECEIVED",
   "ACTIONED",
