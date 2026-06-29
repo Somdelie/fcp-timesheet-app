@@ -1,6 +1,10 @@
 export { resolveUnitPrice } from "./resolveUnitPrice";
 export { recalcOrderTotal } from "./recalcOrderTotal";
 export { calcSiteCosts } from "./calcSiteCosts";
+export {
+  ensureSiteMaterialsForProducts,
+  ensureSiteMaterialsFromOrders,
+} from "./siteMaterials";
 export type { SiteCostRow, SiteCostSummary } from "./calcSiteCosts";
 export { generateFortnightMeeting } from "./generateFortnightMeeting";
 export type {

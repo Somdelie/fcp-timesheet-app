@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import { ensureSiteMaterialsFromOrders } from "@/lib/procurement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,8 @@ export async function GET(
       );
 
     const { id } = await ctx.params;
+
+    await ensureSiteMaterialsFromOrders(prisma, id);
 
     const materials = await prisma.siteMaterial.findMany({
       where: { siteId: id },

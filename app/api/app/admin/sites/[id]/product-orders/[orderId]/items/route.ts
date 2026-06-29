@@ -4,7 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
-import { resolveUnitPrice, recalcOrderTotal } from "@/lib/procurement";
+import {
+  ensureSiteMaterialsForProducts,
+  resolveUnitPrice,
+  recalcOrderTotal,
+} from "@/lib/procurement";
 import { ensureInitialFinishingScheduleForColourProduct } from "@/lib/procurement/finishingScheduleAutoInitial";
 import { ensureSitePaintColorFromOrderItem } from "@/lib/procurement/sitePaintColorSeeder";
 
@@ -199,6 +203,10 @@ export async function POST(
 
     // Recalculate order total
     const newTotal = await recalcOrderTotal(orderId);
+    await ensureSiteMaterialsForProducts(prisma, {
+      siteId,
+      productIds: [productId],
+    });
     await ensureInitialFinishingScheduleForColourProduct(prisma, {
       siteId,
       productId,

@@ -190,7 +190,12 @@ export async function GET(req: Request) {
     if (materialsOnly) {
       const matWhere: any = {};
       if (!includeInactive) matWhere.isActive = true;
-      if (q) matWhere.name = { contains: q, mode: "insensitive" };
+      if (q) {
+        matWhere.OR = [
+          { name: { contains: q, mode: "insensitive" } },
+          { sku: { contains: q, mode: "insensitive" } },
+        ];
+      }
       if (supplierId) matWhere.supplierId = supplierId;
 
       const [totalCount, materials] = await Promise.all([
@@ -227,7 +232,7 @@ export async function GET(req: Request) {
         return {
           id: m.id,
           name: m.name,
-          sku: null,
+          sku: m.sku ?? null,
           description: null,
           thumbnailUrl: null,
           isActive: m.isActive,
@@ -313,7 +318,12 @@ export async function GET(req: Request) {
       // build material where clause similar to procurementProduct
       const matWhere: any = {};
       if (!includeInactive) matWhere.isActive = true;
-      if (q) matWhere.name = { contains: q, mode: "insensitive" };
+      if (q) {
+        matWhere.OR = [
+          { name: { contains: q, mode: "insensitive" } },
+          { sku: { contains: q, mode: "insensitive" } },
+        ];
+      }
       if (supplierId) matWhere.supplierId = supplierId;
 
       const materials = await prisma.material.findMany({
@@ -345,7 +355,7 @@ export async function GET(req: Request) {
         return {
           id: m.id,
           name: m.name,
-          sku: null,
+          sku: m.sku ?? null,
           description: null,
           thumbnailUrl: null,
           isActive: m.isActive,

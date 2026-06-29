@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ProcurementProductsPage from "../procurement-products/page";
+import ProcurementProductsPage from "@/components/procurement/ProcurementProductsPage";
 
 type Supplier = {
   id: string;
@@ -10,14 +10,47 @@ type Supplier = {
 };
 
 export default function ProcurementPage() {
+  const [mounted, setMounted] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
 
   useEffect(() => {
+    setMounted(true);
     fetch("/api/app/admin/suppliers", { credentials: "include" })
       .then((r) => r.json())
       .then((json) => setSuppliers(json.data ?? []));
   }, []);
+
+  if (!mounted) {
+    return (
+      <div className="mx-auto flex w-full items-start gap-4">
+        <div className="w-56 shrink-0 sticky top-4">
+          <div className="rounded border border-border bg-card overflow-hidden">
+            <div className="px-3 py-2 border-b border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Suppliers
+              </p>
+            </div>
+            <div className="space-y-2 p-3">
+              <div className="h-7 rounded bg-muted" />
+              <div className="h-7 rounded bg-muted" />
+              <div className="h-7 rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="rounded border border-border bg-card p-4">
+            <div className="h-9 w-full max-w-md rounded bg-muted" />
+            <div className="mt-4 space-y-2">
+              <div className="h-10 rounded bg-muted" />
+              <div className="h-10 rounded bg-muted" />
+              <div className="h-10 rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full items-start gap-4">

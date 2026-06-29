@@ -9,7 +9,9 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  type Column,
   type ColumnDef,
+  type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -29,9 +31,15 @@ import {
   ListChecks,
   Pencil,
   FileDown,
+  Search,
+  Trash2,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
+import { deleteFinishingSchedule } from "@/actions/site-finishing-schedule";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -64,7 +72,12 @@ export type ScheduleRow = {
   contractManager: string | null;
   startDate: string | null;
   completionDate: string | null;
-  site: { id: string; name: string; code: string | null };
+  site: {
+    id: string;
+    name: string;
+    code: string | null;
+    supervisorName?: string | null;
+  };
   areaCount: number;
   itemCount: number;
 };
@@ -74,10 +87,6 @@ interface Props {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function classNames(...xs: Array<string | false | undefined | null>) {
-  return xs.filter(Boolean).join(" ");
-}
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -98,7 +107,7 @@ function SortableHeader({
   iconColor,
   label,
 }: {
-  column: any;
+  column: Column<ScheduleRow, unknown>;
   icon: React.ElementType;
   iconColor: string;
   label: string;
@@ -124,13 +133,48 @@ function SortableHeader({
 
 // ── Row Actions ──────────────────────────────────────────────────────────────
 
-function RowActions({ schedule }: { schedule: ScheduleRow }) {
+function RowActions({
+  schedule,
+  onDeleted,
+}: {
+  schedule: ScheduleRow;
+  onDeleted: (id: string) => void;
+}) {
   const router = useRouter();
+  const [deleting, startDeleteTransition] = React.useTransition();
+
+  function handleDelete() {
+    const label = schedule.site.code
+      ? `${schedule.site.code} - ${schedule.site.name}`
+      : schedule.site.name;
+    if (!window.confirm(`Delete finishing schedule for ${label}?`)) return;
+
+    startDeleteTransition(async () => {
+      const res = await deleteFinishingSchedule(schedule.id);
+      if (!res.ok) {
+        toast.error(res.error ?? "Failed to delete schedule.");
+        return;
+      }
+      toast.success("Finishing schedule deleted.");
+      onDeleted(schedule.id);
+      router.refresh();
+    });
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" aria-label="Row actions">
-          <MoreHorizontal className="h-4 w-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Row actions"
+          disabled={deleting}
+        >
+          {deleting ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <MoreHorizontal className="h-4 w-4" />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -156,6 +200,16 @@ function RowActions({ schedule }: { schedule: ScheduleRow }) {
           <FileDown className="h-4 w-4" />
           Download PDF
         </DropdownMenuItem>
+        <DropdownMenuItem
+          className="flex items-center gap-2 text-destructive focus:text-destructive"
+          onSelect={(e) => {
+            e.preventDefault();
+            handleDelete();
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -164,16 +218,125 @@ function RowActions({ schedule }: { schedule: ScheduleRow }) {
 // ── Table Component ──────────────────────────────────────────────────────────
 
 export default function FinishingSchedulesTable({ data }: Props) {
+  const router = useRouter();
+  const [rows, setRows] = React.useState(data);
   const [sorting, setSorting] = React.useState<SortingState>([
-    { id: "site", desc: false },
+    { id: "contractNo", desc: true },
   ]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [search, setSearch] = React.useState("");
+  const [supervisorFilter, setSupervisorFilter] = React.useState("all");
+  const [bulkDeleting, startBulkDeleteTransition] = React.useTransition();
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
 
+  React.useEffect(() => {
+    setRows(data);
+    setRowSelection({});
+  }, [data]);
+
+  const supervisors = React.useMemo(() => {
+    const names = new Set<string>();
+    for (const row of rows) {
+      const name = row.site.supervisorName?.trim();
+      if (name) names.add(name);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const filteredRows = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      const supervisor = row.site.supervisorName?.trim() ?? "";
+      if (supervisorFilter !== "all" && supervisor !== supervisorFilter) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        row.site.name.toLowerCase().includes(q) ||
+        (row.site.code ?? "").toLowerCase().includes(q) ||
+        (row.contractNo ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [rows, search, supervisorFilter]);
+
+  const selectedRows = React.useMemo(
+    () =>
+      Object.entries(rowSelection)
+        .filter(([, selected]) => selected)
+        .map(([id]) => filteredRows.find((row) => row.id === id))
+        .filter((row): row is ScheduleRow => Boolean(row)),
+    [filteredRows, rowSelection],
+  );
+
+  function handleDeleted(id: string) {
+    setRows((prev) => prev.filter((row) => row.id !== id));
+    setRowSelection((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  function handleBulkDelete() {
+    if (!selectedRows.length) return;
+    if (
+      !window.confirm(
+        `Delete ${selectedRows.length} selected finishing schedule${selectedRows.length === 1 ? "" : "s"}?`,
+      )
+    ) {
+      return;
+    }
+
+    startBulkDeleteTransition(async () => {
+      let deleted = 0;
+      let failed = 0;
+
+      for (const row of selectedRows) {
+        const res = await deleteFinishingSchedule(row.id);
+        if (res.ok) {
+          deleted += 1;
+          setRows((prev) => prev.filter((item) => item.id !== row.id));
+        } else {
+          failed += 1;
+        }
+      }
+
+      setRowSelection({});
+      if (deleted) toast.success(`Deleted ${deleted} schedule${deleted === 1 ? "" : "s"}.`);
+      if (failed) toast.error(`${failed} schedule${failed === 1 ? "" : "s"} failed to delete.`);
+      router.refresh();
+    });
+  }
+
   const columns: ColumnDef<ScheduleRow>[] = React.useMemo(
     () => [
+      {
+        id: "select",
+        size: 42,
+        enableSorting: false,
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all visible schedules"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select schedule"
+          />
+        ),
+      },
       {
         id: "site",
         accessorFn: (row) => row.site.name,
@@ -200,15 +363,46 @@ export default function FinishingSchedulesTable({ data }: Props) {
         ),
       },
       {
+        id: "supervisor",
+        accessorFn: (row) => row.site.supervisorName ?? "",
+        size: 160,
+        header: ({ column }) => (
+          <SortableHeader
+            column={column}
+            icon={User}
+            iconColor="text-emerald-600"
+            label="Supervisor"
+          />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm">
+            {row.original.site.supervisorName ?? "—"}
+          </span>
+        ),
+      },
+      {
         id: "contractNo",
         accessorKey: "contractNo",
+        sortingFn: (rowA, rowB, columnId) => {
+          const aValue = rowA.getValue<string | null>(columnId) ?? "";
+          const bValue = rowB.getValue<string | null>(columnId) ?? "";
+          const aNumber = Number(aValue);
+          const bNumber = Number(bValue);
+          const aIsNumber = !Number.isNaN(aNumber);
+          const bIsNumber = !Number.isNaN(bNumber);
+
+          if (aIsNumber && bIsNumber) {
+            return aNumber - bNumber;
+          }
+          return String(aValue).localeCompare(String(bValue));
+        },
         size: 130,
         header: ({ column }) => (
           <SortableHeader
             column={column}
             icon={Hash}
             iconColor="text-indigo-600"
-            label="Contract No"
+            label="Job#"
           />
         ),
         cell: ({ row }) => (
@@ -321,7 +515,7 @@ export default function FinishingSchedulesTable({ data }: Props) {
         header: () => <div className="text-center">Actions</div>,
         cell: ({ row }) => (
           <div className="text-center">
-            <RowActions schedule={row.original} />
+            <RowActions schedule={row.original} onDeleted={handleDeleted} />
           </div>
         ),
       },
@@ -330,11 +524,14 @@ export default function FinishingSchedulesTable({ data }: Props) {
   );
 
   const table = useReactTable({
-    data,
+    data: filteredRows,
     columns,
-    state: { sorting, pagination },
+    getRowId: (row) => row.id,
+    state: { sorting, pagination, rowSelection },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -342,6 +539,64 @@ export default function FinishingSchedulesTable({ data }: Props) {
 
   return (
     <div className="border bg-card">
+      <div className="flex flex-col gap-3 border-b bg-muted/30 p-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+              }}
+              placeholder="Search job number or site name"
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={supervisorFilter}
+            onValueChange={(value) => {
+              setSupervisorFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="Filter by supervisor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All supervisors</SelectItem>
+              {supervisors.map((supervisor) => (
+                <SelectItem key={supervisor} value={supervisor}>
+                  {supervisor}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedRows.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedRows.length} selected
+            </span>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? (
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete Selected
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
       <div className="overflow-x-auto">
         <Table className="border-collapse">
           <TableHeader className="bg-muted/60">
@@ -404,7 +659,7 @@ export default function FinishingSchedulesTable({ data }: Props) {
       <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/60">
         <div className="text-muted-foreground hidden text-sm lg:flex">
           Showing{" "}
-          {data.length === 0
+          {filteredRows.length === 0
             ? 0
             : table.getState().pagination.pageIndex *
                 table.getState().pagination.pageSize +
@@ -413,9 +668,9 @@ export default function FinishingSchedulesTable({ data }: Props) {
           {Math.min(
             (table.getState().pagination.pageIndex + 1) *
               table.getState().pagination.pageSize,
-            data.length,
+            filteredRows.length,
           )}{" "}
-          of {data.length} schedules
+          of {filteredRows.length} schedules
         </div>
         <div className="flex w-full items-center gap-4 lg:w-fit lg:gap-8">
           <div className="hidden items-center gap-2 lg:flex">

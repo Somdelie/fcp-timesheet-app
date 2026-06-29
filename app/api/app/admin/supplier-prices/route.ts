@@ -36,6 +36,36 @@ async function getAuth(req: Request) {
   return null;
 }
 
+function serialiseSupplierProductPrice(p: any) {
+  return {
+    ...p,
+    price: decimalToNumber(p.price),
+    unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
+    product: {
+      ...p.product,
+      unitSize: p.product.unitSize
+        ? decimalToNumber(p.product.unitSize)
+        : null,
+    },
+  };
+}
+
+function serialiseMaterialPrice(p: any) {
+  return {
+    ...p,
+    productId: p.materialId,
+    price: decimalToNumber(p.price),
+    unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
+    product: {
+      id: p.material.id,
+      name: p.material.name,
+      sku: p.material.sku,
+      uom: p.uom,
+      unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
+    },
+  };
+}
+
 /**
  * GET /api/app/admin/supplier-prices
  * Query: ?productId=xxx&supplierId=xxx&includeInactive=true
@@ -56,38 +86,60 @@ export async function GET(req: Request) {
     const includeInactive = url.searchParams.get("includeInactive") === "true";
 
     const where: Record<string, unknown> = {};
-    if (!includeInactive) where.isActive = true;
-    if (productId) where.productId = productId;
-    if (supplierId) where.supplierId = supplierId;
+    const materialWhere: Record<string, unknown> = {};
+    if (!includeInactive) {
+      where.isActive = true;
+      materialWhere.isActive = true;
+    }
+    if (productId) {
+      where.productId = productId;
+      materialWhere.materialId = productId;
+    }
+    if (supplierId) {
+      where.supplierId = supplierId;
+      materialWhere.supplierId = supplierId;
+    }
 
-    const prices = await prisma.supplierProductPrice.findMany({
-      where,
-      orderBy: { startsOn: "desc" },
-      include: {
-        supplier: { select: { id: true, name: true } },
-        product: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            uom: true,
-            unitSize: true,
+    const [productPrices, materialPrices] = await Promise.all([
+      prisma.supplierProductPrice.findMany({
+        where,
+        orderBy: { startsOn: "desc" },
+        include: {
+          supplier: { select: { id: true, name: true } },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              uom: true,
+              unitSize: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.materialPrice.findMany({
+        where: materialWhere,
+        orderBy: { startsOn: "desc" },
+        include: {
+          supplier: { select: { id: true, name: true } },
+          material: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+            },
+          },
+        },
+      }),
+    ]);
 
-    const data = prices.map((p) => ({
-      ...p,
-      price: decimalToNumber(p.price),
-      unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
-      product: {
-        ...p.product,
-        unitSize: p.product.unitSize
-          ? decimalToNumber(p.product.unitSize)
-          : null,
-      },
-    }));
+    const data = [
+      ...productPrices.map(serialiseSupplierProductPrice),
+      ...materialPrices.map(serialiseMaterialPrice),
+    ].sort(
+      (a, b) =>
+        new Date(b.startsOn).getTime() - new Date(a.startsOn).getTime(),
+    );
 
     return NextResponse.json({ ok: true, data }, { headers: CORS });
   } catch (e: any) {
@@ -135,10 +187,56 @@ export async function POST(req: Request) {
         { status: 400, headers: CORS },
       );
 
-    const record = await prisma.supplierProductPrice.create({
+    const product = await prisma.procurementProduct.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+
+    if (product) {
+      const record = await prisma.supplierProductPrice.create({
+        data: {
+          supplier: { connect: { id: supplierId } },
+          product: { connect: { id: productId } },
+          price: Number(price),
+          uom: (uom as any) || null,
+          unitSize:
+            unitSize != null && unitSize !== "" ? Number(unitSize) : null,
+          startsOn: startsOn ? new Date(startsOn) : new Date(),
+          endsOn: endsOn ? new Date(endsOn) : null,
+        },
+        include: {
+          supplier: { select: { id: true, name: true } },
+          product: {
+            select: { id: true, name: true, uom: true, unitSize: true },
+          },
+        },
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          data: serialiseSupplierProductPrice(record),
+        },
+        { status: 201, headers: CORS },
+      );
+    }
+
+    const material = await prisma.material.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+
+    if (!material) {
+      return NextResponse.json(
+        { error: "Product not found" },
+        { status: 404, headers: CORS },
+      );
+    }
+
+    const record = await prisma.materialPrice.create({
       data: {
         supplier: { connect: { id: supplierId } },
-        product: { connect: { id: productId } },
+        material: { connect: { id: productId } },
         price: Number(price),
         uom: (uom as any) || null,
         unitSize: unitSize != null && unitSize !== "" ? Number(unitSize) : null,
@@ -147,26 +245,14 @@ export async function POST(req: Request) {
       },
       include: {
         supplier: { select: { id: true, name: true } },
-        product: {
-          select: { id: true, name: true, uom: true, unitSize: true },
-        },
+        material: { select: { id: true, name: true, sku: true } },
       },
     });
 
     return NextResponse.json(
       {
         ok: true,
-        data: {
-          ...record,
-          price: decimalToNumber(record.price),
-          unitSize: record.unitSize ? decimalToNumber(record.unitSize) : null,
-          product: {
-            ...record.product,
-            unitSize: record.product.unitSize
-              ? decimalToNumber(record.product.unitSize)
-              : null,
-          },
-        },
+        data: serialiseMaterialPrice(record),
       },
       { status: 201, headers: CORS },
     );

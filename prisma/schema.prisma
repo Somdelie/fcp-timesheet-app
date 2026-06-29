@@ -292,6 +292,7 @@ model Site {
   jobStatus  JobStatus @default(NOT_STARTED)
   stageIndex Int       @default(0)
   stagePct   Json      @default("{}")
+  specStatus SpecStatus @default(NOT_REQUESTED)
   specAvailable Boolean @default(false)
 
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
@@ -377,6 +378,13 @@ model HistoricalSiteCost {
 
 enum HistoricalCostSource {
   BUILDSMART
+}
+
+enum SpecStatus {
+  NOT_REQUESTED
+  REQUESTED
+  RECEIVED
+  ACTIONED
 }
 
 enum HistoricalCostCategory {

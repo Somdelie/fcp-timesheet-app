@@ -148,7 +148,10 @@ function preserveInlineTextColorsForExport(
   cloneRoot: HTMLElement,
   view: Window = window,
 ) {
-  const sourceEls = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll("*"))];
+  const sourceEls = [
+    sourceRoot,
+    ...Array.from(sourceRoot.querySelectorAll("*")),
+  ];
   const cloneEls = [cloneRoot, ...Array.from(cloneRoot.querySelectorAll("*"))];
 
   sourceEls.forEach((sourceEl, index) => {
@@ -170,24 +173,101 @@ function preserveInlineTextColorsForExport(
   });
 }
 
-function sanitizeModernColorSyntax(root: HTMLElement) {
-  function sanitizeElement(el: HTMLElement) {
-    const inlineStyle = el.getAttribute("style") || "";
-    if (MODERN_COLOR_PATTERN.test(inlineStyle)) {
-      const sanitized = inlineStyle.replace(
-        /:\s*(lab|lch|oklch|oklab|color|color-mix)\([^)]+\)/gi,
-        ": currentColor",
-      );
-      el.setAttribute("style", sanitized);
-    }
+function fallbackForProp(propName: string) {
+  const normalized = propName.toLowerCase();
+  if (normalized.includes("image")) return "none";
+  if (normalized.includes("shadow")) return "none";
+  if (normalized.includes("background")) return "#ffffff";
+  if (
+    normalized.includes("border") ||
+    normalized.includes("columnrule") ||
+    normalized === "outlinecolor"
+  )
+    return "#e5e7eb";
+  if (normalized === "fill" || normalized === "stroke") return "#111827";
+  if (
+    normalized === "color" ||
+    normalized.includes("foreground") ||
+    normalized.includes("caret") ||
+    normalized.includes("textdecoration") ||
+    normalized.includes("outline")
+  )
+    return "#111827";
+  return "transparent";
+}
+
+function sanitizeCssStyleDeclaration(style: CSSStyleDeclaration) {
+  for (let i = 0; i < style.length; i += 1) {
+    const propName = style[i];
+    const value = style.getPropertyValue(propName).trim();
+    if (!value || !MODERN_COLOR_PATTERN.test(value)) continue;
+    style.setProperty(
+      propName,
+      fallbackForProp(propName),
+      style.getPropertyPriority(propName),
+    );
+  }
+}
+
+function sanitizeCssRule(rule: CSSRule) {
+  if ("style" in rule && (rule as CSSStyleRule).style) {
+    sanitizeCssStyleDeclaration((rule as CSSStyleRule).style);
   }
 
-  sanitizeElement(root);
-  root.querySelectorAll("*").forEach((el) => {
-    if (el instanceof HTMLElement) {
-      sanitizeElement(el);
+  if ("cssRules" in rule && (rule as CSSGroupingRule).cssRules) {
+    Array.from((rule as CSSGroupingRule).cssRules).forEach(sanitizeCssRule);
+  }
+}
+
+function sanitizeStyleSheet(sheet: CSSStyleSheet) {
+  try {
+    Array.from(sheet.cssRules).forEach(sanitizeCssRule);
+  } catch {
+    // Ignore inaccessible or cross-origin sheets.
+  }
+}
+
+function sanitizeStyleSheets(doc: Document) {
+  Array.from(doc.styleSheets).forEach((sheet) => {
+    if (sheet instanceof CSSStyleSheet) {
+      sanitizeStyleSheet(sheet);
     }
   });
+}
+
+function sanitizeStyleElement(styleEl: HTMLStyleElement) {
+  const text = styleEl.textContent;
+  if (!text || !MODERN_COLOR_PATTERN.test(text)) return;
+  styleEl.textContent = text.replace(
+    /(?:lab|lch|oklch|oklab|color|color-mix)\([^)]*\)/gi,
+    "currentColor",
+  );
+}
+
+function sanitizeElementInlineStyle(el: HTMLElement) {
+  const style = el.style;
+  for (let i = 0; i < style.length; i += 1) {
+    const propName = style[i];
+    const value = style.getPropertyValue(propName).trim();
+    if (!value || !MODERN_COLOR_PATTERN.test(value)) continue;
+    style.setProperty(
+      propName,
+      fallbackForProp(propName),
+      style.getPropertyPriority(propName),
+    );
+  }
+}
+
+function sanitizeModernColorSyntax(root: HTMLElement) {
+  const elements = [root, ...Array.from(root.querySelectorAll("*"))].filter(
+    (el): el is HTMLElement => el instanceof HTMLElement,
+  );
+
+  elements.forEach(sanitizeElementInlineStyle);
+  root.querySelectorAll("style").forEach((styleEl) => {
+    if (styleEl instanceof HTMLStyleElement) sanitizeStyleElement(styleEl);
+  });
+  if (root.ownerDocument) sanitizeStyleSheets(root.ownerDocument);
 }
 
 async function prepareImagesForExport(root: HTMLElement) {
@@ -306,7 +386,10 @@ function canvasHasVisibleContent(canvas: HTMLCanvasElement) {
   return false;
 }
 
-function drawPreparedImagesOnCanvas(canvas: HTMLCanvasElement, root: HTMLElement) {
+function drawPreparedImagesOnCanvas(
+  canvas: HTMLCanvasElement,
+  root: HTMLElement,
+) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -316,7 +399,12 @@ function drawPreparedImagesOnCanvas(canvas: HTMLCanvasElement, root: HTMLElement
   const scaleX = canvas.width / rootRect.width;
   const scaleY = canvas.height / rootRect.height;
 
-  const hasVisiblePixels = (x: number, y: number, width: number, height: number) => {
+  const hasVisiblePixels = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => {
     const sampleX = Math.max(0, Math.floor(x));
     const sampleY = Math.max(0, Math.floor(y));
     const sampleW = Math.min(canvas.width - sampleX, Math.ceil(width));
@@ -325,7 +413,10 @@ function drawPreparedImagesOnCanvas(canvas: HTMLCanvasElement, root: HTMLElement
 
     try {
       const data = ctx.getImageData(sampleX, sampleY, sampleW, sampleH).data;
-      const step = Math.max(4, Math.floor(Math.sqrt((sampleW * sampleH) / 500)));
+      const step = Math.max(
+        4,
+        Math.floor(Math.sqrt((sampleW * sampleH) / 500)),
+      );
       let visible = 0;
       let sampled = 0;
 

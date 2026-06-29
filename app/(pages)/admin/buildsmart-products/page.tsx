@@ -260,8 +260,8 @@ export default function BuildSmartProductsPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <Button asChild size="sm" variant="outline">
-            <Link href="/admin/procurement-products">
-              Open procurement products
+            <Link href="/admin/paints&preperations">
+              Open Paints & Preparations
             </Link>
           </Button>
           <p className="text-xs text-muted-foreground max-w-xl">

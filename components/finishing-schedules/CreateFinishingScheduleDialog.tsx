@@ -11,6 +11,8 @@ import {
   Paintbrush,
   Plus,
   Trash2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -191,6 +193,8 @@ export default function CreateFinishingScheduleDialog({
   const [usageOptions, setUsageOptions] = useState(DEFAULT_USAGE_OPTIONS);
   const [customUsage, setCustomUsage] = useState("");
   const [lines, setLines] = useState<FinishLine[]>([]);
+  const editorRef = React.useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [contractNo, setContractNo] = useState("");
   const [contractManager, setContractManager] = useState("");
@@ -284,6 +288,30 @@ export default function CreateFinishingScheduleDialog({
       );
     });
   }, [open, selectedSiteId]);
+
+  // Fullscreen change handler to update state
+  useEffect(() => {
+    const handler = () => {
+      setIsFullscreen(document.fullscreenElement === editorRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!editorRef.current) return;
+      if (!document.fullscreenElement) {
+        // enter fullscreen for the editor container
+        await editorRef.current.requestFullscreen?.();
+      } else {
+        await document.exitFullscreen?.();
+      }
+    } catch (err) {
+      // ignore fullscreen errors
+    }
+  };
 
   function reset() {
     if (!fixedSiteId) setSelectedSiteId("");
@@ -445,7 +473,10 @@ export default function CreateFinishingScheduleDialog({
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[520px_minmax(0,1fr)]">
+          <div
+            ref={editorRef}
+            className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[520px_minmax(0,1fr)]"
+          >
             <aside className="space-y-4 overflow-y-auto border-b bg-muted/30 p-4 xl:border-b-0 xl:border-r">
               {!fixedSiteId && (
                 <div className="space-y-1.5">
@@ -627,10 +658,27 @@ export default function CreateFinishingScheduleDialog({
                     </Button>
                   </div>
 
-                  <Button type="button" onClick={() => addLine()}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Line
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" onClick={() => addLine()}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Line
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      title={isFullscreen ? "Exit full screen" : "Full screen"}
+                      onClick={toggleFullscreen}
+                      className="h-9 w-9"
+                    >
+                      {isFullscreen ? (
+                        <Minimize2 className="h-4 w-4" />
+                      ) : (
+                        <Maximize2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
 

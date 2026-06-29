@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import BackfillSiteColoursButton from "@/components/finishing-schedules/BackfillSiteColoursButton";
 import CreateFinishingScheduleDialog from "@/components/finishing-schedules/CreateFinishingScheduleDialog";
 import FinishingSchedulesTable, {
   type ScheduleRow,
@@ -12,7 +13,28 @@ export default async function FinishingSchedulesPage() {
     prisma.siteFinishingSchedule.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        site: { select: { id: true, name: true, code: true } },
+        site: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            supervisorAssignments: {
+              where: {
+                startsOn: { lte: now },
+                OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+              },
+              orderBy: { startsOn: "desc" },
+              take: 1,
+              select: {
+                supervisor: {
+                  select: {
+                    user: { select: { name: true, email: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
         areas: {
           select: {
             id: true,
@@ -90,7 +112,15 @@ export default async function FinishingSchedulesPage() {
     contractManager: s.contractManager,
     startDate: s.startDate ? s.startDate.toISOString() : null,
     completionDate: s.completionDate ? s.completionDate.toISOString() : null,
-    site: s.site,
+    site: {
+      id: s.site.id,
+      name: s.site.name,
+      code: s.site.code,
+      supervisorName:
+        s.site.supervisorAssignments[0]?.supervisor.user?.name ??
+        s.site.supervisorAssignments[0]?.supervisor.user?.email ??
+        null,
+    },
     areaCount: s.areas.length,
     itemCount: s.areas.reduce((sum, a) => sum + a._count.items, 0),
   }));
@@ -101,10 +131,13 @@ export default async function FinishingSchedulesPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           Finishing Schedules
         </h1>
-        <CreateFinishingScheduleDialog
-          sites={siteOptions}
-          suppliers={suppliers}
-        />
+        <div className="flex items-start gap-3">
+          <BackfillSiteColoursButton />
+          <CreateFinishingScheduleDialog
+            sites={siteOptions}
+            suppliers={suppliers}
+          />
+        </div>
       </div>
 
       <FinishingSchedulesTable data={rows} />

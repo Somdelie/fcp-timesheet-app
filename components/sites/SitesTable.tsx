@@ -100,6 +100,7 @@ export type SiteRow = {
   siteClaimDate: string | null;
   amountClaimed: number;
   isActive: boolean;
+  specStatus: "NOT_REQUESTED" | "REQUESTED" | "RECEIVED" | "ACTIONED";
   specAvailable: boolean;
   hasFinishingSchedule: boolean;
   createdAt: string;
@@ -136,7 +137,7 @@ export const SITE_TABLE_COLUMN_OPTIONS = [
   { id: "claimOutstanding", label: "Outstanding" },
   { id: "profitLoss", label: "Profit / Loss" },
   { id: "hasFinishingSchedule", label: "Finishing Schedule" },
-  { id: "specAvailable", label: "Spec" },
+  { id: "specStatus", label: "Spec" },
   { id: "daysWorked", label: "Days Worked" },
   { id: "actions", label: "Actions" },
 ] as const;
@@ -218,6 +219,40 @@ function YesNoPill({ value }: { value: boolean }) {
       )}
     >
       {value ? "Yes" : "No"}
+    </span>
+  );
+}
+
+const SPEC_STATUS_CONFIG = {
+  NOT_REQUESTED: {
+    label: "Not requested",
+    className:
+      "bg-zinc-200/60 text-zinc-600 dark:bg-zinc-700/50 dark:text-zinc-300",
+  },
+  REQUESTED: {
+    label: "Requested",
+    className:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  },
+  RECEIVED: {
+    label: "Received",
+    className:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  },
+  ACTIONED: {
+    label: "Actioned",
+    className:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+} as const;
+
+function SpecStatusPill({ status }: { status: SiteRow["specStatus"] }) {
+  const cfg = SPEC_STATUS_CONFIG[status] ?? SPEC_STATUS_CONFIG.NOT_REQUESTED;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.className}`}
+    >
+      {cfg.label}
     </span>
   );
 }
@@ -434,6 +469,7 @@ function SiteRowActions({
         initialSiteClaimDate={site.siteClaimDate}
         initialAmountClaimed={site.amountClaimed}
         initialJobStatus={site.jobStatus}
+        initialSpecStatus={site.specStatus}
         initialSpecAvailable={site.specAvailable}
         canEditCoreDetails={role === "ADMIN"}
         supervisorOptions={supervisorOptions}
@@ -481,7 +517,13 @@ function SiteRowActions({
                 No materials assigned to this site yet.
               </p>
             ) : (
-              <Table className="min-w-225 border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
+              <Table className="min-w-[720px] table-fixed border-collapse [&_th]:border [&_th]:border-slate-200 [&_th]:dark:border-slate-700 [&_td]:border [&_td]:border-slate-200 [&_td]:dark:border-slate-700">
+                <colgroup>
+                  <col className="w-[18%]" />
+                  <col className="w-[42%]" />
+                  <col className="w-[30%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <TableHeader>
                   <TableRow>
                     <TableHead>SKU</TableHead>
@@ -497,9 +539,11 @@ function SiteRowActions({
                         {m.product.sku || "—"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-slate-400" />
-                          {m.product.name}
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Package className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="truncate" title={m.product.name}>
+                            {m.product.name}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1014,9 +1058,9 @@ export default function SitesTable({
         ),
       },
       {
-        id: "specAvailable",
-        accessorKey: "specAvailable",
-        size: 95,
+        id: "specStatus",
+        accessorKey: "specStatus",
+        size: 125,
         header: ({ column }) => {
           const isSorted = column.getIsSorted();
           return (
@@ -1036,7 +1080,7 @@ export default function SitesTable({
             </button>
           );
         },
-        cell: ({ row }) => <YesNoPill value={row.original.specAvailable} />,
+        cell: ({ row }) => <SpecStatusPill status={row.original.specStatus} />,
       },
       {
         id: "daysWorked",

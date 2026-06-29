@@ -4,7 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
-import { resolveUnitPrice } from "@/lib/procurement";
+import {
+  ensureSiteMaterialsForProducts,
+  resolveUnitPrice,
+} from "@/lib/procurement";
 import { Prisma } from "@/generated/prisma/client";
 import { ensureInitialFinishingScheduleForColourProduct } from "@/lib/procurement/finishingScheduleAutoInitial";
 import { ensureSitePaintColorFromOrderItem } from "@/lib/procurement/sitePaintColorSeeder";
@@ -141,6 +144,10 @@ export async function POST(
           await ensureInitialFinishingScheduleForColourProduct(tx, {
             siteId,
             productId: item.productId,
+          });
+          await ensureSiteMaterialsForProducts(tx, {
+            siteId,
+            productIds: [item.productId],
           });
           await ensureSitePaintColorFromOrderItem(tx, {
             siteId,

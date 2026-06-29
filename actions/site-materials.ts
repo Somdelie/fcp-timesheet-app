@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { requireCanManageSite } from "@/lib/guards";
+import { ensureSiteMaterialsFromOrders } from "@/lib/procurement";
 import { revalidatePath } from "next/cache";
 
 function clean(v: unknown) {
@@ -17,6 +18,8 @@ export async function listSiteMaterials(siteId: string) {
   const auth = await requireServerAuth();
   const id = clean(siteId);
   if (!id) return { ok: false as const, error: "Site is required." };
+
+  await ensureSiteMaterialsFromOrders(prisma, id);
 
   const materials = await prisma.siteMaterial.findMany({
     where: { siteId: id },

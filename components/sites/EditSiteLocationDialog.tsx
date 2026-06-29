@@ -46,6 +46,13 @@ const JOB_STATUS_OPTIONS = [
   { value: "ON_HOLD", label: "On Hold" },
 ] as const;
 
+const SPEC_STATUS_OPTIONS = [
+  { value: "NOT_REQUESTED", label: "Not requested" },
+  { value: "REQUESTED", label: "Requested" },
+  { value: "RECEIVED", label: "Received" },
+  { value: "ACTIONED", label: "Actioned" },
+] as const;
+
 const schema = z.object({
   name: z
     .string()
@@ -63,7 +70,9 @@ const schema = z.object({
   jobStatus: z
     .enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"])
     .optional(),
-  specAvailable: z.boolean().optional(),
+  specStatus: z
+    .enum(["NOT_REQUESTED", "REQUESTED", "RECEIVED", "ACTIONED"])
+    .optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -96,6 +105,12 @@ export default function EditSiteLocationDialog(props: {
   initialSiteClaimDate?: string | null;
   initialAmountClaimed?: number | null;
   initialJobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD" | null;
+  initialSpecStatus?:
+    | "NOT_REQUESTED"
+    | "REQUESTED"
+    | "RECEIVED"
+    | "ACTIONED"
+    | null;
   initialSpecAvailable?: boolean | null;
   canEditCoreDetails?: boolean;
   open?: boolean;
@@ -116,6 +131,7 @@ export default function EditSiteLocationDialog(props: {
     initialSiteClaimDate,
     initialAmountClaimed,
     initialJobStatus,
+    initialSpecStatus,
     initialSpecAvailable,
     canEditCoreDetails = false,
     open: controlledOpen,
@@ -154,7 +170,9 @@ export default function EditSiteLocationDialog(props: {
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
-      specAvailable: Boolean(initialSpecAvailable),
+      specStatus:
+        initialSpecStatus ??
+        (initialSpecAvailable ? "RECEIVED" : "NOT_REQUESTED"),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -178,7 +196,9 @@ export default function EditSiteLocationDialog(props: {
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
-      specAvailable: Boolean(initialSpecAvailable),
+      specStatus:
+        initialSpecStatus ??
+        (initialSpecAvailable ? "RECEIVED" : "NOT_REQUESTED"),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -201,6 +221,7 @@ export default function EditSiteLocationDialog(props: {
     initialSiteClaimDate,
     initialAmountClaimed,
     initialJobStatus,
+    initialSpecStatus,
     initialSpecAvailable,
   ]);
 
@@ -220,7 +241,7 @@ export default function EditSiteLocationDialog(props: {
         siteClaimDate: values.siteClaimDate || null,
         amountClaimed: values.amountClaimed ?? 0,
         jobStatus: values.jobStatus,
-        specAvailable: Boolean(values.specAvailable),
+        specStatus: values.specStatus,
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
       });
@@ -513,7 +534,7 @@ export default function EditSiteLocationDialog(props: {
             />
 
             <Controller
-              name="specAvailable"
+              name="specStatus"
               control={form.control}
               render={({ field }) => (
                 <Field>
@@ -521,16 +542,19 @@ export default function EditSiteLocationDialog(props: {
                     Spec
                   </FieldLabel>
                   <Select
-                    value={field.value ? "yes" : "no"}
-                    onValueChange={(value) => field.onChange(value === "yes")}
+                    value={field.value ?? "NOT_REQUESTED"}
+                    onValueChange={field.onChange}
                     disabled={pending}
                   >
                     <SelectTrigger className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50">
                       <SelectValue placeholder="Select spec status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
+                      {SPEC_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </Field>

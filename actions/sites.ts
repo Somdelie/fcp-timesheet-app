@@ -30,6 +30,27 @@ function isValidLongitude(n: number) {
   return Number.isFinite(n) && n >= -180 && n <= 180;
 }
 
+const SPEC_STATUSES = [
+  "NOT_REQUESTED",
+  "REQUESTED",
+  "RECEIVED",
+  "ACTIONED",
+] as const;
+
+type SiteSpecStatus = (typeof SPEC_STATUSES)[number];
+
+function normalizeSpecStatus(value: unknown): SiteSpecStatus | undefined {
+  if (value === undefined) return undefined;
+  const status = clean(value).toUpperCase();
+  return SPEC_STATUSES.includes(status as SiteSpecStatus)
+    ? (status as SiteSpecStatus)
+    : undefined;
+}
+
+function specAvailableFromStatus(status: SiteSpecStatus) {
+  return status === "RECEIVED" || status === "ACTIONED";
+}
+
 function serializeSite(s: any) {
   // Get supervisor name from first active assignment
   const supervisorName =
@@ -79,6 +100,9 @@ function serializeSite(s: any) {
     latitude: typeof s.latitude === "number" ? s.latitude : null,
     longitude: typeof s.longitude === "number" ? s.longitude : null,
     isActive: s.isActive,
+    specStatus:
+      (s.specStatus as SiteSpecStatus | null | undefined) ??
+      (s.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
     specAvailable: Boolean(s.specAvailable),
     hasFinishingSchedule: (s.finishingSchedules?.length ?? 0) > 0,
     finishingScheduleStatus: s.finishingSchedules?.[0]?.status ?? null,
@@ -227,6 +251,7 @@ export async function listSites(input?: {
       latitude: true,
       longitude: true,
       isActive: true,
+      specStatus: true,
       specAvailable: true,
       jobStatus: true,
       stageIndex: true,
@@ -612,6 +637,7 @@ export async function updateSiteLocation(input: {
   siteClaimDate?: string | null;
   amountClaimed?: number | string | null;
   jobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
+  specStatus?: SiteSpecStatus | null;
   specAvailable?: boolean | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
@@ -646,6 +672,18 @@ export async function updateSiteLocation(input: {
     input.longitude === undefined ? undefined : cleanNumber(input.longitude);
   const specAvailable =
     input.specAvailable === undefined ? undefined : Boolean(input.specAvailable);
+  const specStatus =
+    input.specStatus !== undefined
+      ? normalizeSpecStatus(input.specStatus)
+      : specAvailable !== undefined
+        ? specAvailable
+          ? "RECEIVED"
+          : "NOT_REQUESTED"
+        : undefined;
+
+  if (input.specStatus !== undefined && !specStatus) {
+    return { ok: false as const, error: "Invalid spec status." };
+  }
 
   if ((name !== undefined || code !== undefined) && auth.role !== "ADMIN") {
     return {
@@ -693,7 +731,14 @@ export async function updateSiteLocation(input: {
         ...(input.jobStatus !== undefined
           ? { jobStatus: input.jobStatus }
           : {}),
-        ...(specAvailable !== undefined ? { specAvailable } : {}),
+        ...(specStatus !== undefined
+          ? {
+              specStatus,
+              specAvailable: specAvailableFromStatus(specStatus),
+            }
+          : specAvailable !== undefined
+            ? { specAvailable }
+            : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -709,6 +754,7 @@ export async function updateSiteLocation(input: {
         latitude: true,
         longitude: true,
         isActive: true,
+        specStatus: true,
         specAvailable: true,
         jobStatus: true,
         createdAt: true,
@@ -757,6 +803,7 @@ export async function listOngoingSites() {
       amountClaimed: true,
       siteClaimDate: true,
       isActive: true,
+      specStatus: true,
       specAvailable: true,
       jobStatus: true,
       stageIndex: true,

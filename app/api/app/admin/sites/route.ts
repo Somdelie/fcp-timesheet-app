@@ -14,6 +14,15 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+const SPEC_STATUSES = [
+  "NOT_REQUESTED",
+  "REQUESTED",
+  "RECEIVED",
+  "ACTIONED",
+] as const;
+
+type SiteSpecStatus = (typeof SPEC_STATUSES)[number];
+
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
@@ -127,6 +136,7 @@ export async function GET(req: Request) {
         latitude: true,
         longitude: true,
         isActive: true,
+        specStatus: true,
         specAvailable: true,
         createdAt: true,
         supervisorAssignments: {
@@ -205,6 +215,9 @@ export async function GET(req: Request) {
             latitude: s.latitude,
             longitude: s.longitude,
             isActive: s.isActive,
+            specStatus:
+              (s.specStatus as SiteSpecStatus | null | undefined) ??
+              (s.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
             specAvailable: Boolean(s.specAvailable),
             hasFinishingSchedule: (s.finishingSchedules?.length ?? 0) > 0,
             finishingScheduleStatus: s.finishingSchedules?.[0]?.status ?? null,

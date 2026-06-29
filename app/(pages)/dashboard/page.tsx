@@ -66,6 +66,7 @@ type RecentActivityItem = {
 type SiteWageRow = {
   code?: string | null;
   site: string;
+  supervisor?: string | null;
   wages: number;
 };
 
@@ -173,6 +174,10 @@ function formatSiteWageLabel(item: { code?: string | null; site: string }) {
   return item.code ? `${item.code} - ${item.site}` : item.site;
 }
 
+function formatSiteSupervisorLabel(item: { supervisor?: string | null }) {
+  return item.supervisor?.trim() || "No Supervisor";
+}
+
 function escapePrintHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -201,11 +206,12 @@ function printFortnightSiteWagesAnalytics({
       const color = WAGE_COLORS[index % WAGE_COLORS.length];
       const pct = Math.max(4, (row.wages / max) * 100);
       const labelText = escapePrintHtml(formatSiteWageLabel(row));
+      const supervisorText = escapePrintHtml(formatSiteSupervisorLabel(row));
       return `
         <div class="chart-row">
           <div class="chart-label">
             <span class="dot" style="background:${color}"></span>
-            <span>${labelText}</span>
+            <span><strong>${labelText}</strong><small>${supervisorText}</small></span>
           </div>
           <div class="bar-track">
             <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
@@ -227,17 +233,19 @@ function printFortnightSiteWagesAnalytics({
     h1 { margin: 0; font-size: 25px; line-height: 1.1; }
     .date { margin-top: 6px; color: #526783; font-size: 14px; }
     .stats { display: flex; gap: 10px; }
-    .stat { min-width: 132px; border-radius: 10px; background: #e7f5ed; padding: 12px 14px; text-align: right; }
+    .stat { min-width: 132px; border-radius: 5px; background: #e7f5ed; padding: 12px 14px; text-align: right; }
     .stat-label { color: #657992; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
     .stat-value { margin-top: 5px; color: #16a34a; font-size: 22px; font-weight: 900; }
     .grid { display: block; }
-    .card { border: 1px solid #a7e4bd; border-radius: 8px; background: #ffffff; padding: 22px; }
+    .card { border: 1px solid #a7e4bd; border-radius: 5px; background: #ffffff; padding: 22px; }
     .card h2 { margin: 0; font-size: 18px; }
     .subtitle { margin: 8px 0 28px; color: #526783; font-size: 14px; }
     .chart { display: flex; flex-direction: column; border-top: 1px solid #dbe5ef; }
     .chart-row { display: grid; grid-template-columns: 380px minmax(220px, 1fr) 82px; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid #dbe5ef; page-break-inside: avoid; }
-    .chart-label { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 13px; font-weight: 800; }
-    .chart-label span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chart-label { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 13px; }
+    .chart-label span:last-child { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+    .chart-label strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+    .chart-label small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 11px; font-weight: 700; }
     .dot { width: 11px; height: 11px; border-radius: 999px; flex: 0 0 auto; }
     .bar-track { height: 25px; border-radius: 6px; background: #f2f6fb; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 6px; opacity: .9; }
@@ -248,7 +256,9 @@ function printFortnightSiteWagesAnalytics({
       body { background: #ffffff; }
       .toolbar { display: none; }
       .page { padding: 0; }
-      .card { break-inside: avoid; }
+      .header { margin-bottom: 12px; padding-bottom: 12px; }
+      .card { break-inside: auto; page-break-inside: auto; padding: 16px; }
+      .subtitle { margin-bottom: 16px; }
       @page { size: A4 landscape; margin: 12mm; }
     }
   </style>
@@ -292,7 +302,7 @@ function TopSiteWagesChart({
   showCode = false,
   labelClassName = "w-27.5 min-w-27.5",
 }: {
-  data: { code?: string | null; site: string; wages: number }[];
+  data: SiteWageRow[];
   showCode?: boolean;
   labelClassName?: string;
 }) {
@@ -311,12 +321,19 @@ function TopSiteWagesChart({
                 className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: color }}
               />
-              <span
-                className={`text-sm font-semibold leading-tight text-foreground ${
-                  showCode ? "whitespace-normal" : "truncate"
-                }`}
-              >
-                {label}
+              <span className="min-w-0 flex-1">
+                <span
+                  className={`block text-sm font-semibold leading-tight text-foreground ${
+                    showCode ? "whitespace-normal" : "truncate"
+                  }`}
+                >
+                  {label}
+                </span>
+                {showCode ? (
+                  <span className="mt-0.5 block truncate text-xs font-medium text-muted-foreground">
+                    {formatSiteSupervisorLabel(item)}
+                  </span>
+                ) : null}
               </span>
             </div>
             {/* Bar */}
@@ -372,7 +389,7 @@ export default function HomePage() {
   const [siteWagesSheetOpen, setSiteWagesSheetOpen] = useState(false);
   const role = useUserRole();
 
-  const ADMIN_CACHE_KEY = "dashboard-admin-v6";
+  const ADMIN_CACHE_KEY = "dashboard-admin-v7";
   const SUP_CACHE_KEY = "dashboard-supervisor-v3";
 
   useEffect(() => {
@@ -463,7 +480,14 @@ export default function HomePage() {
                 payload: any;
               } | null;
               if (cached && now - cached.ts < 1 * 60_000) {
-                setSupervisorCounts(cached.payload ?? { submitted: 0, accepted: 0, approved: 0, paid: 0 });
+                setSupervisorCounts(
+                  cached.payload ?? {
+                    submitted: 0,
+                    accepted: 0,
+                    approved: 0,
+                    paid: 0,
+                  },
+                );
                 return;
               }
             }
@@ -487,7 +511,8 @@ export default function HomePage() {
 
           const timesheets = json?.timesheets ?? [];
           const counts = {
-            submitted: timesheets.filter((t) => t.status === "SUBMITTED").length,
+            submitted: timesheets.filter((t) => t.status === "SUBMITTED")
+              .length,
             accepted: timesheets.filter((t) => t.status === "ACCEPTED").length,
             approved: timesheets.filter((t) => t.status === "APPROVED").length,
             paid: timesheets.filter((t) => t.status === "PAID").length,
@@ -602,11 +627,27 @@ export default function HomePage() {
         label: "Manage Timesheets",
         icon: NotebookIcon,
         href: "/supervisor/timesheets",
-        badge: supervisorCounts.submitted > 0 ? supervisorCounts.submitted : null,
+        badge:
+          supervisorCounts.submitted > 0 ? supervisorCounts.submitted : null,
       },
-      { label: "Foremen", icon: Users, href: "/supervisor/foremen", badge: null },
-      { label: "Photo Verification", icon: Camera, href: "/supervisor/photos", badge: null },
-      { label: "Job Progress", icon: TrendingUp, href: "/supervisor/job-progress", badge: null },
+      {
+        label: "Foremen",
+        icon: Users,
+        href: "/supervisor/foremen",
+        badge: null,
+      },
+      {
+        label: "Photo Verification",
+        icon: Camera,
+        href: "/supervisor/photos",
+        badge: null,
+      },
+      {
+        label: "Job Progress",
+        icon: TrendingUp,
+        href: "/supervisor/job-progress",
+        badge: null,
+      },
       { label: "Employees", icon: Users, href: "/employees", badge: null },
       { label: "Sites", icon: Building2, href: "/sites", badge: null },
     ];
@@ -616,7 +657,9 @@ export default function HomePage() {
         <div className="flex-1 space-y-5 pb-6">
           {/* Header */}
           <div>
-            <h1 className="text-xl font-bold text-foreground">Supervisor Dashboard</h1>
+            <h1 className="text-xl font-bold text-foreground">
+              Supervisor Dashboard
+            </h1>
             <p className="text-sm text-muted-foreground mt-0.5">{today}</p>
           </div>
 
@@ -625,7 +668,9 @@ export default function HomePage() {
             <div className="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 px-4 py-3">
               <TriangleAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                {supervisorCounts.submitted} timesheet{supervisorCounts.submitted === 1 ? "" : "s"} pending your review
+                {supervisorCounts.submitted} timesheet
+                {supervisorCounts.submitted === 1 ? "" : "s"} pending your
+                review
               </p>
               <Link
                 href="/supervisor/timesheets"
@@ -647,12 +692,18 @@ export default function HomePage() {
                   className={`flex flex-col gap-3 rounded-xl border p-4 transition-all hover:shadow-md ${card.bg}`}
                   style={{ borderColor: `${card.accent}30` }}
                 >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                  <div
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}
+                  >
                     <Icon className={`w-4.5 h-4.5 ${card.iconColor}`} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground tabular-nums">{card.value}</p>
-                    <p className="text-xs font-medium text-muted-foreground mt-0.5">{card.label}</p>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">
+                      {card.value}
+                    </p>
+                    <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                      {card.label}
+                    </p>
                   </div>
                 </Link>
               );
@@ -661,7 +712,9 @@ export default function HomePage() {
 
           {/* Quick actions */}
           <div>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Quick Actions</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Quick Actions
+            </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {quickActions.map((action) => {
                 const Icon = action.icon;
@@ -679,7 +732,9 @@ export default function HomePage() {
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Icon className="w-5 h-5 text-primary" />
                     </div>
-                    <span className="text-xs font-medium text-foreground leading-tight">{action.label}</span>
+                    <span className="text-xs font-medium text-foreground leading-tight">
+                      {action.label}
+                    </span>
                   </Link>
                 );
               })}
@@ -1317,8 +1372,13 @@ export default function HomePage() {
                             <span className="flex h-7 min-w-10 shrink-0 items-center justify-center rounded bg-primary/10 px-2 text-xs font-bold text-primary">
                               {row.code ?? index + 1}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                              {formatSiteWageLabel(row)}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-foreground">
+                                {formatSiteWageLabel(row)}
+                              </span>
+                              <span className="mt-0.5 block truncate text-xs font-medium text-muted-foreground">
+                                {formatSiteSupervisorLabel(row)}
+                              </span>
                             </span>
                             <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
                               {formatWageTotal(row.wages)}

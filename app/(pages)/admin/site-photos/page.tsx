@@ -14,6 +14,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Loader2,
   ImageIcon,
   RefreshCw,
@@ -27,7 +40,11 @@ import {
   Maximize2,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
+  Download,
+  Printer,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SitePhoto {
   id: string;
@@ -115,6 +132,226 @@ function getStatusVariant(
   }
 }
 
+function escapeHtml(value: string | null | undefined) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatPhotoDate(value: string) {
+  return new Date(value).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function chunkPhotos(photos: SitePhoto[], size = 10) {
+  const chunks: SitePhoto[][] = [];
+  for (let i = 0; i < photos.length; i += size) {
+    chunks.push(photos.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function buildPhotosPrintHtml(group: GroupedPhotos) {
+  const pages = chunkPhotos(group.photos, 12);
+  const title = `${group.label} - Site Photos`;
+  const fullDate = formatPhotoDate(`${group.date}T00:00:00`);
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f8fafc;
+      color: #0f172a;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .toolbar button {
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 10mm;
+      background: #ffffff;
+      page-break-after: always;
+    }
+    .page:last-child { page-break-after: auto; }
+    .header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 7mm;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 4mm;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+    .meta {
+      margin-top: 3px;
+      color: #475569;
+      font-size: 12px;
+    }
+    .count {
+      color: #475569;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(3, auto);
+      gap: 4mm;
+    }
+    .photo {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #ffffff;
+      break-inside: avoid;
+    }
+    .imageBox {
+      height: 50mm;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: auto;
+    }
+    .caption {
+      min-height: 20mm;
+      padding: 2.5mm;
+      border-top: 1px solid #e2e8f0;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+    .site {
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1mm;
+    }
+    .detail {
+      color: #475569;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status {
+      display: inline-block;
+      margin-top: 1.5mm;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 1mm 2mm;
+      font-size: 9px;
+      font-weight: 700;
+    }
+    @media print {
+      body { background: #ffffff; }
+      .toolbar { display: none; }
+      .page {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        box-shadow: none;
+      }
+    }
+    @page { size: A4 portrait; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  ${pages
+    .map(
+      (photos, pageIndex) => `
+      <section class="page">
+        <div class="header">
+          <div>
+            <h1>${escapeHtml(title)}</h1>
+            <div class="meta">${escapeHtml(fullDate)} · Page ${pageIndex + 1} of ${pages.length}</div>
+          </div>
+          <div class="count">${group.photos.length} photo${group.photos.length === 1 ? "" : "s"}</div>
+        </div>
+        <div class="grid">
+          ${photos
+            .map(
+              (photo) => `
+              <article class="photo">
+                <div class="imageBox">
+                  <img src="${escapeHtml(photo.imageUrl)}" alt="${escapeHtml(`${photo.siteName} - ${photo.foremanName}`)}" />
+                </div>
+                <div class="caption">
+                  <div class="site">${escapeHtml(photo.siteName)}</div>
+                  <div class="detail">${escapeHtml(photo.foremanName)}</div>
+                  <div class="detail">${escapeHtml(
+                    new Date(photo.uploadedAtISO).toLocaleTimeString("en-GB", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }),
+                  )}</div>
+                  <span class="status">${escapeHtml(photo.verificationStatus)}</span>
+                </div>
+              </article>`,
+            )
+            .join("")}
+        </div>
+      </section>`,
+    )
+    .join("")}
+</body>
+</html>`;
+}
+
+function safeFilename(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 type NaturalImageSize = {
   width: number;
   height: number;
@@ -133,6 +370,7 @@ export default function AdminSitePhotosPage() {
   const [supervisors, setSupervisors] = useState<FilterOption[]>([]);
   const [selectedForemanId, setSelectedForemanId] = useState<string>("");
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>("");
+  const [foremanOpen, setForemanOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -380,8 +618,9 @@ export default function AdminSitePhotosPage() {
   };
 
   const handleForemanChange = (value: string) => {
-    const newValue = value === "all" ? "" : value;
+    const newValue = value === selectedForemanId ? "" : value;
     setSelectedForemanId(newValue);
+    setForemanOpen(false);
     loadPhotos(newValue, selectedSupervisorId);
   };
 
@@ -399,6 +638,42 @@ export default function AdminSitePhotosPage() {
 
   const hasFilters = selectedForemanId || selectedSupervisorId;
   const groupedPhotos = groupPhotosByDate(photos);
+
+  const openPrintWindow = (group: GroupedPhotos, autoPrint: boolean) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Allow popups to print site photos");
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(buildPhotosPrintHtml(group));
+    printWindow.document.close();
+
+    if (autoPrint) {
+      printWindow.addEventListener("load", () => {
+        setTimeout(() => printWindow.print(), 500);
+      });
+    }
+  };
+
+  const handlePrintGroup = (group: GroupedPhotos) => {
+    openPrintWindow(group, true);
+  };
+
+  const handleDownloadGroup = (group: GroupedPhotos) => {
+    const html = buildPhotosPrintHtml(group);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `site-photos-${group.date}-${safeFilename(group.label)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Photo sheet downloaded");
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -428,22 +703,69 @@ export default function AdminSitePhotosPage() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={selectedForemanId || "all"}
-            onValueChange={handleForemanChange}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="All Foremen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Foremen</SelectItem>
-              {foremen.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={foremanOpen} onOpenChange={setForemanOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={foremanOpen}
+                className="w-52 justify-between font-normal"
+              >
+                <span className="truncate">
+                  {selectedForemanId
+                    ? (foremen.find((f) => f.id === selectedForemanId)?.name ??
+                      "All Foremen")
+                    : "All Foremen"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search foremen..." />
+                <CommandList>
+                  <CommandEmpty>No foremen found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="__all_foremen__"
+                      keywords={["all", "foremen"]}
+                      onSelect={() => {
+                        setSelectedForemanId("");
+                        setForemanOpen(false);
+                        loadPhotos("", selectedSupervisorId);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          !selectedForemanId ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      All Foremen
+                    </CommandItem>
+                    {foremen.map((foreman) => (
+                      <CommandItem
+                        key={foreman.id}
+                        value={foreman.id}
+                        keywords={[foreman.name]}
+                        onSelect={() => handleForemanChange(foreman.id)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedForemanId === foreman.id
+                              ? "opacity-100"
+                              : "opacity-0",
+                          )}
+                        />
+                        {foreman.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -485,7 +807,7 @@ export default function AdminSitePhotosPage() {
         <div className="space-y-8">
           {groupedPhotos.map((group) => (
             <div key={group.date}>
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-foreground">
                   {group.label}
                   <Badge variant="secondary" className="ml-2 text-xs">
@@ -494,8 +816,25 @@ export default function AdminSitePhotosPage() {
                   </Badge>
                 </h2>
 
-                {group.photos.length > 4 && (
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePrintGroup(group)}
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadGroup(group)}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                  {group.photos.length > 4 && (
+                    <>
                     <Button
                       variant="outline"
                       size="icon"
@@ -512,8 +851,9 @@ export default function AdminSitePhotosPage() {
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
 
               <div

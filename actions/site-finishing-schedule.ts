@@ -424,6 +424,8 @@ export async function deleteFinishingSchedule(scheduleId: string) {
   await prisma.siteFinishingSchedule.delete({ where: { id } });
 
   revalidatePath(`/sites/${schedule.siteId}`);
+  revalidatePath(`/admin/finishing-schedules`);
+  revalidatePath(`/admin/sites-operations`);
   return { ok: true as const };
 }
 

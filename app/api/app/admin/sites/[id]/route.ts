@@ -14,6 +14,27 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+const SPEC_STATUSES = [
+  "NOT_REQUESTED",
+  "REQUESTED",
+  "RECEIVED",
+  "ACTIONED",
+] as const;
+
+type SiteSpecStatus = (typeof SPEC_STATUSES)[number];
+
+function normalizeSpecStatus(value: unknown): SiteSpecStatus | undefined {
+  if (value === undefined) return undefined;
+  const status = String(value ?? "").trim().toUpperCase();
+  return SPEC_STATUSES.includes(status as SiteSpecStatus)
+    ? (status as SiteSpecStatus)
+    : undefined;
+}
+
+function specAvailableFromStatus(status: SiteSpecStatus) {
+  return status === "RECEIVED" || status === "ACTIONED";
+}
+
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
@@ -82,6 +103,7 @@ export async function GET(
         latitude: true,
         longitude: true,
         isActive: true,
+        specStatus: true,
         specAvailable: true,
         createdAt: true,
       },
@@ -156,6 +178,9 @@ export async function GET(
           latitude: site.latitude,
           longitude: site.longitude,
           isActive: site.isActive,
+          specStatus:
+            (site.specStatus as SiteSpecStatus | null | undefined) ??
+            (site.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
           specAvailable: site.specAvailable,
           createdAt: site.createdAt.toISOString(),
         },
@@ -216,8 +241,32 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { name, code, location, address, latitude, longitude, isActive, specAvailable } =
-      body;
+    const {
+      name,
+      code,
+      location,
+      address,
+      latitude,
+      longitude,
+      isActive,
+      specStatus: rawSpecStatus,
+      specAvailable,
+    } = body;
+    const specStatus =
+      rawSpecStatus !== undefined
+        ? normalizeSpecStatus(rawSpecStatus)
+        : specAvailable !== undefined
+          ? Boolean(specAvailable)
+            ? "RECEIVED"
+            : "NOT_REQUESTED"
+          : undefined;
+
+    if (rawSpecStatus !== undefined && !specStatus) {
+      return NextResponse.json(
+        { error: "Invalid spec status" },
+        { status: 400, headers: CORS_HEADERS },
+      );
+    }
 
     // Validate name if provided
     if (name !== undefined && typeof name === "string" && !name.trim()) {
@@ -264,8 +313,12 @@ export async function PATCH(
     if (longitude !== undefined)
       updateData.longitude = longitude !== null ? Number(longitude) : null;
     if (isActive !== undefined) updateData.isActive = Boolean(isActive);
-    if (specAvailable !== undefined)
+    if (specStatus !== undefined) {
+      updateData.specStatus = specStatus;
+      updateData.specAvailable = specAvailableFromStatus(specStatus);
+    } else if (specAvailable !== undefined) {
       updateData.specAvailable = Boolean(specAvailable);
+    }
 
     const updatedSite = await prisma.site.update({
       where: { id },
@@ -279,6 +332,7 @@ export async function PATCH(
         latitude: true,
         longitude: true,
         isActive: true,
+        specStatus: true,
         specAvailable: true,
         createdAt: true,
       },
@@ -296,6 +350,9 @@ export async function PATCH(
           latitude: updatedSite.latitude,
           longitude: updatedSite.longitude,
           isActive: updatedSite.isActive,
+          specStatus:
+            (updatedSite.specStatus as SiteSpecStatus | null | undefined) ??
+            (updatedSite.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
           specAvailable: updatedSite.specAvailable,
           createdAt: updatedSite.createdAt.toISOString(),
         },

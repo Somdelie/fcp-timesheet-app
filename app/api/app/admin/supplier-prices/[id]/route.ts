@@ -196,7 +196,12 @@ export async function DELETE(
 
     const { id } = await ctx.params;
 
-    await prisma.supplierProductPrice.delete({ where: { id } });
+    try {
+      await prisma.supplierProductPrice.delete({ where: { id } });
+    } catch (e: any) {
+      if (e?.code !== "P2025") throw e;
+      await prisma.materialPrice.delete({ where: { id } });
+    }
 
     return NextResponse.json({ ok: true }, { headers: CORS });
   } catch (e: any) {

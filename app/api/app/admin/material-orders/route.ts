@@ -4,7 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
-import { resolveUnitPrice, recalcOrderTotal } from "@/lib/procurement";
+import {
+  ensureSiteMaterialsForProducts,
+  resolveUnitPrice,
+  recalcOrderTotal,
+} from "@/lib/procurement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -252,22 +256,10 @@ export async function POST(req: Request) {
       .filter((i) => i.productId && i.quantity && i.quantity >= 1)
       .map((i) => i.productId);
 
-    if (orderedProductIds.length > 0) {
-      const existingMaterials = await prisma.siteMaterial.findMany({
-        where: { siteId, productId: { in: orderedProductIds } },
-        select: { productId: true },
-      });
-      const existingSet = new Set(existingMaterials.map((m) => m.productId));
-      const newProductIds = [...new Set(orderedProductIds)].filter(
-        (pid) => !existingSet.has(pid),
-      );
-      if (newProductIds.length > 0) {
-        await prisma.siteMaterial.createMany({
-          data: newProductIds.map((productId) => ({ siteId, productId })),
-          skipDuplicates: true,
-        });
-      }
-    }
+    await ensureSiteMaterialsForProducts(prisma, {
+      siteId,
+      productIds: orderedProductIds,
+    });
 
     // Recalculate total
     const newTotal = await recalcOrderTotal(order.id);
