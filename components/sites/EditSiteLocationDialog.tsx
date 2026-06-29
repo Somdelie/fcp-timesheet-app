@@ -68,7 +68,6 @@ const schema = z.object({
     .max(80, "Max 80 characters."),
   code: z.string().max(30, "Max 30 characters.").optional(),
   client: z.string().max(120, "Max 120 characters.").optional(),
-  location: z.string().max(120, "Max 120 characters.").optional(),
   address: z.string().max(200, "Max 200 characters.").optional(),
   siteClaimDate: z.string().max(10).optional(),
   amountClaimed: z
@@ -184,8 +183,7 @@ export default function EditSiteLocationDialog(props: {
       name: initialName,
       code: initialCode ?? "",
       client: initialClient ?? "",
-      location: initialLocation ?? "",
-      address: initialAddress ?? "",
+      address: initialAddress ?? initialLocation ?? "",
       siteClaimDate: initialSiteClaimDate?.slice(0, 10) ?? "",
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
@@ -229,8 +227,7 @@ export default function EditSiteLocationDialog(props: {
       name: initialName,
       code: initialCode ?? "",
       client: initialClient ?? "",
-      location: initialLocation ?? "",
-      address: initialAddress ?? "",
+      address: initialAddress ?? initialLocation ?? "",
       siteClaimDate: normalizeDateInput(initialSiteClaimDate),
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
@@ -280,7 +277,7 @@ export default function EditSiteLocationDialog(props: {
             }
           : {}),
         client: values.client || null,
-        location: values.location || null,
+        location: null,
         address: values.address || null,
         siteClaimDate: values.siteClaimDate || null,
         amountClaimed: values.amountClaimed ?? 0,
@@ -461,12 +458,12 @@ export default function EditSiteLocationDialog(props: {
             />
 
             <Controller
-              name="location"
+              name="address"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                    Location label{" "}
+                    Address{" "}
                     <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
                       (Optional)
                     </span>
@@ -475,7 +472,7 @@ export default function EditSiteLocationDialog(props: {
                     {...field}
                     value={field.value ?? ""}
                     onChange={(e) => field.onChange(e.target.value)}
-                    placeholder="e.g. Midrand, Gauteng"
+                    placeholder="e.g. 123 Main Rd, Midrand, Gauteng"
                     disabled={pending}
                     className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
                   />
@@ -666,32 +663,6 @@ export default function EditSiteLocationDialog(props: {
                 </Select>
               </Field>
             )}
-
-            <Controller
-              name="address"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                    Address{" "}
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
-                      (Optional)
-                    </span>
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    value={field.value ?? ""}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    placeholder="e.g. 123 Main Rd, Midrand, Gauteng"
-                    disabled={pending}
-                    className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50"
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">

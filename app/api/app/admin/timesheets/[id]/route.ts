@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireApiAuth } from "@/lib/apiAuth";
+import { shouldTreatForemanScanAsIndividual } from "@/lib/individualForemanScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -280,7 +281,12 @@ export async function GET(
           present: r.present,
           daysWorked,
           pay,
-          isForeman: r.employeeId === foremanEmpId,
+          isForeman:
+            r.employeeId === foremanEmpId &&
+            !shouldTreatForemanScanAsIndividual({
+              employeeId: r.employeeId,
+              fullName: r.fullName,
+            }),
         };
       });
 

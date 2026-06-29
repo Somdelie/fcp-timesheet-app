@@ -4,10 +4,24 @@
 import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
-import type { FinishingZone } from "@/generated/prisma/client";
+import type {
+  FinishingScheduleLogo,
+  FinishingZone,
+} from "@/generated/prisma/client";
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+const FINISHING_SCHEDULE_LOGOS = ["FIRST_CLASS", "UNWABU"] as const;
+
+function normalizeLogoKey(value: unknown): FinishingScheduleLogo {
+  const logo = clean(value).toUpperCase();
+  return FINISHING_SCHEDULE_LOGOS.includes(
+    logo as (typeof FINISHING_SCHEDULE_LOGOS)[number],
+  )
+    ? (logo as FinishingScheduleLogo)
+    : "FIRST_CLASS";
 }
 
 // ========================
@@ -166,6 +180,7 @@ export type CreateScheduleInput = {
   completionDate?: string | null;
   drawingDetails?: string | null;
   contactInfo?: string | null;
+  logoKey?: FinishingScheduleLogo | null;
   areas?: CreateAreaInput[];
 };
 
@@ -228,6 +243,7 @@ export async function createFinishingSchedule(input: CreateScheduleInput) {
         : null,
       drawingDetails: input.drawingDetails ? clean(input.drawingDetails) : null,
       contactInfo: input.contactInfo ? clean(input.contactInfo) : null,
+      logoKey: normalizeLogoKey(input.logoKey),
       areas: input.areas?.length
         ? {
             create: input.areas
@@ -306,6 +322,7 @@ export async function updateFinishingSchedule(input: {
   completionDate?: string | null;
   drawingDetails?: string | null;
   contactInfo?: string | null;
+  logoKey?: FinishingScheduleLogo | null;
 }) {
   const auth = await requireServerAuth();
   if (auth.role !== "ADMIN" && auth.role !== "SUPERVISOR") {
@@ -392,6 +409,10 @@ export async function updateFinishingSchedule(input: {
 
       ...(input.contactInfo !== undefined
         ? { contactInfo: input.contactInfo ? clean(input.contactInfo) : null }
+        : {}),
+
+      ...(input.logoKey !== undefined
+        ? { logoKey: normalizeLogoKey(input.logoKey) }
         : {}),
     },
   });

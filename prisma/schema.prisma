@@ -2017,6 +2017,11 @@ enum FinishingScheduleStatus {
   INITIAL
 }
 
+enum FinishingScheduleLogo {
+  FIRST_CLASS
+  UNWABU
+}
+
 model SiteFinishingSchedule {
   id String @id @default(cuid())
 
@@ -2036,6 +2041,7 @@ model SiteFinishingSchedule {
   completionDate     DateTime?
   drawingDetails     String?
   contactInfo        String?
+  logoKey            FinishingScheduleLogo @default(FIRST_CLASS)
 
   // Versioning / publishing
   status           FinishingScheduleStatus @default(INITIAL)

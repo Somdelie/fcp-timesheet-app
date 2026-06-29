@@ -5,6 +5,7 @@ import { toISODate } from "@/lib/workdate";
 import { addDaysUTC, isoFromDateUTC } from "@/lib/dateUtc";
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 import { logApiRequest } from "@/lib/apiRequestLogger";
+import { shouldTreatForemanScanAsIndividual } from "@/lib/individualForemanScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -227,7 +228,10 @@ async function getFortnightSiteWages() {
     const pairKey = `${scan.employeeId}-${dateISO}`;
     const foremanEmployeeId = foremanIdToEmployeeId.get(foremanId) ?? foremanId;
 
-    if (scan.employeeId === foremanEmployeeId) {
+    if (
+      scan.employeeId === foremanEmployeeId &&
+      !shouldTreatForemanScanAsIndividual({ employeeId: scan.employeeId })
+    ) {
       foremanDayPairs.add(pairKey);
     } else {
       manDayPairs.add(pairKey);

@@ -26,6 +26,7 @@ export type FinishingSchedulePdfAreaDto = {
 export type FinishingSchedulePdfDto = {
   id: string;
   title: string;
+  logoKey: "FIRST_CLASS" | "UNWABU";
   siteName: string;
   siteCode: string;
   siteAddress: string;
@@ -109,6 +110,7 @@ export function mapFinishingScheduleToPdfDto(
   return {
     id: schedule.id,
     title: "FINISHING SCHEDULE",
+    logoKey: schedule.logoKey ?? "FIRST_CLASS",
     siteName: show(schedule.site?.name),
     siteCode: show(schedule.site?.code),
     siteAddress: show(schedule.siteAddress || schedule.site?.address || schedule.site?.location),

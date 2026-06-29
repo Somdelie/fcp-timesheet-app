@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateTimesheetPdf } from "@/lib/generateTimesheetPdf";
 import type { TimesheetGridModel } from "@/lib/timesheets/gridModel";
 import { GET as getTimesheetDetail } from "../route";
+import { shouldTreatForemanScanAsIndividual } from "@/lib/individualForemanScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,7 +51,12 @@ export async function GET(
   let teamPay = 0;
 
   const rows = timesheet.rows.map((row) => {
-    const isForeman = row.fullName.trim().toLowerCase() === foremanKey;
+    const isForeman =
+      row.fullName.trim().toLowerCase() === foremanKey &&
+      !shouldTreatForemanScanAsIndividual({
+        employeeId: row.employeeId,
+        fullName: row.fullName,
+      });
     if (isForeman) {
       foremanDays += row.daysWorked;
       foremanPay += row.pay;

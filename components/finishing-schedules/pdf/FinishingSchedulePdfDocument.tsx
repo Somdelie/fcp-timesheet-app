@@ -11,11 +11,12 @@ import type { FinishingSchedulePdfDto } from "@/lib/finishing-schedules/mapFinis
 import fs from "fs";
 import path from "path";
 
-function resolveLogoDataUri(): string {
+function resolveLogoDataUri(logoKey: FinishingSchedulePdfDto["logoKey"]): string {
+  const fileName = logoKey === "UNWABU" ? "Unwabu-logo.png" : "logo.png";
   const candidates = [
-    path.join(process.cwd(), "public", "logo.png"),
-    path.resolve(__dirname, "..", "..", "..", "public", "logo.png"),
-    path.resolve(__dirname, "..", "public", "logo.png"),
+    path.join(process.cwd(), "public", fileName),
+    path.resolve(__dirname, "..", "..", "..", "public", fileName),
+    path.resolve(__dirname, "..", "public", fileName),
   ];
   for (const p of candidates) {
     try {
@@ -27,8 +28,6 @@ function resolveLogoDataUri(): string {
   }
   return "";
 }
-
-const LOGO_DATA_URI = resolveLogoDataUri();
 
 /* ------------------------------------------------------------------
  *  Single border colour used everywhere
@@ -277,6 +276,7 @@ export function FinishingSchedulePdfDocument({
   data: FinishingSchedulePdfDto;
 }) {
   const areaGroups = groupByArea(data);
+  const logoDataUri = resolveLogoDataUri(data.logoKey);
 
   return (
     <Document title={`${data.siteName} Finishing Schedule`}>
@@ -284,8 +284,8 @@ export function FinishingSchedulePdfDocument({
         {/* ---- Top row ---- */}
         <View style={styles.topRow} fixed>
           <View style={styles.brandBox}>
-            {LOGO_DATA_URI ? (
-              <Image src={LOGO_DATA_URI} style={styles.brandLogo} />
+            {logoDataUri ? (
+              <Image src={logoDataUri} style={styles.brandLogo} />
             ) : (
               <Text
                 style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.4 }}

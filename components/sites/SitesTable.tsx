@@ -479,7 +479,7 @@ function SiteRowActions({
         initialCode={site.code}
         initialClient={site.client}
         initialLocation={site.location}
-        initialAddress={site.address}
+        initialAddress={site.address ?? site.location}
         initialLatitude={site.latitude}
         initialLongitude={site.longitude}
         initialSiteClaimDate={site.siteClaimDate}

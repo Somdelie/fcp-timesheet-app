@@ -124,7 +124,7 @@ type TimelineDrag = {
 
 const today = format(new Date(), "yyyy-MM-dd");
 const activityColumnWidth = 300;
-const dayColumnWidth = 42;
+const dayColumnWidth = 48;
 
 function dateOnly(value: string | Date | null | undefined) {
   if (!value) return "";
@@ -152,20 +152,19 @@ function mapProgramme(programme: ProgrammeRecord | null) {
   return {
     programmeId: programme?.id,
     description: programme?.description ?? "",
-    items:
-      programme?.items?.length
-        ? programme.items.map((item) => ({
-            id: makeId(),
-            persistedId: item.id,
-            name: item.title,
-            trade: item.trade ?? "",
-            description: item.description ?? "",
-            startDate: dateOnly(item.plannedStartDate),
-            finishDate: dateOnly(item.plannedFinishDate),
-            actualStartDate: dateOnly(item.actualStartDate) || undefined,
-            actualFinishDate: dateOnly(item.actualFinishDate) || undefined,
-          }))
-        : [],
+    items: programme?.items?.length
+      ? programme.items.map((item) => ({
+          id: makeId(),
+          persistedId: item.id,
+          name: item.title,
+          trade: item.trade ?? "",
+          description: item.description ?? "",
+          startDate: dateOnly(item.plannedStartDate),
+          finishDate: dateOnly(item.plannedFinishDate),
+          actualStartDate: dateOnly(item.actualStartDate) || undefined,
+          actualFinishDate: dateOnly(item.actualFinishDate) || undefined,
+        }))
+      : [],
   };
 }
 
@@ -286,7 +285,10 @@ export function JobProgramPlanner({
   const plannedStart = useMemo(() => {
     if (
       timelineDrag &&
-      isBefore(new Date(timelineDrag.originalProgrammeStart), new Date(programmeStart))
+      isBefore(
+        new Date(timelineDrag.originalProgrammeStart),
+        new Date(programmeStart),
+      )
     ) {
       return timelineDrag.originalProgrammeStart;
     }
@@ -296,7 +298,10 @@ export function JobProgramPlanner({
   const plannedFinish = useMemo(() => {
     if (
       timelineDrag &&
-      isAfter(new Date(timelineDrag.originalProgrammeFinish), new Date(programmeFinish))
+      isAfter(
+        new Date(timelineDrag.originalProgrammeFinish),
+        new Date(programmeFinish),
+      )
     ) {
       return timelineDrag.originalProgrammeFinish;
     }
@@ -308,14 +313,19 @@ export function JobProgramPlanner({
       const candidate = hasActualFinish(item)
         ? item.actualFinishDate!
         : item.finishDate;
-      return isAfter(new Date(candidate), new Date(latest)) ? candidate : latest;
+      return isAfter(new Date(candidate), new Date(latest))
+        ? candidate
+        : latest;
     }, plannedFinish);
   }, [items, plannedFinish]);
 
   const days = useMemo(() => {
     const total = Math.max(
       0,
-      differenceInCalendarDays(new Date(calendarFinish), new Date(plannedStart)),
+      differenceInCalendarDays(
+        new Date(calendarFinish),
+        new Date(plannedStart),
+      ),
     );
 
     return Array.from({ length: total + 1 }).map((_, index) =>
@@ -346,7 +356,10 @@ export function JobProgramPlanner({
     setHasTimelineChanges(false);
   }
 
-  function updateSiteSummary(siteId: string, programme: ProgrammeRecord | null) {
+  function updateSiteSummary(
+    siteId: string,
+    programme: ProgrammeRecord | null,
+  ) {
     setSiteRows((prev) =>
       prev.map((site) =>
         site.id === siteId
@@ -374,7 +387,9 @@ export function JobProgramPlanner({
     setLoadingSite(true);
     startTransition(async () => {
       try {
-        const programme = (await getSiteProgramme(siteId)) as ProgrammeRecord | null;
+        const programme = (await getSiteProgramme(
+          siteId,
+        )) as ProgrammeRecord | null;
         resetFromProgramme(programme);
         updateSiteSummary(siteId, programme);
       } catch (error) {
@@ -426,7 +441,12 @@ export function JobProgramPlanner({
   function duplicateDraftItem(item: ProgramItem) {
     setDraftItems((prev) => [
       ...prev,
-      { ...item, id: makeId(), persistedId: undefined, name: `${item.name} copy` },
+      {
+        ...item,
+        id: makeId(),
+        persistedId: undefined,
+        name: `${item.name} copy`,
+      },
     ]);
   }
 
@@ -543,13 +563,17 @@ export function JobProgramPlanner({
           return;
         }
 
-        const saved = (await getSiteProgramme(selectedSiteId)) as ProgrammeRecord | null;
+        const saved = (await getSiteProgramme(
+          selectedSiteId,
+        )) as ProgrammeRecord | null;
         resetFromProgramme(saved);
         updateSiteSummary(selectedSiteId, saved);
         toast.success("Programme dates updated.");
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Failed to save programme dates.",
+          error instanceof Error
+            ? error.message
+            : "Failed to save programme dates.",
         );
         resetFromProgramme(await getSiteProgramme(selectedSiteId));
       }
@@ -605,7 +629,9 @@ export function JobProgramPlanner({
 
     setLoadingSite(true);
     try {
-      const programme = (await getSiteProgramme(selectedSiteId)) as ProgrammeRecord | null;
+      const programme = (await getSiteProgramme(
+        selectedSiteId,
+      )) as ProgrammeRecord | null;
       resetFromProgramme(programme);
       updateSiteSummary(selectedSiteId, programme);
       toast.info("Programme date changes reset.");
@@ -650,15 +676,17 @@ export function JobProgramPlanner({
       try {
         const res =
           programmeDialogMode === "edit" && programmeId
-          ? await updateSiteProgramme({ programmeId, ...payload })
-          : await createSiteProgramme({ siteId: draftSiteId, ...payload });
+            ? await updateSiteProgramme({ programmeId, ...payload })
+            : await createSiteProgramme({ siteId: draftSiteId, ...payload });
 
         if (!res?.ok) {
           toast.error(res?.error ?? "Failed to save programme.");
           return;
         }
 
-        const saved = (await getSiteProgramme(draftSiteId)) as ProgrammeRecord | null;
+        const saved = (await getSiteProgramme(
+          draftSiteId,
+        )) as ProgrammeRecord | null;
         setSelectedSiteId(draftSiteId);
         resetFromProgramme(saved);
         updateSiteSummary(draftSiteId, saved);
@@ -789,7 +817,7 @@ export function JobProgramPlanner({
   }
 
   return (
-    <main className="h-[calc(100vh-12rem)] min-h-[560px] overflow-hidden rounded border border-border bg-card shadow-sm">
+    <main className="h-[calc(100vh-12rem)] min-h-140 overflow-hidden rounded border border-border bg-card shadow-sm">
       <div className="flex h-full min-h-0">
         <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border/50 bg-card">
           <div className="space-y-3 border-b border-border/50 bg-card p-3">
@@ -883,355 +911,386 @@ export function JobProgramPlanner({
         <div className="min-h-0 min-w-0 flex-1 space-y-3 overflow-auto bg-muted/30 p-3">
           {programmeId ? (
             <>
-          <section className="rounded border border-border bg-card px-4 py-3 shadow-sm">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-xl font-black">
-                    {selectedSiteLabel || "Site Programme"}
-                  </h2>
-                  {selectedSite?.code ? (
-                    <span className="rounded bg-muted px-2 py-1 text-xs font-black text-muted-foreground">
-                      {selectedSite.code}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-muted-foreground">
-                  <span>{plannedStart}</span>
-                  <span>to</span>
-                  <span>{plannedFinish}</span>
-                  <span className="text-border">|</span>
-                  <span>{items.length} activities</span>
-                  <span>{days.length} days</span>
-                  <span>{stats.completed} completed</span>
-                  <span
-                    className={
-                      stats.lateOrOverdue
-                        ? "text-destructive"
-                        : "text-muted-foreground"
-                    }
-                  >
-                    {stats.lateOrOverdue} late / overdue
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {hasTimelineChanges ? (
-                  <span className="rounded bg-primary/10 px-3 py-2 text-xs font-black text-primary">
-                    Unsaved date changes
-                  </span>
-                ) : null}
-                {hasTimelineChanges ? (
-                  <button
-                    onClick={saveTimelineItems}
-                    disabled={isPending || loadingSite}
-                    className="inline-flex items-center justify-center gap-2 rounded bg-primary px-3 py-2 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                  >
-                    {isPending ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <Check size={16} />
-                    )}
-                    Save Dates
-                  </button>
-                ) : null}
-                {hasTimelineChanges ? (
-                  <button
-                    onClick={handleResetTimelineChanges}
-                    disabled={isPending || loadingSite}
-                    className="inline-flex items-center justify-center gap-2 rounded border border-border bg-background px-3 py-2 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
-                  >
-                    <RotateCcw size={16} />
-                    Reset
-                  </button>
-                ) : null}
-                {description.trim() ? (
-                  <span className="inline-flex items-center gap-1 rounded border border-border bg-background px-3 py-2 text-xs font-black text-muted-foreground">
-                    <FileText size={14} />
-                    Notes
-                  </span>
-                ) : null}
-                {programmeId ? (
-                  <button
-                    onClick={handleDownloadProgrammeExcel}
-                    disabled={excelGenerating || loadingSite || !items.length}
-                    className="inline-flex items-center justify-center gap-2 rounded border border-border bg-background px-3 py-2 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
-                  >
-                    {excelGenerating ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <FileSpreadsheet size={16} />
-                    )}
-                    Excel
-                  </button>
-                ) : null}
-                {programmeId ? (
-                  <button
-                    onClick={handleDownloadProgrammePdf}
-                    disabled={pdfGenerating || loadingSite || !items.length}
-                    className="inline-flex items-center justify-center gap-2 rounded border border-border bg-background px-3 py-2 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
-                  >
-                    {pdfGenerating ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <Download size={16} />
-                    )}
-                    PDF
-                  </button>
-                ) : null}
-                {programmeId ? (
-                  <button
-                    onClick={handleDeleteProgramme}
-                    disabled={isPending}
-                    className="inline-flex items-center justify-center gap-2 rounded border border-destructive/30 px-3 py-2 text-sm font-black text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
-                  >
-                    <Trash2 size={16} />
-                    Delete
-                  </button>
-                ) : null}
-                <button
-                  onClick={openEditProgrammeDialog}
-                  disabled={isPending || loadingSite}
-                  className="inline-flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                >
-                  {isPending ? (
-                    <Loader2 className="animate-spin" size={16} />
-                  ) : (
-                    <Pencil size={16} />
-                  )}
-                  Edit Programme
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded border border-border bg-card shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-xl font-black">Programme Calendar</h2>
-                <p className="text-sm text-muted-foreground">
-                  {loadingSite
-                    ? "Loading programme..."
-                    : "Week-by-week site activities."}
-                </p>
-              </div>
-
-            </div>
-
-            <div
-              className="overflow-auto"
-              onPointerMove={handleTimelinePointerMove}
-              onPointerUp={handleTimelinePointerEnd}
-              onPointerCancel={handleTimelinePointerEnd}
-            >
-          <div
-            className="grid"
-            style={{
-              minWidth: `${activityColumnWidth + days.length * dayColumnWidth}px`,
-              gridTemplateColumns: `${activityColumnWidth}px repeat(${days.length}, ${dayColumnWidth}px)`,
-            }}
-          >
-            <div className="sticky left-0 z-40 border-b border-r border-border bg-card p-4 font-black shadow-sm">
-              Activity
-            </div>
-
-            {weeks.map((week, weekIndex) => {
-              const pastWeek = isPastWeek(week);
-
-              return (
-                <div
-                  key={weekIndex}
-                  className={`border-b border-r border-l-4 px-3 py-2 text-center text-xs font-black uppercase ${
-                    pastWeek
-                      ? "border-l-destructive/40 bg-destructive/10 text-destructive"
-                      : "border-l-background/80 border-primary/30 bg-primary text-primary-foreground"
-                  }`}
-                  style={{ gridColumn: `span ${week.length}` }}
-                >
-                  Week {weekIndex + 1}
-                </div>
-              );
-            })}
-
-            <div className="sticky left-0 z-40 border-b border-r border-border bg-card p-3 text-xs font-bold text-muted-foreground shadow-sm">
-              Dates
-            </div>
-
-            {days.map((day, dayIndex) => {
-              const isToday = dateOnly(day) === today;
-              const pastDay = isPastDay(day);
-              const weekStart = dayIndex % 7 === 0;
-
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={`border-b border-r border-border py-2 text-center text-[11px] font-bold ${
-                    weekStart ? "border-l-4 border-l-primary/70" : ""
-                  } ${
-                    isToday
-                      ? "bg-primary/10 text-primary"
-                      : pastDay
-                        ? "bg-destructive/10 text-destructive/75"
-                        : "bg-card text-muted-foreground"
-                  }`}
-                >
-                  {format(day, "dd")}
-                  <br />
-                  {format(day, "MMM")}
-                </div>
-              );
-            })}
-
-            {sortedItems.map((item, index) => {
-              const startOffset = differenceInCalendarDays(
-                new Date(item.startDate),
-                new Date(plannedStart),
-              );
-              const duration =
-                differenceInCalendarDays(
-                  new Date(item.finishDate),
-                  new Date(item.startDate),
-                ) + 1;
-              const actualDuration = hasActualFinish(item)
-                ? differenceInCalendarDays(
-                    new Date(item.actualFinishDate!),
-                    new Date(item.startDate),
-                  ) + 1
-                : null;
-              const overrunDays =
-                isCompletedLate(item)
-                  ? differenceInCalendarDays(
-                      new Date(item.actualFinishDate!),
-                      new Date(item.finishDate),
-                    )
-                  : 0;
-              const hasScheduleIssue = hasLateOrOverdueStatus(item);
-              const activityColor = getProgrammeActivityColor(index);
-
-              return (
-                <Fragment key={item.id}>
-                  <div className="sticky left-0 z-30 border-b border-r border-border bg-card p-4 shadow-sm">
-                    <div className="min-w-0 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-black text-foreground">
-                            {index + 1}. {item.name}
-                          </div>
-                          {item.trade ? (
-                            <div className="mt-1 truncate text-xs font-bold text-muted-foreground">
-                              {item.trade}
-                            </div>
-                          ) : null}
-                        </div>
-                        <StatusPill item={item} />
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-2 min-[1180px]:grid-cols-2">
-                        <DateChip label="Start" value={item.startDate} />
-                        <DateChip label="Finish" value={item.finishDate} />
-                      </div>
-
-                      <div className="rounded bg-muted/50 px-3 py-2 text-xs font-bold text-muted-foreground">
-                        Planned <b className="text-foreground">{Math.max(duration, 0)}</b> days
-                        {actualDuration ? (
-                          <>
-                            {" | "}
-                            Actual <b className="text-foreground">{actualDuration}</b> days
-                          </>
-                        ) : null}
-                      </div>
+              <section className="rounded border border-border bg-card px-4 py-3 shadow-sm">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="truncate text-xl font-black">
+                        {selectedSiteLabel || "Site Programme"}
+                      </h2>
+                      {selectedSite?.code ? (
+                        <span className="rounded bg-muted px-2 py-1 text-xs font-black text-muted-foreground">
+                          {selectedSite.code}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-muted-foreground">
+                      <span>{plannedStart}</span>
+                      <span>to</span>
+                      <span>{plannedFinish}</span>
+                      <span className="text-border">|</span>
+                      <span>{items.length} activities</span>
+                      <span>{days.length} days</span>
+                      <span>{stats.completed} completed</span>
+                      <span
+                        className={
+                          stats.lateOrOverdue
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {stats.lateOrOverdue} late / overdue
+                      </span>
                     </div>
                   </div>
 
-                  {days.map((day, dayIndex) => {
-                    const pastDay = isPastDay(day);
-                    const weekStart = dayIndex % 7 === 0;
-                    const isInside =
-                      dayIndex >= startOffset &&
-                      dayIndex < startOffset + Math.max(duration, 0);
-                    const isFirst = dayIndex === startOffset;
-                    const isOverrun =
-                      overrunDays > 0 &&
-                      dayIndex >= startOffset + duration &&
-                      dayIndex < startOffset + duration + overrunDays;
-
-                    return (
-                      <div
-                        key={`${item.id}-${day.toISOString()}`}
-                        className={`relative h-[164px] border-b border-r border-border ${
-                          weekStart ? "border-l-4 border-l-primary/70" : ""
-                        } ${pastDay ? "bg-destructive/5" : "bg-card"}`}
+                  <div className="flex flex-nowrap items-center gap-2">
+                    {hasTimelineChanges ? (
+                      <span className="rounded bg-primary/10 px-3 py-2 text-xs font-black text-primary">
+                        Unsaved date changes
+                      </span>
+                    ) : null}
+                    {hasTimelineChanges ? (
+                      <button
+                        onClick={saveTimelineItems}
+                        disabled={isPending || loadingSite}
+                        className="inline-flex items-center justify-center gap-2 rounded bg-primary px-3 py-2 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
                       >
-                        {(isInside || isOverrun) && (
-                          <div
-                            className={`absolute inset-y-12 left-0 right-0 z-0 border-y ${
-                              isOverrun
-                                ? "border-destructive/30 bg-destructive/20"
-                                : `border-transparent ${activityColor.trackClass}`
-                            }`}
-                          />
+                        {isPending ? (
+                          <Loader2 className="animate-spin" size={16} />
+                        ) : (
+                          <Check size={16} />
                         )}
+                        Save Dates
+                      </button>
+                    ) : null}
+                    {hasTimelineChanges ? (
+                      <button
+                        onClick={handleResetTimelineChanges}
+                        disabled={isPending || loadingSite}
+                        className="inline-flex items-center justify-center gap-2 rounded border border-border bg-background px-3 py-2 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
+                      >
+                        <RotateCcw size={16} />
+                        Reset
+                      </button>
+                    ) : null}
+                    {description.trim() ? (
+                      <span className="inline-flex items-center gap-1 rounded border border-border bg-background px-3 py-2 text-xs font-black text-muted-foreground">
+                        <FileText size={14} />
+                        Notes
+                      </span>
+                    ) : null}
+                    {programmeId ? (
+                      <button
+                        onClick={handleDownloadProgrammeExcel}
+                        disabled={
+                          excelGenerating || loadingSite || !items.length
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded border border-border bg-background px-3 py-2 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
+                      >
+                        {excelGenerating ? (
+                          <Loader2 className="animate-spin" size={16} />
+                        ) : (
+                          <FileSpreadsheet size={16} />
+                        )}
+                        Excel
+                      </button>
+                    ) : null}
+                    {programmeId ? (
+                      <button
+                        onClick={handleDownloadProgrammePdf}
+                        disabled={pdfGenerating || loadingSite || !items.length}
+                        className="inline-flex items-center justify-center gap-2 rounded border border-border bg-background px-3 py-2 text-sm font-black text-foreground transition hover:bg-muted disabled:opacity-60"
+                      >
+                        {pdfGenerating ? (
+                          <Loader2 className="animate-spin" size={16} />
+                        ) : (
+                          <Download size={16} />
+                        )}
+                        PDF
+                      </button>
+                    ) : null}
+                    {programmeId ? (
+                      <button
+                        onClick={handleDeleteProgramme}
+                        disabled={isPending}
+                        className="inline-flex items-center justify-center gap-2 rounded border border-destructive/30 px-3 py-2 text-sm font-black text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    ) : null}
+                    <button
+                      onClick={openEditProgrammeDialog}
+                      disabled={isPending || loadingSite}
+                      className="inline-flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                    >
+                      {isPending ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <Pencil size={16} />
+                      )}
+                      Edit Programme
+                    </button>
+                  </div>
+                </div>
+              </section>
 
-                        {isFirst && (
-                          <div
-                            onPointerDown={(event) =>
-                              handleTimelinePointerDown(event, item, "move")
-                            }
-                            className={`absolute left-1 top-11 z-20 flex h-9 min-w-0 items-center overflow-hidden rounded border px-3 text-xs font-black shadow-sm ${
-                              hasScheduleIssue
-                                ? "border-destructive bg-destructive text-destructive-foreground"
-                                : activityColor.barClass
-                            } cursor-grab select-none active:cursor-grabbing`}
-                            style={{
-                              width: `${Math.max(duration, 1) * dayColumnWidth - 8}px`,
-                              touchAction: "none",
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onPointerDown={(event) =>
-                                handleTimelinePointerDown(event, item, "start")
-                              }
-                              className={`absolute inset-y-0 left-0 z-10 w-3 cursor-ew-resize border-r opacity-70 transition hover:opacity-100 focus:opacity-100 ${activityColor.handleClass}`}
-                              aria-label={`Resize ${item.name} start date`}
-                            />
-                            <span className="truncate">
-                              {index + 1}. {item.name}
-                            </span>
-                            {hasScheduleIssue ? (
-                              <AlertTriangle className="ml-2 shrink-0" size={14} />
-                            ) : null}
-                            <button
-                              type="button"
-                              onPointerDown={(event) =>
-                                handleTimelinePointerDown(event, item, "finish")
-                              }
-                              className={`absolute inset-y-0 right-0 z-10 w-3 cursor-ew-resize border-l opacity-70 transition hover:opacity-100 focus:opacity-100 ${activityColor.handleClass}`}
-                              aria-label={`Resize ${item.name} finish date`}
-                            />
+              <section className="overflow-hidden rounded border border-border bg-card shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="text-xl font-black">Programme Calendar</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {loadingSite
+                        ? "Loading programme..."
+                        : "Week-by-week site activities."}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className="overflow-auto pb-2 pr-4"
+                  onPointerMove={handleTimelinePointerMove}
+                  onPointerUp={handleTimelinePointerEnd}
+                  onPointerCancel={handleTimelinePointerEnd}
+                >
+                  <div
+                    className="grid"
+                    style={{
+                      minWidth: `${activityColumnWidth + days.length * dayColumnWidth + 16}px`,
+                      gridTemplateColumns: `${activityColumnWidth}px repeat(${days.length}, ${dayColumnWidth}px)`,
+                    }}
+                  >
+                    <div className="sticky left-0 z-40 border-b border-r border-border bg-card p-4 font-black shadow-sm">
+                      Activity
+                    </div>
+
+                    {weeks.map((week, weekIndex) => {
+                      const pastWeek = isPastWeek(week);
+
+                      return (
+                        <div
+                          key={weekIndex}
+                          className={`whitespace-nowrap border-b border-r border-l-4 px-1 py-2 text-center text-[11px] font-black uppercase ${
+                            pastWeek
+                              ? "border-l-destructive/40 bg-destructive/10 text-destructive"
+                              : "border-l-background/80 border-primary/30 bg-primary text-primary-foreground"
+                          }`}
+                          style={{ gridColumn: `span ${week.length}` }}
+                        >
+                          Week {weekIndex + 1}
+                        </div>
+                      );
+                    })}
+
+                    <div className="sticky left-0 z-40 border-b border-r border-border bg-card p-3 text-xs font-bold text-muted-foreground shadow-sm">
+                      Dates
+                    </div>
+
+                    {days.map((day, dayIndex) => {
+                      const isToday = dateOnly(day) === today;
+                      const pastDay = isPastDay(day);
+                      const weekStart = dayIndex % 7 === 0;
+
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className={`border-b border-r border-border py-2 text-center text-[11px] font-bold ${
+                            weekStart ? "border-l-4 border-l-primary/70" : ""
+                          } ${
+                            isToday
+                              ? "bg-primary/10 text-primary"
+                              : pastDay
+                                ? "bg-destructive/10 text-destructive/75"
+                                : "bg-card text-muted-foreground"
+                          }`}
+                        >
+                          {format(day, "dd")}
+                          <br />
+                          {format(day, "MMM")}
+                        </div>
+                      );
+                    })}
+
+                    {sortedItems.map((item, index) => {
+                      const startOffset = differenceInCalendarDays(
+                        new Date(item.startDate),
+                        new Date(plannedStart),
+                      );
+                      const duration =
+                        differenceInCalendarDays(
+                          new Date(item.finishDate),
+                          new Date(item.startDate),
+                        ) + 1;
+                      const actualDuration = hasActualFinish(item)
+                        ? differenceInCalendarDays(
+                            new Date(item.actualFinishDate!),
+                            new Date(item.startDate),
+                          ) + 1
+                        : null;
+                      const overrunDays = isCompletedLate(item)
+                        ? differenceInCalendarDays(
+                            new Date(item.actualFinishDate!),
+                            new Date(item.finishDate),
+                          )
+                        : 0;
+                      const hasScheduleIssue = hasLateOrOverdueStatus(item);
+                      const activityColor = getProgrammeActivityColor(index);
+
+                      return (
+                        <Fragment key={item.id}>
+                          <div className="sticky left-0 z-30 border-b border-r border-border bg-card p-4 shadow-sm">
+                            <div className="min-w-0 space-y-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-black text-foreground">
+                                    {index + 1}. {item.name}
+                                  </div>
+                                  {item.trade ? (
+                                    <div className="mt-1 truncate text-xs font-bold text-muted-foreground">
+                                      {item.trade}
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <StatusPill item={item} />
+                              </div>
+
+                              <div className="grid grid-cols-1 gap-2 min-[1180px]:grid-cols-2">
+                                <DateChip
+                                  label="Start"
+                                  value={item.startDate}
+                                />
+                                <DateChip
+                                  label="Finish"
+                                  value={item.finishDate}
+                                />
+                              </div>
+
+                              <div className="rounded bg-muted/50 px-3 py-2 text-xs font-bold text-muted-foreground">
+                                Planned{" "}
+                                <b className="text-foreground">
+                                  {Math.max(duration, 0)}
+                                </b>{" "}
+                                days
+                                {actualDuration ? (
+                                  <>
+                                    {" | "}
+                                    Actual{" "}
+                                    <b className="text-foreground">
+                                      {actualDuration}
+                                    </b>{" "}
+                                    days
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </Fragment>
-              );
-            })}
-          </div>
-        </div>
 
-        {!loadingSite && items.length === 0 ? (
-          <div className="border-t border-border bg-muted/30 p-8 text-center">
-            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded bg-background text-muted-foreground shadow-sm">
-              <FileText size={20} />
-            </div>
-            <p className="text-sm font-bold text-muted-foreground">
-              No programme activities saved for this site yet.
-            </p>
-          </div>
-        ) : null}
-          </section>
+                          {days.map((day, dayIndex) => {
+                            const pastDay = isPastDay(day);
+                            const weekStart = dayIndex % 7 === 0;
+                            const isInside =
+                              dayIndex >= startOffset &&
+                              dayIndex < startOffset + Math.max(duration, 0);
+                            const isFirst = dayIndex === startOffset;
+                            const isOverrun =
+                              overrunDays > 0 &&
+                              dayIndex >= startOffset + duration &&
+                              dayIndex < startOffset + duration + overrunDays;
+
+                            return (
+                              <div
+                                key={`${item.id}-${day.toISOString()}`}
+                                className={`relative h-[164px] border-b border-r border-border ${
+                                  weekStart
+                                    ? "border-l-4 border-l-primary/70"
+                                    : ""
+                                } ${pastDay ? "bg-destructive/5" : "bg-card"}`}
+                              >
+                                {(isInside || isOverrun) && (
+                                  <div
+                                    className={`absolute inset-y-12 left-0 right-0 z-0 border-y ${
+                                      isOverrun
+                                        ? "border-destructive/30 bg-destructive/20"
+                                        : `border-transparent ${activityColor.trackClass}`
+                                    }`}
+                                  />
+                                )}
+
+                                {isFirst && (
+                                  <div
+                                    onPointerDown={(event) =>
+                                      handleTimelinePointerDown(
+                                        event,
+                                        item,
+                                        "move",
+                                      )
+                                    }
+                                    className={`absolute left-1 top-11 z-20 flex h-9 min-w-0 items-center overflow-hidden rounded border px-3 text-xs font-black shadow-sm ${
+                                      hasScheduleIssue
+                                        ? "border-destructive bg-destructive text-destructive-foreground"
+                                        : activityColor.barClass
+                                    } cursor-grab select-none active:cursor-grabbing`}
+                                    style={{
+                                      width: `${Math.max(duration, 1) * dayColumnWidth - 8}px`,
+                                      touchAction: "none",
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onPointerDown={(event) =>
+                                        handleTimelinePointerDown(
+                                          event,
+                                          item,
+                                          "start",
+                                        )
+                                      }
+                                      className={`absolute inset-y-0 left-0 z-10 w-3 cursor-ew-resize border-r opacity-70 transition hover:opacity-100 focus:opacity-100 ${activityColor.handleClass}`}
+                                      aria-label={`Resize ${item.name} start date`}
+                                    />
+                                    <span className="truncate">
+                                      {index + 1}. {item.name}
+                                    </span>
+                                    {hasScheduleIssue ? (
+                                      <AlertTriangle
+                                        className="ml-2 shrink-0"
+                                        size={14}
+                                      />
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onPointerDown={(event) =>
+                                        handleTimelinePointerDown(
+                                          event,
+                                          item,
+                                          "finish",
+                                        )
+                                      }
+                                      className={`absolute inset-y-0 right-0 z-10 w-3 cursor-ew-resize border-l opacity-70 transition hover:opacity-100 focus:opacity-100 ${activityColor.handleClass}`}
+                                      aria-label={`Resize ${item.name} finish date`}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </Fragment>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {!loadingSite && items.length === 0 ? (
+                  <div className="border-t border-border bg-muted/30 p-8 text-center">
+                    <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded bg-background text-muted-foreground shadow-sm">
+                      <FileText size={20} />
+                    </div>
+                    <p className="text-sm font-bold text-muted-foreground">
+                      No programme activities saved for this site yet.
+                    </p>
+                  </div>
+                ) : null}
+              </section>
             </>
           ) : (
             <EmptyProgrammeState onCreate={openCreateProgrammeDialog} />
@@ -1260,7 +1319,8 @@ export function JobProgramPlanner({
                   value={draftSiteId}
                   onValueChange={setDraftSiteId}
                   placeholder={
-                    availableCreateSites.length || programmeDialogMode === "edit"
+                    availableCreateSites.length ||
+                    programmeDialogMode === "edit"
                       ? "Search and select site..."
                       : "All active sites already have programmes"
                   }
@@ -1452,7 +1512,6 @@ export function JobProgramPlanner({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </main>
   );
 }
@@ -1480,14 +1539,14 @@ function getScheduleStatus(item: ProgramItem): ScheduleStatus {
 function isCompletedLate(item: ProgramItem) {
   return Boolean(
     hasActualFinish(item) &&
-      isAfter(new Date(item.actualFinishDate!), new Date(item.finishDate)),
+    isAfter(new Date(item.actualFinishDate!), new Date(item.finishDate)),
   );
 }
 
 function hasActualFinish(item: ProgramItem) {
   return Boolean(
     item.actualFinishDate &&
-      !isAfter(new Date(item.actualFinishDate), new Date(today)),
+    !isAfter(new Date(item.actualFinishDate), new Date(today)),
   );
 }
 
@@ -1567,9 +1626,7 @@ function DateChip({
   return (
     <div
       className={`rounded border px-2.5 py-2 ${
-        muted
-          ? "border-border bg-muted/30"
-          : "border-primary/20 bg-primary/5"
+        muted ? "border-border bg-muted/30" : "border-primary/20 bg-primary/5"
       }`}
     >
       <div className="text-[10px] font-black uppercase text-muted-foreground">

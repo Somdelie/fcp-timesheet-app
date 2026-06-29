@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import type { FinishingScheduleLogo } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,17 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+
+const FINISHING_SCHEDULE_LOGOS = ["FIRST_CLASS", "UNWABU"] as const;
+
+function normalizeLogoKey(value: unknown): FinishingScheduleLogo {
+  const logo = String(value ?? "").trim().toUpperCase();
+  return FINISHING_SCHEDULE_LOGOS.includes(
+    logo as (typeof FINISHING_SCHEDULE_LOGOS)[number],
+  )
+    ? (logo as FinishingScheduleLogo)
+    : "FIRST_CLASS";
+}
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS });
@@ -138,6 +150,7 @@ export async function POST(
           : null,
         drawingDetails: body.drawingDetails ? clean(body.drawingDetails) : null,
         contactInfo: body.contactInfo ? clean(body.contactInfo) : null,
+        logoKey: normalizeLogoKey(body.logoKey),
         areas: Array.isArray(body.areas)
           ? {
               create: body.areas.map(

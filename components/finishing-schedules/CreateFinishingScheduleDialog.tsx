@@ -20,6 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -95,6 +102,8 @@ type FinishLine = {
   usage: string;
 };
 
+type ScheduleLogoKey = "FIRST_CLASS" | "UNWABU";
+
 interface Props {
   siteId?: string;
   sites?: SiteOption[];
@@ -133,6 +142,11 @@ const DEFAULT_USAGE_OPTIONS = [
   "Service Duct Walls",
   "Refuse Yard",
   "Transformer Doors",
+];
+
+const LOGO_OPTIONS: Array<{ value: ScheduleLogoKey; label: string }> = [
+  { value: "FIRST_CLASS", label: "FirstClass Projects" },
+  { value: "UNWABU", label: "Unwabu Painting" },
 ];
 
 function siteLabel(site: SiteOption | undefined) {
@@ -207,6 +221,7 @@ export default function CreateFinishingScheduleDialog({
   const [completionDate, setCompletionDate] = useState("");
   const [drawingDetails, setDrawingDetails] = useState("");
   const [contactInfo, setContactInfo] = useState("");
+  const [logoKey, setLogoKey] = useState<ScheduleLogoKey>("FIRST_CLASS");
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === selectedSiteId),
@@ -331,6 +346,7 @@ export default function CreateFinishingScheduleDialog({
     setCompletionDate("");
     setDrawingDetails("");
     setContactInfo("");
+    setLogoKey("FIRST_CLASS");
   }
 
   function addLine(color?: SitePaintColorOption) {
@@ -398,6 +414,7 @@ export default function CreateFinishingScheduleDialog({
         completionDate: completionDate || null,
         drawingDetails: drawingDetails || null,
         contactInfo: contactInfo || null,
+        logoKey,
         areas: lineItems.length
           ? [
               {
@@ -618,6 +635,26 @@ export default function CreateFinishingScheduleDialog({
                   value={contactInfo}
                   onChange={(e) => setContactInfo(e.target.value)}
                 />
+              </Field>
+
+              <Field label="PDF Logo">
+                <Select
+                  value={logoKey}
+                  onValueChange={(value) =>
+                    setLogoKey(value as ScheduleLogoKey)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select PDF logo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOGO_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
             </aside>
 

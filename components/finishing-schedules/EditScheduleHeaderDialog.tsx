@@ -17,8 +17,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { updateFinishingSchedule } from "@/actions/site-finishing-schedule";
+
+type ScheduleLogoKey = "FIRST_CLASS" | "UNWABU";
+
+const LOGO_OPTIONS: Array<{ value: ScheduleLogoKey; label: string }> = [
+  { value: "FIRST_CLASS", label: "FirstClass Projects" },
+  { value: "UNWABU", label: "Unwabu Painting" },
+];
 
 interface Props {
   schedule: {
@@ -35,6 +49,7 @@ interface Props {
     completionDate: Date | string | null;
     drawingDetails: string | null;
     contactInfo: string | null;
+    logoKey?: ScheduleLogoKey | null;
   };
 }
 
@@ -68,6 +83,9 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
     schedule.drawingDetails ?? "",
   );
   const [contactInfo, setContactInfo] = useState(schedule.contactInfo ?? "");
+  const [logoKey, setLogoKey] = useState<ScheduleLogoKey>(
+    schedule.logoKey ?? "FIRST_CLASS",
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,6 +104,7 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
         completionDate: completionDate || null,
         drawingDetails: drawingDetails || null,
         contactInfo: contactInfo || null,
+        logoKey,
       });
       if (!res.ok) {
         toast.error(res.error ?? "Failed to update.");
@@ -218,6 +237,24 @@ export default function EditScheduleHeaderDialog({ schedule }: Props) {
               value={contactInfo}
               onChange={(e) => setContactInfo(e.target.value)}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>PDF Logo</Label>
+            <Select
+              value={logoKey}
+              onValueChange={(value) => setLogoKey(value as ScheduleLogoKey)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select PDF logo" />
+              </SelectTrigger>
+              <SelectContent>
+                {LOGO_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button

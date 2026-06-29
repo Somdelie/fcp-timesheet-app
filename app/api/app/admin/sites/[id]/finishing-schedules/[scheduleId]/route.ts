@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
+import type { FinishingScheduleLogo } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,17 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+
+const FINISHING_SCHEDULE_LOGOS = ["FIRST_CLASS", "UNWABU"] as const;
+
+function normalizeLogoKey(value: unknown): FinishingScheduleLogo {
+  const logo = String(value ?? "").trim().toUpperCase();
+  return FINISHING_SCHEDULE_LOGOS.includes(
+    logo as (typeof FINISHING_SCHEDULE_LOGOS)[number],
+  )
+    ? (logo as FinishingScheduleLogo)
+    : "FIRST_CLASS";
+}
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS });
@@ -154,6 +166,7 @@ export async function PATCH(
         : null;
     if (body.contactInfo !== undefined)
       data.contactInfo = body.contactInfo ? clean(body.contactInfo) : null;
+    if (body.logoKey !== undefined) data.logoKey = normalizeLogoKey(body.logoKey);
 
     const updated = await prisma.siteFinishingSchedule.update({
       where: { id: scheduleId },

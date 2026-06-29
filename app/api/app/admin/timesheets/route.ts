@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
 import { requireApiAuth } from "@/lib/apiAuth";
+import { shouldTreatForemanScanAsIndividual } from "@/lib/individualForemanScan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -270,13 +271,16 @@ export async function GET(req: NextRequest) {
 
       const key = `${foremanId}__${siteId}`;
       const list = scansByForemanSite.get(key) ?? [];
+      const foremanEmployeeId = foremanIdToEmployeeId.get(foremanId) ?? foremanId;
       list.push({
         date: dateISO,
         wage: rate,
         employeeId: scan.employeeId,
         isForeman:
-          scan.employeeId ===
-          (foremanIdToEmployeeId.get(foremanId) ?? foremanId),
+          scan.employeeId === foremanEmployeeId &&
+          !shouldTreatForemanScanAsIndividual({
+            employeeId: scan.employeeId,
+          }),
       });
       scansByForemanSite.set(key, list);
     }

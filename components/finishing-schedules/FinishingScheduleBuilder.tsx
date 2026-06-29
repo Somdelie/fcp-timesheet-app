@@ -105,6 +105,7 @@ type Schedule = {
   completionDate: Date | string | null;
   drawingDetails: string | null;
   contactInfo: string | null;
+  logoKey?: "FIRST_CLASS" | "UNWABU" | null;
   version: number;
   isActive: boolean;
   site: { id: string; name: string; code: string | null };
@@ -247,6 +248,14 @@ export default function FinishingScheduleBuilder({
             <div>
               <dt className="text-muted-foreground">FCP Site Foreman</dt>
               <dd className="font-medium">{schedule.fcpSiteForeman || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">PDF Logo</dt>
+              <dd className="font-medium">
+                {schedule.logoKey === "UNWABU"
+                  ? "Unwabu Painting"
+                  : "FirstClass Projects"}
+              </dd>
             </div>
           </dl>
         </CardContent>

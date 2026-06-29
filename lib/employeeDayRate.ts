@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { shouldTreatForemanScanAsIndividual } from "./individualForemanScan";
 
 // ─── helpers ───────────────────────────────────────────────────────
 
@@ -188,7 +189,11 @@ export async function computeDayRateAtScan(opts: {
   const isForemansOwnScan = !!(
     employee?.userId &&
     foreman?.userId &&
-    employee.userId === foreman.userId
+    employee.userId === foreman.userId &&
+    !shouldTreatForemanScanAsIndividual({
+      employeeId,
+      userId: employee.userId,
+    })
   );
 
   // --- Priority 1: EmployeeDayRateOverride ---
