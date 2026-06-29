@@ -17,6 +17,7 @@ const CORS_HEADERS = {
 const SPEC_STATUSES = [
   "NOT_REQUESTED",
   "NOT_NEEDED",
+  "NOT_REQUIRED",
   "REQUESTED",
   "RECEIVED",
   "ACTIONED",
@@ -27,6 +28,7 @@ type SiteSpecStatus = (typeof SPEC_STATUSES)[number];
 function normalizeSpecStatus(value: unknown): SiteSpecStatus | undefined {
   if (value === undefined) return undefined;
   const status = String(value ?? "").trim().toUpperCase();
+  if (status === "NOT_NEEDED") return "NOT_REQUIRED";
   return SPEC_STATUSES.includes(status as SiteSpecStatus)
     ? (status as SiteSpecStatus)
     : undefined;

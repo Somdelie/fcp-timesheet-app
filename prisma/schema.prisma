@@ -93,6 +93,8 @@ model User {
   noteEditHistory NoteEditHistory[]
 
   siteProgrammes SiteProgramme[] @relation("SiteProgrammeCreatedBy")
+
+  uploadedSiteDocuments SiteDocument[] @relation("SiteDocumentUploadedBy")
 }
 
 model PushToken {
@@ -343,9 +345,37 @@ model Site {
 
   deductions     Deduction[]
   siteProgrammes SiteProgramme[]
+  documents      SiteDocument[]
 
   @@index([isActive])
   @@index([name])
+}
+
+model SiteDocument {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  title        String
+  fileName     String
+  documentType String @default("OTHER")
+  mimeType     String
+  fileSize     Int
+  fileUrl      String
+
+  cloudinaryPublicId     String?
+  cloudinaryResourceType String?
+
+  uploadedByUserId String?
+  uploadedByUser   User?   @relation("SiteDocumentUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId, createdAt])
+  @@index([documentType])
+  @@index([uploadedByUserId])
 }
 
 // ============================
@@ -383,6 +413,7 @@ enum HistoricalCostSource {
 enum SpecStatus {
   NOT_REQUESTED
   NOT_NEEDED
+  NOT_REQUIRED
   REQUESTED
   RECEIVED
   ACTIONED

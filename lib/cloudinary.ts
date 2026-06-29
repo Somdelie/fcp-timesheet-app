@@ -66,3 +66,15 @@ export async function deleteImage(publicId: string): Promise<void> {
     // Ignore deletion errors to avoid blocking cleanup.
   });
 }
+
+export async function deleteCloudinaryResource(
+  publicId: string,
+  resourceType: "image" | "video" | "raw" | "auto" = "image",
+): Promise<void> {
+  if (!publicId) return;
+  await cloudinary.uploader
+    .destroy(publicId, { resource_type: resourceType })
+    .catch(() => {
+      // Ignore deletion errors to avoid blocking cleanup.
+    });
+}

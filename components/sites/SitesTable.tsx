@@ -103,6 +103,7 @@ export type SiteRow = {
   specStatus:
     | "NOT_REQUESTED"
     | "NOT_NEEDED"
+    | "NOT_REQUIRED"
     | "REQUESTED"
     | "RECEIVED"
     | "ACTIONED";
@@ -235,7 +236,12 @@ const SPEC_STATUS_CONFIG = {
       "bg-zinc-200/60 text-zinc-600 dark:bg-zinc-700/50 dark:text-zinc-300",
   },
   NOT_NEEDED: {
-    label: "Not Needed",
+    label: "Not Required",
+    className:
+      "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
+  },
+  NOT_REQUIRED: {
+    label: "Not Required",
     className:
       "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
   },

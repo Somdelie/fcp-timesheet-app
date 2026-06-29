@@ -48,11 +48,18 @@ const JOB_STATUS_OPTIONS = [
 
 const SPEC_STATUS_OPTIONS = [
   { value: "NOT_REQUESTED", label: "Not requested" },
-  { value: "NOT_NEEDED", label: "Not Needed" },
+  { value: "NOT_REQUIRED", label: "Not Required" },
   { value: "REQUESTED", label: "Requested" },
   { value: "RECEIVED", label: "Received" },
   { value: "ACTIONED", label: "Actioned" },
 ] as const;
+
+type SpecStatusValue =
+  | "NOT_REQUESTED"
+  | "NOT_REQUIRED"
+  | "REQUESTED"
+  | "RECEIVED"
+  | "ACTIONED";
 
 const schema = z.object({
   name: z
@@ -72,7 +79,13 @@ const schema = z.object({
     .enum(["NOT_STARTED", "ONGOING", "COMPLETED", "ON_HOLD"])
     .optional(),
   specStatus: z
-    .enum(["NOT_REQUESTED", "NOT_NEEDED", "REQUESTED", "RECEIVED", "ACTIONED"])
+    .enum([
+      "NOT_REQUESTED",
+      "NOT_REQUIRED",
+      "REQUESTED",
+      "RECEIVED",
+      "ACTIONED",
+    ])
     .optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
@@ -109,6 +122,7 @@ export default function EditSiteLocationDialog(props: {
   initialSpecStatus?:
     | "NOT_REQUESTED"
     | "NOT_NEEDED"
+    | "NOT_REQUIRED"
     | "REQUESTED"
     | "RECEIVED"
     | "ACTIONED"
@@ -120,6 +134,8 @@ export default function EditSiteLocationDialog(props: {
   hideTrigger?: boolean;
   supervisorOptions?: PersonOption[];
   foremanOptions?: PersonOption[];
+  initialSupervisorUserId?: string | null;
+  initialForemanUserId?: string | null;
 }) {
   const {
     siteId,
@@ -141,6 +157,8 @@ export default function EditSiteLocationDialog(props: {
     hideTrigger = false,
     supervisorOptions = [],
     foremanOptions = [],
+    initialSupervisorUserId,
+    initialForemanUserId,
   } = props;
 
   const router = useRouter();
@@ -172,9 +190,10 @@ export default function EditSiteLocationDialog(props: {
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
-      specStatus:
-        initialSpecStatus ??
-        (initialSpecAvailable ? "RECEIVED" : "NOT_REQUESTED"),
+      specStatus: normalizeInitialSpecStatus(
+        initialSpecStatus,
+        initialSpecAvailable,
+      ),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -185,6 +204,24 @@ export default function EditSiteLocationDialog(props: {
   function normalizeDateInput(value?: string | null) {
     if (!value) return "";
     return value.slice(0, 10);
+  }
+
+  function normalizeInitialSpecStatus(
+    status?: string | null,
+    specAvailable?: boolean | null,
+  ): SpecStatusValue {
+    if (status === "NOT_NEEDED" || status === "NOT_REQUIRED") {
+      return "NOT_REQUIRED";
+    }
+    if (
+      status === "NOT_REQUESTED" ||
+      status === "REQUESTED" ||
+      status === "RECEIVED" ||
+      status === "ACTIONED"
+    ) {
+      return status;
+    }
+    return specAvailable ? "RECEIVED" : "NOT_REQUESTED";
   }
 
   function resetFormValues() {
@@ -198,14 +235,17 @@ export default function EditSiteLocationDialog(props: {
       amountClaimed:
         typeof initialAmountClaimed === "number" ? initialAmountClaimed : 0,
       jobStatus: initialJobStatus ?? "NOT_STARTED",
-      specStatus:
-        initialSpecStatus ??
-        (initialSpecAvailable ? "RECEIVED" : "NOT_REQUESTED"),
+      specStatus: normalizeInitialSpecStatus(
+        initialSpecStatus,
+        initialSpecAvailable,
+      ),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
         typeof initialLongitude === "number" ? initialLongitude : undefined,
     });
+    setSupervisorUserId(initialSupervisorUserId ?? "");
+    setForemanUserId(initialForemanUserId ?? "");
   }
 
   React.useEffect(() => {
@@ -225,6 +265,8 @@ export default function EditSiteLocationDialog(props: {
     initialJobStatus,
     initialSpecStatus,
     initialSpecAvailable,
+    initialSupervisorUserId,
+    initialForemanUserId,
   ]);
 
   function onSubmit(values: z.infer<typeof schema>) {
@@ -254,12 +296,16 @@ export default function EditSiteLocationDialog(props: {
       }
 
       // Handle supervisor assignment if selected
-      if (values.supervisorUserId) {
+      const selectedSupervisorUserId = supervisorUserId.trim();
+      if (
+        selectedSupervisorUserId &&
+        selectedSupervisorUserId !== (initialSupervisorUserId ?? "")
+      ) {
         setAssigningSuper(true);
         try {
           const superRes = await assignSupervisorToSite({
             siteId,
-            supervisorUserId: values.supervisorUserId,
+            supervisorUserId: selectedSupervisorUserId,
           });
           if (!superRes.ok) {
             toast.error(superRes.error ?? "Failed to assign supervisor");
@@ -272,12 +318,16 @@ export default function EditSiteLocationDialog(props: {
       }
 
       // Handle foreman assignment if selected
-      if (values.foremanUserId) {
+      const selectedForemanUserId = foremanUserId.trim();
+      if (
+        selectedForemanUserId &&
+        selectedForemanUserId !== (initialForemanUserId ?? "")
+      ) {
         setAssigningFore(true);
         try {
           const foreRes = await assignForemanToSite({
             siteId,
-            foremanUserId: values.foremanUserId,
+            foremanUserId: selectedForemanUserId,
           });
           if (!foreRes.ok) {
             toast.error(foreRes.error ?? "Failed to assign foreman");
@@ -314,7 +364,7 @@ export default function EditSiteLocationDialog(props: {
         <DialogTrigger asChild>
           <Button variant="outline" className="gap-2">
             <Pencil className="h-4 w-4" />
-            Edit location
+            Edit Info
           </Button>
         </DialogTrigger>
       )}

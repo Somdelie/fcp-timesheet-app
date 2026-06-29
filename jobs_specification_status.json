@@ -1,0 +1,3927 @@
+[
+  {
+    "jobNumber": "6000",
+    "siteName": "Medicross Boksburg",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6001",
+    "siteName": "Cedarwood School",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6002",
+    "siteName": "Hino West Rand",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6003",
+    "siteName": "Dunlop",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6004",
+    "siteName": "Madombidzha Crossing",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6005",
+    "siteName": "Trilogy Phase 2",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6006",
+    "siteName": "Builders Express Wonderboom",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6007",
+    "siteName": "Mehlareng SC",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6008",
+    "siteName": "Steyn City Stand 2361",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6009",
+    "siteName": "Redhill School Repaints",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6010",
+    "siteName": "Midstream Bowling Club",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6011",
+    "siteName": "Retire @Midstream X47 Woodwork",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6012",
+    "siteName": "TakeAlot CC Phase 2 Ext",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6013",
+    "siteName": "CPT Flat",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6014",
+    "siteName": "Tricolt Offices 2024",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6015",
+    "siteName": "Riverview SC",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6016",
+    "siteName": "Bongani Rainmaker",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6017",
+    "siteName": "Midstream Medical Centre",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6018",
+    "siteName": "Liberty Promenade",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6019",
+    "siteName": "Data Science",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6020",
+    "siteName": "St Peters Gunn Pavillion",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6021",
+    "siteName": "Paarl Cycle Lab",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6022",
+    "siteName": "Lighting Warehouse",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6023",
+    "siteName": "FCP3828 Princeton Village",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6024",
+    "siteName": "Unit 14 61 Shepherd Ave",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6025",
+    "siteName": "Engine-Co",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6026",
+    "siteName": "Jeppe Highschool for Boys",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6027",
+    "siteName": "Princeton Village Gym",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6028",
+    "siteName": "Renault Woodmead",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6029",
+    "siteName": "Piazza Paola Unit 999",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6030",
+    "siteName": "Houghton Phase 4 Core O-R",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6031",
+    "siteName": "McCormick 2024",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6032",
+    "siteName": "Flender",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6033",
+    "siteName": "Stand 4131 Waterfall",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6034",
+    "siteName": "Arcon Park",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6035",
+    "siteName": "Cape Town Office",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6036",
+    "siteName": "Woolworths DC Midrand",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6037",
+    "siteName": "Acudeo College Protea Glen",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6038",
+    "siteName": "SARB PTA",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6039",
+    "siteName": "Mediclinic LTRoom",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6040",
+    "siteName": "House Ixopo",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6041",
+    "siteName": "FCP3848 Bosch",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6042",
+    "siteName": "Bidvest International & Domestic Lounge",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6043",
+    "siteName": "9 Alyth Road Forest Town",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6044",
+    "siteName": "AIE Greenside",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6045",
+    "siteName": "LDS Meetinghouse Benoni",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6046",
+    "siteName": "St Johns Unit 5 St Marks Str",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6047",
+    "siteName": "The Signature Type E",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6048",
+    "siteName": "CWI Vanderbijl",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6049",
+    "siteName": "12C Mount 2024",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6050",
+    "siteName": "Eskimo",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6051",
+    "siteName": "Kingswood Retirement Waterkloof",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6052",
+    "siteName": "Hatfield Square PR2838",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6053",
+    "siteName": "Elim Hubyeni",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6054",
+    "siteName": "Isondo Precinct",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6055",
+    "siteName": "Midstream Hill Medical Park Repaints",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6056",
+    "siteName": "Alphen Park Inverter Room",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6057",
+    "siteName": "21 8th Ave Parktown North",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6058",
+    "siteName": "FCP3831 M&D Offices",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6059",
+    "siteName": "37 Commerce Crescent PO14145",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6060",
+    "siteName": "Eastport Gate House",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6061",
+    "siteName": "Pineslopes SC Cladding",
+    "specificationStatus": "NOT_STARTED"
+  },
+  {
+    "jobNumber": "6062",
+    "siteName": "Watch Tower ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6063",
+    "siteName": "43 Chesham Boundary and Gate House",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6064",
+    "siteName": "Midstream Mediclinic Paediatric Unit D",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6065",
+    "siteName": "Rakesh Res",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6066",
+    "siteName": "33 Commerce Crescent",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6067",
+    "siteName": "Tree Tops Exterior",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6068",
+    "siteName": "Unilever Boksburg",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6069",
+    "siteName": "Anslow Akaru ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6070",
+    "siteName": "Upper East Side",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6071",
+    "siteName": "St Marks Str Unit 1",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6072",
+    "siteName": "26 Elray Street Unit 3",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6073",
+    "siteName": "Atlantic Hills Warehouse",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6074",
+    "siteName": "Sandhurst OP",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6075",
+    "siteName": "Parkdene Woolworths",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6076",
+    "siteName": "31 Mackay Street",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6077",
+    "siteName": "Table Bay Hotel",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6078",
+    "siteName": "NG Gesmylspruit",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6079",
+    "siteName": "31 Commerce Ave",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6080",
+    "siteName": "Metropolis On Park Unit 1310",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6081",
+    "siteName": "Leaping Frog SC",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6082",
+    "siteName": "The Capital on Bath",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6083",
+    "siteName": "299 Lombardy Estate",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6084",
+    "siteName": "Lephalale Mall Exterior",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6085",
+    "siteName": "Brookfields @ Royal Repaints",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6086",
+    "siteName": "Midfield  HOA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6087",
+    "siteName": "Ridge HOA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6088",
+    "siteName": "House Roller",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6089",
+    "siteName": "House JP",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6090",
+    "siteName": "Ellipse Repaints",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6091",
+    "siteName": "White House",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6092",
+    "siteName": "71 Beryl Str Bruma",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6093",
+    "siteName": "Stor-Age Brooklyn 2024",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6094",
+    "siteName": "Stor-Age Bryanston 2024",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6095",
+    "siteName": "Rent A Store 2024",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6096",
+    "siteName": "Lluvia Sugar",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6097",
+    "siteName": "Lavender Square Checkers",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6098",
+    "siteName": "Culross On Main Carports",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6099",
+    "siteName": "St Mary's Gymnasium",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6100",
+    "siteName": "447 Vale Avenue",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6101",
+    "siteName": "Wear Check ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6102",
+    "siteName": "26 Pomona Road",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6103",
+    "siteName": "Idutywa Mall",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6104",
+    "siteName": "Sky City Mall Pnp ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6105",
+    "siteName": "Trilogy Phase 2 Interior",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6106",
+    "siteName": "Royal View B2 Exterior",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6107",
+    "siteName": "11 Jameson",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6108",
+    "siteName": "The Ingress B1-3",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6109",
+    "siteName": "Chamberlain Montana",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6110",
+    "siteName": "Innomotics ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6111",
+    "siteName": "Bedworth Centre",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6112",
+    "siteName": "Netcare Akasia",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6113",
+    "siteName": "GHM Office and Warehouse",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6114",
+    "siteName": "Unit 23 St David Rd",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6115",
+    "siteName": "24 Falcon Crescent 2024",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6116",
+    "siteName": "BC Warehouse",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6117",
+    "siteName": "Nova Pioneer Midrand",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6118",
+    "siteName": "Stand 716 Bluehills",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6119",
+    "siteName": "FCP3883 Retire@Midstream",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6120",
+    "siteName": "88 Bergrivier Drive",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6121",
+    "siteName": "South Block Unit 340C",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6122",
+    "siteName": "4 Epping",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6123",
+    "siteName": "Midlands HOA",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6124",
+    "siteName": "Saintsbury Corner",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6125",
+    "siteName": "Hertford Block L",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6126",
+    "siteName": "McDonald's Westwood",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6127",
+    "siteName": "Oxglen Ph3 Rooftop",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6128",
+    "siteName": "Safety Grip & Pride in Tyres",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6129",
+    "siteName": "The Boardwalk Estate",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6130",
+    "siteName": "Benmore SC",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6131",
+    "siteName": "Shoprite Jacaranda",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6132",
+    "siteName": "Lagoon Beach Hotel",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6133",
+    "siteName": "Waverley Phase 3",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6134",
+    "siteName": "Kingdom Hall Soweto SC2337",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6135",
+    "siteName": "HS Block B Ablutions",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6136",
+    "siteName": "Mias Angling and Scuba",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6137",
+    "siteName": "34 Marbella Complax",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6138",
+    "siteName": "Tasha's Constantia",
+    "specificationStatus": "NO_SPEC_(STUCCO)"
+  },
+  {
+    "jobNumber": "6139",
+    "siteName": "140 Woburn Ave",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6140",
+    "siteName": "FCP3917 St Johns",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6141",
+    "siteName": "Nedbank Talis Roof Repair",
+    "specificationStatus": "NO_SPEC_(ROOFS)"
+  },
+  {
+    "jobNumber": "6142",
+    "siteName": "Stoneridge McDonalds",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6143",
+    "siteName": "Bespoke By Barrow",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6144",
+    "siteName": "House Tayob",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6145",
+    "siteName": "Sunward Management Office Staircase",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6146",
+    "siteName": "142 Mulberry Lane",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6147",
+    "siteName": "Paarl Gymnasium",
+    "specificationStatus": "NO_SPEC_(SABRE)"
+  },
+  {
+    "jobNumber": "6148",
+    "siteName": "Tashas Waffle House",
+    "specificationStatus": "NO_SPEC_(STUCCO)"
+  },
+  {
+    "jobNumber": "6149",
+    "siteName": "Stef Stocks Data Centre",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6150",
+    "siteName": "159 Arkansas Ave",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6151",
+    "siteName": "House Villion",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6152",
+    "siteName": "2 Bristol Rd 2024",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6153",
+    "siteName": "14 Lawrence Rd",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6154",
+    "siteName": "Longlakes 19 Building 5",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6155",
+    "siteName": "Waterkloof High School",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6156",
+    "siteName": "The Precinct Lifestyle",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6157",
+    "siteName": "Protea Wanderers 2024",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6158",
+    "siteName": "Lakeview SC",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6159",
+    "siteName": "Stand 2458 Midlands Estate 2024",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6160",
+    "siteName": "Clearview Square",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6161",
+    "siteName": "Pencil Park",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6162",
+    "siteName": "Uitsig Estate Stand 9&33",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6163",
+    "siteName": "St Peters College Pavillion",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6164",
+    "siteName": "Roedean Boarding School",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6165",
+    "siteName": "20 Inge-Le",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6166",
+    "siteName": "E-Media",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6167",
+    "siteName": "Scania Truck Warehouse",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6168",
+    "siteName": "Midstream Mediclinic Compressor and Vacuum",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6169",
+    "siteName": "DB Schenker Hazmat Store",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6170",
+    "siteName": "Longlakes Warehouse 6",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6171",
+    "siteName": "Meadowview Site 3B",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6172",
+    "siteName": "Kempton Place",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6173",
+    "siteName": "The Lakes Unit 2811",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6174",
+    "siteName": "Siqalo Foods Phase 3",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6175",
+    "siteName": "Golden Walk Entrance 1",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6176",
+    "siteName": "Eastwood Village RSLPR_4008",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6177",
+    "siteName": "Belcon Phase 2",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6178",
+    "siteName": "V&A OCFM ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6179",
+    "siteName": "KDHS Hall",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6180",
+    "siteName": "Crusaders Reception Wall",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6181",
+    "siteName": "KG Mall",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6182",
+    "siteName": "LDS Birch Acres Meeting House",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6183",
+    "siteName": "The Fields",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6184",
+    "siteName": "Mineralia",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6185",
+    "siteName": "Stoneridge Waterproofing Gutters and Flat Roofs",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6186",
+    "siteName": "Stand 4126 Blue Valley ",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6187",
+    "siteName": "Heineken Cellar Springs",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6188",
+    "siteName": "Ermelo Game Centre Walkway Canopy",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6189",
+    "siteName": "Waterfall Walk",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6190",
+    "siteName": "Boca Raton Unit 3",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6191",
+    "siteName": "106 16th Road Midrand",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6192",
+    "siteName": "LDS Benoni Cultural Hall",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6193",
+    "siteName": "Tiber Head Office",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6194",
+    "siteName": "Silky Oaks",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6195",
+    "siteName": "Ravenscraig Student Apartments",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6196",
+    "siteName": "Empire Place Show Unit",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6197",
+    "siteName": "Waterkloof on Main Remedial",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6198",
+    "siteName": "SC Shop 211",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6199",
+    "siteName": "Saratoga Gym",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6200",
+    "siteName": "Bosch PO000667",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6201",
+    "siteName": "BMW Central Lab Rosslyn",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6202",
+    "siteName": "BP Waterfall",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6203",
+    "siteName": "Stand 625 Lanseria",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6204",
+    "siteName": "The Signature Type D",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6205",
+    "siteName": "Shoprite Skycity",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6206",
+    "siteName": "24 Kearney Avenue Sunninghill",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6207",
+    "siteName": "324 Ben Viljoen Str",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6208",
+    "siteName": "Bidvest MH Facility",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6209",
+    "siteName": "40 15th Str Parkhurst",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6210",
+    "siteName": "165 Umkomaas Road ",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6211",
+    "siteName": "Eastwood Village Exterior",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6212",
+    "siteName": "FCP3952 Princeton Village RSLPR4974",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6213",
+    "siteName": "NTT Hoedspruit",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6214",
+    "siteName": "Shambala Lodge",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6215",
+    "siteName": "ISASA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6216",
+    "siteName": "460 Hugo Street",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6217",
+    "siteName": "Toms Place 63 Eagle Canyon",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6218",
+    "siteName": "Kramerville MW Office & Kitchen",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6219",
+    "siteName": "Cure Day Hospital",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6220",
+    "siteName": "Princeton Village Waterproofing Block K, H & B",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6221",
+    "siteName": "Digistics Repaint",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6222",
+    "siteName": "The Galleries ",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6223",
+    "siteName": "Metropolis On Park Unit 1206",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6224",
+    "siteName": "Bosch PO0708",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6225",
+    "siteName": "Ingrain Canteen and Ablutions",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6226",
+    "siteName": "AIE Midrand",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6227",
+    "siteName": "The Wedding Venue",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6228",
+    "siteName": "Roodevalley Premier Hotel",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6229",
+    "siteName": "Laser Transport AGS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6230",
+    "siteName": "TEVO Warehouse",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6231",
+    "siteName": "Unit 207 512 On Second",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6232",
+    "siteName": "4 Molenaar Avenue",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6233",
+    "siteName": "Dr FD Morar Room 115",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6234",
+    "siteName": "Iron Mountain",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6235",
+    "siteName": "FCP3982 Hatfield Square",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6236",
+    "siteName": "62 4th ave Inanda",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6237",
+    "siteName": "Norwood Mall",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6238",
+    "siteName": "Tiber Yard",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6239",
+    "siteName": "3 St Davids Place",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6240",
+    "siteName": "Domus Dei",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6241",
+    "siteName": "Arterial Industrial Ph2",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6242",
+    "siteName": "336 Rosemary Rd",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6243",
+    "siteName": "Stand 8 Eagle Canyon ",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6244",
+    "siteName": "N4 Gateway",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6245",
+    "siteName": "Darragh House 2024",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6246",
+    "siteName": "Heineken Decanting",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6247",
+    "siteName": "LXX Sandhurst Signage",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6248",
+    "siteName": "Crusaders Ph2",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6249",
+    "siteName": "21 St David",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6250",
+    "siteName": "Nissan Woodmead",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6251",
+    "siteName": "12 St Davids",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6252",
+    "siteName": "Intaba",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6253",
+    "siteName": "25 Merlot 2024",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6254",
+    "siteName": "Ellipse Ph3",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6255",
+    "siteName": "25 Greenside Rd",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6256",
+    "siteName": "Exemplar Phase 2",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6257",
+    "siteName": "1 Adelpracht Glen Erasmia",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6258",
+    "siteName": "Irene Link Building C Marmoran",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6259",
+    "siteName": "Leon's Paint Supply",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6260",
+    "siteName": "Nicol Corner Baffles",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6261",
+    "siteName": "Waterfall Islamic Institute Boundary",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6262",
+    "siteName": "Blanton Villas Ph2",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6263",
+    "siteName": "Princeton Village Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6264",
+    "siteName": "West City Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6265",
+    "siteName": "Eastwood Village Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6266",
+    "siteName": "Urban Nest Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6267",
+    "siteName": "Saratoga Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6268",
+    "siteName": "Yale Village Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6269",
+    "siteName": "Hertz Jet Park",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6270",
+    "siteName": "16 Innes Road",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6271",
+    "siteName": "Howick Close",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6272",
+    "siteName": "McCarthy Toyota Woodmead",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6273",
+    "siteName": "House Mvundlela",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6274",
+    "siteName": "Jabulani Mall",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6275",
+    "siteName": "St Peters Napier Block",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6276",
+    "siteName": "Dr Sundas Room 215",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6277",
+    "siteName": "Netcare Pretoria East",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6278",
+    "siteName": "The Fields Rooms",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6279",
+    "siteName": "FCP4019 Princeton Village External",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6280",
+    "siteName": "Irene Link Restaurant Signage Wall",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6281",
+    "siteName": "Midstream Mediclinic Wards ",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6282",
+    "siteName": "Hertford Block A and Gatehouse ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6283",
+    "siteName": "5 Winston Corner 21526",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6284",
+    "siteName": "Cash Sales 2025 ",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6285",
+    "siteName": "Hazelwood ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6286",
+    "siteName": "2 ST Davids ",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6287",
+    "siteName": "Saxon Rovers ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6288",
+    "siteName": "The Apex",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6289",
+    "siteName": "Leeuwfontein Crossing SC ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6290",
+    "siteName": "Rent A Store 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6291",
+    "siteName": "Afrihost 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6292",
+    "siteName": "LDS Weltevreden ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6293",
+    "siteName": "EASTGATE TAXI RANK",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6294",
+    "siteName": "CRC WITKOPPEN ROAD",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6295",
+    "siteName": "MIAS ANGLING BOKSBURG",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6296",
+    "siteName": "Kyalami Cnr SC Internal",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6297",
+    "siteName": "THE NICHE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6298",
+    "siteName": "ARDAGH BELVILLE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6299",
+    "siteName": "Princeton Village Lower",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6300",
+    "siteName": "CLUB COMO ",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6301",
+    "siteName": "St Peters Keys Pavillion",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6302",
+    "siteName": "SU WILGEHOF",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6303",
+    "siteName": "HOUSE JESSOPS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6304",
+    "siteName": "MELOTE REPAINTS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6305",
+    "siteName": "BMW TORQUE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6306",
+    "siteName": "BARLOW PARK EARLY BIRD CRECHE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6307",
+    "siteName": "60 GLEN HOVE ROAD",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6308",
+    "siteName": "WBHO HEAD OFFICE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6309",
+    "siteName": "SOUTHDALE SC",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6310",
+    "siteName": "ABBEYDALE CAPE OFFICES",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6311",
+    "siteName": "ROYAL VIEWS REMEDIAL",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6312",
+    "siteName": "RIVERFIELDS X97",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6313",
+    "siteName": "COSMO BUSINESS PARK ERF 15",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6314",
+    "siteName": "8 ST MARKS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6315",
+    "siteName": "GLENHOVE ROAD BOUNDARY",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6316",
+    "siteName": "SANDTON GATE PHASE 2",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6317",
+    "siteName": "STAND 1235 WATERFALL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6318",
+    "siteName": "2 ST MARK",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6319",
+    "siteName": "DISCOVERY BUILDING",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6320",
+    "siteName": "LIBERTY PROMENADE ROOFS",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6321",
+    "siteName": "29 SPIER ROAD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6322",
+    "siteName": "MENLYN PLACE UNIT 111",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6323",
+    "siteName": "MIDSTREAM MAINTENANCE 2025",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6324",
+    "siteName": "FCP3652 KING DAVID VP",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6325",
+    "siteName": "PARKDENE SNAGS",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6326",
+    "siteName": "MIDSTREAM HOA",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6327",
+    "siteName": "THE LAKES UNIT 2613",
+    "specificationStatus": "DAY_WORK"
+  },
+  {
+    "jobNumber": "6328",
+    "siteName": "CITY CENTRE PH8 PTN20",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6329",
+    "siteName": "385 LONG AVENUE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6330",
+    "siteName": "FCP4061 TAKEALOT",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6331",
+    "siteName": "MONAGHAN FARM STAND 8",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6332",
+    "siteName": "WESTEND BUILDING F ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6333",
+    "siteName": "LWS PHASE 3 REMEDIAL",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6334",
+    "siteName": "114 OXFORD BLD2 EMERGENCY STAIRCASE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6335",
+    "siteName": "EMANZINI",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6336",
+    "siteName": "9 ALYTH ROAD FOREST TOWN 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6337",
+    "siteName": "WE BUY CARS AND ISUZU GERMISTON",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6338",
+    "siteName": "THE MONROE UNIT 21&55",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6339",
+    "siteName": "TAKEALOT DC3 OFFICES",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6340",
+    "siteName": "LDS FAMILY RESEARCH CENTRE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6341",
+    "siteName": "MIDSTREAM FINANCIAL OFFICES",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6342",
+    "siteName": "MALL OF AFRICA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6343",
+    "siteName": "GOSCOR FIRE DAMAGE ",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6344",
+    "siteName": "GOLDEN OAK HOUSE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6345",
+    "siteName": "NGALA LODGE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6346",
+    "siteName": "DISCOVERY DOMESTIC LOUNGE ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6347",
+    "siteName": "18A SPIER ROAD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6348",
+    "siteName": "STEYN PLACE FLOORS",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6349",
+    "siteName": "FORD SILVERTON REPAINTS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6350",
+    "siteName": "OLIVES AND PLATES WATERFALL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6351",
+    "siteName": "GUGULETHU MALL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6352",
+    "siteName": "TERACO JB5 DATA CENTRE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6353",
+    "siteName": "HEINEKEN KEG LINE MAINTENANCE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6354",
+    "siteName": "ARROW PARK 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6355",
+    "siteName": "GARDEN WALK MALL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6356",
+    "siteName": "EASTPORT SPEC 5",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6357",
+    "siteName": "THE SIGNATURE TYPE H",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6358",
+    "siteName": "THE HOUGHTON HOTEL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6359",
+    "siteName": "MEADOWVIEW SITE 5",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6360",
+    "siteName": "SHOPRITE MIDDELBURG",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6361",
+    "siteName": "NICOL CORNER 11TH FLOOR",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6362",
+    "siteName": "SEW EURODRIVE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6363",
+    "siteName": "STRATA UNIT 12",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6364",
+    "siteName": "The Signature Type E Facade ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6365",
+    "siteName": "Fortress Lowlardia",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6366",
+    "siteName": "12 Nautica",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6367",
+    "siteName": "R300 Salvino",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6368",
+    "siteName": "TFG CHLOORKOP",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6369",
+    "siteName": "KK SHELVING",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6370",
+    "siteName": "14 WYNDOVER ROAD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6371",
+    "siteName": "WESKUS MALL CHECKERS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6372",
+    "siteName": "METHODIST HOMES BENONI",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6373",
+    "siteName": "THE CAPITAL MBOMBELA",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6374",
+    "siteName": "LAVENDER SQUARE ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6375",
+    "siteName": "16 SPIER ROAD",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6376",
+    "siteName": "CIBAPAC WAREHOUSE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6377",
+    "siteName": "LIQUOR RUNNERS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6378",
+    "siteName": "CRESTA STORAGE REDEC",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6379",
+    "siteName": "BG MINIS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6380",
+    "siteName": "IRENE BUILDING D- FIRE DOORS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6381",
+    "siteName": "St Johns Pre Prep School",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6382",
+    "siteName": "10 Arabian Avenue 2025 ",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6383",
+    "siteName": "BOSCH PO930,31&32",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6384",
+    "siteName": "ADT",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6385",
+    "siteName": "DALE'S HOUSE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6386",
+    "siteName": "HOUSE KUUN",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6387",
+    "siteName": "CITY CENTRE ONE \u2013 SHOP 101, 204 & 214",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6388",
+    "siteName": "ST LUKES SCHOOL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6389",
+    "siteName": "BOWMANS TERRACE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6390",
+    "siteName": "M&D OFFICES 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6391",
+    "siteName": "BONDEV CONSULTING ROOM 206",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6392",
+    "siteName": "PV WATERPROOFING BLOCK D-I&STUDY",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6393",
+    "siteName": "47 ST DAVIDS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6394",
+    "siteName": "DARRAGH HOUSE ROOFS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6395",
+    "siteName": "MEDICLINIC HELIPAD",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6396",
+    "siteName": "MELROSE MANNER CARE CENTRE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6397",
+    "siteName": "FCP4120 THE SIGNATURE TYPE E",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6398",
+    "siteName": "ELLIPSE CLUBHOUSE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6399",
+    "siteName": "9 ST DAVID",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6400",
+    "siteName": "4 ST DAVID",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6401",
+    "siteName": "39 ST DAVID",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6402",
+    "siteName": "WOODMEAD RETAIL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6403",
+    "siteName": "SEQUENCE LOGISTICS 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6404",
+    "siteName": "THE CAPITAL MENLYN MAINE REMEDIAL WORK",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6405",
+    "siteName": "THE PANTRY HAZELWOOD ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6406",
+    "siteName": "LONGLAKES SPE 141",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6407",
+    "siteName": "KSB",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6408",
+    "siteName": "EMOYENI MALL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6409",
+    "siteName": "THE PRECINCT CHECKERS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6410",
+    "siteName": "BUSINESS PARTNERS ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6411",
+    "siteName": "CCBSA PRETORIA WEST",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6412",
+    "siteName": "216A 70TH STREET BRADEL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6413",
+    "siteName": "CHAMBERLAIN KYALAMI 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6414",
+    "siteName": "UNIT 27 ST DAVIDS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6415",
+    "siteName": "DAINFERN GOLF ESTATE STAND 2215",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6416",
+    "siteName": "90 DEGREES REMEDIAL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6417",
+    "siteName": "ST JOHNS PALISADE FENCE ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6418",
+    "siteName": "UNIT 202 NORTHDENE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6419",
+    "siteName": "35 CURZON ROAD BRYANSTON",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6420",
+    "siteName": "Shoprite Riverfields Steel Gates ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6421",
+    "siteName": "CITY CENTRE PILATES STUDIO",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6422",
+    "siteName": "KG MALL ROOFS",
+    "specificationStatus": "NO_SPEC_(TO_BE_COMFIRMED)"
+  },
+  {
+    "jobNumber": "6423",
+    "siteName": "MOUTSE MALL ROOFS",
+    "specificationStatus": "NO_SPEC_(TO_BE_COMFIRMED)"
+  },
+  {
+    "jobNumber": "6424",
+    "siteName": "ST JOHNS PRE PREP SCHOOL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6425",
+    "siteName": "R300 FOURWAYS AIR",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6426",
+    "siteName": "BROOKFIELDS PH4",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6427",
+    "siteName": "FCP4128 PRINCTON VILLAGE ROOMS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6428",
+    "siteName": "AIE GREENSIDE GROUND FLOOR",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6429",
+    "siteName": "73 DEAN STREET RONDEBOSCH ",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6430",
+    "siteName": "DISTRICT FIT",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6431",
+    "siteName": "FOUNDERS HILL -MAN FINANCIAL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6432",
+    "siteName": "IMPERIAL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6433",
+    "siteName": "UNIT 924 GREENSTONE RIDGE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6434",
+    "siteName": "UNIT 147 VIA POLLINO, DOUGLASDALE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6436",
+    "siteName": "KYALMI CORNER MCDONALDS",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6435",
+    "siteName": "SEW EURODRIVE AEROTON",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6437",
+    "siteName": "TCG PHASE 2",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6438",
+    "siteName": "MOTHERKIND",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6439",
+    "siteName": "CITY PARK OWL APARTMENTS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6440",
+    "siteName": "HEALTH CONNECT",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6441",
+    "siteName": "PRINCETON VILLAGE WATERPROOFING BLOCK D,F,G,I,STUDY",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6442",
+    "siteName": "LP9 WH3 SINOTILE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6443",
+    "siteName": "ST JOHNS AEA SOUTH",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6444",
+    "siteName": "ST JOHNS NURSERYSCHOOL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6445",
+    "siteName": "PHINDA STAFF ACCOMODATION",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6446",
+    "siteName": "CEREAL AND MALT INDUSTRIA",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6447",
+    "siteName": "FCP4153 -FRONT RUNNER",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6448",
+    "siteName": "SAKATA EXISTING OFFICE REFURB",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6449",
+    "siteName": "47 ST DAVIDS COTTAGE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6450",
+    "siteName": "ONE ROSEBANK PHASE2",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6451",
+    "siteName": "WOOLWORTHS DC PHASE2",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6452",
+    "siteName": "46 VALLEY ROAD",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6453",
+    "siteName": "PFERD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6454",
+    "siteName": "UNIT 203 THE NICHE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6455",
+    "siteName": "SKY COLLEGE BLOCK B",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6456",
+    "siteName": "YALE VILLAGE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6457",
+    "siteName": "204 OXFORD",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6458",
+    "siteName": "7 BLACK PALMER CRESCENT",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6459",
+    "siteName": "HOUSE SHABALALA",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6460",
+    "siteName": "PROTEA VILLAGE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6461",
+    "siteName": "CITY CENTRE PH8 PTN22",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6462",
+    "siteName": "25 FRENCH LANE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6463",
+    "siteName": "MEDICLINIC KLOOF 2025",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6464",
+    "siteName": "CHECKERS LEPHALALE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6465",
+    "siteName": "PICK N PAY HENDRINA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6466",
+    "siteName": "SAPPI",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6467",
+    "siteName": "FCP4167 PRINCETON VILLAGE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6468",
+    "siteName": "SACS INDOOR CRICKET",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6469",
+    "siteName": "SHOPRITE WALTER SISULU ROAD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6470",
+    "siteName": "UNIT 114 THE KANYIN",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6471",
+    "siteName": "GATEWAY EAST WATERFFALL CITY",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6472",
+    "siteName": "NH SANDTON",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6473",
+    "siteName": "THE FIELDS 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6474",
+    "siteName": "INCOMAR AERONAUTICS",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6475",
+    "siteName": "GPM Krishna ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6476",
+    "siteName": "WATCH TOWER HILLBROW",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6477",
+    "siteName": "UNIT 1 SANDTON VIEW ESTATE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6478",
+    "siteName": "THE SIGNATURE PH1 UNIT 19",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6479",
+    "siteName": "DHL WATERFALL 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6480",
+    "siteName": "VEGA 2025",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6481",
+    "siteName": "The Crossing 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6482",
+    "siteName": "6 LIBERTAS GLEN ERASMIA",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6483",
+    "siteName": "BOSCH PO001063",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6484",
+    "siteName": "5 ASH STREET",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6485",
+    "siteName": "102A RUTLAND AVENUE ",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6486",
+    "siteName": "OTTEN RESIDENCE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6487",
+    "siteName": "ALBERTON CITY GAME CONVERSION",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6488",
+    "siteName": "SIGNATURE PH1 UNIT 19 EXTERIOR",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6489",
+    "siteName": "HOERSKOOL WATERKLOOF",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6490",
+    "siteName": "SANDTON LINK BRIDGE",
+    "specificationStatus": "NO_SPEC_(MARMORAN)"
+  },
+  {
+    "jobNumber": "6491",
+    "siteName": "16 QUINN STREET PARKHURST",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6492",
+    "siteName": "WEST CITY PO 02919&02920",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6493",
+    "siteName": "FCP4162- JSH",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6494",
+    "siteName": "BHBW WAREHOUSE AND OFFICES",
+    "specificationStatus": "MARMORAN"
+  },
+  {
+    "jobNumber": "6495",
+    "siteName": "PICK N PAY HAZELDEAN",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6496",
+    "siteName": "GARDEN COURT ISANDO",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6497",
+    "siteName": "HOUSE HARILAL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6498",
+    "siteName": "SAN SERENO",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6499",
+    "siteName": "YALE VILLAGE GATE HOUSE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6500",
+    "siteName": "BIDVEST PROTEACOIN",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6501",
+    "siteName": "SUPER GROUP",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6502",
+    "siteName": "PTA BOYS HIGH ",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6503",
+    "siteName": "JACKAL CREEK KFC",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6504",
+    "siteName": "3 LECHWE SERENGETI",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6505",
+    "siteName": "STEYN CITY DOORS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6506",
+    "siteName": "4 VILJOEN STREET",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6507",
+    "siteName": "G FOX",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6508",
+    "siteName": "2 ST DAVIDS COTTAGE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6509",
+    "siteName": "MIDSTREAM MEDICLINIC ROOM 212",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6510",
+    "siteName": "WE BUY CARS CPT",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6511",
+    "siteName": "ETWATWA CROSSING",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6512",
+    "siteName": "EASTPORT SIGNAGE WALL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6513",
+    "siteName": "RHENUS WAREHOUSE KLERKSDORP",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6514",
+    "siteName": "HOUSE VELI",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6515",
+    "siteName": "UNIT 9 SOLEIL COMPLEX",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6516",
+    "siteName": "CRUISE TERMINAL",
+    "specificationStatus": "ACTIONED"
+  },
+  {
+    "jobNumber": "6517",
+    "siteName": "POSTHOUSE LINK",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6519",
+    "siteName": "3B MEADOWVIEW",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6520",
+    "siteName": "COMMERCE SQUARE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6521",
+    "siteName": "BIDVEST BURCHMORES",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6522",
+    "siteName": "SPEAK EASY",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6523",
+    "siteName": "MIDSTREAM MEDICLINIC EXTERNAL WALL",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6524",
+    "siteName": "COSNOVA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6525",
+    "siteName": "RIVERFIELDS X57",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6526",
+    "siteName": "Metropolis on Park Unit 211 ",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6527",
+    "siteName": "PARK CENTRAL EAST WALL",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6528",
+    "siteName": "FERREIRA RESIDENCE",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6529",
+    "siteName": "FCP 4219- MERINO MALL",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6530",
+    "siteName": "HOUSE BOTHA",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6531",
+    "siteName": "THE CAPITAL ON PARK",
+    "specificationStatus": "WATERPROOFING"
+  },
+  {
+    "jobNumber": "6532",
+    "siteName": "KAREN PARK",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6533",
+    "siteName": "RANDBURG SQUARE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6534",
+    "siteName": "MIDSTREAM MEDICLINIC MEDICAL WARD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6535",
+    "siteName": "NETCARE REHAB CENTRE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6536",
+    "siteName": "ZUKA LODGE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6537",
+    "siteName": "CURRO WATERFALL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6538",
+    "siteName": "CSIR BUILDING 15",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6539",
+    "siteName": "WEST CITY PO03491",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6540",
+    "siteName": "WEST CITY PO03311",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6541",
+    "siteName": "CURRUSEAL BOKSBURG",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6542",
+    "siteName": "DHL METSO ",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6543",
+    "siteName": "LIBERTY CANTEEN",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6544",
+    "siteName": "WONDERBOOM CARVENIENCE",
+    "specificationStatus": "ACTIONED"
+  },
+  {
+    "jobNumber": "6545",
+    "siteName": "BIDVEST INTERNATIONAL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6546",
+    "siteName": "37 DOUGLAS ROAD",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6547",
+    "siteName": "NETCARE N17",
+    "specificationStatus": "ACTIONED"
+  },
+  {
+    "jobNumber": "6548",
+    "siteName": "URBAN NES BATHROOM CEILINGS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6549",
+    "siteName": "OLIVETTI HOUSE LOBBY",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6550",
+    "siteName": "BODY 20 RIVERLANDS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6551",
+    "siteName": "ISLAMIC INSTITUTE MOSQUE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6552",
+    "siteName": "HOUSE VILJOEN ",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6553",
+    "siteName": "SUN ADMIN A",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6554",
+    "siteName": "MALL OF AFRICA REPAINTS",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6555",
+    "siteName": "WATERFALL CIRCLE REMEDIAL",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6556",
+    "siteName": "FCP4207 HORIZON SC",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6557",
+    "siteName": "RIVERLANDS 2A EAST",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6558",
+    "siteName": "AO EXPANSION",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6559",
+    "siteName": "THULAMAHASHE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6560",
+    "siteName": "27 CLARADALE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6561",
+    "siteName": "TRILOGY PH1 16TH FLOOR",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6562",
+    "siteName": "HPE AFRICA",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6563",
+    "siteName": "NETCARE KRUGERSDORP",
+    "specificationStatus": "NO_JC_REFURB_BOQ"
+  },
+  {
+    "jobNumber": "6564",
+    "siteName": "PC UNIT 1804",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6465",
+    "siteName": "KNOCKANDO RES",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6566",
+    "siteName": "ACORNHOEK",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6567",
+    "siteName": "IRENE LINK BUILDING C 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6568",
+    "siteName": "CITY CENTRE PTN17",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6569",
+    "siteName": "14 ST DAVIDS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6570",
+    "siteName": "UNIT 34 CENTRAL PARK",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6571",
+    "siteName": "ABE OFFICES",
+    "specificationStatus": "NO_BOQ"
+  },
+  {
+    "jobNumber": "6572",
+    "siteName": "CROSSROADS SCHOOL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6573",
+    "siteName": "FLEURHOF MALL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6574",
+    "siteName": "SIGNATURA",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6575",
+    "siteName": "THE HOMAGE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6576",
+    "siteName": "HAVAL MIDRAND 2ND SHOW ROOM",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6577",
+    "siteName": "THE PRECINCT SHOP 43",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6578",
+    "siteName": "BHC DOOR REPLACEMENT",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6579",
+    "siteName": "GATEWAY CNR FOOD LOVERS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6580",
+    "siteName": "MBC YARD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6581",
+    "siteName": "HERTFORD BUILDING D",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6582",
+    "siteName": "MENLYN MERCEDES BENZ",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6583",
+    "siteName": "HOUSE MORRIS ",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6584",
+    "siteName": "LERATONG CITY MALL",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6585",
+    "siteName": "LEGENDS SAFARI WOODMEAD",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6586",
+    "siteName": "DIMAKO TRANDFORMERS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6587",
+    "siteName": "SPRINGVALE PRIMARY SCHOOL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6588",
+    "siteName": "FCP4190 FORD SILVERTON",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6589",
+    "siteName": "MONTE CIRCLE BUILDING A",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6590",
+    "siteName": "MIDRAND WAREHOUSE 5 OFFICES",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6591",
+    "siteName": "MERCEDES CENTURION",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6592",
+    "siteName": "6 12TH AVENUE PARKHURST",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6593",
+    "siteName": "EPX KUILS RIVER",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6594",
+    "siteName": "ROSCOMMON HOUSE ",
+    "specificationStatus": "WAIT"
+  },
+  {
+    "jobNumber": "6595",
+    "siteName": "RACE SANDTON",
+    "specificationStatus": "WAIT"
+  },
+  {
+    "jobNumber": "6596",
+    "siteName": "ITALTILE BRYANSTON",
+    "specificationStatus": "WAIT"
+  },
+  {
+    "jobNumber": "6597",
+    "siteName": "RIETVLEI BUSINESS PARK ",
+    "specificationStatus": "FIND_OUT_VERSUS_ITEM_1ST"
+  },
+  {
+    "jobNumber": "6598",
+    "siteName": "HATFIELD SQUARE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6600",
+    "siteName": "UNIT 176, 4 POPLAR AVENUE BROAD ACRES",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6601",
+    "siteName": "THE REGENCY 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6602",
+    "siteName": "M&D HO",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6603",
+    "siteName": "LITEGLO WAREHOUSE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6604",
+    "siteName": "WE BUY CARS 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6605",
+    "siteName": "BREDELL SPEC WAREHOUSE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6606",
+    "siteName": "INDUS MENLYN",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6607",
+    "siteName": "SAPPHIRE WAREHOUSE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6608",
+    "siteName": "STAND 2458 MIDLANDS ESTATE 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6609",
+    "siteName": "UNIT S608",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6610",
+    "siteName": "57 6TH STREET PARKHURST",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6611",
+    "siteName": "SERENGETI CLUBHOUSE ABLUTIONS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6612",
+    "siteName": "HOUSE HUNTER",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6613",
+    "siteName": "HARBOUR ARCH",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6614",
+    "siteName": "TOYOTA HINO DEALERSHIP",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6615",
+    "siteName": "86 18TH STREET PARKHURST",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6616",
+    "siteName": "OXGLEN BUILDING 2 PARAPET WATERPROOFING",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6617",
+    "siteName": "MOTUS HO PH2",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6618",
+    "siteName": "KATHERINE TOWERS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6619",
+    "siteName": "CITY CENTRE PHASE 8 PTN21",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6620",
+    "siteName": "ENSTRA 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6621",
+    "siteName": "EDENGLEN PRIMARY SCHOOL",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6622",
+    "siteName": "PARC NICOL FA\u00c7ADE REFURB",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6623",
+    "siteName": "THE SIGNATURE UNIT 118",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6624",
+    "siteName": "B SURE INSURANCE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6625",
+    "siteName": "BARLOW WORLD ISANDO",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6626",
+    "siteName": "JOSHUA GEN CHURCH PH2",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6627",
+    "siteName": "CATERPILLAR",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6628",
+    "siteName": "DATA SCIENCE 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6629",
+    "siteName": "40 15TH STREET PARKHURST",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6630",
+    "siteName": "HOUSE WOOD MONAGHAN FARM",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6631",
+    "siteName": "HOUSE BLOEMHOF",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6632",
+    "siteName": "ONE ROSEBANK MAINTENANCE ",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6633",
+    "siteName": "PV BLOCK P",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6634",
+    "siteName": "THUTHUKA PACKING DIE CUTTER",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6635",
+    "siteName": "THE PRECINCT INTERCARE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6636",
+    "siteName": "EASTWOOD DEC 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6637",
+    "siteName": "AIE GREENSIDE TOP FLOOR",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6638",
+    "siteName": "142 MULBERRY LANE 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6639",
+    "siteName": "THE TERRACE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6640",
+    "siteName": "URBAN NEST DEC 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6641",
+    "siteName": "HATFIELD SQUARE DEC 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6642",
+    "siteName": "WEST CITY DEC 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6643",
+    "siteName": "iTONKA SQUARE PH3",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6644",
+    "siteName": "PV DEC 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6645",
+    "siteName": "CHAMBERLAIN RANDBURG 2025",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6646",
+    "siteName": "SARATOGA DEC 2025",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6647",
+    "siteName": "HEINEKEN SPRINGS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6648",
+    "siteName": "ST JOHNS NEW OFFICE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6649",
+    "siteName": "STEINWEG 2025",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6650",
+    "siteName": "JOHAN RESIDENCE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6651",
+    "siteName": "RICARDO RESIDENCE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6652",
+    "siteName": "17 SUTHERLAND AVENUE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6653",
+    "siteName": "2 ARNOLD ROAD,ROSEBANK",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6654",
+    "siteName": "CAMPUS COLLEGE 1ST-6TH FLOOR BATHROOMS",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6655",
+    "siteName": "BROOKLYN PAVILION",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6656",
+    "siteName": "KEMPTON PLACE 2026",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6657",
+    "siteName": "MIDSTREAM MEDICLINIC THEATRE",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6658",
+    "siteName": "CHAMBERLAIN EASTRAND",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6659",
+    "siteName": "ST JOHNS DRAMA ROOM",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6660",
+    "siteName": "5 ST MARKS 2026",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6661",
+    "siteName": "THE FIELDS STEEL STRUCTURE",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6662",
+    "siteName": "MIDRAND HQ SERVICES HQ",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6663",
+    "siteName": "RIETVLEI BP -RUGGED SA",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6664",
+    "siteName": "RIETVLEI BP -PACKAGE IT ",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6665",
+    "siteName": "ARCHSTONE OFFICES",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6666",
+    "siteName": "ATLANTIC HILLS SITE C",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6667",
+    "siteName": "SASANI AFRICA",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6668",
+    "siteName": "KYALAMI CORNER INTERIOR",
+    "specificationStatus": "RECEIVED"
+  },
+  {
+    "jobNumber": "6669",
+    "siteName": "HURLINGHAM GATE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6670",
+    "siteName": "ST JOHNS ADMIN OFFICE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6671",
+    "siteName": "AGRI PARK STELLENBOSCH",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6672",
+    "siteName": "BELA MALL SIGNAGE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6673",
+    "siteName": "41 SANET STR",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6674",
+    "siteName": "7 VAAL RD",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6675",
+    "siteName": "RENBRO HAMMANSKRAAL",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6676",
+    "siteName": "7 ORCHARDS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6677",
+    "siteName": "83 Protea",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6678",
+    "siteName": "AISJ",
+    "specificationStatus": "NO_SPEC_(DULUX)"
+  },
+  {
+    "jobNumber": "6679",
+    "siteName": "CULROSS BUILDING 7",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6680",
+    "siteName": "VLEI LODGE PHINDA",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6681",
+    "siteName": "BOSCH PO001306",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6682",
+    "siteName": "MIDRAND WAREHOUSE 7",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6683",
+    "siteName": "WONDERBOOM JUNCTION KIA &AXE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6684",
+    "siteName": "ADAMS &ADAMS",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6685",
+    "siteName": "RENT A STORE 2026",
+    "specificationStatus": "NOT_NEEDED_LABOUR_ONLY"
+  },
+  {
+    "jobNumber": "6686",
+    "siteName": "SAKATA SVR OFFICES &CANTEEN",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6687",
+    "siteName": "67 KINGS DRIVE EDENVALE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6688",
+    "siteName": "AIRPORT STRATEGIC PARK",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6689",
+    "siteName": "DAINFERN STAND 2252",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6690",
+    "siteName": "HILL ON EMPIRE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6691",
+    "siteName": "CITY CENTRE SHOP108, 109 -DR'S ROOMS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6692",
+    "siteName": "220 PETER AVENUE LINMEYER",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6693",
+    "siteName": "19 CEDAR WOOD, NEWLANDS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6694",
+    "siteName": "SANDTON GATE PH1",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6695",
+    "siteName": "CLIPPA SALES",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6696",
+    "siteName": "GEORGE HERWELL RES",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6697",
+    "siteName": "ETWATWA SHOPRITE DUCTING",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6698",
+    "siteName": "THE SIGNATURE UNIT 192",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6699",
+    "siteName": "SAKATA LABS",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6700",
+    "siteName": "FLENDER 2026",
+    "specificationStatus": "NOT_NEEDED_MARMORAN"
+  },
+  {
+    "jobNumber": "6701",
+    "siteName": "14 LADIES MILE CONSTATIA CPT",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6702",
+    "siteName": "MIDSTREAM MEDICLINIC COMMON AREAS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6703",
+    "siteName": "Castle Gate Mall Shop 47",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6704",
+    "siteName": "43 CHESHAM INTERIOR",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6705",
+    "siteName": "SC PTN 23 PERGOLA",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6706",
+    "siteName": "IBP CONSTRUCTION",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6707",
+    "siteName": "TIBER WAREHOUSE",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6708",
+    "siteName": "NSIR HOUTBAY",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6709",
+    "siteName": "CAR TRACK TOUCH UPS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6710",
+    "siteName": "HEREFORD COMPLEX",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6711",
+    "siteName": "THE SIGNATURE UNIT 11",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6712",
+    "siteName": "BARROW YARD",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6713",
+    "siteName": "UNITS ON MAIN",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6714",
+    "siteName": "MANN ROAD WAREHOUSE",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6715",
+    "siteName": "35 LINDEN ROAD BRAMLEY",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6716",
+    "siteName": "KINGS WALK MALL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6717",
+    "siteName": "JTDOOLEY OFFICES",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6718",
+    "siteName": "ATLANTIC HILLS AFCOM TI",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6719",
+    "siteName": "BLANTON VILLAS PH3",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6720",
+    "siteName": "DHL WATERFALL SCAFFOLDING",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6721",
+    "siteName": "ARDARGH 2026",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6722",
+    "siteName": "MIDSTREM MEDICLINIC DR'S ROOMS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6723",
+    "siteName": "MANITOU EXTERIOR",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6724",
+    "siteName": "LOFTUS REFURB",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6725",
+    "siteName": "48A HARCUS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6726",
+    "siteName": "Raceway 2026",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6727",
+    "siteName": "OLYMPUS",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6728",
+    "siteName": "RIVERLANDS 2B",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6729",
+    "siteName": "IPROP WAREHOUSE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6730",
+    "siteName": "AKARU UNIT 07",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6731",
+    "siteName": "The Neighbourhood Gatehouse",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6732",
+    "siteName": "Irene Link Building B",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6733",
+    "siteName": "FCP HUTS",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6734",
+    "siteName": "MIDRAND WAREHOUSE 6A",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6735",
+    "siteName": "BARROW OFFICES",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6736",
+    "siteName": "HOUSE KWINIKA",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6737",
+    "siteName": "ST JOHNS NURSERY SCHOOL INTERNATIONAL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6738",
+    "siteName": "UP4395 -SARATOGA",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6739",
+    "siteName": "EUGENE MARAIS HOSPITAL",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6740",
+    "siteName": "ISANDO ENTYCE",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6741",
+    "siteName": "ELLIPSE UNIT 2015&4909",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6742",
+    "siteName": "THE BRDIGES",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6743",
+    "siteName": "ISANDO SNACKWORK",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6744",
+    "siteName": "THE GRANDE UNIT 12",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6745",
+    "siteName": "MMI INDUS NEDBANK TI",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6746",
+    "siteName": "THE FALLS SC",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6747",
+    "siteName": "QUEENS WOOD RETIREMENT VILLAGE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6748",
+    "siteName": "Lanseria business park",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6749",
+    "siteName": "10 ARABIAN 2026",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6750",
+    "siteName": "COCA COLA WATER DAMAGE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6751",
+    "siteName": "AMATOLA DEVELOPMENT",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6752",
+    "siteName": "Signature latent defects",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6753",
+    "siteName": "CT Hydraulics",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6754",
+    "siteName": "ST JOHNS MAIN CHAPEL & DINING HALL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6755",
+    "siteName": "HAMPTON OFFICE PARK",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6756",
+    "siteName": "FCP 4401 106 16TH",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6757",
+    "siteName": "517 Blair Athol",
+    "specificationStatus": "COMPLETED"
+  },
+  {
+    "jobNumber": "6758",
+    "siteName": "Linton CNR 2026",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6759",
+    "siteName": "BDO PRETORIA",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6760",
+    "siteName": "HATFIELD STANDARD PLAZA",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6761",
+    "siteName": "GUGULETHU SQUARE ENTRANCE UPGRADE",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6762",
+    "siteName": "IRENE LINK D REMEDIAL",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6763",
+    "siteName": "CULROSS BUILDING 6",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6764",
+    "siteName": "292 MILNER ROAD",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6765",
+    "siteName": "LOFTUS PARK",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6766",
+    "siteName": "SANDTON CITY E-HAILING",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6767",
+    "siteName": "VILLAGE@HORIZON REMEDIAL",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6768",
+    "siteName": "PV BLOCK B%C FLASHING",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6769",
+    "siteName": "ROSSLYN SNACKWORK",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6770",
+    "siteName": "AFRIHOST 2026",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6771",
+    "siteName": "TSHAKUMA LATENT DEFECTS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6772",
+    "siteName": "HOUGHTON UNIT 7410",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6773",
+    "siteName": "39 COMMERCE SQUARE",
+    "specificationStatus": "NOT_REQUIRED"
+  },
+  {
+    "jobNumber": "6774",
+    "siteName": "CSI CPT",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6775",
+    "siteName": "10 POTGIETER ROAD EASTLEIGH EDENVALE",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6776",
+    "siteName": "41 CORAL HEIGHTS",
+    "specificationStatus": "NO_SPEC_MISSING_BOQ"
+  },
+  {
+    "jobNumber": "6777",
+    "siteName": "THE INGRESS 2026",
+    "specificationStatus": "IN_PROGRESS"
+  },
+  {
+    "jobNumber": "6778",
+    "siteName": "ALBERTON MALL",
+    "specificationStatus": "REQUESTED"
+  },
+  {
+    "jobNumber": "6779",
+    "siteName": "MOLETSI MALL",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6780",
+    "siteName": "WW BOSKRUIN",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6781",
+    "siteName": "PAARDVLEI OFFICES",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6782",
+    "siteName": "BABCOCK BARTLETT",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6783",
+    "siteName": "MANSFIELD RES 2026",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6784",
+    "siteName": "CURRO KRUGERSDORP",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6785",
+    "siteName": "VIRGIN ACTIVE WEMBLEY",
+    "specificationStatus": "PENDING_INFORMATION"
+  },
+  {
+    "jobNumber": "6786",
+    "siteName": "LDS SCHEERPOORT",
+    "specificationStatus": "PENDING_INFORMATION"
+  }
+]
