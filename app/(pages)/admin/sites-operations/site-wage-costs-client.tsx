@@ -116,8 +116,8 @@ function formatChange(current: number, previous: number) {
 
 function changeClass(current: number, previous: number) {
   const pct = changePct(current, previous);
-  if (pct === null || pct > 0) return "text-emerald-700 dark:text-emerald-400";
-  if (pct < 0) return "text-red-600 dark:text-red-400";
+  if (pct === null || pct > 0) return "text-red-600 dark:text-red-400";
+  if (pct < 0) return "text-green-600 dark:text-green-400";
   return "text-muted-foreground";
 }
 

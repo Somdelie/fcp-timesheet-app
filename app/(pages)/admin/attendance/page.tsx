@@ -25,8 +25,8 @@ export default async function AdminAttendancePage({
   const activeTab = isTabValue(sp?.tab) ? sp.tab : "scans";
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="rounded border border-muted/50 bg-card p-4">
+    <div className="mx-auto w-full space-y-6">
+      <div className="rounded border border-muted/50 bg-card">
         <div className="flex flex-wrap gap-1 border-b border-border">
           {TABS.map((tab) => (
             <Link
