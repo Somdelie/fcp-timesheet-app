@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Button } from "../ui/button";
@@ -37,6 +38,7 @@ const pathLabels: Record<string, string> = {
   timesheets: "Timesheets",
   users: "Users",
   settings: "Settings",
+  trash: "Trash",
   profile: "Profile",
   supervisor: "Supervisor",
   new: "New",
@@ -133,6 +135,26 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, role }) => {
 
       {/* right */}
       <div className="flex items-center gap-4">
+        {role === "ADMIN" ? (
+          <Button variant="ghost" size="icon" asChild title="Trash" className="bg-transparent hover:bg-transparent">
+            <Link
+              href="/admin/trash"
+              aria-label="Open trash"
+              className="group relative transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:scale-110 active:translate-y-0 active:scale-95"
+            >
+              <img
+                src="/trash/bin-closed.png"
+                alt=""
+                className="h-7 w-7 object-contain transition-all duration-300 ease-out group-hover:rotate-[-6deg] group-hover:opacity-0 group-hover:blur-[1px]"
+              />
+              <img
+                src="/trash/bin-open.png"
+                alt=""
+                className="absolute inset-0 h-7 w-7 rotate-6 scale-90 object-contain opacity-0 transition-all duration-300 ease-out group-hover:rotate-0 group-hover:scale-100 group-hover:opacity-100"
+              />
+            </Link>
+          </Button>
+        ) : null}
         <NavbarCalendar />
         <NotificationSheet />
         <ModeToggle />

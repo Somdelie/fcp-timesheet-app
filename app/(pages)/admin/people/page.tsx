@@ -4,14 +4,12 @@ import EmployeesPage from "@/app/(pages)/employees/page";
 import ForemanPage from "@/app/(pages)/foreman/page";
 import UsersPage from "@/app/(pages)/users/page";
 import AdminSupervisorsPage from "@/app/(pages)/admin/supervisors/page";
-import AdminTransferEmployeePage from "@/app/(pages)/admin/transfer-employee/page";
 
 const TABS = [
   { value: "employees", label: "Employees" },
   { value: "foremen", label: "Foremen" },
   { value: "users", label: "User Management" },
   { value: "supervisors", label: "Supervisors" },
-  { value: "transfer", label: "Transfer Employee" },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
@@ -63,7 +61,6 @@ export default async function AdminPeoplePage({
           {activeTab === "foremen" ? <ForemanPage /> : null}
           {activeTab === "users" ? <UsersPage /> : null}
           {activeTab === "supervisors" ? <AdminSupervisorsPage /> : null}
-          {activeTab === "transfer" ? <AdminTransferEmployeePage /> : null}
         </div>
       </div>
     </div>

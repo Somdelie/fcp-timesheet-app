@@ -33,6 +33,8 @@ export type FinishingSchedulePdfDto = {
   contractNo: string;
   contractManager: string;
   siteForeman: string;
+  fcpContractManager: string;
+  fcpSiteForeman: string;
   client: string;
   startDate: string;
   completionDate: string;
@@ -117,6 +119,8 @@ export function mapFinishingScheduleToPdfDto(
     contractNo: show(schedule.contractNo || schedule.site?.code),
     contractManager: show(schedule.contractManager),
     siteForeman: show(schedule.siteForeman),
+    fcpContractManager: show(schedule.fcpContractManager),
+    fcpSiteForeman: show(schedule.fcpSiteForeman),
     client: show(schedule.client || schedule.site?.client),
     startDate: formatDate(schedule.startDate),
     completionDate: formatDate(schedule.completionDate),

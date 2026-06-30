@@ -39,6 +39,7 @@ import {
   Hammer,
   Archive,
   BadgeMinus,
+  Trash2,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -50,12 +51,17 @@ type SidebarProps = {
   userName: string;
 };
 
+function icon3d(name: string) {
+  return `/icons-3d/${encodeURIComponent(name)}.png`;
+}
+
 const menuGroups: {
   group: string;
   items: {
     href: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
+    iconSrc?: string;
     roles: Role[];
   }[];
 }[] = [
@@ -66,12 +72,14 @@ const menuGroups: {
         href: "/dashboard",
         label: "Dashboard",
         icon: LayoutDashboard,
+        iconSrc: icon3d("Dashboard"),
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
       },
       {
         href: "/overview",
         label: "Overview",
         icon: CalendarDays,
+        iconSrc: icon3d("Overview"),
         roles: ["ADMIN", "OFFICE", "FOREMAN"],
       },
     ],
@@ -83,18 +91,21 @@ const menuGroups: {
         href: "/timesheets",
         label: "Timesheets",
         icon: NotebookIcon,
+        iconSrc: icon3d("Timesheets"),
         roles: ["ADMIN"],
       },
       {
         href: "/admin/payroll",
         label: "Payroll",
         icon: Clock,
+        iconSrc: icon3d("Payroll"),
         roles: ["ADMIN"],
       },
       {
         href: "/supervisor/timesheets",
         label: "Manage Timesheets",
         icon: NotebookIcon,
+        iconSrc: icon3d("Timesheets"),
         roles: ["SUPERVISOR"],
       },
     ],
@@ -106,18 +117,21 @@ const menuGroups: {
         href: "/sites",
         label: "Sites",
         icon: Building2,
+        iconSrc: icon3d("Sites"),
         roles: ["ADMIN", "OFFICE", "SUPERVISOR", "FOREMAN"],
       },
       {
         href: "/admin/sites-operations",
         label: "Sites Operations",
         icon: TrendingUp,
+        iconSrc: icon3d("Sites Operations"),
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/supervisor/job-progress",
         label: "Job Progress",
         icon: TrendingUp,
+        iconSrc: icon3d("Sites Operations"),
         roles: ["SUPERVISOR"],
       },
       {
@@ -129,72 +143,82 @@ const menuGroups: {
     ],
   },
   {
-    group: "People & Attendance",
-    items: [
-      {
-        href: "/admin/people",
-        label: "People",
-        icon: Users,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/print-cards",
-        label: "Print Cards",
-        icon: Printer,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/admin/attendance",
-        label: "Attendance",
-        icon: ScanLine,
-        roles: ["ADMIN"],
-      },
-      {
-        href: "/employees",
-        label: "Employees",
-        icon: Users,
-        roles: ["SUPERVISOR", "FOREMAN"],
-      },
-      {
-        href: "/supervisor/foremen",
-        label: "Foremen",
-        icon: HardHat,
-        roles: ["SUPERVISOR"],
-      },
-    ],
-  },
-  {
     group: "Procurement",
     items: [
       {
         href: "/admin/paints&preperations",
         label: "Paints & Preparations",
         icon: Truck,
+        iconSrc: icon3d("Paints & Preparations"),
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/admin/suppliers",
         label: "Suppliers & Categories",
         icon: Tag,
+        iconSrc: icon3d("Suppliers & Categories"),
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/admin/paints-colors",
         label: "Paint Colors & Bases",
         icon: Palette,
+        iconSrc: icon3d("Paint Colors & Bases"),
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/admin/equipment",
         label: "Equipment Catalogue",
         icon: Wrench,
+        iconSrc: icon3d("Equipment Catalogue"),
         roles: ["ADMIN", "OFFICE"],
       },
       {
         href: "/admin/orders",
         label: "Orders Catalogue",
         icon: ShoppingCart,
+        iconSrc: icon3d("Orders Catalogue"),
         roles: ["ADMIN", "OFFICE"],
+      },
+    ],
+  },
+  {
+    group: "People & Attendance",
+    items: [
+      {
+        href: "/admin/people",
+        label: "People",
+        icon: Users,
+        iconSrc: icon3d("People"),
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/print-cards",
+        label: "Print Cards",
+        icon: Printer,
+        iconSrc: icon3d("Print Cards"),
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/attendance",
+        label: "Attendance",
+        icon: ScanLine,
+        iconSrc: icon3d("Attendance"),
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/employees",
+        label: "Employees",
+        icon: Users,
+        iconSrc: icon3d("People"),
+        roles: ["SUPERVISOR", "FOREMAN"],
+      },
+      {
+        href: "/supervisor/foremen",
+        label: "Foremen",
+        icon: HardHat,
+        iconSrc: icon3d("People"),
+        roles: ["SUPERVISOR"],
       },
     ],
   },
@@ -206,6 +230,14 @@ const menuGroups: {
         href: "/settings",
         label: "Settings",
         icon: Settings,
+        iconSrc: icon3d("Settings"),
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/trash",
+        label: "Trash",
+        icon: Trash2,
+        iconSrc: icon3d("Trash"),
         roles: ["ADMIN"],
       },
     ],
@@ -360,9 +392,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         .sidebar-item {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 4px;
           margin: 1px 8px;
-          padding: 9px 10px;
+          padding: 4px 10px;
           border-radius: 2px;
           text-decoration: none;
           color: var(--muted-foreground);
@@ -397,14 +429,24 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
 
         .sidebar-item-icon {
-          width: 18px;
-          height: 18px;
+          width: 28px;
+          height: 28px;
           flex-shrink: 0;
-          transition: transform 180ms ease;
+          transition: transform 220ms ease, filter 220ms ease;
+        }
+
+        .sidebar-item-icon-img {
+          object-fit: contain;
+          filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.18));
         }
 
         .sidebar-item:hover .sidebar-item-icon {
-          transform: scale(1.1);
+          transform: translateY(-1px) scale(1.12);
+          filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.22));
+        }
+
+        .sidebar-item.active .sidebar-item-icon {
+          transform: scale(1.08);
         }
 
         .sidebar-item-label {
@@ -529,7 +571,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                       className={`sidebar-item ${isActive ? "active" : ""}`}
                       title={!isOpen ? item.label : undefined}
                     >
-                      <Icon className="sidebar-item-icon" />
+                      {item.iconSrc ? (
+                        <img
+                          src={item.iconSrc}
+                          alt=""
+                          className="sidebar-item-icon sidebar-item-icon-img"
+                        />
+                      ) : (
+                        <Icon className="sidebar-item-icon" />
+                      )}
                       {isOpen && (
                         <>
                           <span className="sidebar-item-label">

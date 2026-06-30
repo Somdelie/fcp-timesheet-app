@@ -313,9 +313,9 @@ export function FinishingSchedulePdfDocument({
             <MetaField label="Site" value={data.siteName} />
             <MetaField label="Contract No" value={data.contractNo} />
             <MetaField label="Site Address" value={data.siteAddress} />
-            <MetaField label="FCP Contract Mgr" value={data.contractManager} />
+            <MetaField label="FCP Contract Mgr" value={data.fcpContractManager} />
             <MetaField label="FCP QS" value={data.fcpQs} />
-            <MetaField label="FCP Foreman" value={data.siteForeman} />
+            <MetaField label="FCP Foreman" value={data.fcpSiteForeman} />
           </View>
           <View style={styles.metaPanel}>
             <MetaField label="Client" value={data.client} />

@@ -54,6 +54,7 @@
     "expo": "^54.0.33",
     "expo-device": "~8.0.10",
     "expo-notifications": "~0.32.16",
+    "framer-motion": "^12.42.1",
     "html2canvas": "^1.4.1",
     "jose": "^5.10.0",
     "jspdf": "^4.1.0",

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { format } from "date-fns";
 import {
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -28,10 +27,14 @@ export function NavbarCalendar() {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded border border-transparent transition-colors hover:border-sky-200/60 hover:bg-sky-50 hover:text-sky-700 dark:hover:border-sky-900/60 dark:hover:bg-sky-950/40 dark:hover:text-sky-300"
+          className="group rounded bg-transparent transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:scale-110 hover:bg-transparent active:translate-y-0 active:scale-95"
           aria-label="Open calendar"
         >
-          <CalendarIcon className="h-5 w-5" />
+          <img
+            src="/icons-3d/calander.png"
+            alt=""
+            className="h-8 w-8 object-contain drop-shadow-sm transition-transform duration-300 ease-out group-hover:rotate-[-5deg]"
+          />
         </Button>
       </PopoverTrigger>
 

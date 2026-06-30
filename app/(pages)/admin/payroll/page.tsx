@@ -7,6 +7,7 @@ const TABS = [
   { value: "deductions", label: "Deductions" },
   { value: "overtime", label: "Overtime Entries" },
   { value: "prices", label: "Overtime Prices" },
+  { value: "transfer", label: "Transfer Employee" },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
@@ -24,7 +25,7 @@ export default async function AdminPayrollPage({
   const activeTab = isTabValue(sp?.tab) ? sp.tab : "quick-view";
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full">
       <div className="rounded border border-muted/50 bg-card p-4">
         <div className="flex flex-wrap gap-1 border-b border-border">
           {TABS.map((tab) => (

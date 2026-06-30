@@ -1,35 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  ArrowRightLeft,
+  Check,
+  ChevronsUpDown,
+  Clock,
+  GripVertical,
+  Loader2,
+  Search,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Command,
   CommandEmpty,
@@ -39,21 +38,26 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Check,
-  ChevronsUpDown,
-  Loader2,
-  ArrowRightLeft,
-  Search,
-  Clock,
-  Users,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 interface SiteScan {
@@ -65,17 +69,14 @@ interface SiteScan {
   scannedAt: string;
   scannedOutAt: string | null;
   isScannedOut: boolean;
-  direction: "IN" | "OUT";
   dayRate: string;
-  scanType: string;
   isTransferred: boolean;
-  transferredFromSiteId: string | null;
-  transferredAt: string | null;
 }
 
 interface SiteOption {
   id: string;
   name: string;
+  code: string | null;
 }
 
 interface ForemanOption {
@@ -83,32 +84,88 @@ interface ForemanOption {
   name: string;
 }
 
+interface TrashItem {
+  id: string;
+  entityType: string;
+  entityId: string;
+  label: string;
+  description: string | null;
+  metadata: unknown;
+  deletedByName: string | null;
+  deletedAt: string;
+  expiresAt: string;
+}
+
+type SiteForemenState = {
+  loading: boolean;
+  loaded: boolean;
+  foremen: ForemanOption[];
+  selectedForemanId: string;
+};
+
+type PendingAction =
+  | {
+      type: "transfer";
+      siteId: string;
+      siteName: string;
+      foremanId: string;
+      employeeCount: number;
+    }
+  | {
+      type: "delete";
+      employeeCount: number;
+    }
+  | {
+      type: "clear-trash";
+      employeeCount: number;
+    };
+
+const emptyForemenState: SiteForemenState = {
+  loading: false,
+  loaded: false,
+  foremen: [],
+  selectedForemanId: "",
+};
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function timeLabel(value: string) {
+  return new Date(value).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function siteLabel(site: SiteOption) {
+  return site.code ? `${site.code} - ${site.name}` : site.name;
+}
+
 export default function AdminTransferEmployeePage() {
   const [sites, setSites] = useState<SiteOption[]>([]);
-  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
+  const [selectedSiteId, setSelectedSiteId] = useState("");
+  const [selectedDateISO, setSelectedDateISO] = useState(todayISO);
   const [siteOpen, setSiteOpen] = useState(false);
   const [scans, setScans] = useState<SiteScan[]>([]);
   const [loadingScans, setLoadingScans] = useState(false);
-  const [scannedInCount, setScannedInCount] = useState(0);
-  const [scannedOutCount, setScannedOutCount] = useState(0);
   const [selectedScanIds, setSelectedScanIds] = useState<string[]>([]);
-
-  // Transfer dialog state
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [selectedScans, setSelectedScans] = useState<SiteScan[]>([]);
-  const [destinationSiteId, setDestinationSiteId] = useState<string>("");
-  const [destSiteOpen, setDestSiteOpen] = useState(false);
-  const [destForemen, setDestForemen] = useState<ForemanOption[]>([]);
-  const [selectedForemanId, setSelectedForemanId] = useState<string>("");
-  const [foremanOpen, setForemanOpen] = useState(false);
-  const [loadingForemen, setLoadingForemen] = useState(false);
-  const [transferReason, setTransferReason] = useState("");
-  const [transferring, setTransferring] = useState(false);
-
-  // Search
   const [searchQuery, setSearchQuery] = useState("");
+  const [siteSearch, setSiteSearch] = useState("");
+  const [foremenBySite, setForemenBySite] = useState<Record<string, SiteForemenState>>({});
+  const [dragging, setDragging] = useState(false);
+  const [dragOverSiteId, setDragOverSiteId] = useState<string | null>(null);
+  const [transferringSiteId, setTransferringSiteId] = useState<string | null>(null);
+  const [isOverBin, setIsOverBin] = useState(false);
+  const [isDroppedInBin, setIsDroppedInBin] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
+  const [clearingTrash, setClearingTrash] = useState(false);
+  const trashDropInProgressRef = useRef(false);
 
-  // Load sites
   useEffect(() => {
     (async () => {
       try {
@@ -116,32 +173,28 @@ export default function AdminTransferEmployeePage() {
         if (!res.ok) throw new Error("Failed to load sites");
         const data = await res.json();
         setSites(data.sites || []);
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load sites");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to load sites");
       }
     })();
   }, []);
 
-  // Load scans for selected site
-  const loadScans = useCallback(async (siteId: string) => {
+  const loadScans = useCallback(async (siteId: string, dateISO: string) => {
     if (!siteId) return;
     setLoadingScans(true);
     try {
       const res = await fetch(
-        `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today`,
+        `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(dateISO)}`,
       );
       if (!res.ok) throw new Error("Failed to load today's scans");
       const data = await res.json();
-      setScans(data.scans || []);
+      const nextScans: SiteScan[] = data.scans || [];
+      setScans(nextScans);
       setSelectedScanIds((ids) =>
-        ids.filter((id) =>
-          (data.scans || []).some((scan: SiteScan) => scan.id === id),
-        ),
+        ids.filter((id) => nextScans.some((scan) => scan.id === id)),
       );
-      setScannedInCount(data.scannedInCount ?? 0);
-      setScannedOutCount(data.scannedOutCount ?? 0);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load scans");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load scans");
       setScans([]);
       setSelectedScanIds([]);
     } finally {
@@ -151,71 +204,119 @@ export default function AdminTransferEmployeePage() {
 
   useEffect(() => {
     if (selectedSiteId) {
-      loadScans(selectedSiteId);
+      void loadScans(selectedSiteId, selectedDateISO);
     } else {
       setScans([]);
       setSelectedScanIds([]);
-      setScannedInCount(0);
-      setScannedOutCount(0);
     }
-  }, [selectedSiteId, loadScans]);
+  }, [selectedSiteId, selectedDateISO, loadScans]);
 
-  // Load foremen when destination site changes
-  useEffect(() => {
-    if (!destinationSiteId) {
-      setDestForemen([]);
-      setSelectedForemanId("");
-      return;
-    }
-    (async () => {
-      setLoadingForemen(true);
-      setSelectedForemanId("");
+  const ensureForemenForSite = useCallback(
+    async (siteId: string) => {
+      const current = foremenBySite[siteId];
+      if (current?.loaded || current?.loading) return current ?? emptyForemenState;
+
+      setForemenBySite((state) => ({
+        ...state,
+        [siteId]: { ...emptyForemenState, loading: true },
+      }));
+
       try {
         const res = await fetch(
-          `/api/app/supervisor/sites/${encodeURIComponent(destinationSiteId)}/scans-today`,
+          `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(selectedDateISO)}`,
         );
         if (!res.ok) throw new Error("Failed to load foremen");
         const data = await res.json();
         const foremen: ForemanOption[] = data.foremen || [];
-        setDestForemen(foremen);
-        // Auto-select if only one foreman
-        if (foremen.length === 1) {
-          setSelectedForemanId(foremen[0].id);
-        }
+        const selectedForemanId = foremen.length === 1 ? foremen[0].id : "";
+        const nextState = {
+          loading: false,
+          loaded: true,
+          foremen,
+          selectedForemanId,
+        };
+        setForemenBySite((state) => ({ ...state, [siteId]: nextState }));
+        return nextState;
       } catch {
-        setDestForemen([]);
-      } finally {
-        setLoadingForemen(false);
+        const nextState = {
+          loading: false,
+          loaded: true,
+          foremen: [],
+          selectedForemanId: "",
+        };
+        setForemenBySite((state) => ({ ...state, [siteId]: nextState }));
+        return nextState;
       }
-    })();
-  }, [destinationSiteId]);
-
-  // Filter scans by search
-  const filteredScans = scans.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.employeeName.toLowerCase().includes(q) ||
-      s.employeeCode.toLowerCase().includes(q)
-    );
-  });
-
-  const scannedIn = filteredScans.filter((s) => !s.isScannedOut);
-  const scannedOut = filteredScans.filter((s) => s.isScannedOut);
-  const selectedScanIdSet = new Set(selectedScanIds);
-  const selectedTransferScans = scans.filter(
-    (scan) => selectedScanIdSet.has(scan.id) && !scan.isScannedOut,
+    },
+    [foremenBySite, selectedDateISO],
   );
-  const selectedScan = selectedScans[0] as SiteScan;
-  const visibleSelectedCount = scannedIn.filter((scan) =>
-    selectedScanIdSet.has(scan.id),
-  ).length;
-  const allVisibleSelected =
-    scannedIn.length > 0 && visibleSelectedCount === scannedIn.length;
-  const someVisibleSelected =
-    visibleSelectedCount > 0 && visibleSelectedCount < scannedIn.length;
 
-  const toggleScanSelection = (scanId: string, checked: boolean) => {
+  const selectedSite = sites.find((site) => site.id === selectedSiteId);
+  const selectedSiteName = selectedSite ? siteLabel(selectedSite) : "";
+  const destinationSites = useMemo(() => {
+    const term = siteSearch.trim().toLowerCase();
+    return sites
+      .filter((site) => site.id !== selectedSiteId)
+      .filter(
+        (site) =>
+          !term ||
+          site.name.toLowerCase().includes(term) ||
+          (site.code ?? "").toLowerCase().includes(term),
+      );
+  }, [sites, selectedSiteId, siteSearch]);
+
+  const filteredScans = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    return scans.filter(
+      (scan) =>
+        !term ||
+        scan.employeeName.toLowerCase().includes(term) ||
+        scan.employeeCode.toLowerCase().includes(term),
+    );
+  }, [scans, searchQuery]);
+
+  const selectedScanIdSet = useMemo(() => new Set(selectedScanIds), [selectedScanIds]);
+  const selectedScans = useMemo(
+    () => scans.filter((scan) => selectedScanIdSet.has(scan.id)),
+    [scans, selectedScanIdSet],
+  );
+  const selectedTransferScans = useMemo(
+    () => selectedScans.filter((scan) => !scan.isScannedOut),
+    [selectedScans],
+  );
+  const scannedCount = scans.length;
+  const photoScanOutCount = scans.filter((scan) => scan.isScannedOut).length;
+  const allVisibleSelected =
+    filteredScans.length > 0 &&
+    filteredScans.every((scan) => selectedScanIdSet.has(scan.id));
+  const someVisibleSelected =
+    filteredScans.some((scan) => selectedScanIdSet.has(scan.id)) && !allVisibleSelected;
+  const showTrashBin = dragging || isDroppedInBin || deletingSelected;
+  const binImage = isDroppedInBin
+    ? "/trash/bin-drop.png"
+    : isOverBin
+      ? "/trash/bin-open.png"
+      : "/trash/bin-closed.png";
+  const trashLabel = deletingSelected
+    ? "Deleting..."
+    : isOverBin
+      ? `Drop to delete ${selectedScans.length}`
+      : selectedScans.length > 0
+        ? `Delete ${selectedScans.length} selected`
+        : "Select employees first";
+  const trashTileLabel = isOverBin
+    ? `Drop to delete ${selectedScans.length}`
+    : trashItems.length > 0
+      ? `${trashItems.length} item${trashItems.length === 1 ? "" : "s"} in bin`
+      : "Open trash bin";
+
+  useEffect(() => {
+    if (trashOpen) {
+      void loadTrash();
+    }
+  }, [trashOpen]);
+
+  function toggleScan(scanId: string, checked: boolean) {
     setSelectedScanIds((ids) =>
       checked
         ? ids.includes(scanId)
@@ -223,62 +324,107 @@ export default function AdminTransferEmployeePage() {
           : [...ids, scanId]
         : ids.filter((id) => id !== scanId),
     );
-  };
+  }
 
-  const toggleVisibleSelection = (checked: boolean) => {
-    const visibleIds = scannedIn.map((scan) => scan.id);
+  function toggleVisible(checked: boolean) {
+    const visibleIds = filteredScans.map((scan) => scan.id);
     setSelectedScanIds((ids) => {
       if (!checked) return ids.filter((id) => !visibleIds.includes(id));
       const next = new Set(ids);
       visibleIds.forEach((id) => next.add(id));
       return Array.from(next);
     });
-  };
+  }
 
-  // Open transfer dialog
-  const openTransfer = (scan: SiteScan) => {
-    setSelectedScans([scan]);
-    setDestinationSiteId("");
-    setSelectedForemanId("");
-    setDestForemen([]);
-    setTransferReason("");
-    setTransferDialogOpen(true);
-  };
+  function setSiteForeman(siteId: string, foremanId: string) {
+    setForemenBySite((state) => ({
+      ...state,
+      [siteId]: {
+        ...(state[siteId] ?? emptyForemenState),
+        selectedForemanId: foremanId,
+      },
+    }));
+  }
 
-  const openBulkTransfer = () => {
-    if (selectedTransferScans.length === 0) return;
-    setSelectedScans(selectedTransferScans);
-    setDestinationSiteId("");
-    setSelectedForemanId("");
-    setDestForemen([]);
-    setTransferReason("");
-    setTransferDialogOpen(true);
-  };
+  async function loadTrash() {
+    setLoadingTrash(true);
+    try {
+      const res = await fetch("/api/admin/trash");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to load trash");
+      setTrashItems(data.items || []);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load trash");
+    } finally {
+      setLoadingTrash(false);
+    }
+  }
 
-  // Perform transfer
-  const doTransfer = async () => {
-    if (
-      selectedScans.length === 0 ||
-      !destinationSiteId ||
-      !selectedSiteId ||
-      !selectedForemanId
-    )
+  async function clearTrash() {
+    setClearingTrash(true);
+    try {
+      const res = await fetch("/api/admin/trash", { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to clear bin");
+      setTrashItems([]);
+      toast.success("Bin cleared");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to clear bin");
+    } finally {
+      setClearingTrash(false);
+    }
+  }
+
+  async function requestTransferToSite(siteId: string) {
+    if (!selectedSiteId || selectedTransferScans.length === 0) {
+      toast.info("Select employees that have not been closed by site photo");
       return;
-    setTransferring(true);
+    }
+
+    const foremenState = await ensureForemenForSite(siteId);
+    const latestState = foremenBySite[siteId] ?? foremenState;
+    const foremanId = latestState.selectedForemanId || foremenState.selectedForemanId;
+
+    if (!foremenState.foremen.length) {
+      toast.error("No foreman assigned to this destination site");
+      return;
+    }
+    if (!foremanId) {
+      toast.info("Select a destination foreman on that site card first");
+      return;
+    }
+
+    const destinationSite = sites.find((site) => site.id === siteId);
+    setPendingAction({
+      type: "transfer",
+      siteId,
+      siteName: destinationSite ? siteLabel(destinationSite) : "selected site",
+      foremanId,
+      employeeCount: selectedTransferScans.length,
+    });
+  }
+
+  async function transferToSite(siteId: string, foremanId: string) {
+    if (!selectedSiteId || selectedTransferScans.length === 0) {
+      toast.info("Select employees that have not been closed by site photo");
+      return;
+    }
+
+    setTransferringSiteId(siteId);
     try {
       const failures: string[] = [];
       const transferredIds: string[] = [];
 
-      for (const scan of selectedScans) {
+      for (const scan of selectedTransferScans) {
         const res = await fetch("/api/app/supervisor/transfer-employee", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             employeeId: scan.employeeId,
             fromSiteId: selectedSiteId,
-            toSiteId: destinationSiteId,
-            toForemanId: selectedForemanId,
-            reason: transferReason.trim() || undefined,
+            toSiteId: siteId,
+            toForemanId: foremanId,
+            workDateISO: selectedDateISO,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -292,12 +438,10 @@ export default function AdminTransferEmployeePage() {
       if (transferredIds.length > 0) {
         toast.success(
           transferredIds.length === 1
-            ? "Transfer successful!"
-            : `${transferredIds.length} employees transferred.`,
+            ? "Employee transferred"
+            : `${transferredIds.length} employees transferred`,
         );
-        setSelectedScanIds((ids) =>
-          ids.filter((id) => !transferredIds.includes(id)),
-        );
+        setSelectedScanIds((ids) => ids.filter((id) => !transferredIds.includes(id)));
       }
 
       if (failures.length > 0) {
@@ -308,29 +452,139 @@ export default function AdminTransferEmployeePage() {
         );
       }
 
-      if (failures.length === 0) {
-        setTransferDialogOpen(false);
-        setSelectedScans([]);
-      }
-      await loadScans(selectedSiteId);
-    } catch (err: any) {
-      toast.error(err.message || "Transfer failed");
+      await loadScans(selectedSiteId, selectedDateISO);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Transfer failed");
     } finally {
-      setTransferring(false);
+      setTransferringSiteId(null);
     }
-  };
+  }
 
-  const selectedSiteName =
-    sites.find((s) => s.id === selectedSiteId)?.name ?? "";
-  const destinationSiteName =
-    sites.find((s) => s.id === destinationSiteId)?.name ?? "";
-  const selectedForemanName =
-    destForemen.find((f) => f.id === selectedForemanId)?.name ?? "";
-  const destinationSites = sites.filter((s) => s.id !== selectedSiteId);
+  async function deleteSelectedScans() {
+    if (selectedScans.length === 0) {
+      toast.info("Select one or more employees first");
+      return;
+    }
+
+    setDeletingSelected(true);
+    try {
+      const failures: string[] = [];
+      const deletedIds: string[] = [];
+
+      for (const scan of selectedScans) {
+        const res = await fetch(
+          `/api/admin/attendance-scans?id=${encodeURIComponent(scan.id)}`,
+          { method: "DELETE" },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          failures.push(`${scan.employeeName}: ${data.error || "Delete failed"}`);
+        } else {
+          deletedIds.push(scan.id);
+        }
+      }
+
+      if (deletedIds.length > 0) {
+        toast.success(
+          deletedIds.length === 1
+            ? "Employee scan deleted"
+            : `${deletedIds.length} employee scans deleted`,
+        );
+        setSelectedScanIds((ids) => ids.filter((id) => !deletedIds.includes(id)));
+      }
+
+      if (failures.length > 0) {
+        toast.error(
+          failures.length === 1
+            ? failures[0]
+            : `${failures.length} deletes failed. ${failures[0]}`,
+        );
+      }
+
+      if (selectedSiteId) {
+        await loadScans(selectedSiteId, selectedDateISO);
+      }
+      if (trashOpen) {
+        await loadTrash();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingSelected(false);
+    }
+  }
+
+  function handleDragStart(event: React.DragEvent) {
+    if (selectedScans.length === 0) {
+      event.preventDefault();
+      toast.info("Select one or more employees first");
+      return;
+    }
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", selectedScanIds.join(","));
+    event.dataTransfer.setData("scanIds", selectedScanIds.join(","));
+    setDragging(true);
+  }
+
+  function handleDragEnd() {
+    if (trashDropInProgressRef.current) return;
+    setDragging(false);
+    setDragOverSiteId(null);
+    setIsOverBin(false);
+  }
+
+  async function handleTrashDrop(event: React.DragEvent) {
+    event.preventDefault();
+    if (selectedScans.length === 0) {
+      setIsOverBin(false);
+      toast.info("Select one or more employees first");
+      return;
+    }
+    trashDropInProgressRef.current = true;
+    setIsDroppedInBin(true);
+    setIsOverBin(false);
+    setDragOverSiteId(null);
+    setPendingAction({ type: "delete", employeeCount: selectedScans.length });
+  }
+
+  function requestDeleteSelectedScans() {
+    setTrashOpen(true);
+  }
+
+  function resetTrashDragState() {
+    setIsDroppedInBin(false);
+    setDragging(false);
+    trashDropInProgressRef.current = false;
+    setIsOverBin(false);
+  }
+
+  async function confirmPendingAction() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+
+    if (action.type === "transfer") {
+      await transferToSite(action.siteId, action.foremanId);
+      return;
+    }
+
+    if (action.type === "clear-trash") {
+      await clearTrash();
+      return;
+    }
+
+    setIsDroppedInBin(true);
+    await deleteSelectedScans();
+    setTimeout(resetTrashDragState, 600);
+  }
+
+  function cancelPendingAction() {
+    setPendingAction(null);
+    resetTrashDragState();
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -338,19 +592,16 @@ export default function AdminTransferEmployeePage() {
             Transfer Employee
           </CardTitle>
           <CardDescription>
-            Transfer employees between sites. Select a source site, then
-            transfer scanned-in employees to a different site. Transferred
-            employees can be scanned out at their new site.
+            Select employees, then drag them to a destination site or the dustbin.
           </CardDescription>
         </CardHeader>
       </Card>
 
-      {/* Site selector + Stats */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-[1fr_180px_1fr]">
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 Source Site
               </label>
               <Popover open={siteOpen} onOpenChange={setSiteOpen}>
@@ -361,16 +612,13 @@ export default function AdminTransferEmployeePage() {
                     aria-expanded={siteOpen}
                     className="w-full justify-between font-normal"
                   >
-                    {selectedSiteId
-                      ? (sites.find((s) => s.id === selectedSiteId)?.name ??
-                        "Select a site...")
-                      : "Select a site..."}
+                    {selectedSiteId ? selectedSiteName : "Select a site..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
+                <PopoverContent className="w-[360px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search sites…" />
+                    <CommandInput placeholder="Search sites..." />
                     <CommandList>
                       <CommandEmpty>No sites found.</CommandEmpty>
                       <CommandGroup>
@@ -378,23 +626,19 @@ export default function AdminTransferEmployeePage() {
                           <CommandItem
                             key={site.id}
                             value={site.id}
-                            keywords={[site.name]}
+                            keywords={[site.name, site.code ?? ""]}
                             onSelect={() => {
-                              setSelectedSiteId(
-                                site.id === selectedSiteId ? "" : site.id,
-                              );
+                              setSelectedSiteId(site.id === selectedSiteId ? "" : site.id);
                               setSiteOpen(false);
                             }}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedSiteId === site.id
-                                  ? "opacity-100"
-                                  : "opacity-0",
+                                selectedSiteId === site.id ? "opacity-100" : "opacity-0",
                               )}
                             />
-                            {site.name}
+                            {siteLabel(site)}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -405,489 +649,493 @@ export default function AdminTransferEmployeePage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
+                Work Date
+              </label>
+              <Input
+                type="date"
+                value={selectedDateISO}
+                onChange={(event) => {
+                  setSelectedDateISO(event.target.value || todayISO());
+                  setSelectedScanIds([]);
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 Search Employees
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search by name or code..."
                   className="pl-9"
                 />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
 
-          {selectedSiteId && (
-            <div className="mt-4 grid grid-cols-3 gap-4">
+          {selectedSiteId ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded border p-3 text-center">
-                <div className="text-2xl font-black text-emerald-600">
-                  {scannedInCount}
-                </div>
-                <div className="text-xs font-medium text-muted-foreground">
-                  Scanned In
-                </div>
+                <div className="text-2xl font-black text-green-600">{scannedCount}</div>
+                <div className="text-xs font-medium text-muted-foreground">Scanned</div>
               </div>
               <div className="rounded border p-3 text-center">
-                <div className="text-2xl font-black text-slate-500">
-                  {scannedOutCount}
-                </div>
-                <div className="text-xs font-medium text-muted-foreground">
-                  Scanned Out
-                </div>
+                <div className="text-2xl font-black text-slate-500">{photoScanOutCount}</div>
+                <div className="text-xs font-medium text-muted-foreground">Closed by Site Photo</div>
               </div>
               <div className="rounded border p-3 text-center">
-                <div className="text-2xl font-black text-blue-600">
-                  {scans.length}
-                </div>
-                <div className="text-xs font-medium text-muted-foreground">
-                  Total
+                <div className="text-2xl font-black text-blue-600">{selectedScans.length}</div>
+                <div className="text-xs font-medium text-muted-foreground">Selected</div>
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={requestDeleteSelectedScans}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    requestDeleteSelectedScans();
+                  }
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setIsOverBin(true);
+                }}
+                onDragEnter={() => setIsOverBin(true)}
+                onDragLeave={() => setIsOverBin(false)}
+                onDrop={(event) => void handleTrashDrop(event)}
+                className={cn(
+                  "flex min-h-[86px] cursor-pointer items-center gap-3 rounded border border-dashed p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  selectedScans.length > 0
+                    ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300"
+                    : "bg-muted/30 text-muted-foreground",
+                  isOverBin && "scale-[1.02] border-red-500 bg-red-100 ring-2 ring-red-200 dark:bg-red-950/40",
+                  isDroppedInBin && "animate-bounce",
+                )}
+              >
+                <img src={binImage} alt="Trash bin" className="h-14 w-14 shrink-0 object-contain" />
+                <div className="min-w-0">
+                  <div className="text-sm font-bold">Delete scans</div>
+                  <div className="text-xs font-medium">{trashTileLabel}</div>
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
-      {/* Scanned-in employees (transferable) */}
-      {selectedSiteId && (
+      {selectedSiteId ? (
+        <div className="grid gap-4 xl:grid-cols-[minmax(360px,0.95fr)_minmax(420px,1.35fr)]">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Employees ({filteredScans.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Site-photo closed rows can be deleted. Only open scans can be transferred.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    aria-label="Select all visible employees"
+                    checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                    onCheckedChange={(checked) => toggleVisible(checked === true)}
+                  />
+                  <span className="text-xs text-muted-foreground">All</span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingScans ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredScans.length === 0 ? (
+                <div className="rounded border border-dashed py-16 text-center text-sm text-muted-foreground">
+                  No employee scans match this view.
+                </div>
+              ) : (
+                <div
+                  draggable={selectedScans.length > 0}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  className={cn(
+                    "space-y-2 rounded border border-dashed p-2 transition-colors",
+                    selectedScans.length > 0 && "cursor-grab border-primary/40 bg-primary/5 active:cursor-grabbing",
+                  )}
+                >
+                  {selectedScans.length > 0 ? (
+                    <div className="flex items-center justify-between rounded bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      <span>{selectedScans.length} selected</span>
+                      <span className="inline-flex items-center gap-1">
+                        <GripVertical className="h-3.5 w-3.5" />
+                        Drag selected group
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {filteredScans.map((scan) => {
+                    const selected = selectedScanIdSet.has(scan.id);
+                    return (
+                      <div
+                        key={scan.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => toggleScan(scan.id, !selected)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleScan(scan.id, !selected);
+                          }
+                        }}
+                        className={cn(
+                          "flex w-full cursor-pointer items-center gap-3 rounded border bg-background p-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          selected && "border-primary bg-primary/10",
+                        )}
+                      >
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(checked) => toggleScan(scan.id, checked === true)}
+                          onClick={(event) => event.stopPropagation()}
+                          aria-label={`Select ${scan.employeeName}`}
+                        />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted text-sm font-semibold">
+                          {scan.employeePhotoUrl ? (
+                            <img
+                              src={scan.employeePhotoUrl}
+                              alt={scan.employeeName}
+                              className="h-10 w-10 rounded object-cover"
+                            />
+                          ) : (
+                            scan.employeeName
+                              .split(" ")
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold">{scan.employeeName}</div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>{scan.employeeCode}</span>
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {timeLabel(scan.scannedAt)}
+                            </span>
+                          </div>
+                        </div>
+                        {scan.isTransferred ? (
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            Transferred here
+                          </Badge>
+                        ) : null}
+                        {scan.isScannedOut ? (
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            Site photo closed
+                          </Badge>
+                        ) : (
+                          <Badge className="shrink-0 bg-green-600 text-xs hover:bg-green-600">
+                            Open scan
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <CardTitle>Destination Sites</CardTitle>
+                  <CardDescription>Drop selected employees onto a destination site.</CardDescription>
+                </div>
+                <div className="relative w-full md:w-72">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={siteSearch}
+                    onChange={(event) => setSiteSearch(event.target.value)}
+                    placeholder="Search destination sites..."
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid max-h-[640px] gap-3 overflow-auto pr-1 md:grid-cols-2">
+                {destinationSites.map((site) => {
+                  const state = foremenBySite[site.id] ?? emptyForemenState;
+                  const isOver = dragOverSiteId === site.id;
+                  const isTransferring = transferringSiteId === site.id;
+
+                  return (
+                    <div
+                      key={site.id}
+                      onDragEnter={() => setDragOverSiteId(site.id)}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        setDragOverSiteId(site.id);
+                      }}
+                      onDragLeave={() => setDragOverSiteId(null)}
+                      onDrop={async (event) => {
+                        event.preventDefault();
+                        setDragOverSiteId(null);
+                        setDragging(false);
+                        await requestTransferToSite(site.id);
+                      }}
+                      className={cn(
+                        "rounded border bg-background p-3 transition-colors",
+                        dragging && "border-dashed",
+                        isOver && "border-primary bg-primary/10 ring-2 ring-primary/20",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold">{siteLabel(site)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {state.loaded
+                              ? state.foremen.length
+                                ? `${state.foremen.length} foreman option${state.foremen.length === 1 ? "" : "s"}`
+                                : "No foreman assigned"
+                              : "Foreman loads on hover/drop"}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          disabled={state.loading}
+                          onClick={() => void ensureForemenForSite(site.id)}
+                        >
+                          {state.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Load"}
+                        </Button>
+                      </div>
+
+                      {state.loaded && state.foremen.length > 1 ? (
+                        <div className="mt-3">
+                          <Select
+                            value={state.selectedForemanId}
+                            onValueChange={(value) => setSiteForeman(site.id, value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select foreman" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {state.foremen.map((foreman) => (
+                                <SelectItem key={foreman.id} value={foreman.id}>
+                                  {foreman.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : null}
+
+                      {state.loaded && state.foremen.length === 1 ? (
+                        <div className="mt-3 rounded bg-muted/50 px-2 py-1.5 text-xs">
+                          {state.foremen[0].name}
+                        </div>
+                      ) : null}
+
+                      <Button
+                        type="button"
+                        className="mt-3 w-full gap-2"
+                        size="sm"
+                        disabled={selectedTransferScans.length === 0 || state.loading || isTransferring}
+                        onMouseEnter={() => void ensureForemenForSite(site.id)}
+                        onClick={() => void requestTransferToSite(site.id)}
+                      >
+                        {isTransferring ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowRightLeft className="h-4 w-4" />
+                        )}
+                        Transfer Here
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
         <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <CardContent className="py-16 text-center text-sm text-muted-foreground">
+            Select a source site to start transferring employees.
+          </CardContent>
+        </Card>
+      )}
+
+      {showTrashBin ? (
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            setIsOverBin(true);
+          }}
+          onDragEnter={() => setIsOverBin(true)}
+          onDragLeave={() => setIsOverBin(false)}
+          onDrop={(event) => void handleTrashDrop(event)}
+          className={cn(
+            "fixed bottom-6 right-6 z-50 flex flex-col items-center transition-all duration-300",
+            isOverBin ? "scale-110" : "scale-100",
+            isDroppedInBin && "animate-bounce",
+          )}
+        >
+          <img
+            src={binImage}
+            alt="Trash bin"
+            className="h-36 w-36 object-contain drop-shadow-2xl md:h-40 md:w-40"
+          />
+          <div className="mt-1 rounded-full border bg-background px-3 py-1 text-xs font-semibold shadow">
+            {trashLabel}
+          </div>
+        </div>
+      ) : null}
+
+      <Sheet open={trashOpen} onOpenChange={setTrashOpen}>
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <img src="/trash/bin-closed.png" alt="Trash bin" className="h-12 w-12 object-contain" />
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Employees on Site ({scannedIn.length})
-                </CardTitle>
-                <CardDescription>
-                  These employees are currently scanned in and can be
-                  transferred.
-                </CardDescription>
+                <SheetTitle>Trash Bin</SheetTitle>
+                <SheetDescription>
+                  Deleted items stay here for 7 days before they are cleared automatically.
+                </SheetDescription>
               </div>
-              <Button
-                onClick={openBulkTransfer}
-                disabled={selectedTransferScans.length === 0}
-                className="gap-2 md:self-center"
-              >
-                <ArrowRightLeft className="h-4 w-4" />
-                Transfer Selected
-                {selectedTransferScans.length > 0
-                  ? ` (${selectedTransferScans.length})`
-                  : ""}
-              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {loadingScans ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </SheetHeader>
+
+          <div className="flex-1 overflow-auto px-4">
+            {loadingTrash ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Loading trash...
               </div>
-            ) : scannedIn.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                No employees currently scanned in at this site.
+            ) : trashItems.length === 0 ? (
+              <div className="rounded border border-dashed py-16 text-center text-sm text-muted-foreground">
+                The bin is empty.
               </div>
             ) : (
-              <div className="rounded border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12 border">
-                        <Checkbox
-                          aria-label="Select all visible employees"
-                          checked={
-                            allVisibleSelected
-                              ? true
-                              : someVisibleSelected
-                                ? "indeterminate"
-                                : false
-                          }
-                          onCheckedChange={(checked) =>
-                            toggleVisibleSelection(checked === true)
-                          }
-                        />
-                      </TableHead>
-                      <TableHead className="border">Employee</TableHead>
-                      <TableHead className="border">Code</TableHead>
-                      <TableHead className="border">Scanned In</TableHead>
-                      <TableHead className="border">Day Rate</TableHead>
-                      <TableHead className="border">Status</TableHead>
-                      <TableHead className="border text-right">
-                        Action
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {scannedIn.map((scan) => (
-                      <TableRow key={scan.id}>
-                        <TableCell className="border">
-                          <Checkbox
-                            aria-label={`Select ${scan.employeeName}`}
-                            checked={selectedScanIdSet.has(scan.id)}
-                            onCheckedChange={(checked) =>
-                              toggleScanSelection(scan.id, checked === true)
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="border font-medium">
-                          {scan.employeeName}
-                        </TableCell>
-                        <TableCell className="border text-sm text-muted-foreground">
-                          {scan.employeeCode}
-                        </TableCell>
-                        <TableCell className="border">
-                          <div className="flex items-center gap-1 text-sm">
-                            <Clock className="h-3 w-3" />
-                            {new Date(scan.scannedAt).toLocaleTimeString(
-                              "en-GB",
-                              { hour: "2-digit", minute: "2-digit" },
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="border text-sm">
-                          R{scan.dayRate}
-                        </TableCell>
-                        <TableCell className="border">
-                          {scan.isTransferred ? (
-                            <Badge variant="secondary" className="text-xs">
-                              ↗ Transferred here
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-xs text-emerald-600 border-emerald-300"
-                            >
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              On Site
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="border text-right">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => openTransfer(scan)}
-                            className="gap-1"
-                          >
-                            <ArrowRightLeft className="h-3 w-3" />
-                            Transfer
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-3">
+                {trashItems.map((item) => (
+                  <div key={item.id} className="rounded border bg-background p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold">{item.label}</div>
+                        {item.description ? (
+                          <div className="mt-0.5 text-xs text-muted-foreground">{item.description}</div>
+                        ) : null}
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-xs">
+                        {item.entityType}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                      <span>
+                        Deleted {new Date(item.deletedAt).toLocaleString("en-GB")}
+                        {item.deletedByName ? ` by ${item.deletedByName}` : ""}
+                      </span>
+                      <span>Auto clears {new Date(item.expiresAt).toLocaleString("en-GB")}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
 
-      {/* Scanned-out employees */}
-      {selectedSiteId && scannedOut.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground">
-              Scanned Out ({scannedOut.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="border">Employee</TableHead>
-                    <TableHead className="border">Code</TableHead>
-                    <TableHead className="border">Scanned In</TableHead>
-                    <TableHead className="border">Scanned Out</TableHead>
-                    <TableHead className="border">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {scannedOut.map((scan) => (
-                    <TableRow key={scan.id} className="opacity-60">
-                      <TableCell className="border font-medium">
-                        {scan.employeeName}
-                      </TableCell>
-                      <TableCell className="border text-sm text-muted-foreground">
-                        {scan.employeeCode}
-                      </TableCell>
-                      <TableCell className="border text-sm">
-                        {new Date(scan.scannedAt).toLocaleTimeString("en-GB", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </TableCell>
-                      <TableCell className="border text-sm">
-                        {scan.scannedOutAt
-                          ? new Date(scan.scannedOutAt).toLocaleTimeString(
-                              "en-GB",
-                              { hour: "2-digit", minute: "2-digit" },
-                            )
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="border">
-                        <Badge variant="secondary" className="text-xs">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Scanned Out
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Transfer Dialog */}
-      <Dialog
-        open={transferDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setTransferDialogOpen(false);
-            setSelectedScans([]);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowRightLeft className="h-5 w-5" />
-              Transfer Employee
-            </DialogTitle>
-            <DialogDescription>
-              Move{" "}
-              {selectedScans.length === 1
-                ? "this employee"
-                : `${selectedScans.length} selected employees`}{" "}
-              from <strong>{selectedSiteName}</strong> to another site.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedScans.length > 0 && (
-            <div className="space-y-4">
-              {/* Employee info */}
-              <div className="rounded border bg-muted/50 p-3">
-                <div className="font-semibold">
-                  {selectedScans.length === 1
-                    ? selectedScans[0].employeeName
-                    : `${selectedScans.length} employees selected`}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedScans.length === 1 ? (
-                    <>
-                  {selectedScan.employeeCode} • Scanned in:{" "}
-                  {new Date(selectedScan.scannedAt).toLocaleTimeString(
-                    "en-GB",
-                    { hour: "2-digit", minute: "2-digit" },
-                  )}
-                    </>
-                  ) : (
-                    <div className="mt-2 max-h-36 space-y-1 overflow-auto">
-                      {selectedScans.map((scan) => (
-                        <div key={scan.id}>{scan.employeeName}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Destination site */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Transfer to:
-                </label>
-                <Popover open={destSiteOpen} onOpenChange={setDestSiteOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={destSiteOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      {destinationSiteId
-                        ? (destinationSites.find(
-                            (s) => s.id === destinationSiteId,
-                          )?.name ?? "Select destination site...")
-                        : "Select destination site..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search sites…" />
-                      <CommandList>
-                        <CommandEmpty>No sites found.</CommandEmpty>
-                        <CommandGroup>
-                          {destinationSites.map((s) => (
-                            <CommandItem
-                              key={s.id}
-                              value={s.id}
-                              keywords={[s.name]}
-                              onSelect={() => {
-                                setDestinationSiteId(
-                                  s.id === destinationSiteId ? "" : s.id,
-                                );
-                                setDestSiteOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  destinationSiteId === s.id
-                                    ? "opacity-100"
-                                    : "opacity-0",
-                                )}
-                              />
-                              {s.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Foreman at destination site */}
-              {destinationSiteId && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Foreman at destination:
-                  </label>
-                  {loadingForemen ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading foremen...
-                    </div>
-                  ) : destForemen.length === 0 ? (
-                    <div className="text-sm text-destructive py-2">
-                      No foreman assigned to this site
-                    </div>
-                  ) : destForemen.length === 1 ? (
-                    <div className="rounded border bg-muted/50 p-2 text-sm">
-                      {destForemen[0].name}
-                    </div>
-                  ) : (
-                    <Popover open={foremanOpen} onOpenChange={setForemanOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={foremanOpen}
-                          className="w-full justify-between font-normal"
-                        >
-                          {selectedForemanId
-                            ? (destForemen.find(
-                                (f) => f.id === selectedForemanId,
-                              )?.name ?? "Select foreman...")
-                            : "Select foreman..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search foremen\u2026" />
-                          <CommandList>
-                            <CommandEmpty>No foremen found.</CommandEmpty>
-                            <CommandGroup>
-                              {destForemen.map((f) => (
-                                <CommandItem
-                                  key={f.id}
-                                  value={f.id}
-                                  keywords={[f.name]}
-                                  onSelect={() => {
-                                    setSelectedForemanId(
-                                      f.id === selectedForemanId ? "" : f.id,
-                                    );
-                                    setForemanOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      selectedForemanId === f.id
-                                        ? "opacity-100"
-                                        : "opacity-0",
-                                    )}
-                                  />
-                                  {f.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-              )}
-
-              {/* Reason */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Reason (optional):
-                </label>
-                <Textarea
-                  value={transferReason}
-                  onChange={(e) => setTransferReason(e.target.value)}
-                  placeholder="e.g. Site needs more workers"
-                  rows={2}
-                />
-              </div>
-
-              {/* Summary */}
-              {destinationSiteId && selectedForemanId && (
-                <div className="rounded border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 text-sm">
-                  <strong>
-                    {selectedScans.length === 1
-                      ? selectedScan.employeeName
-                      : `${selectedScans.length} employees`}
-                  </strong>{" "}
-                  will be transferred from <strong>{selectedSiteName}</strong>{" "}
-                  to{" "}
-                  <strong>{destinationSiteName}</strong> under foreman{" "}
-                  <strong>{selectedForemanName}</strong>. They will be able to
-                  clock out at the new site.
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
+          <SheetFooter>
             <Button
+              type="button"
               variant="outline"
-              onClick={() => setTransferDialogOpen(false)}
-              disabled={transferring}
+              onClick={() => void loadTrash()}
+              disabled={loadingTrash || clearingTrash}
             >
-              Cancel
+              {loadingTrash ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Refresh
             </Button>
             <Button
-              onClick={doTransfer}
-              disabled={
-                !destinationSiteId || !selectedForemanId || transferring
-              }
+              type="button"
+              variant="destructive"
+              disabled={trashItems.length === 0 || clearingTrash}
+              onClick={() => setPendingAction({ type: "clear-trash", employeeCount: trashItems.length })}
             >
-              {transferring ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Transferring...
-                </>
-              ) : (
-                <>
-                  <ArrowRightLeft className="h-4 w-4 mr-2" />
-                  {selectedScans.length === 1
-                    ? "Confirm Transfer"
-                    : `Transfer ${selectedScans.length}`}
-                </>
-              )}
+              {clearingTrash ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Clear Bin
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={pendingAction !== null} onOpenChange={(open) => !open && cancelPendingAction()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.type === "delete"
+                ? "Move selected scans to trash?"
+                : pendingAction?.type === "clear-trash"
+                  ? "Clear the trash bin?"
+                  : "Transfer selected employees?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction?.type === "delete"
+                ? `This will move ${pendingAction.employeeCount} selected attendance scan${
+                    pendingAction.employeeCount === 1 ? "" : "s"
+                  } for ${selectedSiteName || "this site"} to the trash bin. Trash items auto-clear after 7 days.`
+                : pendingAction?.type === "clear-trash"
+                  ? `This will permanently clear ${pendingAction.employeeCount} item${
+                      pendingAction.employeeCount === 1 ? "" : "s"
+                    } from the trash bin.`
+                : pendingAction
+                  ? `This will transfer ${pendingAction.employeeCount} open scan${
+                      pendingAction.employeeCount === 1 ? "" : "s"
+                    } from ${selectedSiteName || "the source site"} to ${pendingAction.siteName}.`
+                  : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelPendingAction}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={pendingAction?.type === "delete" || pendingAction?.type === "clear-trash" ? "destructive" : "default"}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmPendingAction();
+              }}
+            >
+              {pendingAction?.type === "delete"
+                ? "Move to Trash"
+                : pendingAction?.type === "clear-trash"
+                  ? "Clear Bin"
+                  : "Transfer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

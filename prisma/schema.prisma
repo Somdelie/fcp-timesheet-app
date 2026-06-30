@@ -653,6 +653,23 @@ model AttendanceScan {
   @@index([earlySignOutCapturedByUserId])
 }
 
+model TrashItem {
+  id              String   @id @default(cuid())
+  entityType      String
+  entityId        String
+  label           String
+  description     String?
+  metadata        Json     @default("{}")
+  deletedByUserId String?
+  deletedByName   String?
+  deletedAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  @@index([entityType])
+  @@index([deletedAt])
+  @@index([expiresAt])
+}
+
 //
 // ============================
 // RANDOM GROUP PHOTO REQUESTS + SUBMISSIONS

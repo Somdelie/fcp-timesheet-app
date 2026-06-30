@@ -171,9 +171,9 @@ async function buildWorkbook(dto: FinishingSchedulePdfDto): Promise<ExcelJS.Work
     ["Site", dto.siteName],
     ["Contract No", dto.contractNo],
     ["Site Address", dto.siteAddress],
-    ["FCP Contract Mgr", dto.contractManager],
+    ["FCP Contract Mgr", dto.fcpContractManager],
     ["FCP QS", dto.fcpQs],
-    ["FCP Foreman", dto.siteForeman],
+    ["FCP Foreman", dto.fcpSiteForeman],
   ];
   const metaRight = [
     ["Client", dto.client],

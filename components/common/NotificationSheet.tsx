@@ -100,14 +100,18 @@ export function NotificationSheet() {
     <>
       <Button
         variant="ghost"
-        size="sm"
-        className="relative"
+        size="icon"
+        className="group relative bg-transparent hover:bg-transparent"
         onClick={handleOpen}
       >
-        <Bell className="h-4 w-4" />
+        <img
+          src="/icons-3d/bell.png"
+          alt=""
+          className="h-8 w-8 object-contain drop-shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:rotate-[-6deg] group-hover:scale-110 group-active:translate-y-0 group-active:scale-95"
+        />
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
-            {count}
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white/80 bg-gradient-to-b from-red-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-[0_3px_0_rgba(127,29,29,0.85),0_7px_12px_rgba(0,0,0,0.25)] ring-2 ring-background transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110">
+            {count > 99 ? "99+" : count}
           </span>
         )}
       </Button>

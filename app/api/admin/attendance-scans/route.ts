@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
@@ -124,6 +125,7 @@ export async function GET(req: Request) {
         select: {
           id: true,
           name: true,
+          code: true,
           supervisorAssignments: {
             where: {
               startsOn: { lte: now },
@@ -170,6 +172,7 @@ export async function GET(req: Request) {
       employeePhotoUrl: scan.employee.faceImageUrl ?? null,
       siteId: scan.site.id,
       siteName: scan.site.name,
+      siteCode: scan.site.code,
       foremanId: scan.siteDay.foreman.id,
       foremanName: scan.siteDay.foreman.user.name ?? "Unknown",
       supervisorId: supervisorAssignment?.supervisor.id ?? null,
@@ -194,21 +197,22 @@ export async function GET(req: Request) {
   }
 
   // ── Build dropdown options from the full filtered result ────────────
-  const sitesMap = new Map<string, string>();
+  const sitesMap = new Map<string, { name: string; code: string | null }>();
   const foremenMap = new Map<string, string>();
   const supervisorsMap = new Map<string, string>();
 
   for (const scan of result) {
-    sitesMap.set(scan.siteId, scan.siteName);
+    sitesMap.set(scan.siteId, { name: scan.siteName, code: scan.siteCode });
     foremenMap.set(scan.foremanId, scan.foremanName);
     if (scan.supervisorId && scan.supervisorName) {
       supervisorsMap.set(scan.supervisorId, scan.supervisorName);
     }
   }
 
-  const sites = Array.from(sitesMap.entries()).map(([id, name]) => ({
+  const sites = Array.from(sitesMap.entries()).map(([id, site]) => ({
     id,
-    name,
+    name: site.name,
+    code: site.code,
   }));
   const foremen = Array.from(foremenMap.entries()).map(([id, name]) => ({
     id,
@@ -257,7 +261,108 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    await prisma.attendanceScan.delete({ where: { id } });
+    const scan = await prisma.attendanceScan.findUnique({
+      where: { id },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            qrCodeValue: true,
+          },
+        },
+        site: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        siteDay: {
+          select: {
+            id: true,
+            workDate: true,
+            foreman: {
+              select: {
+                id: true,
+                user: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!scan) {
+      return NextResponse.json(
+        { error: "Attendance scan not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
+    }
+
+    const employeeName = `${scan.employee.firstName} ${scan.employee.lastName}`.trim();
+    const siteName = scan.site.code ? `${scan.site.code} - ${scan.site.name}` : scan.site.name;
+    const deletedAt = new Date();
+    const expiresAt = new Date(deletedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const metadata = JSON.stringify({
+      attendanceScan: {
+        id: scan.id,
+        employeeId: scan.employeeId,
+        employeeName,
+        employeeCode: scan.employee.qrCodeValue,
+        siteId: scan.siteId,
+        siteName: scan.site.name,
+        siteCode: scan.site.code,
+        siteDayId: scan.siteDayId,
+        foremanId: scan.siteDay.foreman.id,
+        foremanName: scan.siteDay.foreman.user.name,
+        workDateISO: scan.workDate.toISOString(),
+        scannedAtISO: scan.scannedAt.toISOString(),
+        scannedOutAtISO: scan.scannedOutAt?.toISOString() ?? null,
+        direction: scan.direction,
+        scanType: scan.scanType,
+        dayRateAtScan: scan.dayRateAtScan.toString(),
+        team: scan.team,
+        overtimeType: scan.overtimeType,
+        manualReason: scan.manualReason,
+        transferredFromSiteId: scan.transferredFromSiteId,
+        transferredFromScanId: scan.transferredFromScanId,
+        transferredAtISO: scan.transferredAt?.toISOString() ?? null,
+      },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        INSERT INTO "TrashItem" (
+          "id",
+          "entityType",
+          "entityId",
+          "label",
+          "description",
+          "metadata",
+          "deletedByUserId",
+          "deletedByName",
+          "deletedAt",
+          "expiresAt"
+        )
+        VALUES (
+          ${randomUUID()},
+          ${"attendance-scan"},
+          ${scan.id},
+          ${employeeName},
+          ${`${siteName} - ${scan.workDate.toISOString().slice(0, 10)}`},
+          CAST(${metadata} AS jsonb),
+          ${user.id},
+          ${user.name ?? user.email ?? "Admin"},
+          ${deletedAt},
+          ${expiresAt}
+        )
+      `;
+
+      await tx.attendanceScan.delete({ where: { id } });
+    });
+
     return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
   } catch (e: any) {
     console.error("Error deleting attendance scan", e);
