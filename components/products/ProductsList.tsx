@@ -6,6 +6,7 @@ import {
   Search,
   X,
   RotateCw,
+  Printer,
   Package,
   Wrench,
   ChevronUp,
@@ -51,6 +52,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { printCatalogue, type CataloguePrintRow } from "@/lib/generateCataloguePrint";
 import ProductRowActions from "@/components/products/ProductRowActions";
 
 export interface AdminProductDto {
@@ -346,6 +348,36 @@ function ProductTable({
   });
 
   const label = tab === "PPE" ? "PPE items" : "tools";
+  const title = tab === "PPE" ? "JHB PPE Catalogue" : "JHB Tools Catalogue";
+  const printableRows: CataloguePrintRow[] = table
+    .getSortedRowModel()
+    .rows.map(({ original: product }) => ({
+      name: product.name,
+      sku: product.sku,
+      variantText:
+        [
+          product.sizes.length ? `Sizes: ${product.sizes.join(", ")}` : "",
+          product.colors.length ? `Colors: ${product.colors.join(", ")}` : "",
+        ]
+          .filter(Boolean)
+          .join(" | ") || null,
+      stockQty: product.stockQty ?? 0,
+      price: formatCurrency(Number(product.price)),
+      status: showStatus ? (product.isActive ? "Active" : "Inactive") : null,
+      notes: product.description,
+    }));
+
+  function handlePrint() {
+    if (printableRows.length === 0) {
+      toast.info(`No ${label} to print`);
+      return;
+    }
+
+    if (!printCatalogue({ title, subtitle: q ? `Filtered by "${q}"` : undefined, rows: printableRows })) {
+      toast.error("Allow pop-ups to print");
+    }
+  }
+
   const detailRows = React.useMemo(() => {
     if (!detail) return [];
 
@@ -397,6 +429,17 @@ function ProductTable({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            onClick={handlePrint}
+            className="gap-1.5"
+          >
+            <Printer className="h-4 w-4" />
+            <span className="text-xs font-medium">Print</span>
+          </Button>
           <Button
             type="button"
             variant="outline"

@@ -16,6 +16,7 @@ import {
   Search,
   X,
   Plus,
+  Printer,
   Pencil,
   Truck,
   ShoppingCart,
@@ -63,6 +64,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { printCatalogue, type CataloguePrintRow } from "@/lib/generateCataloguePrint";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -680,6 +682,47 @@ export default function CapeTownStockPage({
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const printableRows: CataloguePrintRow[] = table
+    .getSortedRowModel()
+    .rows.map(({ original: item }) => {
+      const pending = item.orders.filter(
+        (order) => order.status === "PENDING" || order.status === "ORDERED",
+      );
+
+      return {
+        name: item.name,
+        variantText:
+          [
+            item.sizes.length ? `Sizes: ${item.sizes.join(", ")}` : "",
+            item.colors.length ? `Colours: ${item.colors.join(", ")}` : "",
+          ]
+            .filter(Boolean)
+            .join(" | ") || null,
+        stockQty: item.quantity,
+        unit: item.unit,
+        onOrder: pending.reduce((sum, order) => sum + order.qty, 0),
+        notes: item.notes,
+      };
+    });
+
+  function handlePrint() {
+    const label = activeTab === "PPE" ? "PPE" : "Tools";
+    if (printableRows.length === 0) {
+      toast.info(`No Cape Town ${label.toLowerCase()} to print`);
+      return;
+    }
+
+    if (
+      !printCatalogue({
+        title: `Cape Town ${label} Catalogue`,
+        subtitle: search ? `Filtered by "${search}"` : undefined,
+        rows: printableRows,
+      })
+    ) {
+      toast.error("Allow pop-ups to print");
+    }
+  }
+
   // ── Derived variant selectors ─────────────────────────────────────────────
 
   const deployAvailableQty = useMemo(
@@ -754,6 +797,9 @@ export default function CapeTownStockPage({
               <Input placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 pl-8 text-sm" />
             </div>
             {search && <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-3" onClick={handlePrint} disabled={loading}>
+              <Printer className="h-3.5 w-3.5" />Print
+            </Button>
             <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => { setAddCategory(activeTab); setAddForm({ name: "", quantity: 0, unit: "", notes: "", sizes: [], colors: [] }); setAddOpen(true); }}>
               <Plus className="h-3.5 w-3.5" />Add {activeTab === "PPE" ? "PPE" : "Tool"}
             </Button>
