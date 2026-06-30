@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from "react";
 import { toast } from "react-toastify";
 import {
   RotateCw,
@@ -28,8 +34,10 @@ import { cn } from "@/lib/utils";
 import {
   printSupervisorPlantList,
   printSupervisorPlantLists,
+  printSelectedPlantItems,
 } from "@/lib/generatePlantListPrint";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -169,8 +177,7 @@ function groupAssignmentsByProductName(
 ): SupervisorAssignmentRow[] {
   const grouped = new Map<string, Assignment[]>();
   assignments.forEach((assignment) => {
-    const normalizedName = assignment.product.name.trim().toLowerCase();
-    const key = normalizedName || assignment.product.id;
+    const key = productKey(assignment.product.name) || assignment.product.id;
     const existing = grouped.get(key) ?? [];
     existing.push(assignment);
     grouped.set(key, existing);
@@ -194,6 +201,10 @@ function groupAssignmentsByProductName(
       childAssignments: sorted,
     };
   });
+}
+
+function productKey(name: string): string {
+  return name.trim().toLowerCase();
 }
 
 export default function PlantPage() {
@@ -283,7 +294,7 @@ export default function PlantPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full">
       <div className="rounded border border-muted/50 bg-card">
         <div className="flex border-b border-border overflow-x-auto">
           <PlantTab
@@ -312,7 +323,12 @@ export default function PlantPage() {
               <Printer className="h-4 w-4" />
               Print All x4
             </Button>
-            <Button variant="ghost" size="icon" onClick={load} className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={load}
+              className="h-8 w-8"
+            >
               <RotateCw className={cn("h-4 w-4", loading && "animate-spin")} />
             </Button>
           </div>
@@ -329,6 +345,7 @@ export default function PlantPage() {
             <SupervisorTab
               supervisor={activeSupervisor}
               assignments={supervisorAssignments.get(activeTab) ?? []}
+              allAssignments={assignments}
               allSupervisors={supervisors}
               onRefresh={load}
             />
@@ -411,16 +428,40 @@ function PaginationBar({
           : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} of ${total}`}
       </span>
       <div className="flex items-center gap-1">
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onPage(0)} disabled={page === 0}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onPage(0)}
+          disabled={page === 0}
+        >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onPage(page - 1)} disabled={page === 0}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onPage(page - 1)}
+          disabled={page === 0}
+        >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onPage(page + 1)} disabled={page >= totalPages - 1}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onPage(page + 1)}
+          disabled={page >= totalPages - 1}
+        >
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => onPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onPage(totalPages - 1)}
+          disabled={page >= totalPages - 1}
+        >
           <ChevronsRight className="h-4 w-4" />
         </Button>
       </div>
@@ -428,7 +469,13 @@ function PaginationBar({
   );
 }
 
-function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: () => void }) {
+function OfficeTab({
+  items,
+  onRefresh,
+}: {
+  items: OfficePlantItem[];
+  onRefresh: () => void;
+}) {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<"name" | "atOffice">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -442,7 +489,10 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
 
   function toggleSort(f: "name" | "atOffice") {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortField(f); setSortDir("asc"); }
+    else {
+      setSortField(f);
+      setSortDir("asc");
+    }
     setPage(0);
   }
 
@@ -491,18 +541,24 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
   const processed = useMemo(() => {
     const term = search.trim().toLowerCase();
     const rows = term
-      ? items.filter((p) => p.name.toLowerCase().includes(term) || (p.sku ?? "").toLowerCase().includes(term))
+      ? items.filter(
+          (p) =>
+            p.name.toLowerCase().includes(term) ||
+            (p.sku ?? "").toLowerCase().includes(term),
+        )
       : items;
     return [...rows].sort((a, b) => {
       const cmp =
         sortField === "name"
           ? a.name.localeCompare(b.name)
-          : (a.stockQty - a.deployedQty) - (b.stockQty - b.deployedQty);
+          : a.stockQty - a.deployedQty - (b.stockQty - b.deployedQty);
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [items, search, sortField, sortDir]);
 
-  useEffect(() => { setPage(0); }, [search]);
+  useEffect(() => {
+    setPage(0);
+  }, [search]);
 
   const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
   const paged = processed.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -518,7 +574,10 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
           className="pl-9"
         />
         {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         )}
@@ -535,14 +594,35 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
             <TableHeader className="bg-muted/60">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="border-r py-2 px-4">
-                  <SortBtn field="name" active={sortField === "name"} dir={sortDir} onToggle={() => toggleSort("name")}>Item Name</SortBtn>
+                  <SortBtn
+                    field="name"
+                    active={sortField === "name"}
+                    dir={sortDir}
+                    onToggle={() => toggleSort("name")}
+                  >
+                    Item Name
+                  </SortBtn>
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-32">Total Owned</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-28">Deployed</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-32">
+                  Total Owned
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-center border-r w-28">
+                  Deployed
+                </TableHead>
                 <TableHead className="border-r py-2 px-4 w-28">
-                  <SortBtn field="atOffice" active={sortField === "atOffice"} dir={sortDir} onToggle={() => toggleSort("atOffice")} center>At Office</SortBtn>
+                  <SortBtn
+                    field="atOffice"
+                    active={sortField === "atOffice"}
+                    dir={sortDir}
+                    onToggle={() => toggleSort("atOffice")}
+                    center
+                  >
+                    At Office
+                  </SortBtn>
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide w-20 py-2 px-4">Actions</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide w-20 py-2 px-4">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -553,7 +633,11 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
                     <TableCell className="font-medium border-r py-2">
                       <div className="flex items-center gap-2.5">
                         {p.thumbnailUrl ? (
-                          <img src={p.thumbnailUrl} alt={p.name} className="h-8 w-8 rounded object-cover flex-shrink-0" />
+                          <img
+                            src={p.thumbnailUrl}
+                            alt={p.name}
+                            className="h-8 w-8 rounded object-cover flex-shrink-0"
+                          />
                         ) : (
                           <div className="h-8 w-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
                             <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
@@ -561,7 +645,11 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
                         )}
                         <div>
                           <div className="text-sm font-medium">{p.name}</div>
-                          {p.sku && <div className="text-xs text-muted-foreground">{p.sku}</div>}
+                          {p.sku && (
+                            <div className="text-xs text-muted-foreground">
+                              {p.sku}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -577,11 +665,15 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
                     </TableCell>
                     <TableCell className="text-center py-2">
                       {atOffice < 0 ? (
-                        <span className="text-xs font-medium text-destructive">{atOffice}</span>
+                        <span className="text-xs font-medium text-destructive">
+                          {atOffice}
+                        </span>
                       ) : atOffice === 0 ? (
                         <span className="text-xs text-muted-foreground">0</span>
                       ) : (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300 border-0">{atOffice}</Badge>
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300 border-0">
+                          {atOffice}
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell className="py-2 px-3">
@@ -600,22 +692,35 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
               })}
             </TableBody>
           </Table>
-          <PaginationBar page={page} totalPages={totalPages} total={processed.length} onPage={setPage} />
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={processed.length}
+            onPage={setPage}
+          />
         </div>
       )}
 
       {/* Merge Dialog */}
-      <Dialog open={!!mergeSource} onOpenChange={(o) => { if (!o) setMergeSource(null); }}>
+      <Dialog
+        open={!!mergeSource}
+        onOpenChange={(o) => {
+          if (!o) setMergeSource(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Merge Product</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded border bg-muted/30 p-3 text-sm">
-              <div className="text-xs text-muted-foreground mb-0.5">Merging (will be deleted)</div>
+              <div className="text-xs text-muted-foreground mb-0.5">
+                Merging (will be deleted)
+              </div>
               <div className="font-medium">{mergeSource?.name}</div>
               <div className="text-xs text-muted-foreground mt-1">
-                {mergeSource?.stockQty ?? 0} units owned · {mergeSource?.deployedQty ?? 0} deployed
+                {mergeSource?.stockQty ?? 0} units owned ·{" "}
+                {mergeSource?.deployedQty ?? 0} deployed
               </div>
             </div>
 
@@ -626,13 +731,18 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
                 <Input
                   placeholder="Search target product…"
                   value={mergeSearch}
-                  onChange={(e) => { setMergeSearch(e.target.value); setMergeTargetId(""); }}
+                  onChange={(e) => {
+                    setMergeSearch(e.target.value);
+                    setMergeTargetId("");
+                  }}
                   className="pl-9"
                 />
               </div>
               <div className="max-h-48 overflow-y-auto rounded border divide-y text-sm">
                 {mergeTargetOptions.length === 0 ? (
-                  <div className="py-4 text-center text-muted-foreground text-xs">No products found</div>
+                  <div className="py-4 text-center text-muted-foreground text-xs">
+                    No products found
+                  </div>
                 ) : (
                   mergeTargetOptions.map((p) => (
                     <button
@@ -646,31 +756,39 @@ function OfficeTab({ items, onRefresh }: { items: OfficePlantItem[]; onRefresh: 
                       }`}
                     >
                       <span className="font-medium">{p.name}</span>
-                      <span className="text-xs text-muted-foreground">{p.stockQty} owned</span>
+                      <span className="text-xs text-muted-foreground">
+                        {p.stockQty} owned
+                      </span>
                     </button>
                   ))
                 )}
               </div>
             </div>
 
-            {mergeTargetId && (() => {
-              const tgt = items.find((p) => p.id === mergeTargetId);
-              return tgt ? (
-                <div className="rounded border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
-                  <div className="font-semibold">After merge:</div>
-                  <div>
-                    <span className="font-medium">{tgt.name}</span> will have{" "}
-                    <span className="font-medium">{(tgt.stockQty ?? 0) + (mergeSource?.stockQty ?? 0)}</span> units owned.
+            {mergeTargetId &&
+              (() => {
+                const tgt = items.find((p) => p.id === mergeTargetId);
+                return tgt ? (
+                  <div className="rounded border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                    <div className="font-semibold">After merge:</div>
+                    <div>
+                      <span className="font-medium">{tgt.name}</span> will have{" "}
+                      <span className="font-medium">
+                        {(tgt.stockQty ?? 0) + (mergeSource?.stockQty ?? 0)}
+                      </span>{" "}
+                      units owned.
+                    </div>
+                    <div className="mt-1 font-medium">
+                      "{mergeSource?.name}" will be permanently deleted.
+                    </div>
                   </div>
-                  <div className="mt-1 font-medium">
-                    "{mergeSource?.name}" will be permanently deleted.
-                  </div>
-                </div>
-              ) : null;
-            })()}
+                ) : null;
+              })()}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMergeSource(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setMergeSource(null)}>
+              Cancel
+            </Button>
             <Button
               variant="destructive"
               onClick={handleMerge}
@@ -690,11 +808,13 @@ type EditMode = "edit" | "return" | "transfer";
 function SupervisorTab({
   supervisor,
   assignments,
+  allAssignments,
   allSupervisors,
   onRefresh,
 }: {
   supervisor: Supervisor;
   assignments: Assignment[];
+  allAssignments: Assignment[];
   allSupervisors: Supervisor[];
   onRefresh: () => void;
 }) {
@@ -729,8 +849,13 @@ function SupervisorTab({
   const [transferSaving, setTransferSaving] = useState(false);
 
   const [reprinting, setReprinting] = useState<string | null>(null);
+  const [selectedProductKeys, setSelectedProductKeys] = useState<
+    Set<string>
+  >(() => new Set());
 
-  const transferSupervisors = allSupervisors.filter((s) => s.id !== supervisor.id);
+  const transferSupervisors = allSupervisors.filter(
+    (s) => s.id !== supervisor.id,
+  );
   const transferSites = useMemo(
     () => allSupervisors.find((s) => s.id === transferSupId)?.sites ?? [],
     [allSupervisors, transferSupId],
@@ -738,7 +863,10 @@ function SupervisorTab({
 
   function toggleSort(f: "name" | "qty") {
     if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortField(f); setSortDir("asc"); }
+    else {
+      setSortField(f);
+      setSortDir("asc");
+    }
     setPage(0);
   }
 
@@ -770,12 +898,19 @@ function SupervisorTab({
     if (!editTarget) return;
     setEditSaving(true);
     try {
-      const res = await fetch(`/api/app/admin/plant-assignments/${editTarget.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: editStatus, quantity: Number(editQty), note: editNote }),
-      });
+      const res = await fetch(
+        `/api/app/admin/plant-assignments/${editTarget.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            status: editStatus,
+            quantity: Number(editQty),
+            note: editNote,
+          }),
+        },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to update");
       toast.success("Assignment updated");
@@ -792,12 +927,19 @@ function SupervisorTab({
     if (!editTarget) return;
     setReturnSaving(true);
     try {
-      const res = await fetch(`/api/app/admin/plant-assignments/${editTarget.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: "RETURNED", quantity: Number(returnQty), note: returnNote || undefined }),
-      });
+      const res = await fetch(
+        `/api/app/admin/plant-assignments/${editTarget.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            status: "RETURNED",
+            quantity: Number(returnQty),
+            note: returnNote || undefined,
+          }),
+        },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to return");
       toast.success(`${editTarget.product.name} returned to office`);
@@ -814,12 +956,19 @@ function SupervisorTab({
     if (!editTarget || !transferSiteId) return;
     setTransferSaving(true);
     try {
-      const res = await fetch(`/api/app/admin/plant-assignments/${editTarget.id}/transfer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ toSiteId: transferSiteId, quantity: Number(transferQty), note: transferNote || undefined }),
-      });
+      const res = await fetch(
+        `/api/app/admin/plant-assignments/${editTarget.id}/transfer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            toSiteId: transferSiteId,
+            quantity: Number(transferQty),
+            note: transferNote || undefined,
+          }),
+        },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Failed to transfer");
       toast.success("Plant transferred successfully");
@@ -834,13 +983,18 @@ function SupervisorTab({
 
   async function handleReprint(a: Assignment) {
     setReprinting(a.id);
-    const childAssignments = (a as SupervisorAssignmentRow).childAssignments ?? [a];
+    const childAssignments = (a as SupervisorAssignmentRow)
+      .childAssignments ?? [a];
     const pad = (n: number) => String(n).padStart(2, "0");
     const deployed = new Date(a.deployedOn);
     const orderNumber =
       a.reference ??
       `PO-${deployed.getFullYear()}${pad(deployed.getMonth() + 1)}${pad(deployed.getDate())}-${a.id.slice(-4).toUpperCase()}`;
-    const issuedDate = deployed.toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" });
+    const issuedDate = deployed.toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
     const voucherData = {
       orderNumber,
       issuedDate,
@@ -892,26 +1046,118 @@ function SupervisorTab({
   const processed = useMemo(() => {
     const term = search.trim().toLowerCase();
     const rows = term
-      ? groupedAssignments.filter((a) => a.product.name.toLowerCase().includes(term))
+      ? groupedAssignments.filter((a) =>
+          a.product.name.toLowerCase().includes(term),
+        )
       : groupedAssignments;
     return [...rows].sort((a, b) => {
-      const cmp = sortField === "name"
-        ? a.product.name.localeCompare(b.product.name)
-        : a.quantity - b.quantity;
+      const cmp =
+        sortField === "name"
+          ? a.product.name.localeCompare(b.product.name)
+          : a.quantity - b.quantity;
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [groupedAssignments, search, sortField, sortDir]);
 
-  useEffect(() => { setPage(0); }, [search]);
+  useEffect(() => {
+    setPage(0);
+  }, [search]);
 
   const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
   const paged = processed.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const selectedRows = processed.filter((a) =>
+    selectedProductKeys.has(productKey(a.product.name)),
+  );
+  const selectedPagedCount = paged.filter((a) =>
+    selectedProductKeys.has(productKey(a.product.name)),
+  ).length;
+  const allPagedSelected =
+    paged.length > 0 && selectedPagedCount === paged.length;
+  const somePagedSelected = selectedPagedCount > 0 && !allPagedSelected;
+
+  function toggleRowSelection(name: string, checked: boolean) {
+    const key = productKey(name);
+    setSelectedProductKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  function togglePageSelection(checked: boolean) {
+    setSelectedProductKeys((prev) => {
+      const next = new Set(prev);
+      paged.forEach((a) => {
+        const key = productKey(a.product.name);
+        if (checked) next.add(key);
+        else next.delete(key);
+      });
+      return next;
+    });
+  }
+
+  function handlePrintSelected() {
+    if (selectedProductKeys.size === 0) {
+      toast.info("Select one or more items to print");
+      return;
+    }
+
+    const selectedNames = new Map(
+      selectedRows.map((a) => [productKey(a.product.name), a.product.name]),
+    );
+    const supervisorBySite = new Map<string, string>();
+    allSupervisors.forEach((s) => {
+      s.sites.forEach((site) => {
+        supervisorBySite.set(site.id, s.name ?? s.id);
+      });
+    });
+
+    const distribution = new Map<
+      string,
+      { productName: string; quantity: number; supervisorName: string }
+    >();
+    allAssignments.forEach((assignment) => {
+      const key = productKey(assignment.product.name);
+      if (!selectedProductKeys.has(key)) return;
+
+      const supervisorName =
+        supervisorBySite.get(assignment.site.id) ??
+        assignment.supervisorName ??
+        "Unassigned";
+      const rowKey = `${key}__${supervisorName}`;
+      const existing = distribution.get(rowKey);
+      if (existing) {
+        existing.quantity += assignment.quantity;
+      } else {
+        distribution.set(rowKey, {
+          productName: selectedNames.get(key) ?? assignment.product.name,
+          quantity: assignment.quantity,
+          supervisorName,
+        });
+      }
+    });
+
+    const items = Array.from(distribution.values()).sort((a, b) => {
+      const itemCmp = a.productName.localeCompare(b.productName);
+      return itemCmp || a.supervisorName.localeCompare(b.supervisorName);
+    });
+
+    if (items.length === 0) {
+      toast.info("No deployed quantities found for the selected items");
+      return;
+    }
+
+    printSelectedPlantItems(items);
+  }
 
   if (assignments.length === 0) {
     return (
       <div className="py-16 text-center text-muted-foreground">
         <Wrench className="mx-auto h-6 w-6 mb-2 opacity-30" />
-        <p>No plant currently deployed to {supervisor.name ?? "this supervisor"}</p>
+        <p>
+          No plant currently deployed to {supervisor.name ?? "this supervisor"}
+        </p>
       </div>
     );
   }
@@ -928,31 +1174,84 @@ function SupervisorTab({
             className="pl-9"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={handlePrintAll} className="ml-auto gap-1.5 shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrintSelected}
+          disabled={selectedProductKeys.size === 0}
+          className="ml-auto gap-1.5 shrink-0"
+        >
+          <Printer className="h-4 w-4" />
+          Print Selected
+          {selectedProductKeys.size ? ` (${selectedProductKeys.size})` : ""}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrintAll}
+          className="gap-1.5 shrink-0"
+        >
           <Printer className="h-4 w-4" />
           Print List
         </Button>
       </div>
 
       {paged.length === 0 ? (
-        <div className="py-10 text-center text-muted-foreground">No items match your search</div>
+        <div className="py-10 text-center text-muted-foreground">
+          No items match your search
+        </div>
       ) : (
         <div className="rounded border overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/60">
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-12 border-r py-2 px-4">
+                  <Checkbox
+                    aria-label="Select visible items"
+                    checked={
+                      allPagedSelected
+                        ? true
+                        : somePagedSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(checked) =>
+                      togglePageSelection(checked === true)
+                    }
+                  />
+                </TableHead>
                 <TableHead className="border-r py-2 px-4">
-                  <SortBtn field="name" active={sortField === "name"} dir={sortDir} onToggle={() => toggleSort("name")}>Item Name</SortBtn>
+                  <SortBtn
+                    field="name"
+                    active={sortField === "name"}
+                    dir={sortDir}
+                    onToggle={() => toggleSort("name")}
+                  >
+                    Item Name
+                  </SortBtn>
                 </TableHead>
                 <TableHead className="border-r py-2 px-4 w-32">
-                  <SortBtn field="qty" active={sortField === "qty"} dir={sortDir} onToggle={() => toggleSort("qty")} center>Quantity</SortBtn>
+                  <SortBtn
+                    field="qty"
+                    active={sortField === "qty"}
+                    dir={sortDir}
+                    onToggle={() => toggleSort("qty")}
+                    center
+                  >
+                    Quantity
+                  </SortBtn>
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide w-24 py-2 px-4">Actions</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide w-24 py-2 px-4">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -961,7 +1260,20 @@ function SupervisorTab({
 
                 return (
                   <TableRow key={a.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium border-r py-2">{a.product.name}</TableCell>
+                    <TableCell className="w-12 border-r py-2 px-4">
+                      <Checkbox
+                        aria-label={`Select ${a.product.name}`}
+                        checked={selectedProductKeys.has(
+                          productKey(a.product.name),
+                        )}
+                        onCheckedChange={(checked) =>
+                          toggleRowSelection(a.product.name, checked === true)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium border-r py-2">
+                      {a.product.name}
+                    </TableCell>
                     <TableCell className="text-center border-r py-2">
                       <Badge variant="outline">{a.quantity}</Badge>
                     </TableCell>
@@ -972,16 +1284,15 @@ function SupervisorTab({
                           size="icon"
                           className="h-7 w-7"
                           title={
-                            isGrouped
-                              ? "Choose the assignment to edit"
-                              : "Edit"
+                            isGrouped ? "Choose the assignment to edit" : "Edit"
                           }
                           onClick={() => openRowEdit(a)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button
-                          variant="ghost" size="icon"
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-foreground"
                           title="Reprint voucher"
                           disabled={reprinting === a.id}
@@ -996,7 +1307,12 @@ function SupervisorTab({
               })}
             </TableBody>
           </Table>
-          <PaginationBar page={page} totalPages={totalPages} total={processed.length} onPage={setPage} />
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={processed.length}
+            onPage={setPage}
+          />
         </div>
       )}
 
@@ -1069,7 +1385,11 @@ function SupervisorTab({
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
-                {m === "edit" ? "Edit Details" : m === "return" ? "Return" : "Transfer"}
+                {m === "edit"
+                  ? "Edit Details"
+                  : m === "return"
+                    ? "Return"
+                    : "Transfer"}
               </button>
             ))}
           </div>
@@ -1080,19 +1400,40 @@ function SupervisorTab({
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={editStatus} onValueChange={setEditStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {EDIT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {EDIT_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Quantity</Label>
-                <Input type="number" min={1} value={editQty} onChange={(e) => setEditQty(Number(e.target.value))} />
+                <Input
+                  type="number"
+                  min={1}
+                  value={editQty}
+                  onChange={(e) => setEditQty(Number(e.target.value))}
+                />
               </div>
               <div className="space-y-1.5">
-                <Label>Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={2} placeholder="Add a note…" />
+                <Label>
+                  Note{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Textarea
+                  value={editNote}
+                  onChange={(e) => setEditNote(e.target.value)}
+                  rows={2}
+                  placeholder="Add a note…"
+                />
               </div>
             </div>
           )}
@@ -1101,7 +1442,10 @@ function SupervisorTab({
           {editMode === "return" && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Return plant to the office. Max available: <span className="font-medium text-foreground">{editTarget?.quantity}</span>
+                Return plant to the office. Max available:{" "}
+                <span className="font-medium text-foreground">
+                  {editTarget?.quantity}
+                </span>
               </p>
               <div className="space-y-1.5">
                 <Label>Quantity to return</Label>
@@ -1110,12 +1454,29 @@ function SupervisorTab({
                   min={1}
                   max={editTarget?.quantity ?? 1}
                   value={returnQty}
-                  onChange={(e) => setReturnQty(Math.min(Number(e.target.value), editTarget?.quantity ?? 1))}
+                  onChange={(e) =>
+                    setReturnQty(
+                      Math.min(
+                        Number(e.target.value),
+                        editTarget?.quantity ?? 1,
+                      ),
+                    )
+                  }
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Textarea value={returnNote} onChange={(e) => setReturnNote(e.target.value)} rows={2} placeholder="Reason for return…" />
+                <Label>
+                  Note{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Textarea
+                  value={returnNote}
+                  onChange={(e) => setReturnNote(e.target.value)}
+                  rows={2}
+                  placeholder="Reason for return…"
+                />
               </div>
             </div>
           )}
@@ -1124,18 +1485,28 @@ function SupervisorTab({
           {editMode === "transfer" && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Transfer to another supervisor's site. Max available: <span className="font-medium text-foreground">{editTarget?.quantity}</span>
+                Transfer to another supervisor's site. Max available:{" "}
+                <span className="font-medium text-foreground">
+                  {editTarget?.quantity}
+                </span>
               </p>
               <div className="space-y-1.5">
                 <Label>To Supervisor</Label>
                 <Select
                   value={transferSupId}
-                  onValueChange={(v) => { setTransferSupId(v); setTransferSiteId(""); }}
+                  onValueChange={(v) => {
+                    setTransferSupId(v);
+                    setTransferSiteId("");
+                  }}
                 >
-                  <SelectTrigger><SelectValue placeholder="Select supervisor…" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select supervisor…" />
+                  </SelectTrigger>
                   <SelectContent>
                     {transferSupervisors.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name ?? s.id}</SelectItem>
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name ?? s.id}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1143,8 +1514,13 @@ function SupervisorTab({
               {transferSupId && (
                 <div className="space-y-1.5">
                   <Label>To Site</Label>
-                  <Select value={transferSiteId} onValueChange={setTransferSiteId}>
-                    <SelectTrigger><SelectValue placeholder="Select site…" /></SelectTrigger>
+                  <Select
+                    value={transferSiteId}
+                    onValueChange={setTransferSiteId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site…" />
+                    </SelectTrigger>
                     <SelectContent>
                       {transferSites.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
@@ -1162,18 +1538,37 @@ function SupervisorTab({
                   min={1}
                   max={editTarget?.quantity ?? 1}
                   value={transferQty}
-                  onChange={(e) => setTransferQty(Math.min(Number(e.target.value), editTarget?.quantity ?? 1))}
+                  onChange={(e) =>
+                    setTransferQty(
+                      Math.min(
+                        Number(e.target.value),
+                        editTarget?.quantity ?? 1,
+                      ),
+                    )
+                  }
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Textarea value={transferNote} onChange={(e) => setTransferNote(e.target.value)} rows={2} placeholder="Reason for transfer…" />
+                <Label>
+                  Note{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Textarea
+                  value={transferNote}
+                  onChange={(e) => setTransferNote(e.target.value)}
+                  rows={2}
+                  placeholder="Reason for transfer…"
+                />
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
             {editMode === "edit" && (
               <Button onClick={handleEditDetails} disabled={editSaving}>
                 {editSaving ? "Saving…" : "Save Changes"}
@@ -1185,7 +1580,10 @@ function SupervisorTab({
               </Button>
             )}
             {editMode === "transfer" && (
-              <Button onClick={handleTransfer} disabled={transferSaving || !transferSiteId}>
+              <Button
+                onClick={handleTransfer}
+                disabled={transferSaving || !transferSiteId}
+              >
                 {transferSaving ? "Transferring…" : "Transfer"}
               </Button>
             )}
@@ -1442,7 +1840,8 @@ export function PlantAssignmentsTab({
     setReprinting(a.id);
     const pad = (n: number) => String(n).padStart(2, "0");
     const deployed = new Date(a.deployedOn);
-    const orderNumber = a.reference ??
+    const orderNumber =
+      a.reference ??
       `PO-${deployed.getFullYear()}${pad(deployed.getMonth() + 1)}${pad(deployed.getDate())}-${a.id.slice(-4).toUpperCase()}`;
     const issuedDate = deployed.toLocaleDateString("en-ZA", {
       day: "2-digit",
@@ -1622,7 +2021,9 @@ export function PlantAssignmentsTab({
                   <TableRow key={a.id} className="hover:bg-muted/30">
                     <TableCell className="text-sm border-r">
                       {a.reference ? (
-                        <span className="font-semibold text-foreground">#{a.reference}</span>
+                        <span className="font-semibold text-foreground">
+                          #{a.reference}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

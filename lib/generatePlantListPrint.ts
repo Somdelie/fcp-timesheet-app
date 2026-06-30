@@ -8,6 +8,10 @@ export type SupervisorPlantListPrint = {
   items: PlantListPrintItem[];
 };
 
+export type SelectedPlantPrintItem = PlantListPrintItem & {
+  supervisorName: string;
+};
+
 function escapeHTML(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -429,11 +433,170 @@ export function generatePlantListsPrintHTML(
   `;
 }
 
+export function generateSelectedPlantItemsPrintHTML(
+  items: SelectedPlantPrintItem[],
+): string {
+  const tableRows = items
+    .map(
+      (item) => `
+      <tr>
+        <td class="name-col">${escapeHTML(item.productName)}</td>
+        <td class="qty-col">${item.quantity}</td>
+        <td class="supervisor-col">${escapeHTML(item.supervisorName)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title></title>
+      <style>
+        @page { size: A4 portrait; margin: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
+          color: #27272a;
+          background: #fafafa;
+        }
+        .content {
+          padding: 20px;
+          max-width: 820px;
+          margin: 0 auto;
+        }
+        .actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .btn {
+          padding: 8px 16px;
+          border-radius: 4px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          border: 1px solid #e4e4e7;
+          background: white;
+          color: #18181b;
+        }
+        .btn-primary {
+          background: #16a34a;
+          border-color: #16a34a;
+          color: white;
+        }
+        .page-frame {
+          background: white;
+          border: 2px solid #111827;
+          padding: 5px;
+        }
+        .page-frame-inner {
+          border: 1px solid #111827;
+          padding: 5px;
+        }
+        .page-frame-core {
+          border: 1px solid #111827;
+          min-height: calc(297mm - 32px);
+          padding: 10px;
+        }
+        .table-container {
+          border: 1px solid #111827;
+          overflow: hidden;
+          background: white;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        th, td {
+          border: 1px solid #111827;
+          padding: 10px 12px;
+          text-align: left;
+        }
+        th {
+          background: #f3f4f6;
+          color: #111827;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        td {
+          color: #27272a;
+        }
+        tr:nth-child(even) td { background: #fafafa; }
+        .name-col { font-weight: 600; }
+        .qty-col { width: 90px; text-align: center; font-weight: 700; }
+        .supervisor-col { width: 220px; }
+
+        @media print {
+          body { background: white; }
+          .content { padding: 6mm; max-width: none; }
+          .actions { display: none; }
+          .page-frame-core { min-height: calc(297mm - 28mm); }
+          .table-container { break-inside: avoid; }
+          tr { break-inside: avoid; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="content">
+        <div class="actions">
+          <button class="btn" id="close-btn">Close</button>
+          <button class="btn btn-primary" id="print-btn">Print</button>
+        </div>
+
+        <div class="page-frame">
+          <div class="page-frame-inner">
+            <div class="page-frame-core">
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th class="name-col">Item Name</th>
+                      <th class="qty-col">Qty</th>
+                      <th class="supervisor-col">Supervisor Name</th>
+                    </tr>
+                  </thead>
+                  <tbody>${tableRows}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        document.getElementById('close-btn').addEventListener('click', function() {
+          window.close();
+        });
+        document.getElementById('print-btn').addEventListener('click', function() {
+          window.print();
+        });
+      </script>
+    </body>
+    </html>
+  `;
+}
+
 export function printSupervisorPlantList(
   supervisorName: string,
   items: PlantListPrintItem[],
 ): void {
   const html = generatePlantListPrintHTML(supervisorName, items);
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 300);
+  }
+}
+
+export function printSelectedPlantItems(items: SelectedPlantPrintItem[]): void {
+  const html = generateSelectedPlantItemsPrintHTML(items);
   const printWindow = window.open("", "_blank", "width=900,height=700");
   if (printWindow) {
     printWindow.document.write(html);

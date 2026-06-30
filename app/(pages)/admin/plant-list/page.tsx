@@ -73,7 +73,12 @@ type PlantItem = {
   colors: string[];
   sizes: string[];
   stockQty: number;
-  variantStocks?: { id: string; size: string | null; color: string | null; qty: number }[];
+  variantStocks?: {
+    id: string;
+    size: string | null;
+    color: string | null;
+    qty: number;
+  }[];
   deployedQty: number;
   duplicateCount?: number;
   duplicateIds?: string[];
@@ -149,8 +154,12 @@ export default function PlantListPage() {
     async function loadLookups() {
       try {
         const [catRes, supRes] = await Promise.all([
-          fetch("/api/app/admin/product-categories", { credentials: "include" }),
-          fetch("/api/app/admin/suppliers?includeInactive=false", { credentials: "include" }),
+          fetch("/api/app/admin/product-categories", {
+            credentials: "include",
+          }),
+          fetch("/api/app/admin/suppliers?includeInactive=false", {
+            credentials: "include",
+          }),
         ]);
         const [catJson, supJson] = await Promise.all([
           catRes.json(),
@@ -208,7 +217,8 @@ export default function PlantListPage() {
   function openEdit(p: PlantItem) {
     const variantQtys: Record<string, string> = {};
     for (const variant of p.variantStocks ?? []) {
-      if (variant.size) variantQtys[variantKey(variant.size)] = String(variant.qty);
+      if (variant.size)
+        variantQtys[variantKey(variant.size)] = String(variant.qty);
     }
     setEditing(p);
     setForm({
@@ -392,9 +402,7 @@ export default function PlantListPage() {
           </button>
         );
       },
-      cell: ({ row }) => (
-        <div className="font-medium">{row.original.name}</div>
-      ),
+      cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
     },
     {
       id: "sizes",
@@ -496,7 +504,9 @@ export default function PlantListPage() {
         const atOffice = total - deployed;
         if (atOffice < 0)
           return (
-            <span className="text-xs font-medium text-destructive">{atOffice}</span>
+            <span className="text-xs font-medium text-destructive">
+              {atOffice}
+            </span>
           );
         if (atOffice === 0)
           return <span className="text-xs text-muted-foreground">0</span>;
@@ -539,8 +549,8 @@ export default function PlantListPage() {
               (row.original.duplicateCount ?? 1) > 1
                 ? "Merged duplicate rows must be cleaned up before deleting"
                 : (row.original._count?.plantAssignments ?? 0) > 0
-                ? "Cannot delete: currently deployed"
-                : "Delete"
+                  ? "Cannot delete: currently deployed"
+                  : "Delete"
             }
           >
             <Trash2 className="h-4 w-4" />
@@ -564,7 +574,7 @@ export default function PlantListPage() {
 
   /* ================================================================== */
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
+    <div className="mx-auto space-y-2">
       {/* ---- Header + Toolbar ---- */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-xl font-semibold">Plant Catalogue</h1>
@@ -661,10 +671,7 @@ export default function PlantListPage() {
                       className="hover:bg-muted/30 transition-colors"
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className="py-2"
-                        >
+                        <TableCell key={cell.id} className="py-2">
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -675,7 +682,10 @@ export default function PlantListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       No results.
                     </TableCell>
                   </TableRow>
@@ -923,9 +933,7 @@ export default function PlantListPage() {
               </label>
               <Input
                 value={form.sizesRaw}
-                onChange={(e) =>
-                  setForm({ ...form, sizesRaw: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, sizesRaw: e.target.value })}
                 placeholder="e.g. 3m, 5m, 8m  or  Small, Medium, Large"
               />
               {form.sizesRaw && (
@@ -962,7 +970,9 @@ export default function PlantListPage() {
             {formSizes.length > 0 && (
               <div className="space-y-2 rounded border border-border p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <label className="text-sm font-medium">Quantity by Size</label>
+                  <label className="text-sm font-medium">
+                    Quantity by Size
+                  </label>
                   <Badge variant="secondary">Total {displayedStockQty}</Badge>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -1002,22 +1012,30 @@ export default function PlantListPage() {
                     setForm({ ...form, isReturnable: !!v })
                   }
                 />
-                <span className="text-sm">Must be returned to office after use</span>
+                <span className="text-sm">
+                  Must be returned to office after use
+                </span>
               </label>
             </div>
 
             {/* Description */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">Total Quantity Owned</label>
+              <label className="text-sm font-medium">
+                Total Quantity Owned
+              </label>
               <p className="text-xs text-muted-foreground">
-                Enter the full company total — deployed units + units at the office combined.
+                Enter the full company total — deployed units + units at the
+                office combined.
               </p>
               <Input
                 type="number"
                 min={0}
                 value={displayedStockQty}
                 onChange={(e) =>
-                  setForm({ ...form, stockQty: Math.max(0, Number(e.target.value)) })
+                  setForm({
+                    ...form,
+                    stockQty: Math.max(0, Number(e.target.value)),
+                  })
                 }
                 disabled={hasSizeQtys}
                 placeholder="0"

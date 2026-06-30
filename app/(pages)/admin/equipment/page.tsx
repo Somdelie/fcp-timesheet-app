@@ -18,7 +18,7 @@ export default function EquipmentPage() {
   const [activeTab, setActiveTab] = useState<string>("plants");
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
+    <div className="mx-auto w-full space-y-6">
       <div className="rounded border border-muted/50 bg-card p-4">
         <Tabs
           value={activeTab}
