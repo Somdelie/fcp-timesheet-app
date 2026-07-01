@@ -180,6 +180,63 @@ function editTooltip(children: ReactNode) {
   );
 }
 
+type EditableCellInputProps = {
+  editing: boolean;
+  defaultValue: string;
+  displayValue: ReactNode;
+  onActivate: () => void;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+  type?: "text" | "number";
+  step?: string;
+  inputClassName?: string;
+  buttonClassName?: string;
+};
+
+function EditableCellInput({
+  editing,
+  defaultValue,
+  displayValue,
+  onActivate,
+  onCommit,
+  onCancel,
+  type = "text",
+  step,
+  inputClassName,
+  buttonClassName,
+}: EditableCellInputProps) {
+  if (editing) {
+    return (
+      <Input
+        autoFocus
+        type={type}
+        step={step}
+        defaultValue={defaultValue}
+        className={cn("h-5 px-1 py-0 text-center", inputClassName)}
+        onBlur={(event) => onCommit(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            onCommit(event.currentTarget.value);
+          }
+          if (event.key === "Escape") {
+            onCancel();
+          }
+        }}
+      />
+    );
+  }
+
+  return editTooltip(
+    <button
+      type="button"
+      className={cn("min-h-4 w-full leading-none", buttonClassName)}
+      onDoubleClick={onActivate}
+    >
+      {displayValue}
+    </button>,
+  );
+}
+
 function overtimeLabel(value: PayrollRow["overtimeType"]) {
   if (value === "HALF_DAY") return "Half";
   if (value === "FULL_DAY") return "Full";
@@ -231,10 +288,12 @@ export default function AdminAttendancePayrollSummaryPage() {
   const [editingCell, setEditingCell] = useState<EditableCell>(null);
   const [editingHeaderCell, setEditingHeaderCell] =
     useState<EditableHeaderCell>(null);
-  const [headerEdits, setHeaderEdits] = useState({
-    employeeName: "",
-    summaryDate: "",
-  });
+  const [headerEdits, setHeaderEdits] = useState<{
+    employeeName?: string;
+    summaryDate?: string;
+    regularRate?: number;
+    overtimeHourlyRate?: number;
+  }>({});
   const [radixControlsMounted, setRadixControlsMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -291,10 +350,14 @@ export default function AdminAttendancePayrollSummaryPage() {
 
   useEffect(() => {
     setHeaderEdits({
-      employeeName: data?.selectedEmployee?.name ?? "",
+      employeeName: data?.selectedEmployee?.name,
       summaryDate: data
         ? `${formatDate(data.period.startISO)} - ${formatDate(data.period.endISO)}`
-        : "",
+        : undefined,
+      regularRate: data?.selectedEmployee?.defaultDayRate,
+      overtimeHourlyRate: data?.selectedEmployee?.defaultDayRate
+        ? data.selectedEmployee.defaultDayRate / 8
+        : undefined,
     });
   }, [data?.selectedEmployee?.id, data?.period.startISO, data?.period.endISO]);
 
@@ -350,17 +413,21 @@ export default function AdminAttendancePayrollSummaryPage() {
   }, [rows]);
   const reportRows = reportMode === "date" ? rows : monthSummaryRows;
   const displayEmployeeName =
-    headerEdits.employeeName || data?.selectedEmployee?.name || "";
+    headerEdits.employeeName ?? data?.selectedEmployee?.name ?? "";
   const displaySummaryDate =
-    headerEdits.summaryDate ||
+    headerEdits.summaryDate ??
     (data
       ? `${formatDate(data.period.startISO)} - ${formatDate(data.period.endISO)}`
       : "");
   const employeeDayRate = data?.selectedEmployee?.defaultDayRate ?? 0;
-  const regularRateValue = employeeDayRate || editedSummary.regularRate;
-  const overtimeHourlyRate = employeeDayRate
-    ? employeeDayRate / 8
-    : editedSummary.overtimeRate / 8;
+  const displayRegularRate =
+    headerEdits.regularRate ??
+    (employeeDayRate > 0 ? employeeDayRate : editedSummary.regularRate);
+  const displayOvertimeHourlyRate =
+    headerEdits.overtimeHourlyRate ??
+    (employeeDayRate > 0
+      ? employeeDayRate / 8
+      : editedSummary.overtimeRate / 8);
   const printRootRef = useRef<HTMLDivElement | null>(null);
 
   const payrollPrintStyles = `
@@ -515,7 +582,160 @@ ${printRoot.outerHTML}
     setTimeout(() => win.print(), 300);
   }
 
+  function updateMonthRows(monthKey: string, patch: Partial<PayrollRow>) {
+    setRows((current) => {
+      const monthRows = current.filter(
+        (row) => row.date.slice(0, 7) === monthKey,
+      );
+      if (!monthRows.length) return current;
+
+      const currentTotals = {
+        regularDays: monthRows.reduce((sum, row) => sum + row.regularDays, 0),
+        regularWage: monthRows.reduce((sum, row) => sum + row.regularWage, 0),
+        overtimeDays: monthRows.reduce((sum, row) => sum + row.overtimeDays, 0),
+        overtimeWage: monthRows.reduce((sum, row) => sum + row.overtimeWage, 0),
+        totalWage: monthRows.reduce((sum, row) => sum + row.totalWage, 0),
+      };
+
+      const updatedRows = monthRows.map((row) => {
+        if ("regularRate" in patch) {
+          const regularRate = Number(patch.regularRate ?? 0);
+          const regularWage = row.regularDays * regularRate;
+          return {
+            ...row,
+            regularRate,
+            regularWage,
+            totalWage: regularWage + row.overtimeWage,
+          };
+        }
+
+        if ("regularDays" in patch) {
+          const nextTotal = Number(patch.regularDays ?? 0);
+          const factor =
+            currentTotals.regularDays > 0
+              ? nextTotal / currentTotals.regularDays
+              : monthRows.length > 0
+                ? nextTotal / monthRows.length
+                : 0;
+          const regularDays = row.regularDays * factor;
+          const regularWage = regularDays * row.regularRate;
+          return {
+            ...row,
+            regularDays,
+            regularWage,
+            totalWage: regularWage + row.overtimeWage,
+          };
+        }
+
+        if ("regularWage" in patch) {
+          const nextTotal = Number(patch.regularWage ?? 0);
+          const factor =
+            currentTotals.regularWage > 0
+              ? nextTotal / currentTotals.regularWage
+              : monthRows.length > 0
+                ? nextTotal / monthRows.length
+                : 0;
+          const regularWage = row.regularWage * factor;
+          const regularRate =
+            row.regularDays > 0
+              ? regularWage / row.regularDays
+              : row.regularRate;
+          return {
+            ...row,
+            regularRate,
+            regularWage,
+            totalWage: regularWage + row.overtimeWage,
+          };
+        }
+
+        if ("overtimeDays" in patch) {
+          const nextTotal = Number(patch.overtimeDays ?? 0);
+          const factor =
+            currentTotals.overtimeDays > 0
+              ? nextTotal / currentTotals.overtimeDays
+              : monthRows.length > 0
+                ? nextTotal / monthRows.length
+                : 0;
+          const overtimeDays = row.overtimeDays * factor;
+          const overtimeWage = overtimeDays * row.overtimeRate;
+          return {
+            ...row,
+            overtimeDays,
+            overtimeWage,
+            totalWage: row.regularWage + overtimeWage,
+          };
+        }
+
+        if ("overtimeWage" in patch) {
+          const nextTotal = Number(patch.overtimeWage ?? 0);
+          const factor =
+            currentTotals.overtimeWage > 0
+              ? nextTotal / currentTotals.overtimeWage
+              : monthRows.length > 0
+                ? nextTotal / monthRows.length
+                : 0;
+          const overtimeWage = row.overtimeWage * factor;
+          const overtimeRate =
+            row.overtimeDays > 0
+              ? overtimeWage / row.overtimeDays
+              : row.overtimeRate;
+          return {
+            ...row,
+            overtimeRate,
+            overtimeWage,
+            totalWage: row.regularWage + overtimeWage,
+          };
+        }
+
+        if ("totalWage" in patch) {
+          const nextTotal = Number(patch.totalWage ?? 0);
+          const factor =
+            currentTotals.totalWage > 0
+              ? nextTotal / currentTotals.totalWage
+              : monthRows.length > 0
+                ? nextTotal / monthRows.length
+                : 0;
+          const totalWage = row.totalWage * factor;
+          const overtimeWage = Math.max(0, totalWage - row.regularWage);
+          const overtimeRate =
+            row.overtimeDays > 0
+              ? overtimeWage / row.overtimeDays
+              : row.overtimeRate;
+          return {
+            ...row,
+            overtimeRate,
+            overtimeWage,
+            totalWage,
+          };
+        }
+
+        if ("overtimeType" in patch) {
+          return {
+            ...row,
+            overtimeType: patch.overtimeType ?? row.overtimeType,
+          };
+        }
+
+        return row;
+      });
+
+      let index = 0;
+      return current.map((row) => {
+        if (row.date.slice(0, 7) !== monthKey) return row;
+        return updatedRows[index++];
+      });
+    });
+  }
+
   function updateRow(rowIndex: number, patch: Partial<PayrollRow>) {
+    if (reportMode === "month") {
+      const monthRow = reportRows[rowIndex];
+      if (!monthRow) return;
+      const monthKey = monthRow.date.slice(0, 7);
+      updateMonthRows(monthKey, patch);
+      return;
+    }
+
     setRows((current) =>
       current.map((row, index) => {
         if (index !== rowIndex) return row;
@@ -568,12 +788,17 @@ ${printRoot.outerHTML}
         };
       }),
     );
+    setHeaderEdits((current) => ({
+      ...current,
+      regularRate,
+    }));
     setEditingHeaderCell(null);
   }
 
   function applyOvertimeHourlyRate(value: string) {
     const rate = Number(value);
     const overtimeRate = (Number.isFinite(rate) ? rate : 0) * 8;
+    const overtimeHourlyRate = Number.isFinite(rate) ? rate : 0;
 
     setRows((current) =>
       current.map((row) => {
@@ -586,6 +811,10 @@ ${printRoot.outerHTML}
         };
       }),
     );
+    setHeaderEdits((current) => ({
+      ...current,
+      overtimeHourlyRate,
+    }));
     setEditingHeaderCell(null);
   }
 
@@ -595,41 +824,24 @@ ${printRoot.outerHTML}
   ) {
     const isEditing = editingHeaderCell === field;
 
-    if (isEditing) {
-      return (
-        <Input
-          autoFocus
-          defaultValue={value}
-          className="h-6 px-1 py-0 text-center"
-          onBlur={(event) => {
-            setHeaderEdits((current) => ({
-              ...current,
-              [field]: event.target.value,
-            }));
-            setEditingHeaderCell(null);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              setHeaderEdits((current) => ({
-                ...current,
-                [field]: event.currentTarget.value,
-              }));
-              setEditingHeaderCell(null);
-            }
-            if (event.key === "Escape") setEditingHeaderCell(null);
-          }}
-        />
-      );
-    }
-
-    return editTooltip(
-      <button
-        type="button"
-        className="min-h-5 w-full text-center leading-tight"
-        onDoubleClick={() => setEditingHeaderCell(field)}
-      >
-        {value || "0"}
-      </button>,
+    return (
+      <EditableCellInput
+        editing={isEditing}
+        defaultValue={value}
+        displayValue={value ?? ""}
+        onActivate={() => setEditingHeaderCell(field)}
+        onCommit={(nextValue) => {
+          setHeaderEdits((current) => ({
+            ...current,
+            [field]: nextValue,
+          }));
+          setEditingHeaderCell(null);
+        }}
+        onCancel={() => setEditingHeaderCell(null)}
+        type="text"
+        inputClassName="h-6 px-1 py-0"
+        buttonClassName="min-h-5 w-full text-center leading-tight"
+      />
     );
   }
 
@@ -640,31 +852,22 @@ ${printRoot.outerHTML}
   ) {
     const isEditing = editingHeaderCell === field;
 
-    if (isEditing) {
-      return (
-        <Input
-          autoFocus
-          type="number"
-          step="0.01"
-          defaultValue={String(value)}
-          className="h-6 px-1 py-0 text-center"
-          onBlur={(event) => onCommit(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") onCommit(event.currentTarget.value);
-            if (event.key === "Escape") setEditingHeaderCell(null);
-          }}
-        />
-      );
-    }
-
-    return editTooltip(
-      <button
-        type="button"
-        className="min-h-5 w-full text-center tabular-nums leading-tight"
-        onDoubleClick={() => setEditingHeaderCell(field)}
-      >
-        {formatCurrency(value)}
-      </button>,
+    return (
+      <EditableCellInput
+        editing={isEditing}
+        defaultValue={String(value)}
+        displayValue={formatCurrency(value)}
+        onActivate={() => setEditingHeaderCell(field)}
+        onCommit={(nextValue) => {
+          onCommit(nextValue);
+          setEditingHeaderCell(null);
+        }}
+        onCancel={() => setEditingHeaderCell(null)}
+        type="number"
+        step="0.01"
+        inputClassName="h-6 px-1 py-0"
+        buttonClassName="min-h-5 w-full text-center tabular-nums leading-tight"
+      />
     );
   }
 
@@ -676,37 +879,21 @@ ${printRoot.outerHTML}
     const isEditing =
       editingCell?.rowIndex === rowIndex && editingCell.field === field;
 
-    if (isEditing) {
-      return (
-        <Input
-          autoFocus
-          defaultValue={value}
-          className="h-5 px-1 py-0 text-center"
-          onBlur={(event) => {
-            updateRow(rowIndex, { [field]: event.target.value });
-            setEditingCell(null);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              updateRow(rowIndex, {
-                [field]: event.currentTarget.value,
-              });
-              setEditingCell(null);
-            }
-            if (event.key === "Escape") setEditingCell(null);
-          }}
-        />
-      );
-    }
-
-    return editTooltip(
-      <button
-        type="button"
-        className="min-h-4 w-full text-center leading-none"
-        onDoubleClick={() => setEditingCell({ rowIndex, field })}
-      >
-        {value || "0"}
-      </button>,
+    return (
+      <EditableCellInput
+        editing={isEditing}
+        defaultValue={value}
+        displayValue={value || "0"}
+        onActivate={() => setEditingCell({ rowIndex, field })}
+        onCommit={(nextValue) => {
+          updateRow(rowIndex, { [field]: nextValue });
+          setEditingCell(null);
+        }}
+        onCancel={() => setEditingCell(null)}
+        type="text"
+        inputClassName="h-5 px-1 py-0"
+        buttonClassName="min-h-4 w-full text-center leading-none"
+      />
     );
   }
 
@@ -720,33 +907,25 @@ ${printRoot.outerHTML}
     const isEditing =
       editingCell?.rowIndex === rowIndex && editingCell.field === field;
 
-    if (isEditing) {
-      return (
-        <Input
-          autoFocus
-          type="number"
-          step="0.01"
-          defaultValue={String(value)}
-          className={cn("h-5 px-1 py-0", className)}
-          onBlur={(event) => commitNumber(rowIndex, field, event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              commitNumber(rowIndex, field, event.currentTarget.value);
-            }
-            if (event.key === "Escape") setEditingCell(null);
-          }}
-        />
-      );
-    }
-
-    return editTooltip(
-      <button
-        type="button"
-        className={cn("min-h-4 w-full tabular-nums leading-none", className)}
-        onDoubleClick={() => setEditingCell({ rowIndex, field })}
-      >
-        {formatter(value)}
-      </button>,
+    return (
+      <EditableCellInput
+        editing={isEditing}
+        defaultValue={String(value)}
+        displayValue={formatter(value)}
+        onActivate={() => setEditingCell({ rowIndex, field })}
+        onCommit={(nextValue) => {
+          commitNumber(rowIndex, field, nextValue);
+          setEditingCell(null);
+        }}
+        onCancel={() => setEditingCell(null)}
+        type="number"
+        step="0.01"
+        inputClassName={cn("h-5 px-1 py-0", className)}
+        buttonClassName={cn(
+          "min-h-4 w-full tabular-nums leading-none",
+          className,
+        )}
+      />
     );
   }
 
@@ -890,7 +1069,7 @@ ${printRoot.outerHTML}
         "",
         "",
         "Regular Rate (Day)",
-        regularRateValue,
+        displayRegularRate,
       ]);
       sheet.addRow([
         "Summary Date",
@@ -898,7 +1077,7 @@ ${printRoot.outerHTML}
         "",
         "",
         "Overtime Rate (Hr)",
-        overtimeHourlyRate,
+        displayOvertimeHourlyRate,
       ]);
       sheet.addRow([]);
       const exportHeaders =
@@ -1333,7 +1512,7 @@ ${printRoot.outerHTML}
               <div className="border-b border-foreground/70 px-3 py-2 text-center text-sm font-medium">
                 {editableHeaderRateCell(
                   "regularRate",
-                  regularRateValue,
+                  displayRegularRate,
                   applyRegularRate,
                 )}
               </div>
@@ -1343,7 +1522,7 @@ ${printRoot.outerHTML}
               <div className="px-3 py-2 text-center text-sm font-medium">
                 {editableHeaderRateCell(
                   "overtimeHourlyRate",
-                  overtimeHourlyRate,
+                  displayOvertimeHourlyRate,
                   applyOvertimeHourlyRate,
                 )}
               </div>
@@ -1426,65 +1605,55 @@ ${printRoot.outerHTML}
                         : row.siteName || "0"}
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-center tabular-nums">
-                      {reportMode === "date"
-                        ? editableNumberCell(
-                            rowIndex,
-                            "regularDays",
-                            row.regularDays,
-                            formatNumber,
-                            "text-center",
-                          )
-                        : formatNumber(row.regularDays)}
+                      {editableNumberCell(
+                        rowIndex,
+                        "regularDays",
+                        row.regularDays,
+                        formatNumber,
+                        "text-center",
+                      )}
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-right tabular-nums">
-                      {reportMode === "date"
-                        ? editableNumberCell(
-                            rowIndex,
-                            "regularRate",
-                            row.regularRate,
-                            formatCurrency,
-                          )
-                        : formatCurrency(row.regularRate)}
+                      {editableNumberCell(
+                        rowIndex,
+                        "regularRate",
+                        row.regularRate,
+                        formatCurrency,
+                      )}
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-right tabular-nums">
-                      {reportMode === "date"
-                        ? editableNumberCell(
-                            rowIndex,
-                            "regularWage",
-                            row.regularWage,
-                            formatCurrency,
-                          )
-                        : formatCurrency(row.regularWage)}
+                      {editableNumberCell(
+                        rowIndex,
+                        "regularWage",
+                        row.regularWage,
+                        formatCurrency,
+                      )}
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-center">
                       {editableOvertimeHoursCell(
                         rowIndex,
                         row.overtimeDays,
-                        reportMode === "date",
+                        true,
                       )}
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-center tabular-nums">
                       0
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-right tabular-nums">
-                      {reportMode === "date"
-                        ? editableNumberCell(
-                            rowIndex,
-                            "overtimeWage",
-                            row.overtimeWage,
-                            formatCurrency,
-                          )
-                        : formatCurrency(row.overtimeWage)}
+                      {editableNumberCell(
+                        rowIndex,
+                        "overtimeWage",
+                        row.overtimeWage,
+                        formatCurrency,
+                      )}
                     </TableCell>
                     <TableCell className="border border-foreground/40 py-0 text-right font-semibold tabular-nums">
-                      {reportMode === "date"
-                        ? editableNumberCell(
-                            rowIndex,
-                            "totalWage",
-                            row.totalWage,
-                            formatCurrency,
-                          )
-                        : formatCurrency(row.totalWage)}
+                      {editableNumberCell(
+                        rowIndex,
+                        "totalWage",
+                        row.totalWage,
+                        formatCurrency,
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
