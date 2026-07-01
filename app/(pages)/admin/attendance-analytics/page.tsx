@@ -301,7 +301,7 @@ async function exportAttendancePdf(input: {
   }
 
   function drawHeader() {
-    drawText("Fortnight Attendance Analytics", margin, y - 2, 15, bold);
+    drawText("Fortnight Attendance Report", margin, y - 2, 15, bold);
     drawText(
       `${input.data.period.label} | ${input.selectedSiteLabel}`,
       margin,
