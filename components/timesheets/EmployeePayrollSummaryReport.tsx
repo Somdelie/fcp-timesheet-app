@@ -356,7 +356,11 @@ export default function AdminAttendancePayrollSummaryPage() {
     (data
       ? `${formatDate(data.period.startISO)} - ${formatDate(data.period.endISO)}`
       : "");
-  const overtimeHourlyRate = editedSummary.overtimeRate / 8;
+  const employeeDayRate = data?.selectedEmployee?.defaultDayRate ?? 0;
+  const regularRateValue = employeeDayRate || editedSummary.regularRate;
+  const overtimeHourlyRate = employeeDayRate
+    ? employeeDayRate / 8
+    : editedSummary.overtimeRate / 8;
   const printRootRef = useRef<HTMLDivElement | null>(null);
 
   const payrollPrintStyles = `
@@ -886,7 +890,7 @@ ${printRoot.outerHTML}
         "",
         "",
         "Regular Rate (Day)",
-        editedSummary.regularRate,
+        regularRateValue,
       ]);
       sheet.addRow([
         "Summary Date",
@@ -1329,7 +1333,7 @@ ${printRoot.outerHTML}
               <div className="border-b border-foreground/70 px-3 py-2 text-center text-sm font-medium">
                 {editableHeaderRateCell(
                   "regularRate",
-                  editedSummary.regularRate,
+                  regularRateValue,
                   applyRegularRate,
                 )}
               </div>
