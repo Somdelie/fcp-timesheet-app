@@ -200,7 +200,7 @@ const menuGroups: {
         roles: ["ADMIN"],
       },
       {
-        href: "/admin/attendance",
+        href: "/admin/attendance?tab=analytics",
         label: "Attendance",
         icon: ScanLine,
         iconSrc: icon3d("Attendance"),
