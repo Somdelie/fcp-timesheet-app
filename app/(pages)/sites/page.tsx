@@ -54,7 +54,7 @@ export default async function SitesPage({
   }));
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5">
+    <div className="mx-auto w-full space-y-5">
       <SitesList
         initialSites={sites}
         supervisorOptions={supervisorOptions}
