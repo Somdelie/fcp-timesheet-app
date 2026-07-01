@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   CalendarDays,
@@ -158,6 +158,19 @@ function shiftISODate(iso: string, days: number) {
   return toISODate(addDays(new Date(`${iso}T00:00:00`), days));
 }
 
+function toMonthValue(iso: string) {
+  return iso.slice(0, 7);
+}
+
+function monthStartISO(month: string) {
+  return `${month}-01`;
+}
+
+function monthEndISO(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return toISODate(new Date(year, monthNumber, 0));
+}
+
 function editTooltip(children: ReactNode) {
   return (
     <Tooltip>
@@ -207,6 +220,8 @@ function calculateSummary(rows: PayrollRow[]): PayrollSummary {
 export default function AdminAttendancePayrollSummaryPage() {
   const current = currentFortnightSatFri();
   const [startISO, setStartISO] = useState(current.startISO);
+  const [monthFrom, setMonthFrom] = useState(toMonthValue(current.startISO));
+  const [monthTo, setMonthTo] = useState(toMonthValue(current.endISO));
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [employeeOpen, setEmployeeOpen] = useState(false);
@@ -231,7 +246,14 @@ export default function AdminAttendancePayrollSummaryPage() {
   const loadReport = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ start: startISO });
+      const params = new URLSearchParams(
+        reportMode === "month"
+          ? {
+              start: monthStartISO(monthFrom),
+              end: monthEndISO(monthTo < monthFrom ? monthFrom : monthTo),
+            }
+          : { start: startISO },
+      );
       if (employeeSearch.trim()) params.set("q", employeeSearch.trim());
       if (employeeId) params.set("employeeId", employeeId);
 
@@ -255,7 +277,7 @@ export default function AdminAttendancePayrollSummaryPage() {
     const timer = window.setTimeout(loadReport, 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startISO, employeeSearch, employeeId]);
+  }, [startISO, monthFrom, monthTo, reportMode, employeeSearch, employeeId]);
 
   useEffect(() => {
     setRadixControlsMounted(true);
@@ -335,6 +357,159 @@ export default function AdminAttendancePayrollSummaryPage() {
       ? `${formatDate(data.period.startISO)} - ${formatDate(data.period.endISO)}`
       : "");
   const overtimeHourlyRate = editedSummary.overtimeRate / 8;
+  const printRootRef = useRef<HTMLDivElement | null>(null);
+
+  const payrollPrintStyles = `
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
+    @media print {
+      html,
+      body {
+        width: 100vw !important;
+        min-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      body * {
+        visibility: hidden !important;
+      }
+      #payroll-summary-print-root,
+      #payroll-summary-print-root * {
+        visibility: visible !important;
+        overflow: visible !important;
+        max-width: none !important;
+      }
+      #payroll-summary-print-root {
+        position: static !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        max-width: none !important;
+        min-width: 100vw !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #payroll-summary-print-root .overflow-x-auto,
+      #payroll-summary-print-root .overflow-hidden {
+        overflow: visible !important;
+        width: 100% !important;
+      }
+      #payroll-summary-print-root .mx-auto,
+      #payroll-summary-print-root .max-w-7xl,
+      #payroll-summary-print-root .min-w-260 {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      #payroll-summary-print-root table {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+      }
+      #payroll-summary-print-root th,
+      #payroll-summary-print-root td {
+        white-space: normal !important;
+        word-break: break-word !important;
+      }
+      #payroll-summary-print-root .px-4 {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+    }
+  `;
+
+  function printReport() {
+    const printRoot = printRootRef.current;
+    if (!printRoot) return;
+
+    const headNodes = Array.from(
+      document.querySelectorAll<HTMLLinkElement | HTMLStyleElement>(
+        'link[rel="stylesheet"], style',
+      ),
+    );
+
+    const headHtml = headNodes
+      .map((node) => {
+        if (node.tagName.toLowerCase() === "link") {
+          return node.outerHTML;
+        }
+        if (node.tagName.toLowerCase() === "style") {
+          return `<style>${node.textContent ?? ""}</style>`;
+        }
+        return "";
+      })
+      .join("");
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Payroll Summary Report</title>
+${headHtml}
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #ffffff;
+    color: #111827;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body > *:not(#payroll-summary-print-root) { display: none !important; }
+  #payroll-summary-print-root { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  #payroll-summary-print-root .overflow-x-auto, #payroll-summary-print-root .overflow-hidden { overflow: visible !important; }
+  #payroll-summary-print-root .mx-auto, #payroll-summary-print-root .max-w-7xl, #payroll-summary-print-root .min-w-260 {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  #payroll-summary-print-root table { width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; }
+  #payroll-summary-print-root th, #payroll-summary-print-root td {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  .grid { display: grid !important; }
+  .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-cols-\\[180px_1fr\\] { grid-template-columns: 180px 1fr !important; }
+  .border-y { border-top-width: 1px !important; border-bottom-width: 1px !important; }
+  .border-r { border-right-width: 1px !important; }
+  .border-foreground\\/70 { border-color: #d1d5db !important; }
+  .bg-primary { background: #7c3aed !important; }
+  .bg-primary-foreground { color: #ffffff !important; }
+  .bg-muted\\/30 { background: #e2e8f0 !important; }
+  .bg-primary\\/20 { background: rgba(124, 58, 237, 0.2) !important; }
+  .bg-muted\\/20 { background: rgba(148, 163, 184, 0.2) !important; }
+  .text-sm { font-size: 0.875rem !important; }
+  .font-medium { font-weight: 500 !important; }
+  .text-center { text-align: center !important; }
+  .text-right { text-align: right !important; }
+</style>
+</head>
+<body>
+${printRoot.outerHTML}
+</body>
+</html>`;
+
+    const win = window.open("", "_blank", "width=1200,height=900");
+    if (!win) return;
+
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
+  }
 
   function updateRow(rowIndex: number, patch: Partial<PayrollRow>) {
     setRows((current) =>
@@ -884,7 +1059,12 @@ export default function AdminAttendancePayrollSummaryPage() {
   };
 
   return (
-    <div className="space-y-4 px-4 pb-6">
+    <div
+      id="payroll-summary-print-root"
+      ref={printRootRef}
+      className="space-y-4 px-4 pb-6"
+    >
+      <style dangerouslySetInnerHTML={{ __html: payrollPrintStyles }} />
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">
@@ -944,7 +1124,7 @@ export default function AdminAttendancePayrollSummaryPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => window.print()}
+            onClick={printReport}
             disabled={!data?.selectedEmployee}
           >
             <Printer className="mr-2 h-4 w-4" />
@@ -978,9 +1158,7 @@ export default function AdminAttendancePayrollSummaryPage() {
         {radixControlsMounted ? (
           <Select
             value={reportMode}
-            onValueChange={(value) =>
-              setReportMode(value as "date" | "month")
-            }
+            onValueChange={(value) => setReportMode(value as "date" | "month")}
           >
             <SelectTrigger
               className="w-full sm:w-48"
@@ -1005,6 +1183,30 @@ export default function AdminAttendancePayrollSummaryPage() {
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         )}
+
+        {reportMode === "month" ? (
+          <>
+            <Input
+              type="month"
+              value={monthFrom}
+              onChange={(event) => {
+                const value = event.target.value;
+                setMonthFrom(value);
+                if (monthTo < value) setMonthTo(value);
+              }}
+              className="w-full sm:w-38"
+              aria-label="Summary from month"
+            />
+            <Input
+              type="month"
+              value={monthTo}
+              min={monthFrom}
+              onChange={(event) => setMonthTo(event.target.value)}
+              className="w-full sm:w-38"
+              aria-label="Summary to month"
+            />
+          </>
+        ) : null}
 
         {radixControlsMounted ? (
           <Popover open={employeeOpen} onOpenChange={setEmployeeOpen}>
@@ -1097,7 +1299,7 @@ export default function AdminAttendancePayrollSummaryPage() {
 
       {data?.selectedEmployee ? (
         // <div className="rounded border bg-muted/20 md:p-6">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded border-2 border-foreground bg-card shadow-sm">
+        <div className="mx-auto overflow-hidden rounded border-2 border-foreground bg-card shadow-sm">
           <div className="bg-primary px-6 py-2 text-primary-foreground">
             <div className="font-['Brush_Script_MT','Segoe_Script','Lucida_Handwriting',cursive] text-4xl font-normal italic leading-none tracking-wide">
               Payroll Summary Report
@@ -1174,7 +1376,7 @@ export default function AdminAttendancePayrollSummaryPage() {
                   </TableHead>
                   <TableHead
                     rowSpan={2}
-                    className="w-[150px] border border-foreground/70 bg-primary py-0 text-center text-primary-foreground"
+                    className="w-37.5 border border-foreground/70 bg-primary py-0 text-center text-primary-foreground"
                   >
                     TOTAL WAGE
                   </TableHead>
@@ -1318,7 +1520,8 @@ export default function AdminAttendancePayrollSummaryPage() {
           <div className="border-t border-foreground/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
             {activeRows.length} attended day
             {activeRows.length === 1 ? "" : "s"} for{" "}
-            {data.selectedEmployee.name} in this fortnight.
+            {data.selectedEmployee.name} in this{" "}
+            {reportMode === "month" ? "range" : "fortnight"}.
           </div>
         </div>
       ) : // </div>

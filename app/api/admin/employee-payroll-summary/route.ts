@@ -49,9 +49,11 @@ export async function GET(req: Request) {
   const employeeId = url.searchParams.get("employeeId") || null;
   const q = (url.searchParams.get("q") || "").trim();
   const requestedStartISO = url.searchParams.get("start");
+  const requestedEndISO = url.searchParams.get("end");
   const current = currentFortnightSatFri();
   const startISO = requestedStartISO || current.startISO;
   let start: Date;
+  let end: Date;
 
   try {
     start = startOfDayUTC(startISO);
@@ -62,7 +64,32 @@ export async function GET(req: Request) {
     );
   }
 
-  const end = addDaysUTC(start, 13);
+  try {
+    end = requestedEndISO
+      ? startOfDayUTC(requestedEndISO)
+      : addDaysUTC(start, 13);
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid end date" },
+      { status: 400, headers: CORS_HEADERS },
+    );
+  }
+
+  if (end < start) {
+    return NextResponse.json(
+      { error: "End date must be after start date" },
+      { status: 400, headers: CORS_HEADERS },
+    );
+  }
+
+  const dayCount = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  if (dayCount > 370) {
+    return NextResponse.json(
+      { error: "Payroll summary range cannot exceed 370 days" },
+      { status: 400, headers: CORS_HEADERS },
+    );
+  }
+
   const endISO = isoFromDateUTC(end);
   const endExclusive = addDaysUTC(end, 1);
   const terms = q.split(/\s+/).filter(Boolean);
@@ -164,7 +191,7 @@ export async function GET(req: Request) {
   }
 
   const scanByDate = new Map(scans.map((scan) => [isoFromDateUTC(scan.workDate), scan]));
-  const dates = Array.from({ length: 14 }, (_, index) =>
+  const dates = Array.from({ length: dayCount }, (_, index) =>
     isoFromDateUTC(addDaysUTC(start, index)),
   );
 
