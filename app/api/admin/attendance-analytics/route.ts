@@ -31,6 +31,12 @@ type SiteDayRow = DayRow & {
   siteId: string;
   siteName: string;
   siteCode: string | null;
+  supervisorName: string | null;
+};
+
+type SessionUser = {
+  id?: string;
+  role?: string;
 };
 
 function pctChange(current: number, previous: number | null) {
@@ -49,7 +55,7 @@ export async function OPTIONS() {
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  const user = session?.user as any;
+  const user = session?.user as SessionUser | undefined;
 
   if (!user?.id) {
     return NextResponse.json(
@@ -107,7 +113,22 @@ export async function GET(req: Request) {
     }),
     prisma.site.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, code: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        supervisorAssignments: {
+          where: { endsOn: null },
+          select: {
+            supervisor: {
+              select: {
+                user: { select: { name: true, email: true } },
+              },
+            },
+          },
+          orderBy: { startsOn: "desc" },
+        },
+      },
       orderBy: [{ code: "asc" }, { name: "asc" }],
     }),
   ]);
@@ -117,7 +138,22 @@ export async function GET(req: Request) {
     siteIds.length > 0
       ? await prisma.site.findMany({
           where: { id: { in: siteIds } },
-          select: { id: true, name: true, code: true },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            supervisorAssignments: {
+              where: { endsOn: null },
+              select: {
+                supervisor: {
+                  select: {
+                    user: { select: { name: true, email: true } },
+                  },
+                },
+              },
+              orderBy: { startsOn: "desc" },
+            },
+          },
         })
       : [];
   const siteById = new Map(sites.map((site) => [site.id, site]));
@@ -163,6 +199,16 @@ export async function GET(req: Request) {
   const perSite: SiteDayRow[] = [];
   for (const id of siteIds) {
     const site = siteById.get(id);
+    const supervisorName =
+      site?.supervisorAssignments
+        .map(
+          (assignment) =>
+            assignment.supervisor.user?.name ??
+            assignment.supervisor.user?.email ??
+            null,
+        )
+        .filter((name): name is string => Boolean(name))
+        .join(", ") || null;
     let previousSiteTotal: number | null = null;
 
     for (const date of dates) {
@@ -175,6 +221,7 @@ export async function GET(req: Request) {
         siteId: id,
         siteName: site?.name ?? "Unknown site",
         siteCode: site?.code ?? null,
+        supervisorName,
       });
       previousSiteTotal = total;
     }
@@ -206,7 +253,21 @@ export async function GET(req: Request) {
       },
       days,
       perSite,
-      sites: siteOptions,
+      sites: siteOptions.map((site) => ({
+        id: site.id,
+        name: site.name,
+        code: site.code,
+        supervisorName:
+          site.supervisorAssignments
+            .map(
+              (assignment) =>
+                assignment.supervisor.user?.name ??
+                assignment.supervisor.user?.email ??
+                null,
+            )
+            .filter((name): name is string => Boolean(name))
+            .join(", ") || null,
+      })),
     },
     {
       headers: {
