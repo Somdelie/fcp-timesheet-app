@@ -27,7 +27,7 @@ export default async function AdminPeoplePage({
   const activeTab = isTabValue(sp?.tab) ? sp.tab : "employees";
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full">
       {/* <div>
         <h1 className="text-2xl font-semibold tracking-tight">People</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-3xl">

@@ -55,7 +55,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">

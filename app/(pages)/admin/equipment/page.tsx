@@ -20,7 +20,7 @@ export default function EquipmentPage() {
 
   return (
     <div className="mx-auto w-full space-y-6">
-      <div className="rounded border border-muted/50 bg-card p-4">
+      <div className="rounded border border-muted/50 bg-card">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}

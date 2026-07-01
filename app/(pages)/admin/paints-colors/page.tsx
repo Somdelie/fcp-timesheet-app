@@ -174,18 +174,10 @@ export default function PaintColorsAdminPage() {
     <div className="flex flex-col h-full p-6 bg-background">
       <Tabs defaultValue="list" className="w-full">
         <TabsContent value="list">
-          <PaintColorsListTab
-            tabsList={
-              <PaintColorsTabsList />
-            }
-          />
+          <PaintColorsListTab tabsList={<PaintColorsTabsList />} />
         </TabsContent>
         <TabsContent value="seed">
-          <SeedFromPdfsTab
-            tabsList={
-              <PaintColorsTabsList />
-            }
-          />
+          <SeedFromPdfsTab tabsList={<PaintColorsTabsList />} />
         </TabsContent>
       </Tabs>
     </div>
@@ -358,7 +350,10 @@ function PaintColorsListTab({ tabsList }: { tabsList: React.ReactNode }) {
   );
   const currentPageIndex = Math.min(pagination.pageIndex, pageCount - 1);
   const pageStart = currentPageIndex * pagination.pageSize;
-  const pageEnd = Math.min(pageStart + pagination.pageSize, displayColors.length);
+  const pageEnd = Math.min(
+    pageStart + pagination.pageSize,
+    displayColors.length,
+  );
   const paginatedColors = displayColors.slice(pageStart, pageEnd);
 
   const resetCreateForm = () => {
@@ -1243,11 +1238,16 @@ function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
             examples: [...color.examples],
           });
         } else {
-          if (!existing.colorCode && color.colorCode) existing.colorCode = color.colorCode;
+          if (!existing.colorCode && color.colorCode)
+            existing.colorCode = color.colorCode;
           if (color.isTinted) existing.isTinted = true;
           existing.sourceCount += color.sourceCount;
-          existing.suppliers = Array.from(new Set([...existing.suppliers, ...color.suppliers]));
-          existing.examples = Array.from(new Set([...existing.examples, ...color.examples])).slice(0, 3);
+          existing.suppliers = Array.from(
+            new Set([...existing.suppliers, ...color.suppliers]),
+          );
+          existing.examples = Array.from(
+            new Set([...existing.examples, ...color.examples]),
+          ).slice(0, 3);
         }
       }
 
@@ -1259,8 +1259,11 @@ function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
             rawNames: [...supplier.rawNames],
           });
         } else {
-          existing.rawNames = Array.from(new Set([...existing.rawNames, ...supplier.rawNames]));
-          if (!existing.vendorCode && supplier.vendorCode) existing.vendorCode = supplier.vendorCode;
+          existing.rawNames = Array.from(
+            new Set([...existing.rawNames, ...supplier.rawNames]),
+          );
+          if (!existing.vendorCode && supplier.vendorCode)
+            existing.vendorCode = supplier.vendorCode;
         }
       }
     }
@@ -1275,7 +1278,10 @@ function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
       summary: {
         orderPdfs: orderFiles.length,
         priceListPdfs: priceFiles.length,
-        extractedColors: responses.reduce((n, r) => n + r.summary.extractedColors, 0),
+        extractedColors: responses.reduce(
+          (n, r) => n + r.summary.extractedColors,
+          0,
+        ),
         uniqueColors: colors.length,
         suppliersDetected: suppliers.length,
         priceRows: prices.length,
@@ -1321,13 +1327,34 @@ function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
         orderPdfs: orderFiles.length,
         priceListPdfs: priceFiles.length,
         uniqueColors: preview?.summary.uniqueColors ?? 0,
-        variantsCreated: responses.reduce((n, r) => n + r.summary.variantsCreated, 0),
-        variantsSkipped: responses.reduce((n, r) => n + r.summary.variantsSkipped, 0),
-        suppliersTouched: responses.reduce((n, r) => n + r.summary.suppliersTouched, 0),
-        orderPriceLinksCreated: responses.reduce((n, r) => n + r.summary.orderPriceLinksCreated, 0),
-        priceListRows: responses.reduce((n, r) => n + r.summary.priceListRows, 0),
-        priceListImported: responses.reduce((n, r) => n + r.summary.priceListImported, 0),
-        priceListUnmatched: responses.reduce((n, r) => n + r.summary.priceListUnmatched, 0),
+        variantsCreated: responses.reduce(
+          (n, r) => n + r.summary.variantsCreated,
+          0,
+        ),
+        variantsSkipped: responses.reduce(
+          (n, r) => n + r.summary.variantsSkipped,
+          0,
+        ),
+        suppliersTouched: responses.reduce(
+          (n, r) => n + r.summary.suppliersTouched,
+          0,
+        ),
+        orderPriceLinksCreated: responses.reduce(
+          (n, r) => n + r.summary.orderPriceLinksCreated,
+          0,
+        ),
+        priceListRows: responses.reduce(
+          (n, r) => n + r.summary.priceListRows,
+          0,
+        ),
+        priceListImported: responses.reduce(
+          (n, r) => n + r.summary.priceListImported,
+          0,
+        ),
+        priceListUnmatched: responses.reduce(
+          (n, r) => n + r.summary.priceListUnmatched,
+          0,
+        ),
         priceListDuplicateMatches: responses.reduce(
           (n, r) => n + (r.summary.priceListDuplicateMatches ?? 0),
           0,
@@ -1337,7 +1364,9 @@ function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
       createdVariants: responses.flatMap((r) => r.createdVariants),
       skippedVariants: responses.flatMap((r) => r.skippedVariants),
       parseFailures,
-      unmatchedPriceLabels: Array.from(new Set(responses.flatMap((r) => r.unmatchedPriceLabels))),
+      unmatchedPriceLabels: Array.from(
+        new Set(responses.flatMap((r) => r.unmatchedPriceLabels)),
+      ),
     };
   }
 
@@ -1389,7 +1418,9 @@ function SeedFromPdfsTab({ tabsList }: { tabsList: React.ReactNode }) {
             ? { ...current, done: batches.length, message: "Import complete" }
             : current,
         );
-        toast.success(`Saved ${merged.summary.variantsCreated} new colour variants`);
+        toast.success(
+          `Saved ${merged.summary.variantsCreated} new colour variants`,
+        );
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
