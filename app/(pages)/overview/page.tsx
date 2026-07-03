@@ -2,12 +2,14 @@ import Link from "next/link";
 
 import SchedulerPage from "@/app/(pages)/scheduler/page";
 import NotesPage from "@/app/(pages)/notes/page";
+import WorkspacePage from "@/app/(pages)/workspace/page";
 import WeatherPage from "@/app/(pages)/weather/page";
 import MergePdfsPage from "@/app/(pages)/merge-pdfs/page";
 
 const TABS = [
   { value: "scheduler", label: "Scheduler" },
   { value: "notes", label: "Notes" },
+  { value: "workspace", label: "Workspace" },
   { value: "weather", label: "Weather" },
   { value: "merge-pdfs", label: "Merge PDFs" },
 ] as const;
@@ -27,8 +29,8 @@ export default async function OverviewPage({
   const activeTab = isTabValue(sp?.tab) ? sp.tab : "scheduler";
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-7xl flex-col">
-      <div className="flex h-full min-h-0 flex-col rounded border border-muted/50 bg-card p-4">
+    <div className="mx-auto flex h-full w-full flex-col">
+      <div className="flex h-full min-h-0 flex-col rounded border border-muted/50 bg-card">
         <div className="flex flex-wrap gap-1 border-b border-border">
           {TABS.map((tab) => (
             <Link
@@ -48,6 +50,7 @@ export default async function OverviewPage({
         <div className="mt-4 min-h-0 flex-1">
           {activeTab === "scheduler" ? <SchedulerPage /> : null}
           {activeTab === "notes" ? <NotesPage /> : null}
+          {activeTab === "workspace" ? <WorkspacePage /> : null}
           {activeTab === "weather" ? <WeatherPage /> : null}
           {activeTab === "merge-pdfs" ? <MergePdfsPage /> : null}
         </div>

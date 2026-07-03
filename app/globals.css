@@ -782,7 +782,53 @@
   color: var(--muted-foreground);
 }
 
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75em 0;
+  overflow: hidden;
+}
+
+.tiptap th,
+.tiptap td {
+  border: 1px solid var(--border);
+  min-width: 4rem;
+  padding: 0.45rem 0.6rem;
+  position: relative;
+  vertical-align: top;
+}
+
+.tiptap th {
+  background: color-mix(in srgb, var(--primary) 10%, var(--background));
+  font-weight: 700;
+}
+
+.tiptap .selectedCell::after {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.tiptap .column-resize-handle {
+  background-color: var(--primary);
+  bottom: -2px;
+  pointer-events: none;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 3px;
+}
+
+.tiptap.resize-cursor {
+  cursor: col-resize;
+}
+
 .rich-text-readonly .tiptap {
+  position: relative;
   padding: 0;
 }
 
@@ -841,8 +887,29 @@
   margin: 0.5em 0;
   color: var(--muted-foreground);
 }
+.note-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75em 0;
+}
+.note-content th,
+.note-content td {
+  border: 1px solid var(--border);
+  min-width: 4rem;
+  padding: 0.45rem 0.6rem;
+  vertical-align: top;
+}
+.note-content th {
+  background: color-mix(in srgb, var(--primary) 10%, var(--background));
+  font-weight: 700;
+}
 .note-content p {
   margin: 0.2em 0;
+}
+
+.note-content {
+  position: relative;
 }
 
 .note-content img {
@@ -888,4 +955,39 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted-foreground);
+}
+
+
+.workspace-bg {
+  background-color: var(--background);
+
+  background-image:
+    radial-gradient(circle, rgba(0, 0, 0, 0.16) 2px, transparent 2px);
+
+  background-size: 20px 20px;
+  background-position: 20px 20px;
+}
+
+.dark .workspace-bg {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.22) 2px, transparent 2px);
+}
+
+
+.neu-panel {
+  background: #f4f5f8;
+  box-shadow:
+    10px 10px 25px rgba(0, 0, 0, 0.08),
+    -10px -10px 25px rgba(255, 255, 255, 0.9);
+}
+
+.neu-item {
+  box-shadow:
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    -6px -6px 12px rgba(255, 255, 255, 0.9);
+}
+
+.pencil {
+box-shadow: rgba(6, 24, 44, 0.4) 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
+  background-color: white;
 }

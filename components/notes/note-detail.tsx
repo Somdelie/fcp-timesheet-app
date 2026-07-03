@@ -21,6 +21,7 @@ import {
   Edit3,
   Image,
   Download,
+  Maximize2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -255,6 +263,7 @@ export function NoteDetail({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [commentsOpen, setCommentsOpen] = useState(true);
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
+  const [largeEditorOpen, setLargeEditorOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const suppressCollabBroadcastRef = useRef(false);
@@ -815,6 +824,19 @@ export function NoteDetail({
                   </div>
                 )}
                 {editing ? (
+                  <div className="flex min-h-0 flex-1 flex-col gap-2">
+                    <div className="flex shrink-0 justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setLargeEditorOpen(true)}
+                      >
+                        <Maximize2 size={14} />
+                        Big view
+                      </Button>
+                    </div>
                   <RichTextEditor
                     content={content}
                     onChange={(nextContent) => {
@@ -825,6 +847,7 @@ export function NoteDetail({
                     className="min-h-0 flex-1"
                     contentClassName="custom-scrollbar"
                   />
+                  </div>
                 ) : (
                   <div
                     ref={contentRef}
@@ -993,6 +1016,70 @@ export function NoteDetail({
           </div>
         )}
       </div>
+
+      <Sheet
+        open={largeEditorOpen && editing}
+        onOpenChange={setLargeEditorOpen}
+      >
+        <SheetContent
+          side="right"
+          className="w-[calc(100vw-1rem)] gap-0 p-0 sm:max-w-none lg:w-[min(1500px,calc(100vw-2rem))]"
+        >
+          <SheetHeader className="shrink-0 border-b border-border/60 px-5 py-4">
+            <div className="flex items-start justify-between gap-4 pr-8">
+              <div className="min-w-0 flex-1">
+                <SheetTitle>Big note editor</SheetTitle>
+                <SheetDescription>
+                  Editing {title || "Untitled"}
+                </SheetDescription>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLargeEditorOpen(false)}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void save()}
+                  disabled={submitting}
+                  className="gap-2"
+                >
+                  <Check size={14} />
+                  Save
+                </Button>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-5">
+            <Input
+              value={title}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                markTyping();
+              }}
+              placeholder="Note title..."
+              className="h-12 border-border/70 bg-background text-xl font-semibold shadow-none"
+            />
+            <RichTextEditor
+              content={content}
+              onChange={(nextContent) => {
+                setContent(nextContent);
+                markTyping();
+              }}
+              placeholder="Write your note..."
+              className="min-h-0 flex-1"
+              contentClassName="custom-scrollbar px-8 py-6"
+              minHeight="calc(100vh - 260px)"
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={collaboratorsOpen} onOpenChange={setCollaboratorsOpen}>
         <DialogContent className="max-w-xl overflow-hidden p-0">

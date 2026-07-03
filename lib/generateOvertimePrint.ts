@@ -46,11 +46,14 @@ function siteLabel(name: string, code: string | null | undefined): string {
   return code ? `${code} — ${name}` : name;
 }
 
+function compareText(a: string, b: string): number {
+  return a.localeCompare(b, "en-ZA", { sensitivity: "base" });
+}
+
 export function generateOvertimePrintHTML(
   entries: OvertimeEntryForPrint[],
   meta?: OvertimePrintMeta,
 ): string {
-  const totalEntries = entries.length;
   const totalEmployees = entries.reduce((s, e) => s + e.numberOfEmployees, 0);
   const totalHours = entries.reduce((s, e) => s + e.hoursWorked, 0);
   const totalCost = entries.reduce((s, e) => s + e.totalCost, 0);
@@ -64,9 +67,45 @@ export function generateOvertimePrintHTML(
           ? `Up to ${meta.filterTo}`
           : "All dates";
 
-  const tableRows = entries
-    .map(
-      (e) => `
+  const groupedEntries = [...entries]
+    .sort((a, b) => {
+      const foremanCompare = compareText(a.foremanName, b.foremanName);
+      if (foremanCompare !== 0) return foremanCompare;
+      const dateCompare =
+        new Date(a.workDate).getTime() - new Date(b.workDate).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return compareText(
+        siteLabel(a.siteName, a.siteCode),
+        siteLabel(b.siteName, b.siteCode),
+      );
+    })
+    .reduce<Array<{ foremanName: string; rows: OvertimeEntryForPrint[] }>>(
+      (groups, entry) => {
+        const last = groups[groups.length - 1];
+        if (
+          last &&
+          last.foremanName.toLowerCase() === entry.foremanName.toLowerCase()
+        ) {
+          last.rows.push(entry);
+        } else {
+          groups.push({ foremanName: entry.foremanName, rows: [entry] });
+        }
+        return groups;
+      },
+      [],
+    );
+
+  const tableRows = groupedEntries
+    .map((group) => {
+      const foremanEmployees = group.rows.reduce(
+        (sum, e) => sum + e.numberOfEmployees,
+        0,
+      );
+      const foremanHours = group.rows.reduce((sum, e) => sum + e.hoursWorked, 0);
+      const foremanTotal = group.rows.reduce((sum, e) => sum + e.totalCost, 0);
+      const rows = group.rows
+        .map(
+          (e) => `
       <tr>
         <td class="date-col">${escapeHTML(fmtDate(e.workDate))}</td>
         <td class="site-col">${escapeHTML(siteLabel(e.siteName, e.siteCode))}</td>
@@ -77,7 +116,21 @@ export function generateOvertimePrintHTML(
         <td class="num-col">${e.hoursWorked}h</td>
         <td class="num-col total-col">${fmtCurrency(e.totalCost)}</td>
       </tr>`,
-    )
+        )
+        .join("");
+
+      return `
+      <tr class="foreman-row">
+        <td colspan="8">${escapeHTML(group.foremanName)}</td>
+      </tr>
+      ${rows}
+      <tr class="foreman-total-row">
+        <td colspan="5" class="name-col">${escapeHTML(group.foremanName)} total</td>
+        <td class="num-col">${foremanEmployees}</td>
+        <td class="num-col">${foremanHours}h</td>
+        <td class="num-col total-col">${fmtCurrency(foremanTotal)}</td>
+      </tr>`;
+    })
     .join("");
 
   const totalRow = `
@@ -153,32 +206,6 @@ export function generateOvertimePrintHTML(
       border-color: #15803d;
     }
 
-    /* Meta info cards */
-    .meta-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .meta-card {
-      background: white;
-      border: 1px solid #e4e4e7;
-      border-radius: 4px;
-      padding: 12px 16px;
-    }
-    .meta-card-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #71717a;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-    .meta-card-value {
-      font-size: 14px;
-      font-weight: 500;
-      color: #18181b;
-    }
-
     /* Table */
     .table-container {
       background: white;
@@ -203,6 +230,17 @@ export function generateOvertimePrintHTML(
       color: white;
       text-transform: uppercase;
       font-size: 10px;
+    }
+    .main-table .foreman-row td {
+      background: #18181b;
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: left;
+      text-transform: capitalize;
+      letter-spacing: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .main-table .date-col {
       white-space: nowrap;
@@ -243,45 +281,24 @@ export function generateOvertimePrintHTML(
     .main-table .total-row .total-col {
       background: #a1a1aa;
     }
-
-    /* Summary */
-    .totals-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-    .totals-card {
-      background: white;
-      border: 1px solid #e4e4e7;
-      border-radius: 4px;
-      padding: 16px;
-    }
-    .totals-card.grand {
-      background: #18181b;
-      border-color: #18181b;
-    }
-    .totals-card.grand .totals-label,
-    .totals-card.grand .totals-value {
-      color: white;
-    }
-    .totals-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #71717a;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    .totals-value {
-      font-size: 18px;
+    .main-table .foreman-total-row {
+      background: #e4e4e7;
       font-weight: 700;
-      color: #18181b;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .main-table .foreman-total-row td {
+      font-weight: 800;
+    }
+    .main-table .foreman-total-row .total-col {
+      background: #c4c4cc;
     }
 
     @media print {
       body { background: white; }
       .content { padding: 0; max-width: none; }
       .actions { display: none !important; }
-      .meta-card, .table-container, .totals-card {
+      .table-container {
         border: 1px solid #666;
         box-shadow: none;
       }
@@ -293,6 +310,8 @@ export function generateOvertimePrintHTML(
         color-adjust: exact !important;
       }
       .main-table .total-col,
+      .main-table .foreman-row,
+      .main-table .foreman-total-row,
       .main-table .total-row,
       .main-table th {
         -webkit-print-color-adjust: exact !important;
@@ -315,25 +334,6 @@ export function generateOvertimePrintHTML(
       </div>
     </div>
 
-    <div class="meta-cards">
-      <div class="meta-card">
-        <div class="meta-card-label">Total Entries</div>
-        <div class="meta-card-value">${totalEntries}</div>
-      </div>
-      <div class="meta-card">
-        <div class="meta-card-label">Total Employees (OT)</div>
-        <div class="meta-card-value">${totalEmployees}</div>
-      </div>
-      <div class="meta-card">
-        <div class="meta-card-label">Total Hours</div>
-        <div class="meta-card-value">${totalHours}h</div>
-      </div>
-      <div class="meta-card">
-        <div class="meta-card-label">Total Cost</div>
-        <div class="meta-card-value">${fmtCurrency(totalCost)}</div>
-      </div>
-    </div>
-
     <div class="table-container">
       <table class="main-table">
         <thead>
@@ -353,25 +353,6 @@ export function generateOvertimePrintHTML(
           ${totalRow}
         </tbody>
       </table>
-    </div>
-
-    <div class="totals-grid">
-      <div class="totals-card">
-        <div class="totals-label">Entries</div>
-        <div class="totals-value">${totalEntries}</div>
-      </div>
-      <div class="totals-card">
-        <div class="totals-label">Employees</div>
-        <div class="totals-value">${totalEmployees}</div>
-      </div>
-      <div class="totals-card">
-        <div class="totals-label">Hours</div>
-        <div class="totals-value">${totalHours}h</div>
-      </div>
-      <div class="totals-card grand">
-        <div class="totals-label">Total Cost</div>
-        <div class="totals-value">${fmtCurrency(totalCost)}</div>
-      </div>
     </div>
   </div>
 

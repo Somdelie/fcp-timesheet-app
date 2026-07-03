@@ -42,6 +42,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -58,11 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 import {
   Popover,
@@ -129,6 +126,29 @@ function siteLabel(name: string, code: string | null | undefined) {
 
 /* ─── Component ─── */
 
+function dateKeyFromDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromDateKey(key: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function monthKeyFromDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function dateFromMonthKey(key: string) {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(year, month - 1, 1);
+}
+
 export default function OvertimeEntriesPage() {
   // Lookups
   const [sites, setSites] = useState<SiteDto[]>([]);
@@ -150,6 +170,14 @@ export default function OvertimeEntriesPage() {
   const [formPriceId, setFormPriceId] = useState("");
   const [formEmployees, setFormEmployees] = useState("");
   const [formHours, setFormHours] = useState("");
+  const [formDateKeys, setFormDateKeys] = useState<string[]>([]);
+  const [formEmployeesByDate, setFormEmployeesByDate] = useState<
+    Record<string, string>
+  >({});
+  const [formHoursByDate, setFormHoursByDate] = useState<
+    Record<string, string>
+  >({});
+  const [batchCalendarMonth, setBatchCalendarMonth] = useState(new Date());
   const [formNote, setFormNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -263,6 +291,55 @@ export default function OvertimeEntriesPage() {
   }, [loadEntries]);
 
   /* ── Submit new entry ── */
+  function setBatchDates(dates: Date[] | undefined) {
+    const keys = Array.from(
+      new Set((dates ?? []).map((date) => dateKeyFromDate(date))),
+    ).sort();
+    setFormDateKeys(keys);
+    setFormEmployeesByDate((prev) =>
+      Object.fromEntries(
+        keys.map((key) => [key, prev[key] ?? (formEmployees || "1")]),
+      ),
+    );
+    setFormHoursByDate((prev) =>
+      Object.fromEntries(
+        keys.map((key) => [key, prev[key] ?? (formHours || "1")]),
+      ),
+    );
+  }
+
+  function setBatchDefaultHours(value: string) {
+    setFormHours(value);
+    if (!editId) {
+      setFormHoursByDate((prev) =>
+        Object.fromEntries(Object.keys(prev).map((key) => [key, value])),
+      );
+    }
+  }
+
+  function setBatchDefaultEmployees(value: string) {
+    setFormEmployees(value);
+    if (!editId) {
+      setFormEmployeesByDate((prev) =>
+        Object.fromEntries(Object.keys(prev).map((key) => [key, value])),
+      );
+    }
+  }
+
+  function removeBatchDate(key: string) {
+    setFormDateKeys((prev) => prev.filter((dateKey) => dateKey !== key));
+    setFormEmployeesByDate((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    setFormHoursByDate((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
   async function handleSubmit() {
     if (!formSiteId) {
       toast.error("Select a site");
@@ -272,25 +349,65 @@ export default function OvertimeEntriesPage() {
       toast.error("Select a foreman");
       return;
     }
-    if (!formDate) {
+    if (editId && !formDate) {
       toast.error("Select a date");
+      return;
+    }
+    if (!editId && formDateKeys.length === 0) {
+      toast.error("Select at least one date");
       return;
     }
     if (!formPriceId) {
       toast.error("Select an overtime price");
       return;
     }
-    if (!formEmployees || Number(formEmployees) < 1) {
+    if (editId && (!formEmployees || Number(formEmployees) < 1)) {
       toast.error("Enter number of employees (min 1)");
       return;
     }
-    if (!formHours || Number(formHours) <= 0) {
+    if (
+      !editId &&
+      formDateKeys.some((dateKey) => Number(formEmployeesByDate[dateKey]) < 1)
+    ) {
+      toast.error("Enter employees for each date");
+      return;
+    }
+    if (editId && (!formHours || Number(formHours) <= 0)) {
       toast.error("Enter hours worked (must be > 0)");
+      return;
+    }
+    if (
+      !editId &&
+      formDateKeys.some((dateKey) => Number(formHoursByDate[dateKey]) <= 0)
+    ) {
+      toast.error("Enter hours worked for each date");
       return;
     }
 
     setSubmitting(true);
     try {
+      const body = editId
+        ? {
+            siteId: formSiteId,
+            foremanId: formForemanId,
+            workDate: formDate,
+            overtimePriceId: formPriceId,
+            numberOfEmployees: Number(formEmployees),
+            hoursWorked: Number(formHours),
+            note: formNote.trim() || undefined,
+          }
+        : {
+            siteId: formSiteId,
+            foremanId: formForemanId,
+            overtimePriceId: formPriceId,
+            numberOfEmployees: Number(formEmployees),
+            entries: formDateKeys.map((dateKey) => ({
+              workDate: dateKey,
+              numberOfEmployees: Number(formEmployeesByDate[dateKey]),
+              hoursWorked: Number(formHoursByDate[dateKey]),
+            })),
+            note: formNote.trim() || undefined,
+          };
       const res = await fetch(
         editId
           ? `/api/app/admin/overtime-entries/${editId}`
@@ -302,20 +419,16 @@ export default function OvertimeEntriesPage() {
             "content-type": "application/json",
             accept: "application/json",
           },
-          body: JSON.stringify({
-            siteId: formSiteId,
-            foremanId: formForemanId,
-            workDate: formDate,
-            overtimePriceId: formPriceId,
-            numberOfEmployees: Number(formEmployees),
-            hoursWorked: Number(formHours),
-            note: formNote.trim() || undefined,
-          }),
+          body: JSON.stringify(body),
         },
       );
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.error ?? "Failed to save");
-      toast.success(editId ? "Overtime entry updated" : "Overtime entry created");
+      toast.success(
+        editId
+          ? "Overtime entry updated"
+          : `${formDateKeys.length} overtime ${formDateKeys.length === 1 ? "entry" : "entries"} created`,
+      );
       setSheetOpen(false);
       setEditId(null);
       loadEntries();
@@ -338,7 +451,8 @@ export default function OvertimeEntriesPage() {
         body: JSON.stringify({ action: paid ? "MARK_PAID" : "MARK_UNPAID" }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error ?? "Failed to update paid status");
+      if (!res.ok)
+        throw new Error(json?.error ?? "Failed to update paid status");
       toast.success(paid ? "Marked as paid" : "Marked as unpaid");
       loadEntries();
     } catch (e: any) {
@@ -367,9 +481,20 @@ export default function OvertimeEntriesPage() {
 
   /* ── Computed ── */
   const selectedPrice = prices.find((p) => p.id === formPriceId);
+  const selectedDateRows = formDateKeys.map((dateKey) => ({
+    dateKey,
+    employees: formEmployeesByDate[dateKey] ?? formEmployees,
+    hours: formHoursByDate[dateKey] ?? formHours,
+  }));
+  const previewEmployeeHours = editId
+    ? Number(formEmployees || 0) * Number(formHours || 0)
+    : selectedDateRows.reduce(
+        (sum, row) => sum + Number(row.employees || 0) * Number(row.hours || 0),
+        0,
+      );
   const formPreviewTotal =
-    selectedPrice && formEmployees && formHours
-      ? selectedPrice.rate * Number(formEmployees) * Number(formHours)
+    selectedPrice && previewEmployeeHours > 0
+      ? selectedPrice.rate * previewEmployeeHours
       : 0;
 
   /* ── Column defs (matches SitesTable pattern) ── */
@@ -403,263 +528,263 @@ export default function OvertimeEntriesPage() {
       enableSorting: false,
     },
     {
-        id: "workDate",
-        accessorKey: "workDate",
-        size: 120,
-        header: ({ column }) => {
-          const isSorted = column.getIsSorted();
-          return (
-            <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => column.toggleSorting(isSorted === "asc")}
-            >
-              <CalendarDays className="h-4 w-4 text-emerald-600" />
-              Date
-              {isSorted === "asc" ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : isSorted === "desc" ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+      id: "workDate",
+      accessorKey: "workDate",
+      size: 120,
+      header: ({ column }) => {
+        const isSorted = column.getIsSorted();
+        return (
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(isSorted === "asc")}
+          >
+            <CalendarDays className="h-4 w-4 text-emerald-600" />
+            Date
+            {isSorted === "asc" ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : isSorted === "desc" ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        );
+      },
+      cell: ({ row }) => (
+        <span className="text-xs whitespace-nowrap">
+          {fmtDate(row.original.workDate)}
+        </span>
+      ),
+    },
+    {
+      id: "site",
+      accessorFn: (row) => siteLabel(row.siteName, row.siteCode),
+      header: ({ column }) => {
+        const isSorted = column.getIsSorted();
+        return (
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(isSorted === "asc")}
+          >
+            <Building2 className="h-4 w-4 text-sky-600" />
+            Site
+            {isSorted === "asc" ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : isSorted === "desc" ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        );
+      },
+      cell: ({ row }) => (
+        <span className="font-semibold uppercase text-sm">
+          {siteLabel(row.original.siteName, row.original.siteCode)}
+        </span>
+      ),
+    },
+    {
+      id: "foreman",
+      accessorKey: "foremanName",
+      header: ({ column }) => {
+        const isSorted = column.getIsSorted();
+        return (
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(isSorted === "asc")}
+          >
+            <User className="h-4 w-4 text-violet-600" />
+            Foreman
+            {isSorted === "asc" ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : isSorted === "desc" ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        );
+      },
+      cell: ({ row }) => (
+        <span className="text-sm capitalize">{row.original.foremanName}</span>
+      ),
+    },
+    {
+      id: "supervisor",
+      accessorKey: "supervisorName",
+      size: 150,
+      header: () => (
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-cyan-600" />
+          Supervisor
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm capitalize">
+          {row.original.supervisorName ?? "-"}
+        </span>
+      ),
+    },
+    {
+      id: "priceType",
+      accessorKey: "overtimePriceLabel",
+      size: 140,
+      header: ({ column }) => {
+        const isSorted = column.getIsSorted();
+        return (
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => column.toggleSorting(isSorted === "asc")}
+          >
+            <Tag className="h-4 w-4 text-amber-600" />
+            Price Type
+            {isSorted === "asc" ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : isSorted === "desc" ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        );
+      },
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.overtimePriceLabel}</span>
+      ),
+    },
+    {
+      id: "rate",
+      accessorKey: "rateAtCreation",
+      size: 110,
+      header: () => (
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-emerald-600" />
+          Rate
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm font-medium">
+          {formatCurrency(row.original.rateAtCreation)}/hr
+        </span>
+      ),
+    },
+    {
+      id: "employees",
+      accessorKey: "numberOfEmployees",
+      size: 110,
+      header: () => (
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-indigo-600" />
+          Employees
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-center block">
+          {row.original.numberOfEmployees}
+        </span>
+      ),
+    },
+    {
+      id: "hours",
+      accessorKey: "hoursWorked",
+      size: 100,
+      header: () => (
+        <div className="flex items-center gap-2">
+          <Timer className="h-4 w-4 text-orange-600" />
+          Hours
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-center block">
+          {row.original.hoursWorked}h
+        </span>
+      ),
+    },
+    {
+      id: "total",
+      accessorKey: "totalCost",
+      size: 120,
+      header: () => (
+        <div className="flex items-center gap-2">
+          <Calculator className="h-4 w-4 text-rose-600" />
+          Total
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm font-semibold">
+          {formatCurrency(row.original.totalCost)}
+        </span>
+      ),
+    },
+    {
+      id: "paid",
+      accessorFn: (row) => (row.paidAt ? "Paid" : "Unpaid"),
+      size: 110,
+      header: () => <div className="text-center">Status</div>,
+      cell: ({ row }) => {
+        const paid = Boolean(row.original.paidAt);
+        return (
+          <div className="text-center">
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                paid
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700",
               )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <span className="text-xs whitespace-nowrap">
-            {fmtDate(row.original.workDate)}
-          </span>
-        ),
-      },
-      {
-        id: "site",
-        accessorFn: (row) => siteLabel(row.siteName, row.siteCode),
-        header: ({ column }) => {
-          const isSorted = column.getIsSorted();
-          return (
-            <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => column.toggleSorting(isSorted === "asc")}
+              title={
+                row.original.paidAt
+                  ? `Paid${row.original.paidBy ? ` by ${row.original.paidBy}` : ""}`
+                  : "Unpaid"
+              }
             >
-              <Building2 className="h-4 w-4 text-sky-600" />
-              Site
-              {isSorted === "asc" ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : isSorted === "desc" ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              {paid ? "Paid" : "Unpaid"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      size: 130,
+      header: () => <div className="text-center">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Edit overtime entry"
+            onClick={() => openEdit(row.original)}
+          >
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            title={row.original.paidAt ? "Mark unpaid" : "Mark paid"}
+            onClick={() => handlePaid(row.original, !row.original.paidAt)}
+          >
+            <CreditCard
+              className={cn(
+                "h-4 w-4",
+                row.original.paidAt
+                  ? "text-emerald-600"
+                  : "text-muted-foreground",
               )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <span className="font-semibold uppercase text-sm">
-            {siteLabel(row.original.siteName, row.original.siteCode)}
-          </span>
-        ),
-      },
-      {
-        id: "foreman",
-        accessorKey: "foremanName",
-        header: ({ column }) => {
-          const isSorted = column.getIsSorted();
-          return (
-            <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => column.toggleSorting(isSorted === "asc")}
-            >
-              <User className="h-4 w-4 text-violet-600" />
-              Foreman
-              {isSorted === "asc" ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : isSorted === "desc" ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <span className="text-sm capitalize">{row.original.foremanName}</span>
-        ),
-      },
-      {
-        id: "supervisor",
-        accessorKey: "supervisorName",
-        size: 150,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-cyan-600" />
-            Supervisor
-          </div>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm capitalize">
-            {row.original.supervisorName ?? "-"}
-          </span>
-        ),
-      },
-      {
-        id: "priceType",
-        accessorKey: "overtimePriceLabel",
-        size: 140,
-        header: ({ column }) => {
-          const isSorted = column.getIsSorted();
-          return (
-            <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => column.toggleSorting(isSorted === "asc")}
-            >
-              <Tag className="h-4 w-4 text-amber-600" />
-              Price Type
-              {isSorted === "asc" ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : isSorted === "desc" ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-          );
-        },
-        cell: ({ row }) => (
-          <span className="text-sm">{row.original.overtimePriceLabel}</span>
-        ),
-      },
-      {
-        id: "rate",
-        accessorKey: "rateAtCreation",
-        size: 110,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-            Rate
-          </div>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm font-medium">
-            {formatCurrency(row.original.rateAtCreation)}/hr
-          </span>
-        ),
-      },
-      {
-        id: "employees",
-        accessorKey: "numberOfEmployees",
-        size: 110,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-indigo-600" />
-            Employees
-          </div>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm text-center block">
-            {row.original.numberOfEmployees}
-          </span>
-        ),
-      },
-      {
-        id: "hours",
-        accessorKey: "hoursWorked",
-        size: 100,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <Timer className="h-4 w-4 text-orange-600" />
-            Hours
-          </div>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm text-center block">
-            {row.original.hoursWorked}h
-          </span>
-        ),
-      },
-      {
-        id: "total",
-        accessorKey: "totalCost",
-        size: 120,
-        header: () => (
-          <div className="flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-rose-600" />
-            Total
-          </div>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm font-semibold">
-            {formatCurrency(row.original.totalCost)}
-          </span>
-        ),
-      },
-      {
-        id: "paid",
-        accessorFn: (row) => (row.paidAt ? "Paid" : "Unpaid"),
-        size: 110,
-        header: () => <div className="text-center">Status</div>,
-        cell: ({ row }) => {
-          const paid = Boolean(row.original.paidAt);
-          return (
-            <div className="text-center">
-              <span
-                className={cn(
-                  "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                  paid
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-amber-50 text-amber-700",
-                )}
-                title={
-                  row.original.paidAt
-                    ? `Paid${row.original.paidBy ? ` by ${row.original.paidBy}` : ""}`
-                    : "Unpaid"
-                }
-              >
-                {paid ? "Paid" : "Unpaid"}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        id: "actions",
-        size: 130,
-        header: () => <div className="text-center">Actions</div>,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Edit overtime entry"
-              onClick={() => openEdit(row.original)}
-            >
-              <Pencil className="h-4 w-4 text-muted-foreground" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              title={row.original.paidAt ? "Mark unpaid" : "Mark paid"}
-              onClick={() => handlePaid(row.original, !row.original.paidAt)}
-            >
-              <CreditCard
-                className={cn(
-                  "h-4 w-4",
-                  row.original.paidAt
-                    ? "text-emerald-600"
-                    : "text-muted-foreground",
-                )}
-              />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Delete overtime entry"
-              onClick={() => setDeleteId(row.original.id)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        ),
-      },
+            />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Delete overtime entry"
+            onClick={() => setDeleteId(row.original.id)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   const table = useReactTable({
@@ -685,8 +810,14 @@ export default function OvertimeEntriesPage() {
     setFormForemanId("");
     setFormDate("");
     setFormPriceId("");
-    setFormEmployees("");
-    setFormHours("");
+    setFormEmployees("1");
+    setFormHours("1");
+    setFormDateKeys([]);
+    setFormEmployeesByDate({});
+    setFormHoursByDate({});
+    setBatchCalendarMonth(
+      filterFrom ? dateFromDateKey(filterFrom) : new Date(),
+    );
     setFormNote("");
     setSheetOpen(true);
   }
@@ -699,12 +830,15 @@ export default function OvertimeEntriesPage() {
     setFormPriceId(entry.overtimePriceId);
     setFormEmployees(String(entry.numberOfEmployees));
     setFormHours(String(entry.hoursWorked));
+    setFormDateKeys([]);
+    setFormEmployeesByDate({});
+    setFormHoursByDate({});
     setFormNote(entry.note ?? "");
     setSheetOpen(true);
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5">
+    <div className="mx-auto w-full space-y-5">
       {/* Controls bar (matches SitesList) */}
       <div className="rounded border border-border/50 bg-card/80 backdrop-blur-sm p-3 shadow-sm transition-all hover:shadow-md">
         <div className="flex flex-col gap-4 sm:flex-row items-end sm:justify-between">
@@ -1029,9 +1163,12 @@ export default function OvertimeEntriesPage() {
 
       {/* Create Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="sm:max-w-105 overflow-y-auto border-l border-border bg-background p-0">
+        <SheetContent
+          side="bottom"
+          className="w-full h-full p-0 m-0 gap-0 overflow-hidden"
+        >
           {/* Header */}
-          <div className="px-6 pt-6 pb-5 border-b border-border">
+          <div className="shrink-0 px-6 pt-4 pb-4 border-b border-border">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-8 w-8 rounded bg-foreground flex items-center justify-center">
                 <Clock className="h-4 w-4 text-background" />
@@ -1047,7 +1184,7 @@ export default function OvertimeEntriesPage() {
             </p>
           </div>
 
-          <div className="px-6 py-6 space-y-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-5">
             {/* Site */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -1124,21 +1261,56 @@ export default function OvertimeEntriesPage() {
               </Popover>
             </div>
 
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
             {/* Date */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Date
-              </label>
-              <Input
-                type="date"
-                value={formDate}
-                onChange={(e) => setFormDate(e.target.value)}
-                className="h-10 border-border bg-background text-foreground text-sm hover:border-foreground/30 focus:border-foreground transition-colors"
-              />
-            </div>
+            {editId ? (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Date
+                </label>
+                <Input
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  className="h-10 border-border bg-background text-foreground text-sm hover:border-foreground/30 focus:border-foreground transition-colors"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Dates
+                  </label>
+                  {formDateKeys.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {formDateKeys.length} selected
+                    </span>
+                  )}
+                </div>
+                <Input
+                  type="month"
+                  value={monthKeyFromDate(batchCalendarMonth)}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setBatchCalendarMonth(dateFromMonthKey(e.target.value));
+                    }
+                  }}
+                  className="h-10 border-border bg-background text-foreground text-sm hover:border-foreground/30 focus:border-foreground transition-colors"
+                />
+                <div className="rounded border border-border bg-background">
+                  <Calendar
+                    mode="multiple"
+                    month={batchCalendarMonth}
+                    onMonthChange={setBatchCalendarMonth}
+                    selected={formDateKeys.map(dateFromDateKey)}
+                    onSelect={setBatchDates}
+                    className="mx-auto"
+                  />
+                </div>
+              </div>
+            )}
 
-            {/* Divider */}
-            <div className="border-t border-border pt-1" />
+            <div className="space-y-5">
 
             {/* Foreman */}
             <div className="space-y-1.5">
@@ -1297,20 +1469,20 @@ export default function OvertimeEntriesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Employees
+                  {editId ? "Employees" : "Default Employees"}
                 </label>
                 <Input
                   type="number"
                   min="1"
                   placeholder="e.g. 5"
                   value={formEmployees}
-                  onChange={(e) => setFormEmployees(e.target.value)}
+                  onChange={(e) => setBatchDefaultEmployees(e.target.value)}
                   className="h-10 border-border bg-background text-foreground text-sm placeholder:text-muted-foreground hover:border-foreground/30 focus:border-foreground transition-colors"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Hours
+                  {editId ? "Hours" : "Default Hours"}
                 </label>
                 <Input
                   type="number"
@@ -1318,11 +1490,72 @@ export default function OvertimeEntriesPage() {
                   step="0.5"
                   placeholder="e.g. 2"
                   value={formHours}
-                  onChange={(e) => setFormHours(e.target.value)}
+                  onChange={(e) => setBatchDefaultHours(e.target.value)}
                   className="h-10 border-border bg-background text-foreground text-sm placeholder:text-muted-foreground hover:border-foreground/30 focus:border-foreground transition-colors"
                 />
               </div>
             </div>
+
+            {!editId && selectedDateRows.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Employees + Hours Per Date
+                </label>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[1fr_84px_84px_36px] gap-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    <span>Date</span>
+                    <span>Employees</span>
+                    <span>Hours</span>
+                    <span />
+                  </div>
+                  {selectedDateRows.map((row) => (
+                    <div
+                      key={row.dateKey}
+                      className="grid grid-cols-[1fr_84px_84px_36px] items-center gap-2 rounded border border-border bg-muted/30 p-2"
+                    >
+                      <div className="text-sm font-medium text-foreground">
+                        {fmtDate(row.dateKey)}
+                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={row.employees}
+                        onChange={(e) =>
+                          setFormEmployeesByDate((prev) => ({
+                            ...prev,
+                            [row.dateKey]: e.target.value,
+                          }))
+                        }
+                        className="h-9 border-border bg-background text-sm"
+                      />
+                      <Input
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        value={row.hours}
+                        onChange={(e) =>
+                          setFormHoursByDate((prev) => ({
+                            ...prev,
+                            [row.dateKey]: e.target.value,
+                          }))
+                        }
+                        className="h-9 border-border bg-background text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => removeBatchDate(row.dateKey)}
+                        title="Remove date"
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Note */}
             <div className="space-y-1.5">
@@ -1339,44 +1572,47 @@ export default function OvertimeEntriesPage() {
                 className="h-10 border-border bg-background text-foreground text-sm placeholder:text-muted-foreground hover:border-foreground/30 focus:border-foreground transition-colors"
               />
             </div>
+            </div>
+            </div>
+          </div>
 
-            {/* Cost Preview */}
-            {formPreviewTotal > 0 && (
-              <div className="rounded border border-border bg-muted/50 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      Cost Preview
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatCurrency(selectedPrice?.rate ?? 0)}/hr &times;{" "}
-                      {formEmployees} employees &times; {formHours}h
-                    </div>
+          <div className="shrink-0 border-t border-border bg-background px-6 py-3">
+            <div className="ml-auto flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              {formPreviewTotal > 0 && (
+                <div className="rounded border border-border bg-muted/50 px-3 py-2 sm:min-w-52">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Cost Preview
                   </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-foreground tabular-nums">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      {previewEmployeeHours} employee-hours
+                    </span>
+                    <span className="text-base font-bold text-foreground tabular-nums">
                       {formatCurrency(formPreviewTotal)}
-                    </div>
+                    </span>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Submit */}
-            <Button
-              className="w-full h-11 bg-foreground hover:bg-foreground/80 text-background text-sm font-semibold tracking-wide rounded transition-colors mt-2"
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-3.5 w-3.5 rounded-full border-2 border-background/30 border-t-background animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                editId ? "Update Overtime Entry" : "Save Overtime Entry"
               )}
-            </Button>
+
+              <Button
+                className="h-11 bg-foreground px-8 text-sm font-semibold tracking-wide text-background transition-colors hover:bg-foreground/80 sm:min-w-64"
+                onClick={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-background/30 border-t-background animate-spin" />
+                    Saving...
+                  </span>
+                ) : editId ? (
+                  "Update Overtime Entry"
+                ) : formDateKeys.length > 0 ? (
+                  `Save ${formDateKeys.length} Overtime ${formDateKeys.length === 1 ? "Entry" : "Entries"}`
+                ) : (
+                  "Save Overtime Entries"
+                )}
+              </Button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>

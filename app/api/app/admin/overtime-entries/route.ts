@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
@@ -160,7 +161,9 @@ export async function GET(req: Request) {
 /**
  * POST /api/app/admin/overtime-entries
  * Create a new overtime entry
- * Body: { siteId, foremanId, workDate, overtimePriceId, numberOfEmployees, hoursWorked, note? }
+ * Body:
+ *   Single: { siteId, foremanId, workDate, overtimePriceId, numberOfEmployees, hoursWorked, note? }
+ *   Batch:  { siteId, foremanId, overtimePriceId, numberOfEmployees?, entries: [{ workDate, hoursWorked, numberOfEmployees }], note? }
  */
 export async function POST(req: Request) {
   try {
@@ -179,6 +182,7 @@ export async function POST(req: Request) {
       overtimePriceId,
       numberOfEmployees,
       hoursWorked,
+      entries,
       note,
     } = body as {
       siteId?: string;
@@ -187,6 +191,11 @@ export async function POST(req: Request) {
       overtimePriceId?: string;
       numberOfEmployees?: number;
       hoursWorked?: number;
+      entries?: Array<{
+        workDate?: string;
+        hoursWorked?: number;
+        numberOfEmployees?: number;
+      }>;
       note?: string;
     };
 
@@ -200,24 +209,38 @@ export async function POST(req: Request) {
         { error: "foremanId is required" },
         { status: 400, headers: CORS },
       );
-    if (!workDate)
-      return NextResponse.json(
-        { error: "workDate is required" },
-        { status: 400, headers: CORS },
-      );
     if (!overtimePriceId)
       return NextResponse.json(
         { error: "overtimePriceId is required" },
         { status: 400, headers: CORS },
       );
-    if (!numberOfEmployees || numberOfEmployees < 1)
+    const entryRows =
+      Array.isArray(entries) && entries.length > 0
+        ? entries
+        : [{ workDate, hoursWorked, numberOfEmployees }];
+
+    for (const row of entryRows) {
+      if (!row.workDate)
+        return NextResponse.json(
+          { error: "workDate is required" },
+          { status: 400, headers: CORS },
+        );
+      if (!row.hoursWorked || Number(row.hoursWorked) <= 0)
+        return NextResponse.json(
+          { error: "hoursWorked must be greater than 0" },
+          { status: 400, headers: CORS },
+        );
+      if (!row.numberOfEmployees || Number(row.numberOfEmployees) < 1)
+        return NextResponse.json(
+          { error: "numberOfEmployees must be at least 1" },
+          { status: 400, headers: CORS },
+        );
+    }
+
+    const uniqueDates = new Set(entryRows.map((row) => row.workDate));
+    if (uniqueDates.size !== entryRows.length)
       return NextResponse.json(
-        { error: "numberOfEmployees must be at least 1" },
-        { status: 400, headers: CORS },
-      );
-    if (!hoursWorked || Number(hoursWorked) <= 0)
-      return NextResponse.json(
-        { error: "hoursWorked must be greater than 0" },
+        { error: "Duplicate overtime dates are not allowed in one batch" },
         { status: 400, headers: CORS },
       );
 
@@ -251,21 +274,32 @@ export async function POST(req: Request) {
       );
 
     const rateNum = decimalToNumber(price.rate);
-    const totalCost = rateNum * numberOfEmployees * Number(hoursWorked);
 
-    const entry = await prisma.overtimeEntry.create({
-      data: {
-        site: { connect: { id: siteId } },
-        foreman: { connect: { id: foremanId } },
-        workDate: new Date(`${workDate}T00:00:00.000Z`),
-        overtimePrice: { connect: { id: overtimePriceId } },
-        rateAtCreation: rateNum,
-        numberOfEmployees,
-        hoursWorked: Number(hoursWorked),
-        totalCost,
-        note: note || null,
-        createdByUser: { connect: { id: auth.id } },
-      },
+    const rowsToCreate = entryRows.map((row) => {
+        const rowHours = Number(row.hoursWorked);
+        const rowEmployees = Number(row.numberOfEmployees);
+        const totalCost = rateNum * rowEmployees * rowHours;
+
+        return {
+          id: randomUUID(),
+          siteId,
+          foremanId,
+          workDate: new Date(`${row.workDate}T00:00:00.000Z`),
+          overtimePriceId,
+          rateAtCreation: rateNum,
+          numberOfEmployees: rowEmployees,
+          hoursWorked: rowHours,
+          totalCost,
+          note: note || null,
+          createdByUserId: auth.id,
+        };
+      });
+
+    await prisma.overtimeEntry.createMany({ data: rowsToCreate });
+
+    const createdEntries = await prisma.overtimeEntry.findMany({
+      where: { id: { in: rowsToCreate.map((row) => row.id) } },
+      orderBy: { workDate: "asc" },
       include: {
         site: { select: { id: true, name: true, code: true } },
         foreman: {
@@ -278,25 +312,27 @@ export async function POST(req: Request) {
       },
     });
 
+    const data = createdEntries.map((entry) => ({
+      id: entry.id,
+      siteId: entry.siteId,
+      siteName: entry.site.name,
+      siteCode: entry.site.code ?? null,
+      foremanId: entry.foremanId,
+      foremanName: entry.foreman.user.name ?? "Unknown",
+      workDate: entry.workDate.toISOString().slice(0, 10),
+      overtimePriceLabel: entry.overtimePrice.label,
+      rateAtCreation: rateNum,
+      numberOfEmployees: entry.numberOfEmployees,
+      hoursWorked: decimalToNumber(entry.hoursWorked),
+      totalCost: decimalToNumber(entry.totalCost),
+      note: entry.note,
+      createdAt: entry.createdAt.toISOString(),
+    }));
+
     return NextResponse.json(
       {
         ok: true,
-        data: {
-          id: entry.id,
-          siteId: entry.siteId,
-          siteName: entry.site.name,
-          siteCode: entry.site.code ?? null,
-          foremanId: entry.foremanId,
-          foremanName: entry.foreman.user.name ?? "Unknown",
-          workDate: entry.workDate.toISOString().slice(0, 10),
-          overtimePriceLabel: entry.overtimePrice.label,
-          rateAtCreation: rateNum,
-          numberOfEmployees: entry.numberOfEmployees,
-          hoursWorked: decimalToNumber(entry.hoursWorked),
-          totalCost: decimalToNumber(entry.totalCost),
-          note: entry.note,
-          createdAt: entry.createdAt.toISOString(),
-        },
+        data: data.length === 1 ? data[0] : data,
       },
       { status: 201, headers: CORS },
     );
