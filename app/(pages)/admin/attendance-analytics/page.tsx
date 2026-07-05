@@ -41,6 +41,7 @@ import { addDays, currentFortnightSatFri, toISODate } from "@/lib/fortnight";
 type DayRow = {
   date: string;
   total: number;
+  overtimeTotal: number;
   percentChange: number | null;
 };
 
@@ -66,6 +67,11 @@ type AnalyticsResponse = {
   };
   summary: {
     totalAttendance: number;
+    totalOvertime: number;
+    unpaidOvertimeDays: number;
+    unpaidOvertimeHours: number;
+    unpaidOvertimeCost: number;
+    totalWithOvertime: number;
     averagePerDay: number;
     bestDay: DayRow | null;
     activeSiteCount: number;
@@ -81,6 +87,7 @@ type SiteAnalyticsRow = {
   siteCode: string | null;
   supervisorName: string | null;
   total: number;
+  overtimeTotal: number;
   days: SiteDayRow[];
 };
 
@@ -115,7 +122,14 @@ function formatPercent(value: number | null) {
 }
 
 function formatDayCell(day: DayRow) {
-  return `${day.total} (${formatPercent(day.percentChange)})`;
+  return `${day.total} | OT ${formatCompactNumber(day.overtimeTotal)} (${formatPercent(day.percentChange)})`;
+}
+
+function formatCompactNumber(value: number) {
+  return value.toLocaleString("en-ZA", {
+    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+    maximumFractionDigits: 1,
+  });
 }
 
 function downloadBlob(data: BlobPart, filename: string, type: string) {
@@ -185,6 +199,8 @@ async function exportAttendanceExcel(input: {
   sheet.addRow([
     "Total attendance days",
     input.data.summary.totalAttendance,
+    "Unpaid overtime days",
+    input.data.summary.unpaidOvertimeDays,
     "Average per day",
     input.data.summary.averagePerDay,
     "Best day",
@@ -199,7 +215,8 @@ async function exportAttendanceExcel(input: {
   const headerRow = sheet.addRow([
     "Site",
     ...input.data.days.map(
-      (day) => `${formatDate(day.date)}\nTotal: ${day.total}`,
+      (day) =>
+        `${formatDate(day.date)}\nTotal: ${day.total}\nOT: ${formatCompactNumber(day.overtimeTotal)}`,
     ),
     "Total",
   ]);
@@ -218,7 +235,7 @@ async function exportAttendanceExcel(input: {
     const row = sheet.addRow([
       `${siteRowLabel(site)}\n${supervisorLabel(site)}`,
       ...site.days.map(formatDayCell),
-      site.total,
+      `${site.total} | OT ${formatCompactNumber(site.overtimeTotal)}`,
     ]);
     row.height = 30;
   });
@@ -313,7 +330,7 @@ async function exportAttendancePdf(input: {
     drawText(
       `Total ${input.data.summary.totalAttendance} | Average ${input.data.summary.averagePerDay.toFixed(
         1,
-      )} | Best ${input.data.summary.bestDay ? formatDate(input.data.summary.bestDay.date) : "-"} | Sites ${input.data.summary.activeSiteCount}`,
+      )} | Unpaid OT ${formatCompactNumber(input.data.summary.unpaidOvertimeDays)} | Best ${input.data.summary.bestDay ? formatDate(input.data.summary.bestDay.date) : "-"} | Sites ${input.data.summary.activeSiteCount}`,
       margin,
       y - 31,
       8.5,
@@ -339,7 +356,7 @@ async function exportAttendancePdf(input: {
       { label: "Site", total: "", width: siteWidth, align: "left" as const },
       ...input.data.days.map((day) => ({
         label: formatDate(day.date),
-        total: `Total: ${day.total}`,
+        total: `T:${day.total} OT:${formatCompactNumber(day.overtimeTotal)}`,
         width: dayWidth,
         align: "right" as const,
       })),
@@ -459,7 +476,15 @@ async function exportAttendancePdf(input: {
   function drawDayCell(day: SiteDayRow, x: number, width: number) {
     const countText = String(day.total);
     const countTextWidth = regular.widthOfTextAtSize(countText, 6.2);
-    drawText(countText, x + 3, y - 12, 6.2);
+    drawText(countText, x + 3, y - 9, 6.2);
+    drawText(
+      `OT ${formatCompactNumber(day.overtimeTotal)}`,
+      x + 3,
+      y - 17,
+      5.4,
+      regular,
+      muted,
+    );
 
     const badgeLabel = formatPercent(day.percentChange);
     const badgeWidth = Math.max(
@@ -506,7 +531,13 @@ async function exportAttendancePdf(input: {
       thickness: 0.25,
       color: border,
     });
-    drawCell(String(site.total), x, totalWidth, "right", true);
+    drawCell(
+      `${site.total} / ${formatCompactNumber(site.overtimeTotal)}`,
+      x,
+      totalWidth,
+      "right",
+      true,
+    );
     y -= rowHeight;
   }
 
@@ -622,6 +653,7 @@ export default function AdminAttendanceAnalyticsPage() {
         siteCode: string | null;
         supervisorName: string | null;
         total: number;
+        overtimeTotal: number;
         days: SiteDayRow[];
       }
     >();
@@ -634,11 +666,13 @@ export default function AdminAttendanceAnalyticsPage() {
           siteCode: row.siteCode,
           supervisorName: row.supervisorName,
           total: 0,
+          overtimeTotal: 0,
           days: [],
         });
       }
       const group = grouped.get(row.siteId)!;
       group.total += row.total;
+      group.overtimeTotal += row.overtimeTotal;
       group.days.push(row);
     }
 
@@ -825,7 +859,7 @@ export default function AdminAttendanceAnalyticsPage() {
 
       {data ? (
         <>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-5">
             <Card className="gap-3 py-4">
               <CardHeader className="px-4">
                 <CardTitle className="text-sm text-muted-foreground">
@@ -834,6 +868,16 @@ export default function AdminAttendanceAnalyticsPage() {
               </CardHeader>
               <CardContent className="px-4 text-2xl font-semibold">
                 {data.summary.totalAttendance}
+              </CardContent>
+            </Card>
+            <Card className="gap-3 py-4">
+              <CardHeader className="px-4">
+                <CardTitle className="text-sm text-muted-foreground">
+                  Unpaid overtime days
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 text-2xl font-semibold">
+                {formatCompactNumber(data.summary.unpaidOvertimeDays)}
               </CardContent>
             </Card>
             <Card className="gap-3 py-4">
@@ -878,12 +922,13 @@ export default function AdminAttendanceAnalyticsPage() {
                   {data.days.map((day) => (
                     <TableHead
                       key={day.date}
-                      className="min-w-[118px] bg-primary text-primary-foreground"
+                      className="min-w-[148px] bg-primary text-primary-foreground"
                     >
                       <div className="space-y-1">
                         <div>{formatDate(day.date)}</div>
-                        <div className="text-xs font-semibold text-primary-foreground/80">
-                          Total: {day.total}
+                        <div className="flex items-center gap-3 text-xs font-semibold text-primary-foreground/80">
+                          <span>Total: {day.total}</span>
+                          <span>OT: {formatCompactNumber(day.overtimeTotal)}</span>
                         </div>
                       </div>
                     </TableHead>
@@ -908,13 +953,21 @@ export default function AdminAttendanceAnalyticsPage() {
                       {site.days.map((day) => (
                         <TableCell key={`${site.siteId}-${day.date}`}>
                           <div className="flex min-w-[96px] items-center justify-between gap-2">
-                            <span className="tabular-nums">{day.total}</span>
+                            <span className="tabular-nums">
+                              {day.total}
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                / OT {formatCompactNumber(day.overtimeTotal)}
+                              </span>
+                            </span>
                             <PercentBadge value={day.percentChange} />
                           </div>
                         </TableCell>
                       ))}
                       <TableCell className="text-right font-semibold tabular-nums">
                         {site.total}
+                        <div className="text-xs font-normal text-muted-foreground">
+                          OT {formatCompactNumber(site.overtimeTotal)}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

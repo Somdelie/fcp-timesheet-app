@@ -23,7 +23,9 @@ const CORS_HEADERS = {
 type DayRow = {
   date: string;
   total: number;
+  overtimeTotal: number;
   wageTotal: number;
+  overtimeWageTotal: number;
   percentChange: number | null;
 };
 
@@ -38,6 +40,14 @@ type SessionUser = {
   id?: string;
   role?: string;
 };
+
+type OvertimeType = "NONE" | "HALF_DAY" | "FULL_DAY";
+
+function overtimeDays(type: OvertimeType) {
+  if (type === "HALF_DAY") return 0.5;
+  if (type === "FULL_DAY") return 1;
+  return 0;
+}
 
 function pctChange(current: number, previous: number | null) {
   if (previous === null) return null;
@@ -96,7 +106,14 @@ export async function GET(req: Request) {
     ...(siteId ? { siteId } : {}),
   };
 
-  const [dailyGroups, siteGroups, siteOptions] = await Promise.all([
+  const [
+    dailyGroups,
+    dailyOvertimeGroups,
+    siteGroups,
+    siteOvertimeGroups,
+    siteOptions,
+    unpaidOvertimeEntries,
+  ] = await Promise.all([
     prisma.attendanceScan.groupBy({
       by: ["workDate"],
       where,
@@ -105,7 +122,21 @@ export async function GET(req: Request) {
       orderBy: { workDate: "asc" },
     }),
     prisma.attendanceScan.groupBy({
+      by: ["workDate", "overtimeType"],
+      where,
+      _count: { _all: true },
+      _sum: { dayRateAtScan: true },
+      orderBy: { workDate: "asc" },
+    }),
+    prisma.attendanceScan.groupBy({
       by: ["siteId", "workDate"],
+      where,
+      _count: { _all: true },
+      _sum: { dayRateAtScan: true },
+      orderBy: [{ siteId: "asc" }, { workDate: "asc" }],
+    }),
+    prisma.attendanceScan.groupBy({
+      by: ["siteId", "workDate", "overtimeType"],
       where,
       _count: { _all: true },
       _sum: { dayRateAtScan: true },
@@ -130,6 +161,18 @@ export async function GET(req: Request) {
         },
       },
       orderBy: [{ code: "asc" }, { name: "asc" }],
+    }),
+    prisma.overtimeEntry.findMany({
+      where: {
+        workDate: { gte: start, lt: endExclusive },
+        paidAt: null,
+        ...(siteId ? { siteId } : {}),
+      },
+      select: {
+        hoursWorked: true,
+        numberOfEmployees: true,
+        totalCost: true,
+      },
     }),
   ]);
 
@@ -171,6 +214,22 @@ export async function GET(req: Request) {
       decimalToNumber(row._sum.dayRateAtScan),
     ]),
   );
+  const overtimeByDate = new Map<string, number>();
+  const overtimeWagesByDate = new Map<string, number>();
+  for (const row of dailyOvertimeGroups) {
+    const date = isoFromDateUTC(row.workDate);
+    const multiplier = overtimeDays(row.overtimeType as OvertimeType);
+    if (multiplier === 0) continue;
+    overtimeByDate.set(
+      date,
+      (overtimeByDate.get(date) ?? 0) + row._count._all * multiplier,
+    );
+    overtimeWagesByDate.set(
+      date,
+      (overtimeWagesByDate.get(date) ?? 0) +
+        decimalToNumber(row._sum.dayRateAtScan) * multiplier,
+    );
+  }
 
   let previousTotal: number | null = null;
   const days: DayRow[] = dates.map((date) => {
@@ -178,7 +237,9 @@ export async function GET(req: Request) {
     const row = {
       date,
       total,
+      overtimeTotal: overtimeByDate.get(date) ?? 0,
       wageTotal: wagesByDate.get(date) ?? 0,
+      overtimeWageTotal: overtimeWagesByDate.get(date) ?? 0,
       percentChange: pctChange(total, previousTotal),
     };
     previousTotal = total;
@@ -187,6 +248,8 @@ export async function GET(req: Request) {
 
   const siteDateTotals = new Map<string, number>();
   const siteDateWages = new Map<string, number>();
+  const siteDateOvertimeTotals = new Map<string, number>();
+  const siteDateOvertimeWages = new Map<string, number>();
   for (const row of siteGroups) {
     const key = `${row.siteId}:${isoFromDateUTC(row.workDate)}`;
     siteDateTotals.set(
@@ -194,6 +257,20 @@ export async function GET(req: Request) {
       row._count._all,
     );
     siteDateWages.set(key, decimalToNumber(row._sum.dayRateAtScan));
+  }
+  for (const row of siteOvertimeGroups) {
+    const multiplier = overtimeDays(row.overtimeType as OvertimeType);
+    if (multiplier === 0) continue;
+    const key = `${row.siteId}:${isoFromDateUTC(row.workDate)}`;
+    siteDateOvertimeTotals.set(
+      key,
+      (siteDateOvertimeTotals.get(key) ?? 0) + row._count._all * multiplier,
+    );
+    siteDateOvertimeWages.set(
+      key,
+      (siteDateOvertimeWages.get(key) ?? 0) +
+        decimalToNumber(row._sum.dayRateAtScan) * multiplier,
+    );
   }
 
   const perSite: SiteDayRow[] = [];
@@ -216,7 +293,9 @@ export async function GET(req: Request) {
       perSite.push({
         date,
         total,
+        overtimeTotal: siteDateOvertimeTotals.get(`${id}:${date}`) ?? 0,
         wageTotal: siteDateWages.get(`${id}:${date}`) ?? 0,
+        overtimeWageTotal: siteDateOvertimeWages.get(`${id}:${date}`) ?? 0,
         percentChange: pctChange(total, previousSiteTotal),
         siteId: id,
         siteName: site?.name ?? "Unknown site",
@@ -229,6 +308,21 @@ export async function GET(req: Request) {
 
   const totalAttendance = days.reduce((sum, day) => sum + day.total, 0);
   const totalWages = days.reduce((sum, day) => sum + day.wageTotal, 0);
+  const totalOvertime = days.reduce((sum, day) => sum + day.overtimeTotal, 0);
+  const totalOvertimeWages = days.reduce(
+    (sum, day) => sum + day.overtimeWageTotal,
+    0,
+  );
+  const unpaidOvertimeHours = unpaidOvertimeEntries.reduce(
+    (sum, entry) =>
+      sum + decimalToNumber(entry.hoursWorked) * entry.numberOfEmployees,
+    0,
+  );
+  const unpaidOvertimeDays = unpaidOvertimeHours / 8;
+  const unpaidOvertimeCost = unpaidOvertimeEntries.reduce(
+    (sum, entry) => sum + decimalToNumber(entry.totalCost),
+    0,
+  );
   const averagePerDay = totalAttendance / dates.length;
   const bestDay = days.reduce<DayRow | null>(
     (best, day) => (!best || day.total > best.total ? day : best),
@@ -244,7 +338,14 @@ export async function GET(req: Request) {
       },
       summary: {
         totalAttendance,
+        totalOvertime,
+        unpaidOvertimeDays,
+        unpaidOvertimeHours,
+        unpaidOvertimeCost,
+        totalWithOvertime: totalAttendance + totalOvertime,
         totalWages,
+        totalOvertimeWages,
+        totalWagesWithOvertime: totalWages + totalOvertimeWages,
         averagePerDay,
         averageDayRate:
           totalAttendance > 0 ? totalWages / totalAttendance : 0,

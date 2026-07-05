@@ -8,6 +8,7 @@ type OvertimeEntryForPrint = {
   siteName: string;
   siteCode: string | null;
   foremanName: string;
+  supervisorName?: string | null;
   overtimePriceLabel: string;
   rateAtCreation: number;
   numberOfEmployees: number;
@@ -16,10 +17,22 @@ type OvertimeEntryForPrint = {
   note: string | null;
 };
 
+export type OvertimePrintColumnId =
+  | "date"
+  | "site"
+  | "foreman"
+  | "supervisor"
+  | "priceType"
+  | "rate"
+  | "employees"
+  | "hours"
+  | "total";
+
 export interface OvertimePrintMeta {
   filterSiteName?: string;
   filterFrom?: string;
   filterTo?: string;
+  columns?: OvertimePrintColumnId[];
 }
 
 function escapeHTML(str: string): string {
@@ -50,10 +63,80 @@ function compareText(a: string, b: string): number {
   return a.localeCompare(b, "en-ZA", { sensitivity: "base" });
 }
 
+const PRINT_COLUMNS: Array<{
+  id: OvertimePrintColumnId;
+  label: string;
+  className: string;
+  render: (entry: OvertimeEntryForPrint) => string;
+}> = [
+  {
+    id: "date",
+    label: "Date",
+    className: "date-col",
+    render: (entry) => escapeHTML(fmtDate(entry.workDate)),
+  },
+  {
+    id: "site",
+    label: "Site",
+    className: "site-col",
+    render: (entry) => escapeHTML(siteLabel(entry.siteName, entry.siteCode)),
+  },
+  {
+    id: "foreman",
+    label: "Foreman",
+    className: "name-col",
+    render: (entry) => escapeHTML(entry.foremanName),
+  },
+  {
+    id: "supervisor",
+    label: "Supervisor",
+    className: "name-col",
+    render: (entry) => escapeHTML(entry.supervisorName ?? "-"),
+  },
+  {
+    id: "priceType",
+    label: "Price Type",
+    className: "type-col",
+    render: (entry) => escapeHTML(entry.overtimePriceLabel),
+  },
+  {
+    id: "rate",
+    label: "Rate",
+    className: "num-col",
+    render: (entry) => `${fmtCurrency(entry.rateAtCreation)}/hr`,
+  },
+  {
+    id: "employees",
+    label: "Guys",
+    className: "num-col",
+    render: (entry) => String(entry.numberOfEmployees),
+  },
+  {
+    id: "hours",
+    label: "Hours",
+    className: "num-col",
+    render: (entry) => `${entry.hoursWorked}h`,
+  },
+  {
+    id: "total",
+    label: "Total",
+    className: "num-col total-col",
+    render: (entry) => fmtCurrency(entry.totalCost),
+  },
+];
+
 export function generateOvertimePrintHTML(
   entries: OvertimeEntryForPrint[],
   meta?: OvertimePrintMeta,
 ): string {
+  const selectedColumnIds =
+    meta?.columns && meta.columns.length > 0
+      ? new Set(meta.columns)
+      : new Set(PRINT_COLUMNS.map((column) => column.id));
+  const activeColumns = PRINT_COLUMNS.filter((column) =>
+    selectedColumnIds.has(column.id),
+  );
+  const showForemanGroupLabels = selectedColumnIds.has("foreman");
   const totalEmployees = entries.reduce((s, e) => s + e.numberOfEmployees, 0);
   const totalHours = entries.reduce((s, e) => s + e.hoursWorked, 0);
   const totalCost = entries.reduce((s, e) => s + e.totalCost, 0);
@@ -107,38 +190,57 @@ export function generateOvertimePrintHTML(
         .map(
           (e) => `
       <tr>
-        <td class="date-col">${escapeHTML(fmtDate(e.workDate))}</td>
-        <td class="site-col">${escapeHTML(siteLabel(e.siteName, e.siteCode))}</td>
-        <td class="name-col">${escapeHTML(e.foremanName)}</td>
-        <td class="type-col">${escapeHTML(e.overtimePriceLabel)}</td>
-        <td class="num-col">${fmtCurrency(e.rateAtCreation)}/hr</td>
-        <td class="num-col">${e.numberOfEmployees}</td>
-        <td class="num-col">${e.hoursWorked}h</td>
-        <td class="num-col total-col">${fmtCurrency(e.totalCost)}</td>
+        ${activeColumns
+          .map(
+            (column) =>
+              `<td class="${column.className}">${column.render(e)}</td>`,
+          )
+          .join("")}
       </tr>`,
         )
         .join("");
+      const summaryCells = activeColumns
+        .map((column, index) => {
+          if (index === 0)
+            return `<td class="name-col">${escapeHTML(group.foremanName)} total</td>`;
+          if (column.id === "employees")
+            return `<td class="num-col">${foremanEmployees}</td>`;
+          if (column.id === "hours")
+            return `<td class="num-col">${foremanHours}h</td>`;
+          if (column.id === "total")
+            return `<td class="num-col total-col">${fmtCurrency(foremanTotal)}</td>`;
+          return `<td></td>`;
+        })
+        .join("");
+
+      if (!showForemanGroupLabels) return rows;
 
       return `
       <tr class="foreman-row">
-        <td colspan="8">${escapeHTML(group.foremanName)}</td>
+        <td colspan="${activeColumns.length}">${escapeHTML(group.foremanName)}</td>
       </tr>
       ${rows}
       <tr class="foreman-total-row">
-        <td colspan="5" class="name-col">${escapeHTML(group.foremanName)} total</td>
-        <td class="num-col">${foremanEmployees}</td>
-        <td class="num-col">${foremanHours}h</td>
-        <td class="num-col total-col">${fmtCurrency(foremanTotal)}</td>
+        ${summaryCells}
       </tr>`;
+    })
+    .join("");
+
+  const totalCells = activeColumns
+    .map((column, index) => {
+      if (index === 0) return `<td class="name-col">TOTAL</td>`;
+      if (column.id === "employees")
+        return `<td class="num-col">${totalEmployees}</td>`;
+      if (column.id === "hours") return `<td class="num-col">${totalHours}h</td>`;
+      if (column.id === "total")
+        return `<td class="num-col total-col">${fmtCurrency(totalCost)}</td>`;
+      return `<td></td>`;
     })
     .join("");
 
   const totalRow = `
     <tr class="total-row">
-      <td colspan="5" class="name-col">TOTAL</td>
-      <td class="num-col">${totalEmployees}</td>
-      <td class="num-col">${totalHours}h</td>
-      <td class="num-col total-col">${fmtCurrency(totalCost)}</td>
+      ${totalCells}
     </tr>
   `;
 
@@ -338,14 +440,7 @@ export function generateOvertimePrintHTML(
       <table class="main-table">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Site</th>
-            <th>Foreman</th>
-            <th>Price Type</th>
-            <th>Rate</th>
-            <th>Employees</th>
-            <th>Hours</th>
-            <th>Total</th>
+            ${activeColumns.map((column) => `<th>${column.label}</th>`).join("")}
           </tr>
         </thead>
         <tbody>

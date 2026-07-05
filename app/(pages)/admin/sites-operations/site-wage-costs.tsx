@@ -1,7 +1,7 @@
 import { addDays, currentFortnightSatFri, toISODate } from "@/lib/fortnight";
 import { prisma } from "@/lib/prisma";
 import { calcSiteCosts } from "@/lib/procurement";
-import { addDaysUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { addDaysUTC, decimalToNumber, startOfDayUTC } from "@/lib/dateUtc";
 import SiteWageCostsClient from "./site-wage-costs-client";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +22,8 @@ export type SiteWageCostRow = {
   supervisorName: string | null;
   previousWages: number;
   currentWages: number;
+  previousUnpaidOvertime: number;
+  currentUnpaidOvertime: number;
   totalWages: number;
   previousScans: number;
   currentScans: number;
@@ -43,6 +45,29 @@ async function periodCosts(period: SiteWageCostPeriod, siteIds: string[]) {
   const start = startOfDayUTC(period.startISO);
   const endExclusive = addDaysUTC(startOfDayUTC(period.endISO), 1);
   return calcSiteCosts(start, endExclusive, siteIds);
+}
+
+async function unpaidOvertimeCosts(
+  period: SiteWageCostPeriod,
+  siteIds: string[],
+) {
+  if (siteIds.length === 0) return new Map<string, number>();
+
+  const start = startOfDayUTC(period.startISO);
+  const endExclusive = addDaysUTC(startOfDayUTC(period.endISO), 1);
+  const rows = await prisma.overtimeEntry.groupBy({
+    by: ["siteId"],
+    where: {
+      siteId: { in: siteIds },
+      workDate: { gte: start, lt: endExclusive },
+      paidAt: null,
+    },
+    _sum: { totalCost: true },
+  });
+
+  return new Map(
+    rows.map((row) => [row.siteId, decimalToNumber(row._sum.totalCost)]),
+  );
 }
 
 export default async function SiteWageCostsPage() {
@@ -80,9 +105,16 @@ export default async function SiteWageCostsPage() {
   });
 
   const siteIds = sites.map((site) => site.id);
-  const [previousCosts, currentCosts] = await Promise.all([
+  const [
+    previousCosts,
+    currentCosts,
+    previousUnpaidOvertimeBySite,
+    currentUnpaidOvertimeBySite,
+  ] = await Promise.all([
     periodCosts(periods.previous, siteIds),
     periodCosts(periods.current, siteIds),
+    unpaidOvertimeCosts(periods.previous, siteIds),
+    unpaidOvertimeCosts(periods.current, siteIds),
   ]);
 
   const previousBySite = new Map(
@@ -96,6 +128,10 @@ export default async function SiteWageCostsPage() {
       const currentRow = currentBySite.get(site.id);
       const previousWages = previous?.wagesCost ?? 0;
       const currentWages = currentRow?.wagesCost ?? 0;
+      const previousUnpaidOvertime =
+        previousUnpaidOvertimeBySite.get(site.id) ?? 0;
+      const currentUnpaidOvertime =
+        currentUnpaidOvertimeBySite.get(site.id) ?? 0;
 
       return {
         id: site.id,
@@ -108,11 +144,21 @@ export default async function SiteWageCostsPage() {
           site.supervisorAssignments[0]?.supervisor.user.name ?? null,
         previousWages,
         currentWages,
+        previousUnpaidOvertime,
+        currentUnpaidOvertime,
         totalWages: previousWages + currentWages,
         previousScans: previous?.scanCount ?? 0,
         currentScans: currentRow?.scanCount ?? 0,
       };
     })
+    .filter(
+      (row) =>
+        row.previousWages +
+          row.currentWages +
+          row.previousUnpaidOvertime +
+          row.currentUnpaidOvertime >
+        0,
+    )
     .sort((a, b) => {
       const byWages = b.totalWages - a.totalWages;
       if (byWages !== 0) return byWages;

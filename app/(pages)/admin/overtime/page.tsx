@@ -76,7 +76,10 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { printOvertimeEntries } from "@/lib/generateOvertimePrint";
+import {
+  printOvertimeEntries,
+  type OvertimePrintColumnId,
+} from "@/lib/generateOvertimePrint";
 
 /* ─── Types ─── */
 
@@ -111,6 +114,25 @@ type OvertimeEntry = {
   createdBy: string | null;
   createdAt: string;
 };
+
+const OVERTIME_PRINT_COLUMN_OPTIONS: Array<{
+  id: OvertimePrintColumnId;
+  label: string;
+}> = [
+  { id: "date", label: "Date" },
+  { id: "site", label: "Site" },
+  { id: "foreman", label: "Foreman" },
+  { id: "supervisor", label: "Supervisor" },
+  { id: "priceType", label: "Price Type" },
+  { id: "rate", label: "Rate" },
+  { id: "employees", label: "Guys" },
+  { id: "hours", label: "Hours" },
+  { id: "total", label: "Total" },
+];
+
+const DEFAULT_OVERTIME_PRINT_COLUMNS = OVERTIME_PRINT_COLUMN_OPTIONS.map(
+  (column) => column.id,
+);
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-ZA", {
@@ -184,6 +206,10 @@ export default function OvertimeEntriesPage() {
   const [siteOpen, setSiteOpen] = useState(false);
   const [foremanOpen, setForemanOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [printColumnIds, setPrintColumnIds] = useState<
+    OvertimePrintColumnId[]
+  >(DEFAULT_OVERTIME_PRINT_COLUMNS);
 
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -362,14 +388,14 @@ export default function OvertimeEntriesPage() {
       return;
     }
     if (editId && (!formEmployees || Number(formEmployees) < 1)) {
-      toast.error("Enter number of employees (min 1)");
+      toast.error("Enter number of guys (min 1)");
       return;
     }
     if (
       !editId &&
       formDateKeys.some((dateKey) => Number(formEmployeesByDate[dateKey]) < 1)
     ) {
-      toast.error("Enter employees for each date");
+      toast.error("Enter guys for each date");
       return;
     }
     if (editId && (!formHours || Number(formHours) <= 0)) {
@@ -676,7 +702,7 @@ export default function OvertimeEntriesPage() {
       header: () => (
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-indigo-600" />
-          Employees
+          Guys
         </div>
       ),
       cell: ({ row }) => (
@@ -803,6 +829,31 @@ export default function OvertimeEntriesPage() {
   const selectedEntries = table
     .getSelectedRowModel()
     .rows.map((row) => row.original);
+
+  function togglePrintColumn(id: OvertimePrintColumnId, checked: boolean) {
+    setPrintColumnIds((prev) => {
+      if (checked) return prev.includes(id) ? prev : [...prev, id];
+      const next = prev.filter((columnId) => columnId !== id);
+      return next.length > 0 ? next : prev;
+    });
+  }
+
+  function printSelectedOvertimeEntries() {
+    const selectedSite =
+      filterSiteId !== "all"
+        ? sites.find((s) => s.id === filterSiteId)
+        : undefined;
+
+    printOvertimeEntries(selectedEntries, {
+      filterSiteName: selectedSite
+        ? siteLabel(selectedSite.name, selectedSite.code)
+        : undefined,
+      filterFrom: filterFrom || undefined,
+      filterTo: filterTo || undefined,
+      columns: printColumnIds,
+    });
+    setPrintOptionsOpen(false);
+  }
 
   function openSheet() {
     setEditId(null);
@@ -948,29 +999,73 @@ export default function OvertimeEntriesPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
-              size="lg"
-              disabled={selectedEntries.length === 0}
-              onClick={() => {
-                const selectedSite =
-                  filterSiteId !== "all"
-                    ? sites.find((s) => s.id === filterSiteId)
-                    : undefined;
-                printOvertimeEntries(selectedEntries, {
-                  filterSiteName: selectedSite
-                    ? siteLabel(selectedSite.name, selectedSite.code)
-                    : undefined,
-                  filterFrom: filterFrom || undefined,
-                  filterTo: filterTo || undefined,
-                });
-              }}
-            >
-              <Printer className="h-4 w-4" />
-              Print Selected
-              {selectedEntries.length > 0 ? ` (${selectedEntries.length})` : ""}
-            </Button>
+            <Popover open={printOptionsOpen} onOpenChange={setPrintOptionsOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  size="lg"
+                  disabled={selectedEntries.length === 0}
+                >
+                  <Printer className="h-4 w-4" />
+                  Print Selected
+                  {selectedEntries.length > 0
+                    ? ` (${selectedEntries.length})`
+                    : ""}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-3" align="end">
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-sm font-semibold text-foreground">
+                      Print Columns
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Choose what should appear on the printed report.
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {OVERTIME_PRINT_COLUMN_OPTIONS.map((column) => (
+                      <label
+                        key={column.id}
+                        className="flex cursor-pointer items-center gap-2 rounded border border-border px-2 py-2 text-sm"
+                      >
+                        <Checkbox
+                          checked={printColumnIds.includes(column.id)}
+                          onCheckedChange={(checked) =>
+                            togglePrintColumn(column.id, checked === true)
+                          }
+                        />
+                        <span>{column.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between gap-2 border-t border-border pt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPrintColumnIds(DEFAULT_OVERTIME_PRINT_COLUMNS)
+                      }
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="gap-2"
+                      onClick={printSelectedOvertimeEntries}
+                    >
+                      <Printer className="h-4 w-4" />
+                      Print
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button className="gap-2" size="lg" onClick={openSheet}>
               <Plus className="h-4 w-4" />
               Add Overtime
@@ -1465,11 +1560,11 @@ export default function OvertimeEntriesPage() {
             {/* Divider */}
             <div className="border-t border-border pt-1" />
 
-            {/* Employees + Hours side by side */}
+            {/* Guys + Hours side by side */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  {editId ? "Employees" : "Default Employees"}
+                  {editId ? "Guys" : "Default Guys"}
                 </label>
                 <Input
                   type="number"
@@ -1499,12 +1594,12 @@ export default function OvertimeEntriesPage() {
             {!editId && selectedDateRows.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Employees + Hours Per Date
+                  Guys + Hours Per Date
                 </label>
                 <div className="space-y-2">
                   <div className="grid grid-cols-[1fr_84px_84px_36px] gap-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     <span>Date</span>
-                    <span>Employees</span>
+                    <span>Guys</span>
                     <span>Hours</span>
                     <span />
                   </div>

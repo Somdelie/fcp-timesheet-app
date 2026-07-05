@@ -39,6 +39,14 @@ const UNASSIGNED_SUPERVISOR = "__unassigned_supervisor__";
 type StatusFilter = "all" | "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
 type ShowFilter = "active" | "all" | "inactive";
 type WageFilter = "all" | "with" | "without";
+type UnpaidOvertimeMode = "exclude" | "include";
+type AmountFilter =
+  | "all"
+  | "under-10k"
+  | "over-10k"
+  | "over-25k"
+  | "over-50k"
+  | "over-100k";
 type SortValue =
   | "total-desc"
   | "current-desc"
@@ -121,6 +129,15 @@ function changeClass(current: number, previous: number) {
   return "text-muted-foreground";
 }
 
+function matchesAmountFilter(totalWages: number, filter: AmountFilter) {
+  if (filter === "under-10k") return totalWages < 10000;
+  if (filter === "over-10k") return totalWages >= 10000;
+  if (filter === "over-25k") return totalWages >= 25000;
+  if (filter === "over-50k") return totalWages >= 50000;
+  if (filter === "over-100k") return totalWages >= 100000;
+  return true;
+}
+
 function compareRows(sort: SortValue) {
   return (a: SiteWageCostRow, b: SiteWageCostRow) => {
     if (sort === "current-desc") return b.currentWages - a.currentWages;
@@ -183,6 +200,7 @@ async function exportWageCostsExcel(input: {
   previousPeriod: SiteWageCostPeriod;
   currentPeriod: SiteWageCostPeriod;
   totals: ReturnType<typeof totalsFor>;
+  includeUnpaidOvertime: boolean;
 }) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
@@ -195,14 +213,42 @@ async function exportWageCostsExcel(input: {
 
   const previousLabel = dateRangeLabel(input.previousPeriod);
   const currentLabel = dateRangeLabel(input.currentPeriod);
+  const changeColor = (current: number, previous: number) => {
+    const pct = changePct(current, previous);
+    if (pct === null || pct > 0) return "FFDC2626";
+    if (pct < 0) return "FF16A34A";
+    return "FF64748B";
+  };
+  const currentWageCell = (current: number, previous: number) => ({
+    richText: [
+      {
+        text: formatChange(current, previous),
+        font: { bold: true, color: { argb: changeColor(current, previous) } },
+      },
+      { text: "   " },
+      { text: formatCurrency(current) },
+    ],
+  });
+  const currentScanCell = (current: number, previous: number) => ({
+    richText: [
+      {
+        text: formatChange(current, previous),
+        font: { bold: true, color: { argb: changeColor(current, previous) } },
+      },
+      { text: "   " },
+      { text: String(current), font: { color: { argb: "FF64748B" } } },
+    ],
+  });
 
-  sheet.mergeCells("A1:J1");
+  sheet.mergeCells("A1:H1");
   sheet.getCell("A1").value = "Site Wage Costs";
   sheet.getCell("A1").font = { bold: true, size: 16, color: { argb: "FF111827" } };
   sheet.getCell("A1").alignment = { vertical: "middle" };
 
-  sheet.mergeCells("A2:J2");
-  sheet.getCell("A2").value = `${previousLabel} and ${currentLabel}`;
+  sheet.mergeCells("A2:H2");
+  sheet.getCell("A2").value = `${previousLabel} and ${currentLabel}${
+    input.includeUnpaidOvertime ? " - includes unpaid overtime" : ""
+  }`;
   sheet.getCell("A2").font = { size: 11, color: { argb: "FF475569" } };
 
   sheet.addRow([]);
@@ -212,11 +258,9 @@ async function exportWageCostsExcel(input: {
     "",
     "",
     input.totals.previousWages,
-    input.totals.currentWages,
-    formatChange(input.totals.currentWages, input.totals.previousWages),
+    currentWageCell(input.totals.currentWages, input.totals.previousWages),
     input.totals.previousScans,
-    input.totals.currentScans,
-    formatChange(input.totals.currentScans, input.totals.previousScans),
+    currentScanCell(input.totals.currentScans, input.totals.previousScans),
   ]);
   totalsRow.font = { bold: true };
   totalsRow.fill = {
@@ -232,27 +276,24 @@ async function exportWageCostsExcel(input: {
     "Client",
     `Previous Wages (${previousLabel})`,
     `Current Wages (${currentLabel})`,
-    "Wage %",
     "Previous Scans",
     "Current Scans",
-    "Scan %",
   ]);
   headerRow.font = { bold: true, color: { argb: "FF111827" } };
-  headerRow.height = 22;
+  headerRow.height = 34;
 
   input.rows.forEach((row) => {
-    sheet.addRow([
+    const worksheetRow = sheet.addRow([
       row.code ?? "Uncoded",
       row.name,
       row.supervisorName ?? "-",
       row.client ?? "-",
       row.previousWages,
-      row.currentWages,
-      formatChange(row.currentWages, row.previousWages),
+      currentWageCell(row.currentWages, row.previousWages),
       row.previousScans,
-      row.currentScans,
-      formatChange(row.currentScans, row.previousScans),
+      currentScanCell(row.currentScans, row.previousScans),
     ]);
+    worksheetRow.height = 32;
   });
 
   sheet.columns = [
@@ -262,10 +303,8 @@ async function exportWageCostsExcel(input: {
     { width: 24 },
     { width: 20 },
     { width: 20 },
-    { width: 12 },
-    { width: 16 },
-    { width: 16 },
-    { width: 12 },
+    { width: 20 },
+    { width: 20 },
   ];
 
   sheet.eachRow((row, rowNumber) => {
@@ -279,20 +318,37 @@ async function exportWageCostsExcel(input: {
       cell.alignment = {
         vertical: "middle",
         horizontal: colNumber >= 5 ? "right" : "left",
+        wrapText: true,
       };
       if (rowNumber === 5) {
         cell.fill = {
           type: "pattern",
           pattern: "solid",
           fgColor:
-            colNumber === 5 || colNumber === 8
+            colNumber === 5 || colNumber === 7
               ? { argb: "FFD1FAE5" }
-              : colNumber === 6 || colNumber === 9
+              : colNumber === 6 || colNumber === 8
                 ? { argb: "FFDBEAFE" }
                 : { argb: "FFF1F5F9" },
         };
       }
-      if (colNumber === 5 || colNumber === 6) {
+      if (rowNumber > 5) {
+        if (colNumber === 5 || colNumber === 7) {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFECFDF5" },
+          };
+        }
+        if (colNumber === 6 || colNumber === 8) {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFEFF6FF" },
+          };
+        }
+      }
+      if (colNumber === 5) {
         cell.numFmt = '"R "#,##0.00';
       }
     });
@@ -311,6 +367,7 @@ async function exportWageCostsPdf(input: {
   previousPeriod: SiteWageCostPeriod;
   currentPeriod: SiteWageCostPeriod;
   totals: ReturnType<typeof totalsFor>;
+  includeUnpaidOvertime: boolean;
 }) {
   const { PDFDocument, StandardFonts, rgb, PageSizes } = await import("pdf-lib");
   const pdf = await PDFDocument.create();
@@ -323,17 +380,17 @@ async function exportWageCostsPdf(input: {
   const rowHeight = 20;
   const headerHeight = 28;
   const tableWidth = pageWidth - margin * 2;
+  const metricWidth = 94;
+  const remainingTextWidth = tableWidth - metricWidth * 4;
   const columns = [
     { label: "Job No.", width: 48, align: "left" as const },
     { label: "Site", width: 135, align: "left" as const },
-    { label: "Supervisor", width: 88, align: "left" as const },
-    { label: "Client", width: 82, align: "left" as const },
-    { label: "Previous", width: 86, align: "right" as const },
-    { label: "Current", width: 86, align: "right" as const },
-    { label: "Wage %", width: 54, align: "right" as const },
-    { label: "Prev Scans", width: 62, align: "right" as const },
-    { label: "Curr Scans", width: 62, align: "right" as const },
-    { label: "Scan %", width: tableWidth - 703, align: "right" as const },
+    { label: "Supervisor", width: 86, align: "left" as const },
+    { label: "Client", width: remainingTextWidth - 269, align: "left" as const },
+    { label: "Previous", width: metricWidth, align: "right" as const },
+    { label: "Current", width: metricWidth, align: "right" as const },
+    { label: "Previous Scans", width: metricWidth, align: "right" as const },
+    { label: "Current Scans", width: metricWidth, align: "right" as const },
   ];
 
   const ink = rgb(0.08, 0.1, 0.14);
@@ -342,6 +399,8 @@ async function exportWageCostsPdf(input: {
   const headerBg = rgb(0.95, 0.97, 0.99);
   const greenBg = rgb(0.9, 0.98, 0.94);
   const blueBg = rgb(0.91, 0.95, 1);
+  const redText = rgb(0.86, 0, 0.08);
+  const greenText = rgb(0, 0.62, 0.24);
 
   let page = pdf.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
@@ -362,21 +421,23 @@ async function exportWageCostsPdf(input: {
     drawText(
       `${dateRangeLabel(input.previousPeriod)} and ${dateRangeLabel(
         input.currentPeriod,
-      )}`,
+      )}${input.includeUnpaidOvertime ? " - includes unpaid overtime" : ""}`,
       margin,
       y - 20,
       8.5,
       regular,
       muted,
     );
-    const totalText = `Total: ${formatCurrency(input.totals.totalWages)}`;
-    drawText(
-      totalText,
-      pageWidth - margin - bold.widthOfTextAtSize(totalText, 10),
-      y - 12,
-      10,
-      bold,
-    );
+    const previousTotalText = `Previous: ${formatCurrency(
+      input.totals.previousWages,
+    )}`;
+    const currentTotalText = `Current: ${formatCurrency(input.totals.currentWages)}`;
+    const currentTotalWidth = bold.widthOfTextAtSize(currentTotalText, 9.2);
+    const previousTotalWidth = bold.widthOfTextAtSize(previousTotalText, 9.2);
+    const currentTotalX = pageWidth - margin - currentTotalWidth;
+    const previousTotalX = currentTotalX - previousTotalWidth - 18;
+    drawText(previousTotalText, previousTotalX, y - 12, 9.2, bold, muted);
+    drawText(currentTotalText, currentTotalX, y - 12, 9.2, bold);
     y -= 42;
   }
 
@@ -427,7 +488,21 @@ async function exportWageCostsPdf(input: {
     }
   }
 
-  function drawRow(values: string[], isTotal = false) {
+  function changePdfColor(current: number, previous: number) {
+    const pct = changePct(current, previous);
+    if (pct === null || pct > 0) return redText;
+    if (pct < 0) return greenText;
+    return muted;
+  }
+
+  function drawRow(
+    values: string[],
+    isTotal = false,
+    changes: {
+      wage?: { label: string; color: ReturnType<typeof rgb> };
+      scans?: { label: string; color: ReturnType<typeof rgb> };
+    } = {},
+  ) {
     ensureSpace();
     let x = margin;
     page.drawRectangle({
@@ -445,6 +520,24 @@ async function exportWageCostsPdf(input: {
       const text = truncatePdfText(font, value, col.width - 8, 7.5);
       const w = font.widthOfTextAtSize(text, 7.5);
       const textX = col.align === "right" ? x + col.width - w - 4 : x + 4;
+      if (i === 5 && changes.wage) {
+        const changeText = truncatePdfText(
+          bold,
+          changes.wage.label,
+          col.width * 0.42,
+          7.2,
+        );
+        drawText(changeText, x + 4, y - 13, 7.2, bold, changes.wage.color);
+      }
+      if (i === 7 && changes.scans) {
+        const changeText = truncatePdfText(
+          bold,
+          changes.scans.label,
+          col.width * 0.45,
+          7.2,
+        );
+        drawText(changeText, x + 4, y - 13, 7.2, bold, changes.scans.color);
+      }
       drawText(text, textX, y - 13, 7.5, font);
       page.drawLine({
         start: { x, y },
@@ -467,27 +560,52 @@ async function exportWageCostsPdf(input: {
       "",
       formatCurrency(input.totals.previousWages),
       formatCurrency(input.totals.currentWages),
-      formatChange(input.totals.currentWages, input.totals.previousWages),
       String(input.totals.previousScans),
       String(input.totals.currentScans),
-      formatChange(input.totals.currentScans, input.totals.previousScans),
     ],
     true,
+    {
+      wage: {
+        label: formatChange(input.totals.currentWages, input.totals.previousWages),
+        color: changePdfColor(
+          input.totals.currentWages,
+          input.totals.previousWages,
+        ),
+      },
+      scans: {
+        label: formatChange(input.totals.currentScans, input.totals.previousScans),
+        color: changePdfColor(
+          input.totals.currentScans,
+          input.totals.previousScans,
+        ),
+      },
+    },
   );
 
   input.rows.forEach((row) => {
-    drawRow([
-      row.code ?? "Uncoded",
-      row.name,
-      row.supervisorName ?? "-",
-      row.client ?? "-",
-      formatCurrency(row.previousWages),
-      formatCurrency(row.currentWages),
-      formatChange(row.currentWages, row.previousWages),
-      String(row.previousScans),
-      String(row.currentScans),
-      formatChange(row.currentScans, row.previousScans),
-    ]);
+    drawRow(
+      [
+        row.code ?? "Uncoded",
+        row.name,
+        row.supervisorName ?? "-",
+        row.client ?? "-",
+        formatCurrency(row.previousWages),
+        formatCurrency(row.currentWages),
+        String(row.previousScans),
+        String(row.currentScans),
+      ],
+      false,
+      {
+        wage: {
+          label: formatChange(row.currentWages, row.previousWages),
+          color: changePdfColor(row.currentWages, row.previousWages),
+        },
+        scans: {
+          label: formatChange(row.currentScans, row.previousScans),
+          color: changePdfColor(row.currentScans, row.previousScans),
+        },
+      },
+    );
   });
 
   const pages = pdf.getPages();
@@ -528,6 +646,9 @@ export default function SiteWageCostsClient({
     React.useState<StatusFilter>("ONGOING");
   const [showFilter, setShowFilter] = React.useState<ShowFilter>("active");
   const [wageFilter, setWageFilter] = React.useState<WageFilter>("all");
+  const [unpaidOvertimeMode, setUnpaidOvertimeMode] =
+    React.useState<UnpaidOvertimeMode>("exclude");
+  const [amountFilter, setAmountFilter] = React.useState<AmountFilter>("all");
   const [sort, setSort] = React.useState<SortValue>("total-desc");
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize, setPageSize] = React.useState(10);
@@ -547,10 +668,31 @@ export default function SiteWageCostsClient({
     [rows],
   );
 
+  const includeUnpaidOvertime = unpaidOvertimeMode === "include";
+  const rowsWithWageMode = React.useMemo(
+    () =>
+      rows.map((row) => {
+        const previousWages =
+          row.previousWages +
+          (includeUnpaidOvertime ? row.previousUnpaidOvertime : 0);
+        const currentWages =
+          row.currentWages +
+          (includeUnpaidOvertime ? row.currentUnpaidOvertime : 0);
+
+        return {
+          ...row,
+          previousWages,
+          currentWages,
+          totalWages: previousWages + currentWages,
+        };
+      }),
+    [includeUnpaidOvertime, rows],
+  );
+
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    return rows
+    return rowsWithWageMode
       .filter((row) => {
         if (showFilter === "active" && !row.isActive) return false;
         if (showFilter === "inactive" && row.isActive) return false;
@@ -572,6 +714,7 @@ export default function SiteWageCostsClient({
         }
         if (wageFilter === "with" && row.totalWages <= 0) return false;
         if (wageFilter === "without" && row.totalWages > 0) return false;
+        if (!matchesAmountFilter(row.totalWages, amountFilter)) return false;
         if (
           sort === "increased-desc" &&
           row.currentWages <= row.previousWages
@@ -589,18 +732,28 @@ export default function SiteWageCostsClient({
       })
       .sort(compareRows(sort));
   }, [
-    rows,
+    rowsWithWageMode,
     query,
     showFilter,
     statusFilter,
     supervisorFilter,
     wageFilter,
+    amountFilter,
     sort,
   ]);
 
   React.useEffect(() => {
     setPageIndex(0);
-  }, [query, showFilter, statusFilter, supervisorFilter, wageFilter, sort]);
+  }, [
+    query,
+    showFilter,
+    statusFilter,
+    supervisorFilter,
+    wageFilter,
+    unpaidOvertimeMode,
+    amountFilter,
+    sort,
+  ]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePageIndex = Math.min(pageIndex, pageCount - 1);
@@ -614,7 +767,9 @@ export default function SiteWageCostsClient({
     (supervisorFilter !== ALL_SUPERVISORS ? 1 : 0) +
     (statusFilter !== "ONGOING" ? 1 : 0) +
     (showFilter !== "active" ? 1 : 0) +
-    (wageFilter !== "all" ? 1 : 0);
+    (wageFilter !== "all" ? 1 : 0) +
+    (amountFilter !== "all" ? 1 : 0) +
+    (includeUnpaidOvertime ? 1 : 0);
 
   const showingFrom = filtered.length === 0 ? 0 : safePageIndex * pageSize + 1;
   const showingTo = Math.min((safePageIndex + 1) * pageSize, filtered.length);
@@ -625,6 +780,8 @@ export default function SiteWageCostsClient({
     setStatusFilter("ONGOING");
     setShowFilter("active");
     setWageFilter("all");
+    setUnpaidOvertimeMode("exclude");
+    setAmountFilter("all");
     setSort("total-desc");
   }
 
@@ -636,6 +793,7 @@ export default function SiteWageCostsClient({
         previousPeriod,
         currentPeriod,
         totals,
+        includeUnpaidOvertime,
       });
     } finally {
       setExporting(null);
@@ -650,6 +808,7 @@ export default function SiteWageCostsClient({
         previousPeriod,
         currentPeriod,
         totals,
+        includeUnpaidOvertime,
       });
     } finally {
       setExporting(null);
@@ -732,6 +891,38 @@ export default function SiteWageCostsClient({
           </Select>
 
           <Select
+            value={unpaidOvertimeMode}
+            onValueChange={(value) =>
+              setUnpaidOvertimeMode(value as UnpaidOvertimeMode)
+            }
+          >
+            <SelectTrigger className="h-8 w-44 text-xs md:text-sm dark:border-zinc-700/50 dark:bg-zinc-800/50">
+              <SelectValue placeholder="Unpaid overtime" />
+            </SelectTrigger>
+            <SelectContent side="top">
+              <SelectItem value="exclude">Exclude unpaid OT</SelectItem>
+              <SelectItem value="include">Include unpaid OT</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={amountFilter}
+            onValueChange={(value) => setAmountFilter(value as AmountFilter)}
+          >
+            <SelectTrigger className="h-8 w-40 text-xs md:text-sm dark:border-zinc-700/50 dark:bg-zinc-800/50">
+              <SelectValue placeholder="Amount" />
+            </SelectTrigger>
+            <SelectContent side="top">
+              <SelectItem value="all">All amounts</SelectItem>
+              <SelectItem value="under-10k">Under R10K</SelectItem>
+              <SelectItem value="over-10k">Over R10K</SelectItem>
+              <SelectItem value="over-25k">Over R25K</SelectItem>
+              <SelectItem value="over-50k">Over R50K</SelectItem>
+              <SelectItem value="over-100k">Over R100K</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
             value={sort}
             onValueChange={(value) => setSort(value as SortValue)}
           >
@@ -795,6 +986,7 @@ export default function SiteWageCostsClient({
           </h1>
           <p className="text-sm text-muted-foreground">
             {dateRangeLabel(previousPeriod)} and {dateRangeLabel(currentPeriod)}
+            {includeUnpaidOvertime ? " - includes unpaid overtime" : ""}
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3 text-right text-sm">
@@ -890,6 +1082,12 @@ export default function SiteWageCostsClient({
                     </TableCell>
                     <TableCell className="border border-zinc-200 bg-emerald-50 px-3 py-2 text-right tabular-nums dark:border-zinc-700 dark:bg-emerald-900/20">
                       {formatCurrency(row.previousWages)}
+                      {includeUnpaidOvertime &&
+                      row.previousUnpaidOvertime > 0 ? (
+                        <div className="text-xs text-muted-foreground">
+                          includes unpaid {formatCurrency(row.previousUnpaidOvertime)}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="border border-zinc-200 bg-blue-50 px-3 py-2 tabular-nums dark:border-zinc-700 dark:bg-blue-900/20">
                       <div className="flex items-center justify-between gap-3">
@@ -903,6 +1101,12 @@ export default function SiteWageCostsClient({
                         </span>
                         <span>{formatCurrency(row.currentWages)}</span>
                       </div>
+                      {includeUnpaidOvertime &&
+                      row.currentUnpaidOvertime > 0 ? (
+                        <div className="mt-1 text-right text-xs text-muted-foreground">
+                          includes unpaid {formatCurrency(row.currentUnpaidOvertime)}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="border border-zinc-200 bg-emerald-50 px-3 py-2 text-right text-muted-foreground tabular-nums dark:border-zinc-700 dark:bg-emerald-900/20">
                       {row.previousScans}

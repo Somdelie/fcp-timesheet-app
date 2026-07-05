@@ -1,5 +1,6 @@
 export const SA_BANKS = [
   "ABSA",
+  "Access Bank",
   "African Bank",
   "Bidvest Bank",
   "Capitec",
@@ -16,6 +17,7 @@ export const SA_BANKS = [
   "Standard Bank",
   "TymeBank",
   "Ubank",
+  "Zero Bank",
 ] as const;
 
 export type SaBankName = (typeof SA_BANKS)[number];
