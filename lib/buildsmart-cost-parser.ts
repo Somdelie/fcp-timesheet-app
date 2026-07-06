@@ -24,7 +24,12 @@
 
 // pdf-parse v2.x exports PDFParse as a named class (no default export).
 import type { BuildSmartRow } from "@/lib/procurement/buildsmartHistoricalImporter";
-import pdfParse from "pdf-parse";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const pdfParseModule = require("pdf-parse");
+const PDFParse =
+  pdfParseModule.default ?? pdfParseModule.PDFParse ?? pdfParseModule;
 
 export interface ParsedCostRow extends Omit<
   BuildSmartRow,
@@ -319,9 +324,16 @@ function extractMaterialFields(afterDate: string): {
 export async function parseCostReportBuffer(
   buffer: Buffer,
 ): Promise<ParsedCostReport> {
-  const result = await pdfParse(buffer);
-  const text: string = result.text;
+  const parser = new PDFParse({ data: buffer });
 
+  let text = "";
+
+  try {
+    const result = await parser.getText();
+    text = result.text;
+  } finally {
+    await parser.destroy?.();
+  }
   const lines = text
     .split(/\r?\n/)
     .map((l: string) => l.trim())

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Upload,
   FileText,
@@ -96,6 +96,29 @@ type PdfOrdersTabProps = {
   description: string;
   badgeText: string;
   apiUrlDefault: string;
+};
+
+type ImportJobResultJson = Partial<SeedResponse> & {
+  progress?: {
+    current: number;
+    total: number;
+    message?: string;
+  };
+};
+
+type ImportJobRow = {
+  id: string;
+  fileName: string;
+  status: "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+  error?: string | null;
+  createdAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  resultJson?: ImportJobResultJson | null;
+};
+
+type QueueResponse = SeedResponse & {
+  jobs?: ImportJobRow[];
 };
 
 const ACCEPTED_TYPES = ["application/pdf"];
@@ -203,8 +226,9 @@ function PdfOrdersTab({
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<SeedResponse | null>(null);
+  const [result, setResult] = useState<QueueResponse | null>(null);
   const [apiUrl, setApiUrl] = useState(apiUrlDefault);
+  const [jobs, setJobs] = useState<ImportJobRow[]>([]);
 
   const sortedFiles = useMemo(
     () =>
@@ -212,6 +236,90 @@ function PdfOrdersTab({
         (a, b) => Number(a.orderNumber || 0) - Number(b.orderNumber || 0),
       ),
     [files],
+  );
+
+  useEffect(() => {
+    if (!jobs.length) return;
+
+    const hasActiveJobs = jobs.some((job) =>
+      ["QUEUED", "PROCESSING"].includes(job.status),
+    );
+
+    if (!hasActiveJobs) return;
+
+    const timer = window.setInterval(async () => {
+      try {
+        const ids = jobs.map((job) => job.id).join(",");
+        const res = await fetch(`/api/admin/buildsmart/import-jobs?ids=${ids}`);
+
+        if (!res.ok) return;
+
+        const data = (await res.json()) as { jobs: ImportJobRow[] };
+
+        setJobs((prev) => {
+          const previousOrder = prev.map((job) => job.id);
+          const latest = new Map(data.jobs.map((job) => [job.id, job]));
+
+          return previousOrder
+            .map((id) => latest.get(id))
+            .filter(Boolean) as ImportJobRow[];
+        });
+      } catch {
+        // silent polling failure
+      }
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+  }, [jobs]);
+
+  const completedJobs = jobs.filter((job) => job.status === "COMPLETED");
+  const failedJobs = jobs.filter((job) => job.status === "FAILED");
+  const processingJobs = jobs.filter((job) => job.status === "PROCESSING");
+  const queuedJobs = jobs.filter((job) => job.status === "QUEUED");
+
+  const jobResults = completedJobs
+    .map((job) => job.resultJson)
+    .filter(Boolean) as ImportJobResultJson[];
+
+  const totalDuplicates = jobResults.reduce(
+    (sum, item) => sum + (item.summary?.duplicates ?? 0),
+    0,
+  );
+
+  const totalSkipped = jobResults.reduce(
+    (sum, item) => sum + (item.summary?.skippedOrders ?? 0),
+    0,
+  );
+
+  const totalSaved = jobResults.reduce(
+    (sum, item) => sum + (item.summary?.savedToDb ?? 0),
+    0,
+  );
+
+  const totalParsed = jobResults.reduce(
+    (sum, item) =>
+      sum + (item.summary?.parsedOrders ?? item.summary?.queuedOrders ?? 0),
+    0,
+  );
+
+  const skippedOrderNumbers = jobResults.flatMap(
+    (item) => item.skippedOrderNumbers ?? [],
+  );
+
+  const duplicateRefs = jobResults.flatMap((item) => item.duplicateRefs ?? []);
+
+  const parseFailures = jobResults.flatMap((item) => item.parseFailures ?? []);
+
+  const skipReasons = jobResults.reduce<Record<string, string[]>>(
+    (acc, item) => {
+      for (const [orderNumber, reasons] of Object.entries(
+        item.skipReasons ?? {},
+      )) {
+        acc[orderNumber] = [...(acc[orderNumber] ?? []), ...reasons];
+      }
+      return acc;
+    },
+    {},
   );
 
   function addFiles(fileList: FileList | File[]) {
@@ -231,9 +339,11 @@ function PdfOrdersTab({
     setFiles((prev) => {
       const seen = new Set(prev.map((f) => f.id));
       const merged = [...prev];
+
       for (const file of incoming) {
         if (!seen.has(file.id)) merged.push(file);
       }
+
       return merged;
     });
   }
@@ -245,6 +355,7 @@ function PdfOrdersTab({
   function clearAll() {
     setFiles([]);
     setResult(null);
+    setJobs([]);
   }
 
   async function handleSubmit() {
@@ -252,6 +363,8 @@ function PdfOrdersTab({
 
     setIsSubmitting(true);
     setResult(null);
+    setJobs([]);
+
     setFiles((prev) =>
       prev.map((file) => ({
         ...file,
@@ -262,6 +375,7 @@ function PdfOrdersTab({
 
     try {
       const formData = new FormData();
+
       for (const file of files) {
         formData.append("pdfs", file.file, file.file.name);
       }
@@ -275,61 +389,30 @@ function PdfOrdersTab({
         throw new Error(await getResponseErrorMessage(response));
       }
 
-      const data = (await response.json()) as SeedResponse & {
+      const data = (await response.json()) as QueueResponse & {
         error?: string;
       };
 
       setResult(data);
-      const failedByName = new Map(
-        (data.parseFailures ?? []).map((f) => [f.fileName, f.reason]),
-      );
-      const failedByOrder = new Map(
-        (data.parseFailures ?? [])
-          .filter((f) => f.orderNumber)
-          .map((f) => [f.orderNumber!, f.reason]),
-      );
+      setJobs(data.jobs ?? []);
+
       setFiles((prev) =>
-        prev.map((file) => {
-          const parseReason =
-            failedByName.get(file.file.name) ??
-            failedByOrder.get(file.orderNumber);
-          if (parseReason) {
-            return {
-              ...file,
-              status: "error" as const,
-              message: parseReason,
-            };
-          }
-          if (data.duplicateRefs?.includes(file.orderNumber)) {
-            return {
-              ...file,
-              status: "error" as const,
-              message: "Already imported (duplicate PO)",
-            };
-          }
-          if (data.skippedOrderNumbers?.includes(file.orderNumber)) {
-            return {
-              ...file,
-              status: "error" as const,
-              message:
-                data.skipReasons?.[file.orderNumber]?.join("; ") ?? "Skipped",
-            };
-          }
-          const saved = data.savedOrderIds?.length
-            ? data.duplicateRefs?.includes(file.orderNumber) === false
-            : false;
-          return {
-            ...file,
-            status: "done" as const,
-            message: saved ? "Saved to database" : "Parsed",
-          };
-        }),
+        prev.map((file) => ({
+          ...file,
+          status: "done" as const,
+          message: data.jobs?.length ? "Queued for import" : "Parsed",
+        })),
       );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Something went wrong";
+
       setFiles((prev) =>
-        prev.map((file) => ({ ...file, status: "error", message })),
+        prev.map((file) => ({
+          ...file,
+          status: "error",
+          message,
+        })),
       );
     } finally {
       setIsSubmitting(false);
@@ -397,12 +480,8 @@ function PdfOrdersTab({
                 <h3 className="text-lg font-medium">Drop PDFs here</h3>
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground">
                   Supports multiple BuildSmart purchase-order PDFs at once.
-                  Filenames like{" "}
-                  <span className="font-medium text-foreground">
-                    ORDER 66681.pdf
-                  </span>{" "}
-                  are picked up automatically and seeded as material orders.
                 </p>
+
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <Button
                     onClick={() => inputRef.current?.click()}
@@ -411,16 +490,18 @@ function PdfOrdersTab({
                     <FolderOpen className="mr-2 h-4 w-4" />
                     Choose PDFs
                   </Button>
+
                   <Button
                     variant="outline"
                     onClick={clearAll}
-                    disabled={!files.length}
+                    disabled={!files.length && !jobs.length}
                     className="rounded"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Clear list
                   </Button>
                 </div>
+
                 <Input
                   ref={inputRef}
                   type="file"
@@ -446,6 +527,7 @@ function PdfOrdersTab({
                   </div>
                 </CardContent>
               </Card>
+
               <Card className="rounded border bg-muted/20 shadow-none">
                 <CardContent className="p-4">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -456,6 +538,7 @@ function PdfOrdersTab({
                   </div>
                 </CardContent>
               </Card>
+
               <Card className="rounded border bg-muted/20 shadow-none">
                 <CardContent className="p-4">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -477,37 +560,19 @@ function PdfOrdersTab({
               />
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={handleSubmit}
-                disabled={!files.length || isSubmitting}
-                size="lg"
-                className="rounded px-6"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="mr-2 h-4 w-4" />
-                )}
-                {isSubmitting ? "Processing PDFs..." : "Generate seed output"}
-              </Button>
-
-              <Button
-                variant="outline"
-                disabled={!result?.prismaSeedCode}
-                onClick={() =>
-                  result?.prismaSeedCode &&
-                  downloadText(
-                    "site-product-orders.seed.ts",
-                    result.prismaSeedCode,
-                  )
-                }
-                className="rounded"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download seed file
-              </Button>
-            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={!files.length || isSubmitting}
+              size="lg"
+              className="rounded px-6"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              {isSubmitting ? "Queueing PDFs..." : "Queue PDF import"}
+            </Button>
           </CardContent>
         </Card>
 
@@ -555,12 +620,12 @@ function PdfOrdersTab({
                             <Badge variant="secondary">Queued</Badge>
                           )}
                           {entry.status === "uploading" && (
-                            <Badge>Processing</Badge>
+                            <Badge>Queueing</Badge>
                           )}
                           {entry.status === "done" && (
                             <Badge className="gap-1 rounded-full">
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              Done
+                              Queued
                             </Badge>
                           )}
                           {entry.status === "error" && (
@@ -569,9 +634,10 @@ function PdfOrdersTab({
                               className="gap-1 rounded-full"
                             >
                               <AlertTriangle className="h-3.5 w-3.5" />
-                              Skipped
+                              Error
                             </Badge>
                           )}
+
                           <Button
                             variant="ghost"
                             size="icon"
@@ -582,6 +648,7 @@ function PdfOrdersTab({
                           </Button>
                         </div>
                       </div>
+
                       {entry.message ? (
                         <p className="mt-3 text-xs text-muted-foreground">
                           {entry.message}
@@ -601,7 +668,7 @@ function PdfOrdersTab({
           <CardHeader>
             <CardTitle className="text-lg">Run summary</CardTitle>
             <CardDescription>
-              What happened after processing the uploaded PDFs.
+              Live summary from the import jobs.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -612,131 +679,46 @@ function PdfOrdersTab({
             ) : (
               <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <MetricCard label="Files" value={result.summary.totalFiles} />
+                  <MetricCard label="Queued" value={queuedJobs.length} />
                   <MetricCard
-                    label="Parsed"
-                    value={
-                      result.summary.parsedOrders ?? result.summary.queuedOrders
-                    }
+                    label="Processing"
+                    value={processingJobs.length}
                   />
-                  <MetricCard
-                    label="Parse failed"
-                    value={result.summary.parseFailures ?? 0}
-                  />
-                  <MetricCard
-                    label="Ready to save"
-                    value={result.summary.seededOrders}
-                  />
-                  <MetricCard
-                    label="Saved to DB"
-                    value={result.summary.savedToDb}
-                  />
-                  <MetricCard
-                    label="Duplicates"
-                    value={result.summary.duplicates}
-                  />
-                  <MetricCard
-                    label="Skipped"
-                    value={result.summary.skippedOrders}
-                  />
-                  {(result.summary.stockOrdersDetected ?? 0) > 0 && (
-                    <>
-                      <MetricCard
-                        label="STOCK detected"
-                        value={result.summary.stockOrdersDetected ?? 0}
-                      />
-                      <MetricCard
-                        label="STOCK created"
-                        value={result.summary.stockOrdersCreated ?? 0}
-                      />
-                    </>
-                  )}
+                  <MetricCard label="Completed" value={completedJobs.length} />
+                  <MetricCard label="Failed" value={failedJobs.length} />
+                  <MetricCard label="Parsed" value={totalParsed} />
+                  <MetricCard label="Saved" value={totalSaved} />
+                  <MetricCard label="Duplicates" value={totalDuplicates} />
+                  <MetricCard label="Skipped" value={totalSkipped} />
                 </div>
-
-                {result.stockOrders && result.stockOrders.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium flex items-center gap-2">
-                        Stock Orders
-                        <Badge
-                          variant="secondary"
-                          className="rounded-full px-2 py-0.5 text-xs"
-                        >
-                          {result.stockOrders.length}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2">
-                        {result.stockOrders.map((o) => (
-                          <div
-                            key={o.orderNumber}
-                            className={`rounded border p-3 flex items-center justify-between gap-3 ${
-                              o.status === "created"
-                                ? "bg-green-50 border-green-200"
-                                : o.status === "duplicate"
-                                  ? "bg-muted/30"
-                                  : "bg-amber-50 border-amber-200"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium">
-                                PO #{o.orderNumber}
-                                {o.foremanName && (
-                                  <span className="ml-2 text-muted-foreground font-normal">
-                                    → {o.foremanName}
-                                  </span>
-                                )}
-                              </div>
-                              {o.reason && (
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {o.reason}
-                                </div>
-                              )}
-                            </div>
-                            <Badge
-                              variant={
-                                o.status === "created" ? "default" : "secondary"
-                              }
-                              className="shrink-0 rounded-full"
-                            >
-                              {o.status === "created"
-                                ? `${o.itemsCreated} items`
-                                : o.status === "duplicate"
-                                  ? "Duplicate"
-                                  : "Skipped"}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
 
                 <Separator />
 
                 <div className="space-y-3">
-                  <div className="text-sm font-medium">
-                    Skipped order numbers
-                  </div>
-                  {!!result.parseFailures?.length && (
-                    <ul className="mb-3 space-y-1 text-sm text-amber-700">
-                      {result.parseFailures.map((f) => (
-                        <li key={f.fileName}>
-                          {f.fileName}
-                          {f.orderNumber ? ` (PO ${f.orderNumber})` : ""}:{" "}
-                          {f.reason}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {(result.skippedOrderNumbers ?? []).length ? (
+                  <div className="text-sm font-medium">Duplicate orders</div>
+                  {duplicateRefs.length ? (
                     <div className="flex flex-wrap gap-2">
-                      {(result.skippedOrderNumbers ?? []).map((orderNumber) => (
-                        <Badge
-                          key={orderNumber}
-                          variant="destructive"
-                          className="rounded-full px-3 py-1"
-                        >
+                      {duplicateRefs.map((orderNumber) => (
+                        <Badge key={orderNumber} variant="secondary">
+                          {orderNumber}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No duplicate orders.
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">Skipped orders</div>
+                  {skippedOrderNumbers.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {skippedOrderNumbers.map((orderNumber) => (
+                        <Badge key={orderNumber} variant="destructive">
                           {orderNumber}
                         </Badge>
                       ))}
@@ -748,31 +730,51 @@ function PdfOrdersTab({
                   )}
                 </div>
 
-                {!!result.skipReasons &&
-                  Object.keys(result.skipReasons).length > 0 && (
+                {Object.keys(skipReasons).length > 0 && (
+                  <>
+                    <Separator />
                     <div className="space-y-3">
                       <div className="text-sm font-medium">Skip reasons</div>
-                      <div className="space-y-3">
-                        {Object.entries(result.skipReasons).map(
-                          ([orderNumber, reasons]) => (
-                            <div
-                              key={orderNumber}
-                              className="rounded border bg-muted/20 p-4"
-                            >
-                              <div className="text-sm font-semibold">
-                                Order {orderNumber}
-                              </div>
-                              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                {reasons.map((reason) => (
-                                  <li key={reason}>&bull; {reason}</li>
-                                ))}
-                              </ul>
+                      {Object.entries(skipReasons).map(
+                        ([orderNumber, reasons]) => (
+                          <div
+                            key={orderNumber}
+                            className="rounded border bg-muted/20 p-4"
+                          >
+                            <div className="text-sm font-semibold">
+                              Order {orderNumber}
                             </div>
-                          ),
-                        )}
-                      </div>
+                            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                              {reasons.map((reason) => (
+                                <li key={reason}>&bull; {reason}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ),
+                      )}
                     </div>
-                  )}
+                  </>
+                )}
+
+                {parseFailures.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium">Parse failures</div>
+                      <ul className="space-y-1 text-sm text-amber-700">
+                        {parseFailures.map((failure) => (
+                          <li key={`${failure.fileName}-${failure.reason}`}>
+                            {failure.fileName}
+                            {failure.orderNumber
+                              ? ` (PO ${failure.orderNumber})`
+                              : ""}
+                            : {failure.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </CardContent>
@@ -780,23 +782,86 @@ function PdfOrdersTab({
 
         <Card className="rounded border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Generated seed payload</CardTitle>
+            <CardTitle className="text-lg">Import progress</CardTitle>
             <CardDescription>
-              Preview of the returned orders before you write them to the
-              database.
+              Live status of uploaded BuildSmart PDF jobs.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {!result ? (
+          <CardContent className="space-y-3">
+            {!jobs.length ? (
               <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
-                Process PDFs to preview generated orders.
+                No import jobs yet.
               </div>
             ) : (
-              <ScrollArea className="h-140 rounded border bg-muted/20 p-4">
-                <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-                  {JSON.stringify(result.orders, null, 2)}
-                </pre>
-              </ScrollArea>
+              <div className="space-y-3">
+                {jobs.map((job) => {
+                  const progress = job.resultJson?.progress;
+                  const pct =
+                    progress?.total && progress.total > 0
+                      ? Math.round((progress.current / progress.total) * 100)
+                      : job.status === "COMPLETED" || job.status === "FAILED"
+                        ? 100
+                        : job.status === "PROCESSING"
+                          ? 50
+                          : 10;
+
+                  return (
+                    <div key={job.id} className="rounded border bg-card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium">
+                            {job.fileName}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {progress?.message ??
+                              (job.status === "QUEUED"
+                                ? "Waiting to start"
+                                : job.status === "PROCESSING"
+                                  ? "Processing PDF"
+                                  : job.status === "COMPLETED"
+                                    ? "Completed"
+                                    : "Failed")}
+                          </div>
+                          {job.error && (
+                            <div className="mt-2 text-xs text-destructive">
+                              {job.error}
+                            </div>
+                          )}
+                        </div>
+
+                        <Badge
+                          variant={
+                            job.status === "FAILED"
+                              ? "destructive"
+                              : job.status === "COMPLETED"
+                                ? "default"
+                                : "secondary"
+                          }
+                          className="shrink-0 rounded-full"
+                        >
+                          {job.status}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+
+                      <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                        <span>{pct}%</span>
+                        {progress && (
+                          <span>
+                            {progress.current} / {progress.total}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -1297,7 +1362,7 @@ function HistoricalMaterialsTab() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-125">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr>
@@ -1379,7 +1444,7 @@ function HistoricalMaterialsTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-125">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr>
@@ -1546,17 +1611,14 @@ function HistoricalCostsTab() {
   const [siteCodeOverride, setSiteCodeOverride] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [preview, setPreview] = useState<ParseResponse | null>(null);
-  const [importResult, setImportResult] = useState<ImportResponse | null>(null);
-  const [importProgress, setImportProgress] = useState<{
-    done: number;
-    total: number;
-  } | null>(null);
+  const [jobs, setJobs] = useState<ImportJobRow[]>([]);
 
   function addFiles(list: FileList | File[]) {
     const incoming = Array.from(list).filter(
       (f) =>
         f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
     );
+
     setFiles((prev) => {
       const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
       return [
@@ -1564,28 +1626,82 @@ function HistoricalCostsTab() {
         ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`)),
       ];
     });
+
     setPreview(null);
-    setImportResult(null);
+    setJobs([]);
   }
 
   function removeFile(name: string) {
     setFiles((prev) => prev.filter((f) => f.name !== name));
     setPreview(null);
-    setImportResult(null);
+    setJobs([]);
   }
+
+  function clearAll() {
+    setFiles([]);
+    setPreview(null);
+    setJobs([]);
+    setSiteCodeOverride("");
+  }
+
+  useEffect(() => {
+    if (!jobs.length) return;
+
+    const hasActiveJobs = jobs.some((job) =>
+      ["QUEUED", "PROCESSING"].includes(job.status),
+    );
+
+    if (!hasActiveJobs) return;
+
+    const timer = window.setInterval(async () => {
+      try {
+        const ids = jobs.map((job) => job.id).join(",");
+        const res = await fetch(`/api/admin/buildsmart/import-jobs?ids=${ids}`);
+
+        if (!res.ok) return;
+
+        const data = (await res.json()) as { jobs: ImportJobRow[] };
+
+        setJobs((prev) => {
+          const previousOrder = prev.map((job) => job.id);
+          const latest = new Map(data.jobs.map((job) => [job.id, job]));
+
+          return previousOrder
+            .map((id) => latest.get(id))
+            .filter(Boolean) as ImportJobRow[];
+        });
+      } catch {
+        // silent polling failure
+      }
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+  }, [jobs]);
 
   async function callApi(action: "parse" | "import") {
     if (!files.length || isBusy) return;
+
     setIsBusy(true);
-    if (action === "parse") setImportResult(null);
-    setImportProgress(null);
+
+    if (action === "parse") {
+      setPreview(null);
+    }
+
+    if (action === "import") {
+      setJobs([]);
+    }
 
     try {
       const fd = new FormData();
       fd.append("action", action);
-      if (siteCodeOverride.trim())
+
+      if (siteCodeOverride.trim()) {
         fd.append("siteCode", siteCodeOverride.trim());
-      for (const f of files) fd.append("pdfs", f, f.name);
+      }
+
+      for (const f of files) {
+        fd.append("pdfs", f, f.name);
+      }
 
       const res = await fetch("/api/admin/buildsmart/seed-historical-costs", {
         method: "POST",
@@ -1596,73 +1712,63 @@ function HistoricalCostsTab() {
         throw new Error(await getResponseErrorMessage(res));
       }
 
+      const data = await res.json();
+
       if (action === "parse") {
-        const data = await res.json();
         setPreview(data as ParseResponse);
       } else {
-        const reader = res.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        const streamedResults: CostImportResult[] = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop()!;
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            const event = JSON.parse(line) as
-              | {
-                  type: "progress";
-                  total: number;
-                  done: number;
-                  result: CostImportResult;
-                }
-              | {
-                  type: "done";
-                  summary: Record<string, number>;
-                  totalProcessed: number;
-                  rowsByCategory: Record<string, number>;
-                  parseWarnings: string[];
-                }
-              | { type: "error"; error: string };
-
-            if (event.type === "progress") {
-              setImportProgress({ done: event.done, total: event.total });
-              streamedResults.push(event.result);
-            } else if (event.type === "done") {
-              setImportResult({
-                action: "import",
-                summary: event.summary,
-                totalProcessed: event.totalProcessed,
-                rowsByCategory: event.rowsByCategory ?? {},
-                parseWarnings: event.parseWarnings,
-                results: streamedResults,
-              });
-              setImportProgress(null);
-            } else if (event.type === "error") {
-              throw new Error(event.error);
-            }
-          }
-        }
+        const queued = data as QueueResponse;
+        setJobs(queued.jobs ?? []);
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsBusy(false);
-      setImportProgress(null);
     }
   }
 
-  const rows = importResult?.results ?? preview?.rows ?? [];
-  const warnings = importResult?.parseWarnings ?? preview?.parseWarnings ?? [];
+  const completedJobs = jobs.filter((job) => job.status === "COMPLETED");
+  const failedJobs = jobs.filter((job) => job.status === "FAILED");
+  const processingJobs = jobs.filter((job) => job.status === "PROCESSING");
+  const queuedJobs = jobs.filter((job) => job.status === "QUEUED");
+
+  const jobResults = completedJobs
+    .map((job) => job.resultJson)
+    .filter(Boolean) as any[];
+
+  const importResults = jobResults.flatMap(
+    (result) => (result.results ?? []) as CostImportResult[],
+  );
+
+  const previewRows = preview?.rows ?? [];
+  const rows = importResults.length ? importResults : previewRows;
+
+  const parseWarnings = [
+    ...(preview?.parseWarnings ?? []),
+    ...jobResults.flatMap((result) => result.parseWarnings ?? []),
+  ];
+
+  const combinedSummary = jobResults.reduce<Record<string, number>>(
+    (acc, result) => {
+      for (const [key, value] of Object.entries(result.summary ?? {})) {
+        acc[key] = (acc[key] ?? 0) + Number(value ?? 0);
+      }
+      return acc;
+    },
+    {},
+  );
+
+  const importedCount = combinedSummary.NEW_HISTORICAL ?? 0;
+  const duplicateImported = combinedSummary.DUPLICATE_IMPORTED ?? 0;
+  const duplicateExisting = combinedSummary.DUPLICATE_EXISTING_APP ?? 0;
+  const duplicateOrder = combinedSummary.DUPLICATE_ORDER ?? 0;
+  const missingSite = combinedSummary.MISSING_SITE ?? 0;
+  const invalidRow = combinedSummary.INVALID_ROW ?? 0;
+
+  const isImportMode = jobs.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-      {/* Upload card */}
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="rounded border shadow-sm">
           <CardHeader className="space-y-3">
@@ -1675,10 +1781,10 @@ function HistoricalCostsTab() {
                   Upload BuildSmart &quot;Detail Contract Cost Report&quot; PDFs
                   for labour, plant, and other ledger lines. Rows tied to a PO
                   already imported via PDF Orders or Historical Materials are
-                  skipped automatically. Use either PDF Orders or Historical
-                  Materials for material POs — not both.
+                  skipped automatically.
                 </CardDescription>
               </div>
+
               <Badge
                 variant="secondary"
                 className="rounded-full px-3 py-1 text-xs"
@@ -1689,7 +1795,6 @@ function HistoricalCostsTab() {
           </CardHeader>
 
           <CardContent className="space-y-5">
-            {/* Drop zone */}
             <div
               onDragEnter={(e) => {
                 e.preventDefault();
@@ -1710,8 +1815,9 @@ function HistoricalCostsTab() {
                 e.preventDefault();
                 e.stopPropagation();
                 setDragActive(false);
-                if (e.dataTransfer.files?.length)
+                if (e.dataTransfer.files?.length) {
                   addFiles(e.dataTransfer.files);
+                }
               }}
               className={cn(
                 "group rounded border-2 border-dashed p-8 transition",
@@ -1724,9 +1830,11 @@ function HistoricalCostsTab() {
                 <div className="mb-4 rounded border bg-background p-4 shadow-sm">
                   <History className="h-8 w-8" />
                 </div>
+
                 <h3 className="text-lg font-medium">
                   Drop cost-report PDFs here
                 </h3>
+
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground">
                   Accepts BuildSmart{" "}
                   <span className="font-medium text-foreground">
@@ -1738,6 +1846,7 @@ function HistoricalCostsTab() {
                   </span>{" "}
                   reports. Not purchase-order PDFs.
                 </p>
+
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <Button
                     onClick={() => inputRef.current?.click()}
@@ -1746,20 +1855,18 @@ function HistoricalCostsTab() {
                     <FolderOpen className="mr-2 h-4 w-4" />
                     Choose PDFs
                   </Button>
+
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setFiles([]);
-                      setPreview(null);
-                      setImportResult(null);
-                    }}
-                    disabled={!files.length}
+                    onClick={clearAll}
+                    disabled={!files.length && !jobs.length}
                     className="rounded"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Clear
                   </Button>
                 </div>
+
                 <input
                   ref={inputRef}
                   type="file"
@@ -1774,7 +1881,6 @@ function HistoricalCostsTab() {
               </div>
             </div>
 
-            {/* Site code override */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 Site code override{" "}
@@ -1782,6 +1888,7 @@ function HistoricalCostsTab() {
                   (only needed when the PDF has no contract header)
                 </span>
               </label>
+
               <Input
                 placeholder="e.g. 6537"
                 value={siteCodeOverride}
@@ -1790,7 +1897,6 @@ function HistoricalCostsTab() {
               />
             </div>
 
-            {/* Action buttons */}
             <div className="flex flex-wrap gap-3">
               <Button
                 onClick={() => callApi("parse")}
@@ -1799,63 +1905,37 @@ function HistoricalCostsTab() {
                 size="lg"
                 className="rounded px-6"
               >
-                {isBusy && !importResult ? (
+                {isBusy && !jobs.length ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <FileText className="mr-2 h-4 w-4" />
                 )}
                 Preview rows
               </Button>
+
               <Button
                 onClick={() => callApi("import")}
-                disabled={!files.length || isBusy || !preview}
+                disabled={!files.length || isBusy}
                 size="lg"
                 className="rounded px-6"
               >
-                {importProgress ? (
+                {isBusy ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Play className="mr-2 h-4 w-4" />
                 )}
-                Import to database
+                {isBusy ? "Queueing import..." : "Import to database"}
               </Button>
             </div>
-
-            {importProgress && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Importing rows…</span>
-                  <span className="font-semibold tabular-nums">
-                    {importProgress.done}
-                    {" / "}
-                    {importProgress.total}
-                    <span className="ml-2 text-primary">
-                      {Math.round(
-                        (importProgress.done / importProgress.total) * 100,
-                      )}
-                      {"%"}
-                    </span>
-                  </span>
-                </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-150"
-                    style={{
-                      width: `${Math.round((importProgress.done / importProgress.total) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* File queue */}
         <Card className="rounded border shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Upload queue</CardTitle>
             <CardDescription>PDFs staged for import.</CardDescription>
           </CardHeader>
+
           <CardContent>
             <ScrollArea className="h-96 pr-3">
               <div className="space-y-3">
@@ -1870,10 +1950,11 @@ function HistoricalCostsTab() {
                       className="rounded border bg-card p-3 shadow-sm"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="rounded border bg-muted p-2 shrink-0">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="shrink-0 rounded border bg-muted p-2">
                             <FileText className="h-4 w-4" />
                           </div>
+
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium">
                               {f.name}
@@ -1883,6 +1964,7 @@ function HistoricalCostsTab() {
                             </div>
                           </div>
                         </div>
+
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1901,24 +1983,137 @@ function HistoricalCostsTab() {
         </Card>
       </div>
 
-      {/* Import summary (shown after import) */}
-      {importResult && (
-        <Card className="rounded border shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Import summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {Object.entries(importResult.summary).map(([k, v]) => (
-                <MetricCard key={k} label={k.replace(/_/g, " ")} value={v} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {jobs.length > 0 && (
+        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <Card className="rounded border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Import summary</CardTitle>
+              <CardDescription>
+                Live summary from the historical cost import jobs.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <MetricCard label="Queued" value={queuedJobs.length} />
+                <MetricCard label="Processing" value={processingJobs.length} />
+                <MetricCard label="Completed" value={completedJobs.length} />
+                <MetricCard label="Failed" value={failedJobs.length} />
+                <MetricCard label="Imported" value={importedCount} />
+                <MetricCard
+                  label="Duplicate imported"
+                  value={duplicateImported}
+                />
+                <MetricCard label="Duplicate app" value={duplicateExisting} />
+                <MetricCard label="Duplicate PO" value={duplicateOrder} />
+                <MetricCard label="Missing site" value={missingSite} />
+                <MetricCard label="Invalid rows" value={invalidRow} />
+              </div>
+
+              {parseWarnings.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
+                      <TriangleAlert className="h-4 w-4" />
+                      Parse warnings
+                    </div>
+
+                    <ul className="space-y-1 text-sm text-amber-700">
+                      {parseWarnings.map((warning, index) => (
+                        <li key={`${warning}-${index}`}>&bull; {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Import progress</CardTitle>
+              <CardDescription>
+                Live status of uploaded historical cost jobs.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              {jobs.map((job) => {
+                const progress = job.resultJson?.progress;
+                const pct =
+                  progress?.total && progress.total > 0
+                    ? Math.round((progress.current / progress.total) * 100)
+                    : job.status === "COMPLETED" || job.status === "FAILED"
+                      ? 100
+                      : job.status === "PROCESSING"
+                        ? 50
+                        : 10;
+
+                return (
+                  <div key={job.id} className="rounded border bg-card p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {job.fileName}
+                        </div>
+
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {progress?.message ??
+                            (job.status === "QUEUED"
+                              ? "Waiting to start"
+                              : job.status === "PROCESSING"
+                                ? "Processing PDF"
+                                : job.status === "COMPLETED"
+                                  ? "Completed"
+                                  : "Failed")}
+                        </div>
+
+                        {job.error && (
+                          <div className="mt-2 text-xs text-destructive">
+                            {job.error}
+                          </div>
+                        )}
+                      </div>
+
+                      <Badge
+                        variant={
+                          job.status === "FAILED"
+                            ? "destructive"
+                            : job.status === "COMPLETED"
+                              ? "default"
+                              : "secondary"
+                        }
+                        className="shrink-0 rounded-full"
+                      >
+                        {job.status}
+                      </Badge>
+                    </div>
+
+                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                      <span>{pct}%</span>
+                      {progress && (
+                        <span>
+                          {progress.current} / {progress.total}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Parse warnings */}
-      {warnings.length > 0 && (
+      {parseWarnings.length > 0 && !jobs.length && (
         <Card className="rounded border border-amber-200 bg-amber-50 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-800">
@@ -1926,27 +2121,28 @@ function HistoricalCostsTab() {
               Parse warnings
             </CardTitle>
           </CardHeader>
+
           <CardContent>
             <ul className="space-y-1 text-sm text-amber-700">
-              {warnings.map((w, i) => (
-                <li key={i}>&bull; {w}</li>
+              {parseWarnings.map((warning, index) => (
+                <li key={`${warning}-${index}`}>&bull; {warning}</li>
               ))}
             </ul>
           </CardContent>
         </Card>
       )}
 
-      {/* Row table */}
       {rows.length > 0 && (
         <Card className="rounded border shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">
-              {importResult ? "Import results" : "Preview"}{" "}
+              {isImportMode ? "Import results" : "Preview"}{" "}
               <span className="ml-1 text-sm font-normal text-muted-foreground">
                 {rows.length} rows
               </span>
             </CardTitle>
-            {!importResult && (
+
+            {!isImportMode && (
               <CardDescription>
                 Review parsed rows before importing. Click{" "}
                 <span className="font-medium text-foreground">
@@ -1956,8 +2152,9 @@ function HistoricalCostsTab() {
               </CardDescription>
             )}
           </CardHeader>
+
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-125">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr>
@@ -1971,35 +2168,36 @@ function HistoricalCostsTab() {
                     </th>
                     <th className="px-4 py-2 text-left font-medium">Date</th>
                     <th className="px-4 py-2 text-right font-medium">Amount</th>
-                    {importResult && (
+                    {isImportMode && (
                       <th className="px-4 py-2 text-left font-medium">
                         Status
                       </th>
                     )}
                   </tr>
                 </thead>
+
                 <tbody className="divide-y">
                   {rows.map((r, i) => {
-                    const isResult = importResult !== null;
                     const row = r as CostPreviewRow & Partial<CostImportResult>;
-                    const statusInfo = isResult
+                    const statusInfo = isImportMode
                       ? (STATUS_BADGE[row.status ?? ""] ?? {
                           label: row.status ?? "",
                           variant: "secondary" as const,
                         })
                       : null;
+
                     return (
                       <tr
                         key={i}
                         className={cn(
                           "transition-colors",
-                          isResult &&
+                          isImportMode &&
                             row.status === "NEW_HISTORICAL" &&
                             "bg-green-50/50",
-                          isResult &&
+                          isImportMode &&
                             row.status === "DUPLICATE_IMPORTED" &&
                             "bg-muted/30",
-                          isResult &&
+                          isImportMode &&
                             (row.status === "MISSING_SITE" ||
                               row.status === "INVALID_ROW") &&
                             "bg-red-50/40",
@@ -2013,9 +2211,11 @@ function HistoricalCostsTab() {
                             </div>
                           )}
                         </td>
+
                         <td className="px-4 py-2 font-mono text-xs">
                           {row.ledgerCode}
                         </td>
+
                         <td className="px-4 py-2">
                           <span
                             className={cn(
@@ -2027,7 +2227,8 @@ function HistoricalCostsTab() {
                             {row.category}
                           </span>
                         </td>
-                        <td className="max-w-[200px] truncate px-4 py-2 text-xs text-muted-foreground">
+
+                        <td className="max-w-50 truncate px-4 py-2 text-xs text-muted-foreground">
                           {row.description ?? "—"}
                           {row.parseWarning && (
                             <div className="text-amber-600">
@@ -2035,6 +2236,7 @@ function HistoricalCostsTab() {
                             </div>
                           )}
                         </td>
+
                         <td className="px-4 py-2 text-xs">
                           {row.transactionDate
                             ? new Date(row.transactionDate).toLocaleDateString(
@@ -2042,13 +2244,15 @@ function HistoricalCostsTab() {
                               )
                             : "—"}
                         </td>
+
                         <td className="px-4 py-2 text-right font-mono text-xs">
                           R
                           {Number(row.amount).toLocaleString("en-ZA", {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        {isResult && (
+
+                        {isImportMode && (
                           <td className="px-4 py-2">
                             <Badge
                               variant={statusInfo?.variant}
@@ -2056,6 +2260,7 @@ function HistoricalCostsTab() {
                             >
                               {statusInfo?.label}
                             </Badge>
+
                             {row.reason && row.reason !== statusInfo?.label && (
                               <div className="mt-0.5 text-xs text-muted-foreground">
                                 {row.reason}
@@ -2067,6 +2272,7 @@ function HistoricalCostsTab() {
                     );
                   })}
                 </tbody>
+
                 <tfoot className="border-t-2 border-border bg-muted/30">
                   <tr>
                     <td
@@ -2075,13 +2281,15 @@ function HistoricalCostsTab() {
                     >
                       GRAND TOTAL
                     </td>
+
                     <td className="px-4 py-2 text-right font-mono text-sm font-bold">
                       R
                       {rows
-                        .reduce((s, r) => s + Number(r.amount), 0)
+                        .reduce((s, r) => s + Number((r as any).amount ?? 0), 0)
                         .toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
                     </td>
-                    {importResult && <td />}
+
+                    {isImportMode && <td />}
                   </tr>
                 </tfoot>
               </table>
@@ -2446,7 +2654,7 @@ function ClaimsTab() {
             )}
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-125">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 border-b bg-muted/50">
                   <tr>

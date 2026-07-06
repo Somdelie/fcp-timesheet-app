@@ -20,11 +20,31 @@ export async function processBuildSmartImportJob(jobId: string) {
       status: "PROCESSING",
       startedAt: new Date(),
       error: null,
+      resultJson: {
+        progress: {
+          current: 0,
+          total: 1,
+          message: "Starting PDF import...",
+        },
+      },
     },
   });
 
   try {
     const buffer = Buffer.from(job.fileUrl, "base64");
+
+    await prisma.importJob.update({
+      where: { id: jobId },
+      data: {
+        resultJson: {
+          progress: {
+            current: 1,
+            total: 3,
+            message: "Reading PDF file...",
+          },
+        },
+      },
+    });
 
     const result = await importBuildSmartPdfOrders({
       buffers: [
@@ -41,7 +61,14 @@ export async function processBuildSmartImportJob(jobId: string) {
       data: {
         status: "COMPLETED",
         finishedAt: new Date(),
-        resultJson: result as any,
+        resultJson: {
+          ...(result as any),
+          progress: {
+            current: 3,
+            total: 3,
+            message: "Import completed",
+          },
+        },
       },
     });
 
@@ -53,6 +80,13 @@ export async function processBuildSmartImportJob(jobId: string) {
         status: "FAILED",
         finishedAt: new Date(),
         error: error instanceof Error ? error.message : String(error),
+        resultJson: {
+          progress: {
+            current: 3,
+            total: 3,
+            message: "Import failed",
+          },
+        },
       },
     });
 
