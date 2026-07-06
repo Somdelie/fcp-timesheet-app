@@ -12,51 +12,47 @@ type Invite = {
   createdAt: string;
 };
 
+const SHOWN_KEY = "shown-invite-ids";
+
 export default function InvitePopup() {
   const [invite, setInvite] = useState<Invite | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const SHOWN_KEY = "shown-invite-ids";
-
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    let cancelled = false;
 
-    const shownRaw = localStorage.getItem(SHOWN_KEY);
-    const shownSet = shownRaw
-      ? new Set(JSON.parse(shownRaw) as string[])
-      : new Set<string>();
-
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource("/api/app/notes/invites/stream");
-    } catch (err) {
-      // fallback: do nothing
-    }
-
-    const onMessage = (ev: MessageEvent) => {
+    async function loadInvites() {
       try {
-        const data = JSON.parse(ev.data) as Invite[];
-        if (!Array.isArray(data) || data.length === 0) return;
-        const firstUnseen = data.find((i) => !shownSet.has(i.id));
-        if (firstUnseen) setInvite(firstUnseen);
-      } catch (err) {
-        // ignore parse errors
-      }
-    };
+        const raw = localStorage.getItem(SHOWN_KEY);
+        const shownIds = raw ? (JSON.parse(raw) as string[]) : [];
+        const shownSet = new Set(shownIds);
 
-    if (es) {
-      es.addEventListener("message", onMessage as any);
-      es.addEventListener("error", () => {
-        // reconnects automatically; ignore errors
-      });
+        const res = await fetch("/api/app/notes/invites", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!res.ok) return;
+
+        const data = (await res.json()) as Invite[];
+
+        if (cancelled || !Array.isArray(data)) return;
+
+        const firstUnseen = data.find((i) => !shownSet.has(i.id));
+
+        if (firstUnseen) {
+          setInvite(firstUnseen);
+        }
+      } catch {
+        // ignore
+      }
     }
+
+    loadInvites();
 
     return () => {
-      if (es) {
-        es.removeEventListener("message", onMessage as any);
-        es.close();
-      }
+      cancelled = true;
     };
   }, []);
 
@@ -64,7 +60,11 @@ export default function InvitePopup() {
     try {
       const raw = localStorage.getItem(SHOWN_KEY);
       const arr = raw ? (JSON.parse(raw) as string[]) : [];
-      if (!arr.includes(id)) arr.push(id);
+
+      if (!arr.includes(id)) {
+        arr.push(id);
+      }
+
       localStorage.setItem(SHOWN_KEY, JSON.stringify(arr));
     } catch {
       // ignore
@@ -73,13 +73,17 @@ export default function InvitePopup() {
 
   const handleAccept = async () => {
     if (!invite) return;
+
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch(`/api/app/notes/invites/${invite.id}`, {
         method: "PATCH",
       });
+
       if (!res.ok) throw new Error("Failed to accept");
+
       markShown(invite.id);
       setInvite(null);
     } catch (err: any) {
@@ -91,13 +95,17 @@ export default function InvitePopup() {
 
   const handleDecline = async () => {
     if (!invite) return;
+
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch(`/api/app/notes/invites/${invite.id}`, {
         method: "DELETE",
       });
+
       if (!res.ok) throw new Error("Failed to decline");
+
       markShown(invite.id);
       setInvite(null);
     } catch (err: any) {
@@ -119,22 +127,27 @@ export default function InvitePopup() {
               Invite
             </Badge>
           </div>
+
           <div className="mt-1 text-sm text-muted-foreground">
             <div>
               <strong>{invite.invitedBy?.name ?? "Someone"}</strong> invited you
               to collaborate on
             </div>
+
             <div className="mt-1 font-medium">
               {invite.noteTitle ?? "a note"}
             </div>
           </div>
+
           {error && (
             <div className="mt-2 text-xs text-destructive">{error}</div>
           )}
+
           <div className="mt-3 flex gap-2">
             <Button onClick={handleAccept} disabled={loading}>
               Accept
             </Button>
+
             <Button variant="ghost" onClick={handleDecline} disabled={loading}>
               Decline
             </Button>
