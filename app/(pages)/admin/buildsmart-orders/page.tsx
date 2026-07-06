@@ -85,7 +85,7 @@ type SeedResponse = {
   stockOrders?: StockOrderResult[];
   savedOrderIds?: string[];
   duplicateRefs?: string[];
-  skippedOrderNumbers: string[];
+  skippedOrderNumbers?: string[];
   skipReasons?: Record<string, string[]>;
   parseFailures?: ParseFailure[];
   prismaSeedCode?: string;
@@ -729,9 +729,9 @@ function PdfOrdersTab({
                       ))}
                     </ul>
                   )}
-                  {result.skippedOrderNumbers.length ? (
+                  {(result.skippedOrderNumbers ?? []).length ? (
                     <div className="flex flex-wrap gap-2">
-                      {result.skippedOrderNumbers.map((orderNumber) => (
+                      {(result.skippedOrderNumbers ?? []).map((orderNumber) => (
                         <Badge
                           key={orderNumber}
                           variant="destructive"

@@ -95,6 +95,8 @@ model User {
   siteProgrammes SiteProgramme[] @relation("SiteProgrammeCreatedBy")
 
   uploadedSiteDocuments SiteDocument[] @relation("SiteDocumentUploadedBy")
+
+  importJobs ImportJob[]
 }
 
 model PushToken {
@@ -290,12 +292,12 @@ model Site {
   latitude  Float?
   longitude Float?
 
-  isActive   Boolean   @default(true)
-  jobStatus  JobStatus @default(NOT_STARTED)
-  stageIndex Int       @default(0)
-  stagePct   Json      @default("{}")
-  specStatus SpecStatus @default(NOT_REQUESTED)
-  specAvailable Boolean @default(false)
+  isActive      Boolean    @default(true)
+  jobStatus     JobStatus  @default(NOT_STARTED)
+  stageIndex    Int        @default(0)
+  stagePct      Json       @default("{}")
+  specStatus    SpecStatus @default(NOT_REQUESTED)
+  specAvailable Boolean    @default(false)
 
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 
@@ -2062,11 +2064,11 @@ model SiteFinishingSchedule {
 
   // Versioning / publishing
   status           FinishingScheduleStatus @default(INITIAL)
-  version          Int       @default(1)
-  isActive         Boolean   @default(true)
+  version          Int                     @default(1)
+  isActive         Boolean                 @default(true)
   approvedAt       DateTime?
   approvedByUserId String?
-  approvedByUser   User?     @relation("FinishingScheduleApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedByUser   User?                   @relation("FinishingScheduleApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
 
   supersededById   String?
   supersededBy     SiteFinishingSchedule?  @relation("FinishingScheduleVersionChain", fields: [supersededById], references: [id], onDelete: SetNull)
@@ -2264,6 +2266,31 @@ model ProcurementProductCoverage {
   paintPlans SitePaintPlan[]
 
   @@index([productId, isActive])
+}
+
+model ImportJob {
+  id String @id @default(cuid())
+
+  type   String
+  status String @default("QUEUED")
+
+  fileName String
+  fileUrl  String
+
+  error      String?
+  resultJson Json?
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([createdById])
 }
 
 model SitePaintPlan {
