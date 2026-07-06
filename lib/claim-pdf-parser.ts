@@ -1,12 +1,21 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PDFParse } = require("pdf-parse");
+// Use dynamic import to avoid CommonJS module resolution issues in deployed environments
 
 const SITE_CODE_RE = /FCP\s*[-–]\s*(\d{4,})/i;
 const DATE_RE =
   /\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i;
 const MONTH_MAP: Record<string, number> = {
-  january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
-  july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11,
 };
 
 function parseSAAmount(raw: string): number {
@@ -79,14 +88,21 @@ export function parseClaimText(text: string): ParsedClaim | null {
 export async function parseClaimBuffers(
   buffers: { name: string; buffer: Buffer }[],
 ): Promise<{ fileName: string; claim: ParsedClaim | null; error?: string }[]> {
-  const results: { fileName: string; claim: ParsedClaim | null; error?: string }[] = [];
+  const pdfParse = (await import("pdf-parse")).default;
+
+  const results: {
+    fileName: string;
+    claim: ParsedClaim | null;
+    error?: string;
+  }[] = [];
+
   for (const { name, buffer } of buffers) {
     try {
-      const parser = new PDFParse({ data: buffer } as any);
-      const result = await parser.getText();
-      await parser.destroy();
+      const result = await pdfParse(buffer);
       const text: string = result.text;
+
       const claim = parseClaimText(text);
+
       results.push({
         fileName: name,
         claim,
@@ -100,5 +116,6 @@ export async function parseClaimBuffers(
       });
     }
   }
+
   return results;
 }

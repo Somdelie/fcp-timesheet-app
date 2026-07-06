@@ -1,10 +1,15 @@
-import { createRequire } from "node:module";
 import { normalizeBuildSmartProductCode } from "@/lib/procurement/buildsmartProductCodes";
 
-// pdf-parse v2.x exports PDFParse as a named class (no default export).
-const require = createRequire(import.meta.url);
-const { PDFParse } = require("pdf-parse");
+// Lazy-load pdf-parse on first use to work around module resolution issues in deployed environments
+let pdfParseModule: any = null;
 
+async function getPDFParseModule() {
+  if (!pdfParseModule) {
+    const module = await import("pdf-parse");
+    pdfParseModule = module;
+  }
+  return pdfParseModule;
+}
 // ── Types ──
 export type ParsedItem = {
   costCode: string;
@@ -417,11 +422,15 @@ export async function parsePdfBuffer(
   if (!buffer || buffer.length === 0) return null;
   let text: string;
   try {
+    const module = await getPDFParseModule();
+    const PDFParse = module.PDFParse || module.default;
+
     const parser = new PDFParse({ data: buffer } as { data: Buffer });
     const result = await parser.getText();
     await parser.destroy();
     text = cleanText(result.text);
-  } catch {
+  } catch (err) {
+    console.error("PDF parsing error:", err);
     return null;
   }
 

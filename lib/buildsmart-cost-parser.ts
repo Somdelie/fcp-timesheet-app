@@ -23,10 +23,8 @@
  */
 
 // pdf-parse v2.x exports PDFParse as a named class (no default export).
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-const { PDFParse } = require("pdf-parse");
 import type { BuildSmartRow } from "@/lib/procurement/buildsmartHistoricalImporter";
+import pdfParse from "pdf-parse";
 
 export interface ParsedCostRow extends Omit<
   BuildSmartRow,
@@ -81,8 +79,7 @@ export interface ParsedCostReport {
 // ── Pattern constants ────────────────────────────────────────────────────────
 
 // "Contract: 6000 - Medicross Boksburg" or "Contract No. 6000 - ..."
-const CONTRACT_RE =
-  /^contract(?:\s+no\.?)?[:\s#]*(\d{4,6})\s*[-–]\s*(.+)$/i;
+const CONTRACT_RE = /^contract(?:\s+no\.?)?[:\s#]*(\d{4,6})\s*[-–]\s*(.+)$/i;
 
 /** Strip trailing report total columns accidentally captured in the site name. */
 function cleanContractSiteName(raw: string): string {
@@ -182,7 +179,10 @@ function lastAmount(line: string): string | null {
  *   qty > 1  → find the pair where unitPrice × qty ≈ total (±2 %); return total.
  *   fallback → return the maximum amount on the line (always ≥ unit price for qty ≥ 1).
  */
-function resolveLineTotal(line: string, quantity: number | null): string | null {
+function resolveLineTotal(
+  line: string,
+  quantity: number | null,
+): string | null {
   const amounts = [...line.matchAll(AMOUNT_TOKEN_RE)]
     .map((m) => parseFloat(m[0].replace(/[\s,]/g, "")))
     .filter((n) => n > 0);
@@ -281,7 +281,9 @@ function extractMaterialFields(afterDate: string): {
     // Unit: ends with "L" (20L, 5L) or is a known standalone unit word
     if (
       /^\d+L$/i.test(token) ||
-      /^(kg|g|m2|m²|m|l|ltr|each|ea|pc|pcs|day|days|hr|hrs|bag|bags|set|sets)$/i.test(token)
+      /^(kg|g|m2|m²|m|l|ltr|each|ea|pc|pcs|day|days|hr|hrs|bag|bags|set|sets)$/i.test(
+        token,
+      )
     ) {
       unit = token;
     }
@@ -317,9 +319,7 @@ function extractMaterialFields(afterDate: string): {
 export async function parseCostReportBuffer(
   buffer: Buffer,
 ): Promise<ParsedCostReport> {
-  const parser = new PDFParse({ data: buffer } as any);
-  const result = await parser.getText();
-  await parser.destroy();
+  const result = await pdfParse(buffer);
   const text: string = result.text;
 
   const lines = text
@@ -350,7 +350,9 @@ export async function parseCostReportBuffer(
     if (SKIP_RE.test(scanLine) || PERIOD_LINE_RE.test(scanLine)) continue;
     const scanTxn = scanLine.match(TXN_DATE_PREFIX_RE);
     if (!scanTxn) continue;
-    const creditMatches = [...scanLine.matchAll(/\(\s*([\d,\s]+\.\d{2})\s*\)/g)];
+    const creditMatches = [
+      ...scanLine.matchAll(/\(\s*([\d,\s]+\.\d{2})\s*\)/g),
+    ];
     if (!creditMatches.length) continue;
     // Store each credited amount as a normalised string
     for (const m of creditMatches) {
