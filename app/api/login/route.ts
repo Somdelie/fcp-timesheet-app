@@ -66,13 +66,13 @@ export async function POST(req: Request) {
     role: user.role,
   });
 
-  writeAuditEvent({
+  void writeAuditEvent({
     actorUserId: user.id,
     action: "LOGIN",
     entity: "User",
     entityId: user.id,
-    metadata: { email: user.email, role: user.role, source: "web" },
-  });
+    metadata: { email: user.email, role: user.role, source: "mobile-app" },
+  }).catch(console.error);
 
   return NextResponse.json(
     {

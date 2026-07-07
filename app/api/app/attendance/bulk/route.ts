@@ -100,8 +100,8 @@ export async function POST(req: Request) {
 
   const actingForemanId = resolved.foremanId!;
   const actingMode = resolved.mode;
-  const assistantEmployeeId =
-    resolved.mode === "ASSISTANT" ? resolved.assistantEmployeeId : null;
+  // const assistantEmployeeId =
+  //   resolved.mode === "ASSISTANT" ? resolved.assistantEmployeeId : null;
 
   // Validate acting foreman is assigned to the site
   const siteAssignment = await prisma.foremanSiteAssignment.findFirst({
