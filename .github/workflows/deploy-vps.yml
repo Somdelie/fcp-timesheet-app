@@ -1,4 +1,4 @@
-name: Deploy FCP to VPS
+name: Deploy FCP
 
 on:
   push:
@@ -6,38 +6,18 @@ on:
       - main
 
 concurrency:
-  group: fcp-vps-deploy
+  group: fcp-deploy
   cancel-in-progress: true
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: [self-hosted, fcp-vps]
 
     steps:
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script_stop: true
-          script: |
-            set -e
-
-            cd /opt/apps/fcp
-
-            echo "Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "Building and restarting app..."
-            docker compose up -d --build
-
-            echo "Checking container..."
-            docker ps | grep fcp-app
-
-            echo "Cleaning old images..."
-            docker image prune -f
-
-            echo "Deployment complete."
+      - name: Update application
+        run: |
+          cd /opt/apps/fcp
+          git fetch origin main
+          git reset --hard origin/main
+          docker compose up -d --build
+          docker image prune -f
