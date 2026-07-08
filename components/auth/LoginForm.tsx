@@ -55,7 +55,8 @@ export function LoginForm() {
         }
 
         toast.success("Login successful!");
-        router.push(result?.url || "/");
+        router.replace("/");
+        router.refresh();
       });
     } catch (error) {
       console.log(error);

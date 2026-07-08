@@ -54,6 +54,11 @@ const SPEC_STATUS_OPTIONS = [
   { value: "ACTIONED", label: "Actioned" },
 ] as const;
 
+const FINISHING_SCHEDULE_OPTIONS = [
+  { value: "no", label: "No" },
+  { value: "yes", label: "Yes" },
+] as const;
+
 type SpecStatusValue =
   | "NOT_REQUESTED"
   | "NOT_REQUIRED"
@@ -86,6 +91,7 @@ const schema = z.object({
       "ACTIONED",
     ])
     .optional(),
+  finishingSchedule: z.enum(["yes", "no"]).optional(),
   latitude: z
     .number({ error: "Latitude must be a number." })
     .min(-90, "Latitude must be between -90 and 90.")
@@ -127,6 +133,8 @@ export default function EditSiteLocationDialog(props: {
     | "ACTIONED"
     | null;
   initialSpecAvailable?: boolean | null;
+  initialFinishingScheduleDone?: boolean | null;
+  initialHasFinishingScheduleInSystem?: boolean | null;
   canEditCoreDetails?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -150,6 +158,8 @@ export default function EditSiteLocationDialog(props: {
     initialJobStatus,
     initialSpecStatus,
     initialSpecAvailable,
+    initialFinishingScheduleDone,
+    initialHasFinishingScheduleInSystem,
     canEditCoreDetails = false,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
@@ -176,6 +186,13 @@ export default function EditSiteLocationDialog(props: {
       setInternalOpen(next);
     }
   };
+
+  function initialFinishingScheduleValue(): "yes" | "no" {
+    if (initialHasFinishingScheduleInSystem || initialFinishingScheduleDone) {
+      return "yes";
+    }
+    return "no";
+  }
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),

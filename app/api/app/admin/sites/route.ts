@@ -140,6 +140,7 @@ export async function GET(req: Request) {
         isActive: true,
         specStatus: true,
         specAvailable: true,
+        finishingScheduleDone: true,
         createdAt: true,
         supervisorAssignments: {
           select: {
@@ -221,7 +222,10 @@ export async function GET(req: Request) {
               (s.specStatus as SiteSpecStatus | null | undefined) ??
               (s.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
             specAvailable: Boolean(s.specAvailable),
-            hasFinishingSchedule: (s.finishingSchedules?.length ?? 0) > 0,
+            finishingScheduleDone: Boolean(s.finishingScheduleDone),
+            hasFinishingSchedule:
+              (s.finishingSchedules?.length ?? 0) > 0 ||
+              Boolean(s.finishingScheduleDone),
             finishingScheduleStatus: s.finishingSchedules?.[0]?.status ?? null,
             createdAt: s.createdAt.toISOString(),
             supervisorName,

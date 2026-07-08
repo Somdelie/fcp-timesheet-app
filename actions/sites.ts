@@ -54,6 +54,15 @@ function specAvailableFromStatus(status: SiteSpecStatus) {
   return status === "RECEIVED" || status === "ACTIONED";
 }
 
+function siteHasFinishingSchedule(s: {
+  finishingSchedules?: unknown[] | null;
+  finishingScheduleDone?: boolean | null;
+}) {
+  return (
+    (s.finishingSchedules?.length ?? 0) > 0 || Boolean(s.finishingScheduleDone)
+  );
+}
+
 function serializeSite(s: any) {
   // Get supervisor name from first active assignment
   const supervisorName =
@@ -107,7 +116,9 @@ function serializeSite(s: any) {
       (s.specStatus as SiteSpecStatus | null | undefined) ??
       (s.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
     specAvailable: Boolean(s.specAvailable),
-    hasFinishingSchedule: (s.finishingSchedules?.length ?? 0) > 0,
+    finishingScheduleDone: Boolean(s.finishingScheduleDone),
+    hasFinishingScheduleInSystem: (s.finishingSchedules?.length ?? 0) > 0,
+    hasFinishingSchedule: siteHasFinishingSchedule(s),
     finishingScheduleStatus: s.finishingSchedules?.[0]?.status ?? null,
     jobStatus: (s.jobStatus ?? "NOT_STARTED") as
       | "NOT_STARTED"
@@ -256,6 +267,7 @@ export async function listSites(input?: {
       isActive: true,
       specStatus: true,
       specAvailable: true,
+      finishingScheduleDone: true,
       jobStatus: true,
       stageIndex: true,
       stagePct: true,
@@ -642,6 +654,7 @@ export async function updateSiteLocation(input: {
   jobStatus?: "NOT_STARTED" | "ONGOING" | "COMPLETED" | "ON_HOLD";
   specStatus?: SiteSpecStatus | null;
   specAvailable?: boolean | null;
+  finishingScheduleDone?: boolean | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
 }) {
@@ -675,6 +688,10 @@ export async function updateSiteLocation(input: {
     input.longitude === undefined ? undefined : cleanNumber(input.longitude);
   const specAvailable =
     input.specAvailable === undefined ? undefined : Boolean(input.specAvailable);
+  const finishingScheduleDone =
+    input.finishingScheduleDone === undefined
+      ? undefined
+      : Boolean(input.finishingScheduleDone);
   const specStatus =
     input.specStatus !== undefined
       ? normalizeSpecStatus(input.specStatus)
@@ -742,6 +759,9 @@ export async function updateSiteLocation(input: {
           : specAvailable !== undefined
             ? { specAvailable }
             : {}),
+        ...(finishingScheduleDone !== undefined
+          ? { finishingScheduleDone }
+          : {}),
         ...(latitude !== undefined ? { latitude } : {}),
         ...(longitude !== undefined ? { longitude } : {}),
       },
@@ -759,6 +779,7 @@ export async function updateSiteLocation(input: {
         isActive: true,
         specStatus: true,
         specAvailable: true,
+        finishingScheduleDone: true,
         jobStatus: true,
         createdAt: true,
         finishingSchedules: {
@@ -808,6 +829,7 @@ export async function listOngoingSites() {
       isActive: true,
       specStatus: true,
       specAvailable: true,
+      finishingScheduleDone: true,
       jobStatus: true,
       stageIndex: true,
       stagePct: true,

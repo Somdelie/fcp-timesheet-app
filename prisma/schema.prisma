@@ -299,6 +299,9 @@ model Site {
   specStatus    SpecStatus @default(NOT_REQUESTED)
   specAvailable Boolean    @default(false)
 
+  /// Manual override for sites that had a finishing schedule before the system existed.
+  finishingScheduleDone Boolean @default(false)
+
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 
   createdAt     DateTime  @default(now())
