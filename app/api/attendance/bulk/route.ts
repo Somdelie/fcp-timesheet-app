@@ -8,6 +8,12 @@ import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks"
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type ScanItem = {
+  qrCodeValue: string;
+  rawName: string | null;
+  scanTime: Date;
+};
+
 function startOfDayUTC(dateISO: string) {
   const d = new Date(`${dateISO}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid workDateISO");
@@ -41,13 +47,15 @@ export async function POST(req: Request) {
 
   const siteId = String(body?.siteId ?? "");
   const workDateISO = String(body?.workDateISO ?? "");
-  const scanItems = Array.isArray(body?.scans)
-    ? body.scans.map((s: any) => ({
-        qrCodeValue: String(s?.qrCodeValue ?? "").trim(),
-        rawName:
-          typeof s?.rawName === "string" ? s.rawName.trim() || null : null,
-        scanTime: s?.scanTime ? new Date(s.scanTime) : new Date(),
-      }))
+  const scanItems: ScanItem[] = Array.isArray(body?.scans)
+    ? body.scans.map(
+        (s: any): ScanItem => ({
+          qrCodeValue: String(s?.qrCodeValue ?? "").trim(),
+          rawName:
+            typeof s?.rawName === "string" ? s.rawName.trim() || null : null,
+          scanTime: s?.scanTime ? new Date(s.scanTime) : new Date(),
+        }),
+      )
     : [];
   const latitude = typeof body?.latitude === "number" ? body.latitude : null;
   const longitude = typeof body?.longitude === "number" ? body.longitude : null;
@@ -106,7 +114,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Day is locked" }, { status: 409 });
   }
 
-  const qrValues = scanItems.map((s) => s.qrCodeValue).filter(Boolean);
+  const qrValues: string[] = scanItems
+    .map((s: ScanItem) => s.qrCodeValue)
+    .filter((value): value is string => value.length > 0);
 
   // optional local dedupe to reduce DB churn
   const uniqueQrValues = Array.from(new Set(qrValues));
