@@ -349,7 +349,19 @@ async function buildPreview(rows: ParsedSeedRow[]) {
       action = row.cardNumber ? "updateCard" : "reactivate";
     } else if (exactCardMatch) {
       matchedEmployee = exactCardMatch;
-      action = "updateCard";
+
+      action = "skip";
+
+      status = "warning";
+
+      message =
+        row.name &&
+        row.name.toLowerCase() !==
+          formatEmployeeName(matchedEmployee).toLowerCase()
+          ? `Card already belongs to ${formatEmployeeName(
+              matchedEmployee,
+            )}. Row will be skipped.`
+          : "Card already exists. Row will be skipped.";
       if (
         row.name &&
         row.name.toLowerCase() !==
@@ -367,14 +379,14 @@ async function buildPreview(rows: ParsedSeedRow[]) {
       action = "invalid";
     }
 
-    if (row.cardNumber && !matchedEmployee) {
-      const existingCard = employeesByCard.get(row.cardNumber);
-      if (existingCard) {
-        status = "warning";
-        message = "Card already assigned to another employee";
-        action = "invalid";
-      }
-    }
+    // if (row.cardNumber && !matchedEmployee) {
+    //   const existingCard = employeesByCard.get(row.cardNumber);
+    //   if (existingCard) {
+    //     status = "warning";
+    //     message = "Card already assigned to another employee";
+    //     action = "invalid";
+    //   }
+    // }
 
     if (!row.cardNumber && action === "create") {
       if (!row.name) {
@@ -474,6 +486,10 @@ async function saveRows(
   const resultRows = await prisma.$transaction(async (tx) => {
     const createdRows = [] as typeof previewRows;
     for (const row of previewRows) {
+      if (row.action === "skip") {
+        createdRows.push(row);
+        continue;
+      }
       if (row.action === "invalid") {
         createdRows.push(row);
         continue;
