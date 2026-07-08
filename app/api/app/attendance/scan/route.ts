@@ -15,6 +15,8 @@ const BodySchema = z.object({
   latitude: z.number().optional().nullable(),
   longitude: z.number().optional().nullable(),
   address: z.string().optional().nullable(),
+  rawName: z.string().optional().nullable(),
+  scanTime: z.string().optional().nullable(),
 });
 
 function startOfTodayLocal() {
@@ -31,10 +33,6 @@ function normalizeEmployeeCode(raw: string) {
     .toUpperCase()
     .replace(/\s+/g, "");
   return t;
-}
-
-function isValidEmployeeCode(code: string) {
-  return /^EMP[_-][A-Z0-9]+$/.test(code);
 }
 
 async function ensureForemanAssignedToSite(opts: {
@@ -134,13 +132,6 @@ export async function POST(req: Request) {
   const siteId = body.data.siteId;
   const employeeCode = normalizeEmployeeCode(body.data.employeeCode);
 
-  if (!isValidEmployeeCode(employeeCode)) {
-    return NextResponse.json(
-      { error: "Invalid employee code" },
-      { status: 400 },
-    );
-  }
-
   const assigned = await ensureForemanAssignedToSite({
     userId: auth.userId,
     siteId,
@@ -164,7 +155,36 @@ export async function POST(req: Request) {
   });
 
   if (!employee) {
-    return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    const cardScan = await prisma.attendanceCardScan.create({
+      data: {
+        cardNumber: employeeCode,
+        status: "UNMATCHED",
+        rawName: body.data.rawName?.trim() || null,
+        scanTime: body.data.scanTime
+          ? new Date(body.data.scanTime)
+          : new Date(),
+        site: { connect: { id: siteId } },
+      },
+      select: {
+        id: true,
+        cardNumber: true,
+        scanTime: true,
+        rawName: true,
+        siteId: true,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      status: "UNMATCHED",
+      scan: {
+        id: cardScan.id,
+        cardNumber: cardScan.cardNumber,
+        scanTime: cardScan.scanTime.toISOString(),
+        rawName: cardScan.rawName,
+        siteId: cardScan.siteId,
+      },
+    });
   }
   if (!employee.isActive) {
     const fullName = `${employee.firstName} ${employee.lastName}`.trim();

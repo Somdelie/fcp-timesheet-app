@@ -41,7 +41,14 @@ export async function POST(req: Request) {
 
   const siteId = String(body?.siteId ?? "");
   const workDateISO = String(body?.workDateISO ?? "");
-  const scans = Array.isArray(body?.scans) ? body.scans : [];
+  const scanItems = Array.isArray(body?.scans)
+    ? body.scans.map((s: any) => ({
+        qrCodeValue: String(s?.qrCodeValue ?? "").trim(),
+        rawName:
+          typeof s?.rawName === "string" ? s.rawName.trim() || null : null,
+        scanTime: s?.scanTime ? new Date(s.scanTime) : new Date(),
+      }))
+    : [];
   const latitude = typeof body?.latitude === "number" ? body.latitude : null;
   const longitude = typeof body?.longitude === "number" ? body.longitude : null;
   const address =
@@ -54,7 +61,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (scans.length === 0) {
+  if (scanItems.length === 0) {
     return NextResponse.json({ error: "No scans submitted" }, { status: 400 });
   }
 
@@ -99,9 +106,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Day is locked" }, { status: 409 });
   }
 
-  const qrValues = scans
-    .map((s: any) => String(s?.qrCodeValue ?? "").trim())
-    .filter(Boolean);
+  const qrValues = scanItems.map((s) => s.qrCodeValue).filter(Boolean);
 
   // optional local dedupe to reduce DB churn
   const uniqueQrValues = Array.from(new Set(qrValues));
@@ -116,6 +121,9 @@ export async function POST(req: Request) {
   });
 
   const byQr = new Map(employees.map((e) => [e.qrCodeValue, e]));
+  const unknownScanItems = scanItems.filter(
+    (item) => item.qrCodeValue && !byQr.has(item.qrCodeValue),
+  );
 
   const results: Array<{
     qrCodeValue: string;
@@ -193,6 +201,22 @@ export async function POST(req: Request) {
         "Failed to ensure SiteDayPhotoRequest for server bulk attendance",
         e,
       );
+    }
+  }
+
+  if (unknownScanItems.length > 0) {
+    try {
+      await prisma.attendanceCardScan.createMany({
+        data: unknownScanItems.map((item) => ({
+          cardNumber: item.qrCodeValue,
+          status: "UNMATCHED",
+          rawName: item.rawName,
+          scanTime: item.scanTime,
+          siteId,
+        })),
+      });
+    } catch (e) {
+      console.error("Failed to save unmatched attendance card scans", e);
     }
   }
 

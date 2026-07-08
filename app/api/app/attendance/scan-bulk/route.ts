@@ -9,13 +9,26 @@ import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks"
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BodySchema = z.object({
-  siteId: z.string().min(1),
-  employeeCodes: z.array(z.string().min(1)).min(1).max(500),
-  latitude: z.number().optional().nullable(),
-  longitude: z.number().optional().nullable(),
-  address: z.string().optional().nullable(),
+const ScanPayloadItem = z.object({
+  cardNumber: z.string().min(1),
+  rawName: z.string().optional().nullable(),
+  scanTime: z.string().optional().nullable(),
 });
+
+const BodySchema = z
+  .object({
+    siteId: z.string().min(1),
+    employeeCodes: z.array(z.string().min(1)).optional(),
+    scans: z.array(ScanPayloadItem).optional(),
+    latitude: z.number().optional().nullable(),
+    longitude: z.number().optional().nullable(),
+    address: z.string().optional().nullable(),
+  })
+  .refine(
+    (data) =>
+      (data.employeeCodes?.length ?? 0) > 0 || (data.scans?.length ?? 0) > 0,
+    { message: "No scans submitted", path: ["employeeCodes"] },
+  );
 
 function startOfTodayLocal() {
   const d = new Date();
@@ -28,10 +41,6 @@ function normalizeCode(raw: string) {
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
-}
-
-function isValidEmployeeCode(code: string) {
-  return /^EMP[_-][A-Z0-9]+$/.test(code);
 }
 
 async function ensureForemanAssignedToSite(opts: {
@@ -138,26 +147,31 @@ export async function POST(req: Request) {
 
   const siteId = body.data.siteId;
 
-  // Normalize + de-dupe inside payload
-  const normalized = body.data.employeeCodes.map(normalizeCode);
-  const invalidCodes = normalized.filter((c) => !isValidEmployeeCode(c));
+  const scanItems = [
+    ...(body.data.employeeCodes ?? []).map((code) => ({
+      cardNumber: code,
+      rawName: null as string | null,
+      scanTime: null as string | null,
+    })),
+    ...(body.data.scans ?? []),
+  ]
+    .map((item) => ({
+      cardNumber: normalizeCode(item.cardNumber),
+      rawName: item.rawName?.trim() || null,
+      scanTime: item.scanTime ? new Date(item.scanTime) : new Date(),
+    }))
+    .filter((item) => item.cardNumber.length > 0);
 
-  const uniqueCodes: string[] = [];
-  const seen = new Set<string>();
-  for (const c of normalized) {
-    if (seen.has(c)) continue;
-    seen.add(c);
-    uniqueCodes.push(c);
-  }
-
-  const validUniqueCodes = uniqueCodes.filter((c) => isValidEmployeeCode(c));
-
-  if (validUniqueCodes.length === 0) {
+  if (scanItems.length === 0) {
     return NextResponse.json(
-      { error: "No valid employee codes", invalidCodes },
+      { error: "No valid scan codes submitted" },
       { status: 400 },
     );
   }
+
+  const uniqueCodes = Array.from(
+    new Set(scanItems.map((item) => item.cardNumber)),
+  );
 
   const assigned = await ensureForemanAssignedToSite({
     userId: auth.userId,
@@ -186,7 +200,7 @@ export async function POST(req: Request) {
 
   // Fetch employees for these QR codes in one query
   const employees = await prisma.employee.findMany({
-    where: { qrCodeValue: { in: validUniqueCodes } },
+    where: { qrCodeValue: { in: uniqueCodes } },
     select: {
       id: true,
       qrCodeValue: true,
@@ -205,7 +219,7 @@ export async function POST(req: Request) {
     employeeIds: employees.map((employee) => employee.id),
   });
 
-  // Determine rejected (not found / inactive)
+  // Determine rejected (not found / inactive) and save unmatched scans
   const rejectedCodes: string[] = [];
   const blockedEmployeeScans: Array<{
     code: string;
@@ -221,17 +235,27 @@ export async function POST(req: Request) {
     code: string;
     empId: string;
   }> = [];
+  const unmatchedItems: Array<{
+    cardNumber: string;
+    rawName: string | null;
+    scanTime: Date;
+  }> = [];
 
-  for (const code of validUniqueCodes) {
-    const emp = byCode.get(code);
+  for (const scan of scanItems) {
+    const emp = byCode.get(scan.cardNumber);
     if (!emp) {
-      rejectedCodes.push(code); // not found
+      rejectedCodes.push(scan.cardNumber);
+      unmatchedItems.push({
+        cardNumber: scan.cardNumber,
+        rawName: scan.rawName,
+        scanTime: scan.scanTime,
+      });
       continue;
     }
     if (!emp.isActive) {
       const fullName = `${emp.firstName} ${emp.lastName}`.trim();
       deactivatedEmployees.push({
-        code,
+        code: scan.cardNumber,
         name: fullName,
         error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
       });
@@ -240,25 +264,29 @@ export async function POST(req: Request) {
     const scanBlock = blockedEmployees.get(emp.id);
     if (scanBlock) {
       blockedEmployeeScans.push({
-        code,
+        code: scan.cardNumber,
         name: scanBlock.employeeName,
         error: scanBlock.message,
       });
       continue;
     }
-    candidateEmployees.push({
-      code,
-      empId: emp.id,
-    });
+
+    if (!candidateEmployees.some((item) => item.empId === emp.id)) {
+      candidateEmployees.push({
+        code: scan.cardNumber,
+        empId: emp.id,
+      });
+    }
   }
 
   if (candidateEmployees.length === 0) {
     return NextResponse.json({
       ok: true,
       saved: 0,
+      unmatchedSaved: unmatchedItems.length,
       duplicates: [],
-      invalidCodes,
       rejectedCodes,
+      unmatchedCodes: unmatchedItems.map((item) => item.cardNumber),
       deactivatedEmployees,
       blockedEmployeeScans,
     });
@@ -287,9 +315,10 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       saved: 0,
+      unmatchedSaved: unmatchedItems.length,
       duplicates,
-      invalidCodes,
       rejectedCodes,
+      unmatchedCodes: unmatchedItems.map((item) => item.cardNumber),
       deactivatedEmployees,
       blockedEmployeeScans,
     });
@@ -308,11 +337,25 @@ export async function POST(req: Request) {
     ),
   );
 
-  // Create scans in a transaction
+  // Create scans and unmatched card records in a transaction
   let saved = 0;
+  let unmatchedSaved = 0;
 
   try {
     await prisma.$transaction(async (tx) => {
+      for (const item of unmatchedItems) {
+        await tx.attendanceCardScan.create({
+          data: {
+            cardNumber: item.cardNumber,
+            status: "UNMATCHED",
+            rawName: item.rawName,
+            scanTime: item.scanTime,
+            site: { connect: { id: siteId } },
+          },
+        });
+        unmatchedSaved += 1;
+      }
+
       for (let i = 0; i < toCreate.length; i++) {
         const item = toCreate[i];
         const rateResult = rateResults[i];
@@ -364,9 +407,10 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     saved,
+    unmatchedSaved,
     duplicates,
-    invalidCodes,
     rejectedCodes,
+    unmatchedCodes: unmatchedItems.map((item) => item.cardNumber),
     deactivatedEmployees,
     blockedEmployeeScans,
   });

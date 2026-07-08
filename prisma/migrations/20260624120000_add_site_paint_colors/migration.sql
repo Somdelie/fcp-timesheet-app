@@ -1,4 +1,17 @@
 -- Add site-specific paint colours captured from BuildSmart order PDFs.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ColorBaseType') THEN
+    CREATE TYPE "ColorBaseType" AS ENUM (
+      'DEEP',
+      'PASTEL',
+      'WHITE',
+      'CLEAR',
+      'NEUTRAL'
+    );
+  END IF;
+END $$;
+
 CREATE TABLE "SitePaintColor" (
     "id" TEXT NOT NULL,
     "siteId" TEXT NOT NULL,

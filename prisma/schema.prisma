@@ -161,7 +161,8 @@ model Employee {
   deductions Deduction[]
 
   // ✅ NEW: day-rate overrides (temporary or site-specific)
-  rateOverrides EmployeeDayRateOverride[]
+  rateOverrides       EmployeeDayRateOverride[]
+  attendanceCardScans AttendanceCardScan[]      @relation("AttendanceCardScanEmployee")
 
   @@index([isActive])
   @@index([lastName, firstName])
@@ -348,9 +349,10 @@ model Site {
   plantTransfersFrom PlantTransfer[] @relation("PlantTransferFromSite")
   plantTransfersTo   PlantTransfer[] @relation("PlantTransferToSite")
 
-  deductions     Deduction[]
-  siteProgrammes SiteProgramme[]
-  documents      SiteDocument[]
+  deductions          Deduction[]
+  siteProgrammes      SiteProgramme[]
+  documents           SiteDocument[]
+  attendanceCardScans AttendanceCardScan[] @relation("AttendanceCardScanSite")
 
   @@index([isActive])
   @@index([name])
@@ -656,6 +658,34 @@ model AttendanceScan {
   @@index([hasEarlySignOut])
   @@index([earlySignOutReasonId])
   @@index([earlySignOutCapturedByUserId])
+}
+
+enum AttendanceCardScanStatus {
+  MATCHED
+  UNMATCHED
+}
+
+model AttendanceCardScan {
+  id String @id @default(cuid())
+
+  cardNumber String
+  status     AttendanceCardScanStatus @default(UNMATCHED)
+
+  employeeId String?
+  employee   Employee? @relation("AttendanceCardScanEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+
+  rawName   String?
+  scanTime  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  siteId String?
+  site   Site?   @relation("AttendanceCardScanSite", fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([cardNumber])
+  @@index([status])
+  @@index([employeeId])
+  @@index([siteId])
+  @@index([scanTime])
 }
 
 model TrashItem {
