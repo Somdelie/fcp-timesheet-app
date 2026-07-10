@@ -209,6 +209,7 @@ export default function EditSiteLocationDialog(props: {
         initialSpecStatus,
         initialSpecAvailable,
       ),
+      finishingSchedule: initialFinishingScheduleValue(),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -253,6 +254,7 @@ export default function EditSiteLocationDialog(props: {
         initialSpecStatus,
         initialSpecAvailable,
       ),
+      finishingSchedule: initialFinishingScheduleValue(),
       latitude:
         typeof initialLatitude === "number" ? initialLatitude : undefined,
       longitude:
@@ -279,6 +281,8 @@ export default function EditSiteLocationDialog(props: {
     initialJobStatus,
     initialSpecStatus,
     initialSpecAvailable,
+    initialFinishingScheduleDone,
+    initialHasFinishingScheduleInSystem,
     initialSupervisorUserId,
     initialForemanUserId,
   ]);
@@ -300,6 +304,11 @@ export default function EditSiteLocationDialog(props: {
         amountClaimed: values.amountClaimed ?? 0,
         jobStatus: values.jobStatus,
         specStatus: values.specStatus,
+        ...(!initialHasFinishingScheduleInSystem
+          ? {
+              finishingScheduleDone: values.finishingSchedule === "yes",
+            }
+          : {}),
         latitude: values.latitude ?? null,
         longitude: values.longitude ?? null,
       });
@@ -623,6 +632,44 @@ export default function EditSiteLocationDialog(props: {
                       ))}
                     </SelectContent>
                   </Select>
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="finishingSchedule"
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Finishing Schedule
+                  </FieldLabel>
+                  <Select
+                    value={field.value ?? initialFinishingScheduleValue()}
+                    onValueChange={field.onChange}
+                    disabled={pending || Boolean(initialHasFinishingScheduleInSystem)}
+                  >
+                    <SelectTrigger className="mt-1.5 dark:bg-zinc-800/50 dark:border-zinc-700/50">
+                      <SelectValue placeholder="Select finishing schedule status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FINISHING_SCHEDULE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {initialHasFinishingScheduleInSystem ? (
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      This site already has a finishing schedule in the app.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      Mark Yes if the finishing schedule was completed outside
+                      this app.
+                    </p>
+                  )}
                 </Field>
               )}
             />

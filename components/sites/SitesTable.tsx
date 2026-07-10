@@ -108,6 +108,8 @@ export type SiteRow = {
     | "RECEIVED"
     | "ACTIONED";
   specAvailable: boolean;
+  finishingScheduleDone?: boolean;
+  hasFinishingScheduleInSystem?: boolean;
   hasFinishingSchedule: boolean;
   createdAt: string;
   supervisorName: string | null;
@@ -487,6 +489,8 @@ function SiteRowActions({
         initialJobStatus={site.jobStatus}
         initialSpecStatus={site.specStatus}
         initialSpecAvailable={site.specAvailable}
+        initialFinishingScheduleDone={site.finishingScheduleDone}
+        initialHasFinishingScheduleInSystem={site.hasFinishingScheduleInSystem}
         canEditCoreDetails={role === "ADMIN"}
         supervisorOptions={supervisorOptions}
         foremanOptions={foremanOptions}

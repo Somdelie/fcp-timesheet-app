@@ -42,7 +42,13 @@ export default async function SiteManagePage({
       jobStatus: true,
       specStatus: true,
       specAvailable: true,
+      finishingScheduleDone: true,
       createdAt: true,
+      finishingSchedules: {
+        where: { isActive: true },
+        select: { id: true },
+        take: 1,
+      },
       supervisorAssignments: {
         where: { endsOn: null },
         select: {
@@ -132,7 +138,8 @@ export default async function SiteManagePage({
   const siteAddress = site.address?.trim();
   const activeSupervisorUserId =
     site.supervisorAssignments[0]?.supervisor.userId ?? null;
-  const activeForemanUserId = site.foremanAssignments[0]?.foreman.userId ?? null;
+  const activeForemanUserId =
+    site.foremanAssignments[0]?.foreman.userId ?? null;
 
   return (
     <div>
@@ -241,6 +248,10 @@ export default async function SiteManagePage({
                 initialJobStatus={site.jobStatus}
                 initialSpecStatus={site.specStatus}
                 initialSpecAvailable={site.specAvailable}
+                initialFinishingScheduleDone={site.finishingScheduleDone}
+                initialHasFinishingScheduleInSystem={
+                  site.finishingSchedules.length > 0
+                }
                 initialSupervisorUserId={activeSupervisorUserId}
                 initialForemanUserId={activeForemanUserId}
                 canEditCoreDetails={auth.role === "ADMIN"}
