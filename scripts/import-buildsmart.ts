@@ -162,7 +162,8 @@ export async function importBuildSmartRows(
       results.push({
         row,
         status: "INVALID_ROW",
-        reason: "Missing or invalid required fields (siteCode, ledgerCode, transactionDate, amount)",
+        reason:
+          "Missing or invalid required fields (siteCode, ledgerCode, transactionDate, amount)",
       });
       continue;
     }
@@ -227,7 +228,8 @@ export async function importBuildSmartRows(
         results.push({
           row,
           status: "DUPLICATE_EXISTING_APP",
-          reason: "Similar record found in live app data (±14 days, ±15% amount)",
+          reason:
+            "Similar record found in live app data (±14 days, ±15% amount)",
           category,
           siteId,
         });
@@ -321,7 +323,6 @@ async function main() {
     //   transactionDate: new Date("2025-10-03"),
     //   amount: "9014.70",
     // },
-
     // ── Curro Waterfall (6537) – Paint / Materials ───────────────────────────
     // {
     //   siteCode: "6537",
@@ -331,7 +332,6 @@ async function main() {
     //   transactionDate: new Date("2025-10-05"),
     //   amount: "12450.00",
     // },
-
     // ── Sandton Gate PH2 (6316) – Labour ────────────────────────────────────
     // {
     //   siteCode: "6316",
@@ -341,7 +341,6 @@ async function main() {
     //   transactionDate: new Date("2025-03-07"),
     //   amount: "152340.22",
     // },
-
     // ── Sandton Gate PH2 (6316) – Scaffolding ───────────────────────────────
     // {
     //   siteCode: "6316",
@@ -351,12 +350,13 @@ async function main() {
     //   transactionDate: new Date("2025-03-10"),
     //   amount: "30189.91",
     // },
-
     // ADD YOUR REAL ROWS BELOW THIS LINE
   ];
 
   if (rows.length === 0) {
-    console.log("No rows to import. Add BuildSmart rows to the `rows` array in main().");
+    console.log(
+      "No rows to import. Add BuildSmart rows to the `rows` array in main().",
+    );
     return;
   }
 

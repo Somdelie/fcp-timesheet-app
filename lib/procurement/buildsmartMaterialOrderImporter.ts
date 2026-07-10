@@ -9,7 +9,10 @@ import {
   normalizeSkuKey,
 } from "@/lib/procurement/buildsmartProductCodes";
 import type { ParsedMaterialLine } from "@/lib/buildsmart-cost-parser";
-import type { ProductUom } from "@/generated/prisma/client";
+import {
+  Prisma,
+  type ProductUom,
+} from "@/generated/prisma/client";
 import {
   resolveSupplierForOrderItems,
   resolveSupplierForProduct,
@@ -37,6 +40,245 @@ export interface MaterialOrderImportResult {
   orderId?: string;
   linesCreated: number;
   totalAmount: string;
+}
+
+function toDecimal(
+  value: unknown,
+  fallback = "0",
+): Prisma.Decimal {
+  try {
+    if (value === null || value === undefined || value === "") {
+      return new Prisma.Decimal(fallback);
+    }
+
+    return new Prisma.Decimal(
+      value as string | number | Prisma.Decimal,
+    );
+  } catch {
+    return new Prisma.Decimal(fallback);
+  }
+}
+
+async function resolveStoredUnitPrice({
+  supplierId,
+  productId,
+  uom,
+  unitSize,
+  pdfUnitPrice,
+  pdfLineTotal,
+  quantity,
+}: {
+  supplierId: string | null;
+  productId: string;
+  uom: ProductUom | null;
+  unitSize: number | null;
+  pdfUnitPrice: string | null | undefined;
+  pdfLineTotal: string;
+  quantity: number;
+}): Promise<Prisma.Decimal> {
+  const directPrice = toDecimal(pdfUnitPrice);
+
+  if (directPrice.gt(0)) {
+    return directPrice;
+  }
+
+  const lineTotal = toDecimal(pdfLineTotal);
+  const safeQuantity = quantity > 0 ? quantity : 1;
+
+  if (lineTotal.gt(0)) {
+    return lineTotal.div(safeQuantity);
+  }
+
+  const now = new Date();
+
+  const unitSizeDecimal =
+    unitSize !== null
+      ? new Prisma.Decimal(unitSize)
+      : null;
+
+  if (supplierId) {
+    const exactSupplierPrice =
+      await prisma.supplierProductPrice.findFirst({
+        where: {
+          supplierId,
+          productId,
+          isActive: true,
+          price: { gt: 0 },
+          startsOn: { lte: now },
+          OR: [
+            { endsOn: null },
+            { endsOn: { gte: now } },
+          ],
+          ...(uom ? { uom } : {}),
+          ...(unitSizeDecimal
+            ? { unitSize: unitSizeDecimal }
+            : {}),
+        },
+        orderBy: [
+          { startsOn: "desc" },
+          { updatedAt: "desc" },
+        ],
+        select: {
+          price: true,
+        },
+      });
+
+    if (
+      exactSupplierPrice?.price &&
+      exactSupplierPrice.price.gt(0)
+    ) {
+      return exactSupplierPrice.price;
+    }
+
+    const supplierPrice =
+      await prisma.supplierProductPrice.findFirst({
+        where: {
+          supplierId,
+          productId,
+          isActive: true,
+          price: { gt: 0 },
+          startsOn: { lte: now },
+          OR: [
+            { endsOn: null },
+            { endsOn: { gte: now } },
+          ],
+        },
+        orderBy: [
+          { startsOn: "desc" },
+          { updatedAt: "desc" },
+        ],
+        select: {
+          price: true,
+        },
+      });
+
+    if (
+      supplierPrice?.price &&
+      supplierPrice.price.gt(0)
+    ) {
+      return supplierPrice.price;
+    }
+  }
+
+  const exactProductPrice =
+    await prisma.supplierProductPrice.findFirst({
+      where: {
+        productId,
+        isActive: true,
+        price: { gt: 0 },
+        startsOn: { lte: now },
+        OR: [
+          { endsOn: null },
+          { endsOn: { gte: now } },
+        ],
+        ...(uom ? { uom } : {}),
+        ...(unitSizeDecimal
+          ? { unitSize: unitSizeDecimal }
+          : {}),
+      },
+      orderBy: [
+        { startsOn: "desc" },
+        { updatedAt: "desc" },
+      ],
+      select: {
+        price: true,
+      },
+    });
+
+  if (
+    exactProductPrice?.price &&
+    exactProductPrice.price.gt(0)
+  ) {
+    return exactProductPrice.price;
+  }
+
+  const generalProductPrice =
+    await prisma.supplierProductPrice.findFirst({
+      where: {
+        productId,
+        isActive: true,
+        price: { gt: 0 },
+        startsOn: { lte: now },
+        OR: [
+          { endsOn: null },
+          { endsOn: { gte: now } },
+        ],
+      },
+      orderBy: [
+        { startsOn: "desc" },
+        { updatedAt: "desc" },
+      ],
+      select: {
+        price: true,
+      },
+    });
+
+  if (
+    generalProductPrice?.price &&
+    generalProductPrice.price.gt(0)
+  ) {
+    return generalProductPrice.price;
+  }
+
+  const previousOrderPrice =
+    await prisma.siteProductOrderItem.findFirst({
+      where: {
+        productId,
+        unitPriceAtOrder: { gt: 0 },
+        ...(supplierId
+          ? {
+              order: {
+                supplierId,
+              },
+            }
+          : {}),
+        ...(uom ? { uomAtOrder: uom } : {}),
+        ...(unitSizeDecimal
+          ? {
+              unitSizeAtOrder: unitSizeDecimal,
+            }
+          : {}),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        unitPriceAtOrder: true,
+      },
+    });
+
+  if (
+    previousOrderPrice?.unitPriceAtOrder &&
+    previousOrderPrice.unitPriceAtOrder.gt(0)
+  ) {
+    return previousOrderPrice.unitPriceAtOrder;
+  }
+
+  const anyPreviousPrice =
+    await prisma.siteProductOrderItem.findFirst({
+      where: {
+        productId,
+        unitPriceAtOrder: { gt: 0 },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        unitPriceAtOrder: true,
+      },
+    });
+
+  if (
+    anyPreviousPrice?.unitPriceAtOrder &&
+    anyPreviousPrice.unitPriceAtOrder.gt(0)
+  ) {
+    return anyPreviousPrice.unitPriceAtOrder;
+  }
+
+  throw new Error(
+    `No stored price found for product ${productId}` +
+      `${uom ? ` (${unitSize ?? ""}${uom})` : ""}`,
+  );
 }
 
 /**
@@ -224,51 +466,90 @@ async function processOrderGroup(
         l.transactionDate < earliest ? l.transactionDate : earliest,
       groupLines[0].transactionDate,
     );
-    const totalAmount = groupLines
-      .reduce((s, l) => s + parseFloat(l.totalAmount), 0)
-      .toFixed(2);
-
-    const itemData: {
+    const resolvedLines: {
       productId: string;
       quantity: number;
-      unitPriceAtOrder: number;
       uomAtOrder: ProductUom | null;
       unitSizeAtOrder: number | null;
+      line: ParsedMaterialLine;
     }[] = [];
 
-    const resolvedProducts: { productId: string }[] = [];
-
     for (const line of groupLines) {
-      const { productId } = await resolveProduct(line.description, orderNumber);
-      resolvedProducts.push({ productId });
-      const qty = line.quantity ?? 1;
-      const unitPrice = line.unitPrice
-        ? parseFloat(line.unitPrice)
-        : parseFloat(line.totalAmount);
-      const { uomAtOrder, unitSizeAtOrder } = parseUnitToken(line.unit ?? null);
-      itemData.push({
-        productId,
-        quantity: qty,
-        unitPriceAtOrder: unitPrice,
+      const { productId } = await resolveProduct(
+        line.description,
+        orderNumber,
+      );
+
+      const quantity =
+        line.quantity && line.quantity > 0
+          ? Math.round(line.quantity)
+          : 1;
+
+      const {
         uomAtOrder,
         unitSizeAtOrder,
+      } = parseUnitToken(line.unit ?? null);
+
+      resolvedLines.push({
+        productId,
+        quantity,
+        uomAtOrder,
+        unitSizeAtOrder,
+        line,
       });
     }
 
     let orderSupplierId: string | null = null;
-    if (orderNumber) {
-      const refSupplier = await resolveSupplierForProduct({
-        description: groupLines[0].description,
-        orderReference: orderNumber,
-      });
+
+    const fromItems =
+      await resolveSupplierForOrderItems(
+        resolvedLines.map((item) => item.productId),
+      );
+
+    orderSupplierId = fromItems.supplierId;
+
+    if (!orderSupplierId) {
+      const refSupplier =
+        await resolveSupplierForProduct({
+          description: groupLines[0].description,
+          orderReference: orderNumber,
+        });
+
       orderSupplierId = refSupplier.supplierId;
     }
-    if (!orderSupplierId) {
-      const fromItems = await resolveSupplierForOrderItems(
-        resolvedProducts.map((p) => p.productId),
-      );
-      orderSupplierId = fromItems.supplierId;
-    }
+
+    const itemData = await Promise.all(
+      resolvedLines.map(async (resolved) => {
+        const unitPriceAtOrder =
+          await resolveStoredUnitPrice({
+            supplierId: orderSupplierId,
+            productId: resolved.productId,
+            uom: resolved.uomAtOrder,
+            unitSize: resolved.unitSizeAtOrder,
+            pdfUnitPrice: resolved.line.unitPrice,
+            pdfLineTotal: resolved.line.totalAmount,
+            quantity: resolved.quantity,
+          });
+
+        return {
+          productId: resolved.productId,
+          quantity: resolved.quantity,
+          unitPriceAtOrder,
+          uomAtOrder: resolved.uomAtOrder,
+          unitSizeAtOrder: resolved.unitSizeAtOrder,
+        };
+      }),
+    );
+
+    const totalAmountDecimal = itemData.reduce(
+      (sum, item) =>
+        sum.add(
+          item.unitPriceAtOrder.mul(item.quantity),
+        ),
+      new Prisma.Decimal(0),
+    );
+
+    const totalAmount = totalAmountDecimal.toFixed(2);
 
     const order = await prisma.siteProductOrder.create({
       data: {
@@ -276,7 +557,7 @@ async function processOrderGroup(
         reference: orderNumber,
         note: `Seeded from BuildSmart historical cost report`,
         createdAt: orderDate,
-        totalCost: parseFloat(totalAmount),
+        totalCost: totalAmountDecimal,
         supplierId: orderSupplierId,
         items: {
           create: itemData.map((item) => ({
