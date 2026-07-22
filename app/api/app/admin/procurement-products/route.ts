@@ -38,15 +38,61 @@ async function getAuth(req: Request) {
   return null;
 }
 
+function normalizeCatalogueName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function serialise(p: any) {
+  const master = p.masterCatalogueProduct ?? null;
+
   return {
     ...p,
-    unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
+
+    // Keep the legacy ProcurementProduct id as the public id during Stage 1.
+    // Existing order, stock, PPE, plant and price endpoints still depend on it.
+    id: p.id,
+
+    // MasterCatalogueProduct is authoritative whenever the compatibility link
+    // exists. Unlinked legacy rows still work until they are reviewed.
+    name: master?.name ?? p.name,
+    sku: master?.sku ?? p.sku,
+    description: master?.description ?? p.description,
+    thumbnailUrl: master?.thumbnailUrl ?? p.thumbnailUrl,
+    category: master?.categoryRef ?? p.category ?? null,
+    supplier: master?.supplier ?? p.supplier ?? null,
+    productType: master?.productType ?? p.productType,
+    isReturnable: master?.isReturnable ?? p.isReturnable,
+    isDeductible: master?.isDeductible ?? p.isDeductible,
+    deductionSplits: master?.deductionSplits ?? p.deductionSplits,
+    colors: master?.colors ?? p.colors ?? [],
+    sizes: master?.sizes ?? p.sizes ?? [],
+    stockQty: master?.stockQty ?? p.stockQty ?? 0,
+    isActive: master?.isActive ?? p.isActive,
+
+    masterCatalogueProductId: p.masterCatalogueProductId ?? master?.id ?? null,
+    catalogueSource: master ? "MASTER" : "LEGACY",
+
+    unitSize:
+      master?.unitSize != null
+        ? decimalToNumber(master.unitSize)
+        : p.unitSize
+          ? decimalToNumber(p.unitSize)
+          : null,
+    uom: master?.uom ?? p.uom ?? null,
+
     supplierPrices: p.supplierPrices?.map((sp: any) => ({
       ...sp,
       price: decimalToNumber(sp.price),
       unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
     })),
+
+    // Do not expose the nested compatibility object in the JSON response.
+    masterCatalogueProduct: undefined,
   };
 }
 
@@ -68,7 +114,10 @@ async function findDuplicatePlantName(name: string, excludeId?: string) {
   );
 }
 
-function mergePlantProducts(products: any[], deployedQtyMap: Map<string, number>) {
+function mergePlantProducts(
+  products: any[],
+  deployedQtyMap: Map<string, number>,
+) {
   const groups = new Map<string, any[]>();
 
   for (const product of products) {
@@ -197,14 +246,28 @@ export async function GET(req: Request) {
         ];
       }
       if (supplierId) matWhere.supplierId = supplierId;
+      if (categoryId) matWhere.categoryId = categoryId;
 
-      const [totalCount, materials] = await Promise.all([
-        prisma.material.count({ where: matWhere }),
+      // Phase 0 (hybrid cutover): union the authoritative `Material` rows with
+      // the legacy `ProcurementProduct` MATERIAL catalogue so the Paints &
+      // Preparations page shows the full catalogue while the data migration is
+      // in progress. Once the backfill runs, this union can collapse to
+      // reading `Material` alone.
+      const ppWhere: any = { productType: "MATERIAL" };
+      if (!includeInactive) ppWhere.isActive = true;
+      if (q) {
+        ppWhere.OR = [
+          { name: { contains: q, mode: "insensitive" } },
+          { sku: { contains: q, mode: "insensitive" } },
+        ];
+      }
+      if (supplierId) ppWhere.supplierId = supplierId;
+      if (categoryId) ppWhere.categoryId = categoryId;
+
+      const [materials, ppMaterials] = await Promise.all([
         prisma.material.findMany({
           where: matWhere,
           orderBy: { name: "asc" },
-          skip,
-          take: limit,
           include: {
             supplier: { select: { id: true, name: true } },
             prices: {
@@ -220,29 +283,59 @@ export async function GET(req: Request) {
             },
           },
         }),
+        prisma.procurementProduct.findMany({
+          where: ppWhere,
+          orderBy: { name: "asc" },
+          include: {
+            category: { select: { id: true, name: true } },
+            supplier: { select: { id: true, name: true } },
+            masterCatalogueProduct: {
+              include: {
+                categoryRef: { select: { id: true, name: true } },
+                supplier: { select: { id: true, name: true } },
+              },
+            },
+            supplierPrices: {
+              where: { isActive: true },
+              select: {
+                id: true,
+                price: true,
+                uom: true,
+                unitSize: true,
+                supplierId: true,
+                supplier: { select: { id: true, name: true } },
+              },
+            },
+            variantStocks: {
+              select: { id: true, size: true, color: true, qty: true },
+            },
+            _count: {
+              select: { orderItems: true, supplierPrices: true },
+            },
+          },
+        }),
       ]);
 
-      const mapped = materials.map((m: any) => {
+      const mapMaterial = (m: any) => {
         const sizes = (m.prices ?? [])
-          .map((p: any) => {
-            if (p.unitSize != null && p.uom) return `${p.unitSize}${p.uom}`;
-            return null;
-          })
+          .map((p: any) =>
+            p.unitSize != null && p.uom ? `${p.unitSize}${p.uom}` : null,
+          )
           .filter(Boolean) as string[];
         return {
           id: m.id,
           name: m.name,
           sku: m.sku ?? null,
-          description: null,
+          description: m.description ?? null,
           thumbnailUrl: null,
           isActive: m.isActive,
           productType: "MATERIAL",
           isReturnable: m.isReturnable,
-          isDeductible: true,
-          deductionSplits: 1,
+          isDeductible: m.isDeductible ?? true,
+          deductionSplits: m.deductionSplits ?? 1,
           colors: m.colors ?? [],
           sizes: Array.from(new Set(sizes)),
-          stockQty: m.stockQty ?? 0,
+          stockQty: 0,
           variantStocks: [],
           category: null,
           supplier: m.supplier ?? null,
@@ -257,18 +350,43 @@ export async function GET(req: Request) {
           })),
           _count: { orderItems: 0, supplierPrices: (m.prices ?? []).length },
         };
-      });
+      };
 
-      const hasMore = skip + mapped.length < totalCount;
+      // Dedupe key: prefer real SKU, else fall back to normalized name. The
+      // authoritative Material row wins over its legacy ProcurementProduct twin.
+      const keyOf = (p: any) => {
+        const sku = String(p.sku ?? "")
+          .trim()
+          .toLowerCase();
+        if (sku) return `sku:${sku}`;
+        return `name:${String(p.name ?? "")
+          .trim()
+          .toLowerCase()}`;
+      };
+
+      const seen = new Set<string>();
+      const combined: any[] = [];
+      for (const m of materials.map(mapMaterial)) {
+        seen.add(keyOf(m));
+        combined.push(m);
+      }
+      for (const p of ppMaterials) {
+        const mappedPp = { ...serialise(p), productType: "MATERIAL" };
+        if (seen.has(keyOf(mappedPp))) continue;
+        seen.add(keyOf(mappedPp));
+        combined.push(mappedPp);
+      }
+
+      combined.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 
       return NextResponse.json(
         {
           ok: true,
-          data: mapped.map((p) => ({ ...serialise(p), deployedQty: 0 })),
-          page,
-          limit,
-          total: totalCount,
-          hasMore,
+          data: combined.map((p) => ({ ...serialise(p), deployedQty: 0 })),
+          page: 1,
+          limit: combined.length,
+          total: combined.length,
+          hasMore: false,
         },
         { headers: CORS },
       );
@@ -285,6 +403,12 @@ export async function GET(req: Request) {
         include: {
           category: { select: { id: true, name: true } },
           supplier: { select: { id: true, name: true } },
+          masterCatalogueProduct: {
+            include: {
+              categoryRef: { select: { id: true, name: true } },
+              supplier: { select: { id: true, name: true } },
+            },
+          },
           supplierPrices: {
             where: { isActive: true },
             select: {
@@ -542,44 +666,139 @@ export async function POST(req: Request) {
         ? Number(stockQty)
         : 0;
 
-    const product = await prisma.procurementProduct.create({
-      data: {
-        name: name.trim(),
-        sku: sku?.trim() || null,
-        category: categoryId ? { connect: { id: categoryId } } : undefined,
-        uom: uom || null,
-        unitSize: unitSize != null ? Number(unitSize) : null,
-        description: description?.trim() || null,
-        supplier: supplierId ? { connect: { id: supplierId } } : undefined,
-        thumbnailUrl: thumbnailUrl?.trim() || null,
-        productType: productType ?? "MATERIAL",
-        isReturnable: isReturnable ?? false,
-        isDeductible: (body as any).isDeductible ?? true,
-        deductionSplits: Number((body as any).deductionSplits) || 1,
-        colors: colors ?? [],
-        sizes: (body as any).sizes ?? [],
-        stockQty: computedStockQty,
-        ...(variantStocksInput?.length
-          ? {
-              variantStocks: {
-                createMany: {
-                  data: variantStocksInput.map((v) => ({
-                    size: v.size || null,
-                    color: v.color || null,
-                    qty: Math.max(0, Number(v.qty) || 0),
-                  })),
-                },
+    const cleanName = name.trim();
+    const normalizedName = normalizeCatalogueName(cleanName);
+
+    const product = await prisma.$transaction(async (tx) => {
+      let masterCatalogueProductId: string | null = null;
+
+      if (supplierId) {
+        const category = categoryId
+          ? await tx.productCategory.findUnique({
+              where: { id: categoryId },
+              select: { name: true },
+            })
+          : null;
+
+        const existingMaster = await tx.masterCatalogueProduct.findUnique({
+          where: {
+            supplierId_normalizedName: {
+              supplierId,
+              normalizedName,
+            },
+          },
+          include: {
+            legacyProcurementProduct: {
+              select: { id: true },
+            },
+          },
+        });
+
+        if (existingMaster?.legacyProcurementProduct) {
+          throw Object.assign(
+            new Error(
+              `A catalogue product named "${existingMaster.name}" already exists for this supplier`,
+            ),
+            { code: "CATALOGUE_DUPLICATE" },
+          );
+        }
+
+        const master = existingMaster
+          ? await tx.masterCatalogueProduct.update({
+              where: { id: existingMaster.id },
+              data: {
+                name: cleanName,
+                description: description?.trim() || null,
+                category: category?.name ?? "Uncategorised",
+                categoryId: categoryId || null,
+                sku: sku?.trim() || null,
+                thumbnailUrl: thumbnailUrl?.trim() || null,
+                productType: productType ?? "MATERIAL",
+                isReturnable: isReturnable ?? false,
+                colors: colors ?? [],
+                sizes: (body as any).sizes ?? [],
+                stockQty: computedStockQty,
+                uom: uom || null,
+                unitSize: unitSize != null ? Number(unitSize) : null,
+                isDeductible: (body as any).isDeductible ?? true,
+                deductionSplits: Number((body as any).deductionSplits) || 1,
+                isActive: true,
               },
-            }
-          : {}),
-      },
-      include: {
-        category: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } },
-        variantStocks: {
-          select: { id: true, size: true, color: true, qty: true },
+            })
+          : await tx.masterCatalogueProduct.create({
+              data: {
+                supplierId,
+                name: cleanName,
+                normalizedName,
+                description: description?.trim() || null,
+                category: category?.name ?? "Uncategorised",
+                categoryId: categoryId || null,
+                sku: sku?.trim() || null,
+                thumbnailUrl: thumbnailUrl?.trim() || null,
+                productType: productType ?? "MATERIAL",
+                isReturnable: isReturnable ?? false,
+                colors: colors ?? [],
+                sizes: (body as any).sizes ?? [],
+                stockQty: computedStockQty,
+                uom: uom || null,
+                unitSize: unitSize != null ? Number(unitSize) : null,
+                isDeductible: (body as any).isDeductible ?? true,
+                deductionSplits: Number((body as any).deductionSplits) || 1,
+              },
+            });
+
+        masterCatalogueProductId = master.id;
+      }
+
+      return tx.procurementProduct.create({
+        data: {
+          name: cleanName,
+          normalizedName,
+          sku: sku?.trim() || null,
+          category: categoryId ? { connect: { id: categoryId } } : undefined,
+          uom: uom || null,
+          unitSize: unitSize != null ? Number(unitSize) : null,
+          description: description?.trim() || null,
+          supplier: supplierId ? { connect: { id: supplierId } } : undefined,
+          thumbnailUrl: thumbnailUrl?.trim() || null,
+          productType: productType ?? "MATERIAL",
+          isReturnable: isReturnable ?? false,
+          isDeductible: (body as any).isDeductible ?? true,
+          deductionSplits: Number((body as any).deductionSplits) || 1,
+          colors: colors ?? [],
+          sizes: (body as any).sizes ?? [],
+          stockQty: computedStockQty,
+          masterCatalogueProduct: masterCatalogueProductId
+            ? { connect: { id: masterCatalogueProductId } }
+            : undefined,
+          ...(variantStocksInput?.length
+            ? {
+                variantStocks: {
+                  createMany: {
+                    data: variantStocksInput.map((v) => ({
+                      size: v.size || null,
+                      color: v.color || null,
+                      qty: Math.max(0, Number(v.qty) || 0),
+                    })),
+                  },
+                },
+              }
+            : {}),
         },
-      },
+        include: {
+          category: { select: { id: true, name: true } },
+          supplier: { select: { id: true, name: true } },
+          masterCatalogueProduct: {
+            include: {
+              categoryRef: { select: { id: true, name: true } },
+              supplier: { select: { id: true, name: true } },
+            },
+          },
+          variantStocks: {
+            select: { id: true, size: true, color: true, qty: true },
+          },
+        },
+      });
     });
 
     return NextResponse.json(
@@ -587,6 +806,12 @@ export async function POST(req: Request) {
       { status: 201, headers: CORS },
     );
   } catch (e: any) {
+    if (e?.code === "CATALOGUE_DUPLICATE") {
+      return NextResponse.json(
+        { error: e.message },
+        { status: 409, headers: CORS },
+      );
+    }
     if (e?.code === "P2002") {
       const target = e?.meta?.target ?? e?.meta?.modelName ?? "";
       const field = Array.isArray(target)

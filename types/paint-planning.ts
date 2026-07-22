@@ -7,6 +7,13 @@ export type PaintPlan = {
   productId: string;
   coverageId: string | null;
   coats: number;
+  coverageNameSnapshot: string | null;
+  coverageM2PerLitreSnapshot: number;
+  coverageBasisSnapshot: "PER_COAT" | "TOTAL_SYSTEM";
+  containerSizeLitresSnapshot: number;
+  wastagePercent: number;
+  requiredLitresBeforeWastage: number;
+  wastageLitres: number;
   requiredLitres: number;
   requiredContainers: number;
   roundedContainers: number;
@@ -22,7 +29,11 @@ export type PaintPlan = {
   };
   coverage: {
     id: string;
-    coverageM2: number;
+    name: string;
+    coverageM2PerLitre: number | null;
+    coverageBasis: "PER_COAT" | "TOTAL_SYSTEM" | null;
+    coverageType: "THEORETICAL" | "PRACTICAL" | null;
+    recommendedCoats: number | null;
     uom: string | null;
     unitSize: number | null;
     note: string | null;
@@ -46,9 +57,34 @@ export type ProductOption = {
 };
 export type CoverageOption = {
   id: string;
-  coverageM2: number;
+  name: string;
+  applicationMethod: string | null;
+  applicationMethods: string[] | null;
+  rateMode: "COVERAGE" | "CONSUMPTION" | "CONTAINER_COVERAGE";
+  rateUnit:
+    | "M2_PER_L"
+    | "M2_PER_KG"
+    | "L_PER_M2"
+    | "KG_PER_M2"
+    | "M2_PER_CONTAINER";
+  rateMin: number | null;
+  rateMax: number | null;
+  coverageM2PerLitre: number | null;
+  coverageBasis: "PER_COAT" | "TOTAL_SYSTEM" | null;
+  coverageType: "THEORETICAL" | "PRACTICAL" | null;
+  recommendedCoats: number | null;
+  recommendedCoatsMin: number | null;
+  recommendedCoatsMax: number | null;
   uom: string | null;
   unitSize: number | null;
+  recommendedDftMicrons: number | null;
+  recommendedWftMicrons: number | null;
+  thicknessMin: number | null;
+  thicknessMax: number | null;
+  thicknessUnit: "MICRON" | "MM" | null;
+  manufacturerRateLabel: string | null;
+  sourceSnippet: string | null;
   note: string | null;
+  isDefault: boolean;
   product: { id: string; name: string };
 };

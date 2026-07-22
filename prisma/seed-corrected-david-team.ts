@@ -1,14 +1,25 @@
 // prisma/seed-corrected-david-team.ts
 import { prisma } from "@/lib/prisma";
 
-const DEFAULT_DAY_RATE = 250;
+const DEFAULT_DAY_RATE = 280;
 
 const employees = [
   {
-    firstName: "Mchavi",
-    lastName: "Promise",
-    qrCodeValue: "4B3650BD56A8E57A",
-    aliases: ["MCHAVI PROMISE", "Mchavi Promise"],
+    firstName: "LUNGANI ",
+    lastName: "NGWENYA",
+    qrCodeValue: "09D235622D3369",
+    aliases: [
+      "LUNGANI   ",
+      "Lungani Ngwenya",
+      "Lungani Ngwenya",
+      "LUNGANI NGWENYA",
+    ],
+  },
+  {
+    firstName: "MSIZI",
+    lastName: "NGWENYA",
+    qrCodeValue: "9535E28EC3F7E8EE",
+    aliases: ["MSIZI   ", "Msizi Ngwenya", "Msizi Ngwenya", "MSIZI NGWENYA"],
   },
 ] as const;
 
@@ -110,7 +121,7 @@ async function main() {
           firstName: input.firstName,
           lastName: input.lastName,
           qrCodeValue: input.qrCodeValue,
-          defaultDayRate: DEFAULT_DAY_RATE,
+          // defaultDayRate: DEFAULT_DAY_RATE,
           isActive: true,
         },
       });

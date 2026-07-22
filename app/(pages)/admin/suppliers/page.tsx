@@ -370,16 +370,28 @@ export default function SuppliersPage() {
                 </div>
               </div>
 
-              <div className="rounded border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead className="text-center">Parent</TableHead>
-                      <TableHead className="text-center">Products</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+              <div className="border bg-card">
+                <Table className="min-w-245 border-separate border-spacing-0">
+                  <TableHeader className="bg-muted/60">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Supplier
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Contact
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Parent
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Products
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Status
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -387,7 +399,7 @@ export default function SuppliersPage() {
                       <TableRow>
                         <TableCell
                           colSpan={6}
-                          className="text-center py-8 text-muted-foreground"
+                          className="h-24 border border-zinc-200 text-center text-muted-foreground dark:border-zinc-700"
                         >
                           Loading...
                         </TableCell>
@@ -396,7 +408,7 @@ export default function SuppliersPage() {
                       <TableRow>
                         <TableCell
                           colSpan={6}
-                          className="text-center py-8 text-muted-foreground"
+                          className="h-24 border border-zinc-200 text-center text-muted-foreground dark:border-zinc-700"
                         >
                           <Truck className="mx-auto h-8 w-8 mb-2 opacity-40" />
                           No suppliers found
@@ -404,25 +416,30 @@ export default function SuppliersPage() {
                       </TableRow>
                     ) : (
                       suppliers.map((supplier) => (
-                        <TableRow key={supplier.id}>
-                          <TableCell>
-                            <div className="font-medium">{supplier.name}</div>
+                        <TableRow
+                          key={supplier.id}
+                          className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                        >
+                          <TableCell className="border border-zinc-200 px-3 py-2 align-top whitespace-normal dark:border-zinc-700">
+                            <div className="max-w-70 wrap-break-word font-medium">
+                              {supplier.name}
+                            </div>
                             {supplier.address && (
-                              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <div className="mt-1 flex max-w-70 wrap-break-word items-start gap-1 text-xs text-muted-foreground">
                                 <MapPin className="h-3 w-3" />
                                 {supplier.address}
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <div className="space-y-0.5 text-sm">
+                          <TableCell className="border border-zinc-200 px-3 py-2 align-top whitespace-normal dark:border-zinc-700">
+                            <div className="max-w-62.5 space-y-0.5 text-sm">
                               {supplier.phone && (
                                 <div className="flex items-center gap-1 text-muted-foreground">
                                   <Phone className="h-3 w-3" /> {supplier.phone}
                                 </div>
                               )}
                               {supplier.email && (
-                                <div className="flex items-center gap-1 text-muted-foreground">
+                                <div className="flex items-center gap-1 text-muted-foreground break-all">
                                   <Mail className="h-3 w-3" /> {supplier.email}
                                 </div>
                               )}
@@ -431,7 +448,7 @@ export default function SuppliersPage() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="border border-zinc-200 px-3 py-2 text-center dark:border-zinc-700">
                             {supplier.parentSupplier ? (
                               <Badge variant="secondary">
                                 {supplier.parentSupplier.name}
@@ -442,12 +459,12 @@ export default function SuppliersPage() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="border border-zinc-200 px-3 py-2 text-center dark:border-zinc-700">
                             <Badge variant="secondary">
                               {supplier._count.products}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="border border-zinc-200 px-3 py-2 text-center dark:border-zinc-700">
                             <Badge
                               variant={
                                 supplier.isActive ? "default" : "outline"
@@ -456,22 +473,26 @@ export default function SuppliersPage() {
                               {supplier.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="border border-zinc-200 px-3 py-2 text-right dark:border-zinc-700">
                             <div className="flex items-center justify-end gap-1">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
                                 onClick={() => openEditSupplier(supplier)}
+                                title="Edit supplier"
+                                aria-label="Edit supplier"
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
                                 className="text-destructive"
                                 onClick={() =>
                                   setSupplierDeleteTarget(supplier)
                                 }
+                                title="Delete supplier"
+                                aria-label="Delete supplier"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -509,13 +530,19 @@ export default function SuppliersPage() {
                 </Button>
               </div>
 
-              <div className="rounded border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-center">Products</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+              <div className="border bg-card">
+                <Table className="min-w-170 border-separate border-spacing-0">
+                  <TableHeader className="bg-muted/60">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Category
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Products
+                      </TableHead>
+                      <TableHead className="border border-zinc-200 px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide dark:border-zinc-700">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -523,7 +550,7 @@ export default function SuppliersPage() {
                       <TableRow>
                         <TableCell
                           colSpan={3}
-                          className="text-center py-8 text-muted-foreground"
+                          className="h-24 border border-zinc-200 text-center text-muted-foreground dark:border-zinc-700"
                         >
                           Loading...
                         </TableCell>
@@ -532,7 +559,7 @@ export default function SuppliersPage() {
                       <TableRow>
                         <TableCell
                           colSpan={3}
-                          className="text-center py-8 text-muted-foreground"
+                          className="h-24 border border-zinc-200 text-center text-muted-foreground dark:border-zinc-700"
                         >
                           <FolderTree className="mx-auto h-8 w-8 mb-2 opacity-40" />
                           {categorySearch
@@ -542,26 +569,31 @@ export default function SuppliersPage() {
                       </TableRow>
                     ) : (
                       filteredCategories.map((category) => (
-                        <TableRow key={category.id}>
-                          <TableCell className="font-medium">
+                        <TableRow
+                          key={category.id}
+                          className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                        >
+                          <TableCell className="border border-zinc-200 px-3 py-2 font-medium dark:border-zinc-700">
                             {category.name}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="border border-zinc-200 px-3 py-2 text-center dark:border-zinc-700">
                             <Badge variant="secondary">
                               {category._count.procurementProducts}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="border border-zinc-200 px-3 py-2 text-right dark:border-zinc-700">
                             <div className="flex items-center justify-end gap-1">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
                                 onClick={() => openEditCategory(category)}
+                                title="Edit category"
+                                aria-label="Edit category"
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
                                 className="text-destructive"
                                 onClick={() =>

@@ -25,9 +25,17 @@ import {
   listAdminSiteAssignments,
 } from "@/actions/site-assignments";
 
+import { TeamSelectionDialog } from "./TeamSelectionDialog";
+
 interface Assignment {
   id: string;
-  person?: { name: string; email: string } | null;
+  person?: {
+    name: string;
+    email: string;
+    supervisorId?: string;
+    userId?: string;
+    team?: string | null;
+  } | null;
   endsOn?: string | null;
   startsOn: string;
 }
@@ -148,6 +156,14 @@ export default function SiteAssignmentsPanel({
   const [assigningAdmin, setAssigningAdmin] = React.useState(false);
   const [endingId, setEndingId] = React.useState<string | null>(null);
 
+  // Team selection dialog state
+  const [showTeamSelection, setShowTeamSelection] = React.useState(false);
+  const [pendingSupervisorId, setPendingSupervisorId] =
+    React.useState<string>("");
+  const [teamsToAssign, setTeamsToAssign] = React.useState<
+    { supervisorId: string; supervisorName: string; team: string | null }[]
+  >([]);
+
   // Check if there are any active supervisors (no endsOn date)
   const hasActiveSupervisor = supervisors.some((s) => !s.endsOn);
 
@@ -175,6 +191,35 @@ export default function SiteAssignmentsPanel({
   const handleAssignSupervisor = async () => {
     if (!supervisorUserId) return toast.error("Please select a supervisor");
 
+    // If there's already 1+ active supervisors, we need team selection for both
+    const activeSupervisors = supervisors.filter((s) => !s.endsOn);
+    if (activeSupervisors.length >= 1) {
+      // Prepare dialog with existing supervisors + new one
+      const selectedSuper = supervisorOptions.find(
+        (s) => s.id === supervisorUserId,
+      );
+      if (!selectedSuper) return;
+
+      const toAssign = [
+        ...activeSupervisors.map((s) => ({
+          supervisorId: s.person?.userId || "",
+          supervisorName: s.person?.name || "Unknown",
+          team: (s.person as any)?.team || null,
+        })),
+        {
+          supervisorId: supervisorUserId,
+          supervisorName: selectedSuper.name,
+          team: null,
+        },
+      ];
+
+      setTeamsToAssign(toAssign);
+      setPendingSupervisorId(supervisorUserId);
+      setShowTeamSelection(true);
+      return;
+    }
+
+    // First supervisor, assign directly without team selection
     setAssigningSuper(true);
     try {
       const res = await assignSupervisorToSite({ siteId, supervisorUserId });
@@ -184,6 +229,43 @@ export default function SiteAssignmentsPanel({
 
       toast.success("Supervisor assigned");
       setSupervisorUserId("");
+      await refresh();
+    } finally {
+      setAssigningSuper(false);
+    }
+  };
+
+  const handleTeamSelectionConfirm = async (
+    assignments: { supervisorId: string; team: string }[],
+  ) => {
+    setAssigningSuper(true);
+    try {
+      // First, update existing supervisors with their teams
+      for (const assignment of assignments) {
+        if (assignment.supervisorId === pendingSupervisorId) continue; // Skip the new one for now
+        // TODO: If you want to update existing assignments, you'd need an updateSupervisorTeam action
+        // For now, teams are assigned only on creation
+      }
+
+      // Then assign the new supervisor with team
+      const newAssignment = assignments.find(
+        (a) => a.supervisorId === pendingSupervisorId,
+      );
+      if (!newAssignment) return toast.error("Team selection required");
+
+      const res = await assignSupervisorToSite({
+        siteId,
+        supervisorUserId: pendingSupervisorId,
+        team: newAssignment.team,
+      });
+
+      if (!res.ok)
+        return toast.error(res.error ?? "Failed to assign supervisor");
+
+      toast.success("Supervisor assigned with team");
+      setSupervisorUserId("");
+      setPendingSupervisorId("");
+      setShowTeamSelection(false);
       await refresh();
     } finally {
       setAssigningSuper(false);
@@ -486,8 +568,16 @@ export default function SiteAssignmentsPanel({
       <div className="mt-6 rounded border border-slate-200/50 bg-blue-50/50 p-3 text-xs text-blue-700 dark:border-slate-700/50 dark:bg-blue-500/5 dark:text-blue-400">
         <strong>Workflow:</strong> Assign supervisors first, then foremen.
         Foremen are automatically linked to all active supervisors when assigned
-        to a site.
+        to a site. When assigning 2+ supervisors, select their team assignments.
       </div>
+
+      <TeamSelectionDialog
+        open={showTeamSelection}
+        onOpenChange={setShowTeamSelection}
+        supervisors={teamsToAssign}
+        onConfirm={handleTeamSelectionConfirm}
+        isLoading={assigningSuper}
+      />
     </Card>
   );
 }

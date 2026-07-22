@@ -79,7 +79,7 @@ export default function BuildSmartProductsPage() {
   }, [products, search]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <div className="mx-auto w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -90,9 +90,14 @@ export default function BuildSmartProductsPage() {
             imports.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => location.reload()}>
-          <RotateCw className="mr-1 h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => location.reload()}>
+            <RotateCw className="mr-1 h-4 w-4" /> Refresh
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/master-catalogue">Master Catalogue</Link>
+          </Button>
+        </div>
       </div>
 
       <Card>

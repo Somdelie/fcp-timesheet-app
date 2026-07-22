@@ -34,6 +34,7 @@ async function getAuth(req: Request) {
     )
       return { id: p.sub, role: p.role as "ADMIN" | "OFFICE" | "SUPERVISOR" };
   }
+
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
   if (
@@ -44,15 +45,82 @@ async function getAuth(req: Request) {
       id: (session.user as any).id as string,
       role: role as "ADMIN" | "OFFICE" | "SUPERVISOR",
     };
+
   return null;
 }
 
-/**
- * GET /api/app/admin/material-orders
- *
- * List all SiteProductOrders across all sites (most recent first).
- * Supports optional ?siteId=, ?from=, ?to= query params.
- */
+function normalizeCatalogueName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function resolveOrderProduct(productId: string) {
+  const legacy = await prisma.procurementProduct.findUnique({
+    where: { id: productId },
+    include: { masterCatalogueProduct: true },
+  });
+
+  if (legacy) {
+    return {
+      legacyProductId: legacy.id,
+      masterCatalogueProductId: legacy.masterCatalogueProductId,
+      uom: legacy.masterCatalogueProduct?.uom ?? legacy.uom,
+      unitSize: legacy.masterCatalogueProduct?.unitSize ?? legacy.unitSize,
+    };
+  }
+
+  const master = await prisma.masterCatalogueProduct.findUnique({
+    where: { id: productId },
+    include: { legacyProcurementProduct: true },
+  });
+
+  if (!master) return null;
+
+  if (master.legacyProcurementProduct) {
+    return {
+      legacyProductId: master.legacyProcurementProduct.id,
+      masterCatalogueProductId: master.id,
+      uom: master.uom ?? master.legacyProcurementProduct.uom,
+      unitSize: master.unitSize ?? master.legacyProcurementProduct.unitSize,
+    };
+  }
+
+  const compatibilityProduct = await prisma.procurementProduct.create({
+    data: {
+      name: master.name,
+      normalizedName:
+        master.normalizedName || normalizeCatalogueName(master.name),
+      sku: master.sku,
+      description: master.description,
+      categoryId: master.categoryId,
+      supplierId: master.supplierId,
+      thumbnailUrl: master.thumbnailUrl,
+      productType: master.productType,
+      uom: master.uom,
+      unitSize: master.unitSize,
+      isReturnable: master.isReturnable,
+      isDeductible: master.isDeductible,
+      deductionSplits: master.deductionSplits,
+      colors: master.colors,
+      sizes: master.sizes,
+      stockQty: master.stockQty,
+      isActive: master.isActive,
+      masterCatalogueProductId: master.id,
+    },
+  });
+
+  return {
+    legacyProductId: compatibilityProduct.id,
+    masterCatalogueProductId: master.id,
+    uom: master.uom,
+    unitSize: master.unitSize,
+  };
+}
+
 export async function GET(req: Request) {
   try {
     const auth = await getAuth(req);
@@ -87,12 +155,16 @@ export async function GET(req: Request) {
         items: {
           include: {
             product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-                uom: true,
-                unitSize: true,
+              include: {
+                masterCatalogueProduct: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                    uom: true,
+                    unitSize: true,
+                  },
+                },
               },
             },
           },
@@ -111,19 +183,23 @@ export async function GET(req: Request) {
       note: o.note,
       totalCost: o.totalCost ? decimalToNumber(o.totalCost) : null,
       createdAt: o.createdAt.toISOString(),
-      items: o.items.map((i) => ({
-        id: i.id,
-        productId: i.productId,
-        productName: i.product.name,
-        sku: i.product.sku,
-        quantity: i.quantity,
-        unitPriceAtOrder: decimalToNumber(i.unitPriceAtOrder),
-        uomAtOrder: i.uomAtOrder,
-        unitSizeAtOrder: i.unitSizeAtOrder
-          ? decimalToNumber(i.unitSizeAtOrder)
-          : null,
-        note: i.note,
-      })),
+      items: o.items.map((i) => {
+        const master = i.product.masterCatalogueProduct;
+        return {
+          id: i.id,
+          productId: i.productId,
+          masterCatalogueProductId: master?.id ?? null,
+          productName: master?.name ?? i.product.name,
+          sku: master?.sku ?? i.product.sku,
+          quantity: i.quantity,
+          unitPriceAtOrder: decimalToNumber(i.unitPriceAtOrder),
+          uomAtOrder: i.uomAtOrder,
+          unitSizeAtOrder: i.unitSizeAtOrder
+            ? decimalToNumber(i.unitSizeAtOrder)
+            : null,
+          note: i.note,
+        };
+      }),
     }));
 
     return NextResponse.json({ ok: true, data }, { headers: CORS });
@@ -136,12 +212,6 @@ export async function GET(req: Request) {
   }
 }
 
-/**
- * POST /api/app/admin/material-orders
- *
- * Creates a SiteProductOrder header + items in one request.
- * Body: { siteId, supplierId?, reference?, note?, items: [{ productId, quantity, unitPrice?, uom?, unitSize?, note? }] }
- */
 export async function POST(req: Request) {
   try {
     const auth = await getAuth(req);
@@ -177,20 +247,18 @@ export async function POST(req: Request) {
       }[];
     };
 
-    if (!siteId) {
+    if (!siteId)
       return NextResponse.json(
         { error: "siteId is required" },
         { status: 400, headers: CORS },
       );
-    }
-    if (!Array.isArray(items) || items.length === 0) {
+
+    if (!Array.isArray(items) || items.length === 0)
       return NextResponse.json(
         { error: "At least one item is required" },
         { status: 400, headers: CORS },
       );
-    }
 
-    // Verify site exists
     const site = await prisma.site.findUnique({
       where: { id: siteId },
       select: { id: true },
@@ -201,7 +269,31 @@ export async function POST(req: Request) {
         { status: 404, headers: CORS },
       );
 
-    // Create order header
+    const validItems = items.filter(
+      (item) => item.productId && item.quantity && item.quantity >= 1,
+    );
+
+    if (validItems.length === 0)
+      return NextResponse.json(
+        { error: "No valid order items were supplied" },
+        { status: 400, headers: CORS },
+      );
+
+    const resolvedItems: {
+      item: (typeof validItems)[number];
+      resolved: NonNullable<Awaited<ReturnType<typeof resolveOrderProduct>>>;
+    }[] = [];
+
+    for (const item of validItems) {
+      const resolved = await resolveOrderProduct(item.productId);
+      if (!resolved)
+        return NextResponse.json(
+          { error: `Product not found: ${item.productId}` },
+          { status: 404, headers: CORS },
+        );
+      resolvedItems.push({ item, resolved });
+    }
+
     const order = await prisma.siteProductOrder.create({
       data: {
         site: { connect: { id: siteId } },
@@ -212,28 +304,19 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create items
-    for (const item of items) {
-      if (!item.productId || !item.quantity || item.quantity < 1) continue;
-
-      const product = await prisma.procurementProduct.findUnique({
-        where: { id: item.productId },
-        select: { id: true, uom: true, unitSize: true },
-      });
-      if (!product) continue;
-
-      const itemUom = (item.uom as any) || product.uom || null;
+    for (const { item, resolved } of resolvedItems) {
+      const itemUom = (item.uom as any) || resolved.uom || null;
       const itemUnitSize =
         item.unitSize != null && item.unitSize !== ""
           ? Number(item.unitSize)
-          : product.unitSize
-            ? Number(product.unitSize)
+          : resolved.unitSize
+            ? Number(resolved.unitSize)
             : null;
 
       const resolvedPrice = await resolveUnitPrice({
         manualPrice: item.unitPrice,
         supplierId: supplierId ?? null,
-        productId: item.productId,
+        productId: resolved.legacyProductId,
         uom: itemUom ?? undefined,
         unitSize: itemUnitSize ?? undefined,
       });
@@ -241,7 +324,7 @@ export async function POST(req: Request) {
       await prisma.siteProductOrderItem.create({
         data: {
           order: { connect: { id: order.id } },
-          product: { connect: { id: item.productId } },
+          product: { connect: { id: resolved.legacyProductId } },
           quantity: item.quantity,
           unitPriceAtOrder: resolvedPrice,
           uomAtOrder: itemUom,
@@ -251,17 +334,15 @@ export async function POST(req: Request) {
       });
     }
 
-    // Auto-seed SiteMaterial for each ordered product
-    const orderedProductIds = items
-      .filter((i) => i.productId && i.quantity && i.quantity >= 1)
-      .map((i) => i.productId);
+    const orderedProductIds = Array.from(
+      new Set(resolvedItems.map(({ resolved }) => resolved.legacyProductId)),
+    );
 
     await ensureSiteMaterialsForProducts(prisma, {
       siteId,
       productIds: orderedProductIds,
     });
 
-    // Recalculate total
     const newTotal = await recalcOrderTotal(order.id);
 
     return NextResponse.json(
@@ -275,6 +356,15 @@ export async function POST(req: Request) {
       { status: 201, headers: CORS },
     );
   } catch (e: any) {
+    if (e?.code === "P2002")
+      return NextResponse.json(
+        {
+          error:
+            "A compatibility product already exists for this master catalogue product. Please retry the order.",
+        },
+        { status: 409, headers: CORS },
+      );
+
     console.error("POST material-orders error:", e);
     return NextResponse.json(
       { error: "Internal error" },

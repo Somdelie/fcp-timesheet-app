@@ -19,9 +19,15 @@ function serializeAssignment(a: any) {
         : String(a.endsOn)
       : null,
     siteId: a.siteId,
-    // attached person
     person: a.person,
   };
+}
+
+function revalidateSiteAssignmentPaths(siteId: string) {
+  revalidatePath(`/sites/${siteId}`);
+  revalidatePath("/sites");
+  revalidatePath("/admin/job-progress");
+  revalidatePath("/sites/map");
 }
 
 /** ========= Supervisor ↔ Site ========= */
@@ -38,6 +44,7 @@ export async function listSupervisorSiteAssignments(siteId: string) {
       startsOn: true,
       endsOn: true,
       siteId: true,
+      team: true,
       supervisor: {
         select: {
           id: true,
@@ -57,6 +64,7 @@ export async function listSupervisorSiteAssignments(siteId: string) {
           userId: r.supervisor.user.id,
           name: r.supervisor.user.name,
           email: r.supervisor.user.email,
+          team: r.team,
         },
       }),
     ),
@@ -65,36 +73,52 @@ export async function listSupervisorSiteAssignments(siteId: string) {
 
 export async function assignSupervisorToSite(input: {
   siteId: string;
-  supervisorUserId: string; // the User.id of the supervisor
+  supervisorUserId: string;
+  team?: string;
 }) {
   const auth = await requireServerAuth();
-  if (auth.role !== "ADMIN")
+  if (auth.role !== "ADMIN") {
     return {
       ok: false as const,
       error: "Only admin can assign supervisors to sites.",
     };
+  }
 
-  const siteId = String(input.siteId);
-  const supervisorUserId = String(input.supervisorUserId);
+  const siteId = String(input.siteId ?? "").trim();
+  const supervisorUserId = String(input.supervisorUserId ?? "").trim();
+  const team = String(input.team ?? "").trim() || null;
 
-  const supervisor = await prisma.supervisor.findUnique({
-    where: { userId: supervisorUserId },
-    select: { id: true },
-  });
+  if (!siteId) {
+    return { ok: false as const, error: "Site is required." };
+  }
+  if (!supervisorUserId) {
+    return { ok: false as const, error: "Supervisor is required." };
+  }
 
-  if (!supervisor)
+  const [site, supervisor] = await Promise.all([
+    prisma.site.findUnique({ where: { id: siteId }, select: { id: true } }),
+    prisma.supervisor.findUnique({
+      where: { userId: supervisorUserId },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!site) return { ok: false as const, error: "Site not found." };
+  if (!supervisor) {
     return { ok: false as const, error: "Supervisor not found." };
+  }
 
-  // Make sure there isn't already an active assignment
   const existing = await prisma.supervisorSiteAssignment.findFirst({
     where: { siteId, supervisorId: supervisor.id, endsOn: null },
     select: { id: true },
   });
-  if (existing)
+
+  if (existing) {
     return {
       ok: false as const,
       error: "Supervisor is already assigned to this site.",
     };
+  }
 
   await prisma.supervisorSiteAssignment.create({
     data: {
@@ -102,10 +126,11 @@ export async function assignSupervisorToSite(input: {
       supervisor: { connect: { id: supervisor.id } },
       startsOn: new Date(),
       endsOn: null,
+      team,
     },
   });
 
-  revalidatePath(`/sites/${siteId}`);
+  revalidateSiteAssignmentPaths(siteId);
   return { ok: true as const };
 }
 
@@ -114,18 +139,35 @@ export async function endSupervisorSiteAssignment(input: {
   siteId: string;
 }) {
   const auth = await requireServerAuth();
-  if (auth.role !== "ADMIN")
+  if (auth.role !== "ADMIN") {
     return {
       ok: false as const,
       error: "Only admin can end supervisor assignments.",
     };
+  }
+
+  const assignmentId = String(input.assignmentId ?? "").trim();
+  const siteId = String(input.siteId ?? "").trim();
+
+  if (!assignmentId || !siteId) {
+    return { ok: false as const, error: "Assignment and site are required." };
+  }
+
+  const assignment = await prisma.supervisorSiteAssignment.findFirst({
+    where: { id: assignmentId, siteId },
+    select: { id: true },
+  });
+
+  if (!assignment) {
+    return { ok: false as const, error: "Supervisor assignment not found." };
+  }
 
   await prisma.supervisorSiteAssignment.update({
-    where: { id: input.assignmentId },
+    where: { id: assignmentId },
     data: { endsOn: new Date() },
   });
 
-  revalidatePath(`/sites/${input.siteId}`);
+  revalidateSiteAssignmentPaths(siteId);
   return { ok: true as const };
 }
 
@@ -173,14 +215,16 @@ export async function assignForemanToSite(input: {
   foremanUserId: string;
 }) {
   const auth = await requireServerAuth();
-
-  // Admin OR a supervisor who manages this site can assign foremen to that site
   await requireCanManageSite(auth, input.siteId);
 
-  const siteId = String(input.siteId);
-  const foremanUserId = String(input.foremanUserId);
+  const siteId = String(input.siteId ?? "").trim();
+  const foremanUserId = String(input.foremanUserId ?? "").trim();
 
-  // Check if the site has at least one active supervisor
+  if (!siteId) return { ok: false as const, error: "Site is required." };
+  if (!foremanUserId) {
+    return { ok: false as const, error: "Foreman is required." };
+  }
+
   const activeSupervisorAssignments =
     await prisma.supervisorSiteAssignment.findMany({
       where: { siteId, endsOn: null },
@@ -205,25 +249,26 @@ export async function assignForemanToSite(input: {
     where: { siteId, foremanId: foreman.id, endsOn: null },
     select: { id: true },
   });
-  if (existing)
+
+  if (existing) {
     return {
       ok: false as const,
       error: "Foreman is already assigned to this site.",
     };
+  }
 
-  // Create foreman site assignment AND link foreman to all active supervisors at this site
   await prisma.$transaction(async (tx) => {
-    // 1. Create the site assignment
+    const startsOn = new Date();
+
     await tx.foremanSiteAssignment.create({
       data: {
         site: { connect: { id: siteId } },
         foreman: { connect: { id: foreman.id } },
-        startsOn: new Date(),
+        startsOn,
         endsOn: null,
       },
     });
 
-    // 2. Link foreman to each active supervisor at this site (if not already linked)
     for (const { supervisorId } of activeSupervisorAssignments) {
       const existingLink = await tx.supervisorForeman.findFirst({
         where: {
@@ -231,6 +276,7 @@ export async function assignForemanToSite(input: {
           foremanId: foreman.id,
           endsOn: null,
         },
+        select: { foremanId: true },
       });
 
       if (!existingLink) {
@@ -238,14 +284,14 @@ export async function assignForemanToSite(input: {
           data: {
             supervisor: { connect: { id: supervisorId } },
             foreman: { connect: { id: foreman.id } },
-            startsOn: new Date(),
+            startsOn,
           },
         });
       }
     }
   });
 
-  revalidatePath(`/sites/${siteId}`);
+  revalidateSiteAssignmentPaths(siteId);
   return { ok: true as const };
 }
 
@@ -256,12 +302,24 @@ export async function endForemanSiteAssignment(input: {
   const auth = await requireServerAuth();
   await requireCanManageSite(auth, input.siteId);
 
+  const assignmentId = String(input.assignmentId ?? "").trim();
+  const siteId = String(input.siteId ?? "").trim();
+
+  const assignment = await prisma.foremanSiteAssignment.findFirst({
+    where: { id: assignmentId, siteId },
+    select: { id: true },
+  });
+
+  if (!assignment) {
+    return { ok: false as const, error: "Foreman assignment not found." };
+  }
+
   await prisma.foremanSiteAssignment.update({
-    where: { id: input.assignmentId },
+    where: { id: assignmentId },
     data: { endsOn: new Date() },
   });
 
-  revalidatePath(`/sites/${input.siteId}`);
+  revalidateSiteAssignmentPaths(siteId);
   return { ok: true as const };
 }
 
@@ -288,7 +346,11 @@ export async function listAdminSiteAssignments(siteId: string) {
     assignments: rows.map((r) =>
       serializeAssignment({
         ...r,
-        person: { name: r.user.name, email: r.user.email },
+        person: {
+          userId: r.user.id,
+          name: r.user.name,
+          email: r.user.email,
+        },
       }),
     ),
   };
@@ -299,31 +361,54 @@ export async function assignAdminToSite(input: {
   adminUserId: string;
 }) {
   const auth = await requireServerAuth();
-  if (auth.role !== "ADMIN")
-    return { ok: false as const, error: "Only admin can assign admins to sites." };
+  if (auth.role !== "ADMIN") {
+    return {
+      ok: false as const,
+      error: "Only admin can assign admins to sites.",
+    };
+  }
 
-  const siteId = String(input.siteId);
-  const userId = String(input.adminUserId);
+  const siteId = String(input.siteId ?? "").trim();
+  const userId = String(input.adminUserId ?? "").trim();
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true },
-  });
-  if (!user || !["ADMIN", "OFFICE"].includes(user.role))
+  if (!siteId) return { ok: false as const, error: "Site is required." };
+  if (!userId) return { ok: false as const, error: "Admin is required." };
+
+  const [site, user] = await Promise.all([
+    prisma.site.findUnique({ where: { id: siteId }, select: { id: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    }),
+  ]);
+
+  if (!site) return { ok: false as const, error: "Site not found." };
+  if (!user || !["ADMIN", "OFFICE"].includes(user.role)) {
     return { ok: false as const, error: "Admin user not found." };
+  }
 
   const existing = await prisma.adminSiteAssignment.findFirst({
     where: { siteId, userId, endsOn: null },
     select: { id: true },
   });
-  if (existing)
-    return { ok: false as const, error: "Admin is already assigned to this site." };
+
+  if (existing) {
+    return {
+      ok: false as const,
+      error: "Admin is already assigned to this site.",
+    };
+  }
 
   await prisma.adminSiteAssignment.create({
-    data: { site: { connect: { id: siteId } }, user: { connect: { id: userId } } },
+    data: {
+      site: { connect: { id: siteId } },
+      user: { connect: { id: userId } },
+      startsOn: new Date(),
+      endsOn: null,
+    },
   });
 
-  revalidatePath(`/sites/${siteId}`);
+  revalidateSiteAssignmentPaths(siteId);
   return { ok: true as const };
 }
 
@@ -332,14 +417,30 @@ export async function endAdminSiteAssignment(input: {
   siteId: string;
 }) {
   const auth = await requireServerAuth();
-  if (auth.role !== "ADMIN")
-    return { ok: false as const, error: "Only admin can end admin assignments." };
+  if (auth.role !== "ADMIN") {
+    return {
+      ok: false as const,
+      error: "Only admin can end admin assignments.",
+    };
+  }
+
+  const assignmentId = String(input.assignmentId ?? "").trim();
+  const siteId = String(input.siteId ?? "").trim();
+
+  const assignment = await prisma.adminSiteAssignment.findFirst({
+    where: { id: assignmentId, siteId },
+    select: { id: true },
+  });
+
+  if (!assignment) {
+    return { ok: false as const, error: "Admin assignment not found." };
+  }
 
   await prisma.adminSiteAssignment.update({
-    where: { id: input.assignmentId },
+    where: { id: assignmentId },
     data: { endsOn: new Date() },
   });
 
-  revalidatePath(`/sites/${input.siteId}`);
+  revalidateSiteAssignmentPaths(siteId);
   return { ok: true as const };
 }

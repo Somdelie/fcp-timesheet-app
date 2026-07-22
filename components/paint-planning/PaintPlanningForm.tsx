@@ -55,8 +55,10 @@ export function PaintPlanningForm({
   const [productId, setProductId] = useState("");
   const [coverageId, setCoverageId] = useState("");
   const [coats, setCoats] = useState("1");
-  const [coverageM2Override, setCoverageM2Override] = useState("");
+  const [coverageM2PerLitreOverride, setCoverageM2PerLitreOverride] =
+    useState("");
   const [unitSizeLitres, setUnitSizeLitres] = useState("20");
+  const [wastagePercent, setWastagePercent] = useState("0");
   const [costPerContainer, setCostPerContainer] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -64,7 +66,15 @@ export function PaintPlanningForm({
 
   // Coverage dialog state
   const [coverageDialogOpen, setCoverageDialogOpen] = useState(false);
+  const [newCoverageName, setNewCoverageName] = useState("");
   const [newCoverageM2, setNewCoverageM2] = useState("");
+  const [newCoverageBasis, setNewCoverageBasis] = useState<
+    "PER_COAT" | "TOTAL_SYSTEM"
+  >("PER_COAT");
+  const [newCoverageType, setNewCoverageType] = useState<
+    "THEORETICAL" | "PRACTICAL"
+  >("PRACTICAL");
+  const [newRecommendedCoats, setNewRecommendedCoats] = useState("1");
   const [newCoverageUnitSize, setNewCoverageUnitSize] = useState("20");
   const [newCoverageNote, setNewCoverageNote] = useState("");
   const [savingCoverage, setSavingCoverage] = useState(false);
@@ -82,23 +92,31 @@ export function PaintPlanningForm({
   );
 
   // Effective values for calculation
-  const effectiveCoverageM2 = coverageM2Override
-    ? parseFloat(coverageM2Override)
+  const effectiveCoverageM2PerLitre = coverageM2PerLitreOverride
+    ? parseFloat(coverageM2PerLitreOverride)
     : selectedCoverage
-      ? selectedCoverage.coverageM2
+      ? selectedCoverage.coverageM2PerLitre
       : 0;
-  const effectiveUnitSize = parseFloat(unitSizeLitres) || 0;
-  const effectiveArea = (parseFloat(areaM2) || 0) * (parseInt(coats) || 1);
+  const effectiveBasis = selectedCoverage?.coverageBasis ?? "PER_COAT";
+  const effectiveUnitSize =
+    parseFloat(unitSizeLitres) || Number(selectedCoverage?.unitSize) || 0;
+  const coatsInt = parseInt(coats) || 1;
+  const effectiveArea = parseFloat(areaM2) || 0;
+  const effectiveCoatFactor = effectiveBasis === "PER_COAT" ? coatsInt : 1;
+  const effectiveWastagePercent = parseFloat(wastagePercent) || 0;
   const effectiveCost = parseFloat(costPerContainer) || 0;
 
   // Calculations
   const calc = useMemo(() => {
-    if (!effectiveArea || !effectiveCoverageM2 || !effectiveUnitSize) {
+    if (!effectiveArea || !effectiveCoverageM2PerLitre || !effectiveUnitSize) {
       return null;
     }
 
-    const containersNeeded = effectiveArea / effectiveCoverageM2;
-    const litresNeeded = containersNeeded * effectiveUnitSize;
+    const litresBeforeWastage =
+      (effectiveArea * effectiveCoatFactor) / effectiveCoverageM2PerLitre;
+    const wastageLitres = litresBeforeWastage * (effectiveWastagePercent / 100);
+    const litresNeeded = litresBeforeWastage + wastageLitres;
+    const containersNeeded = litresNeeded / effectiveUnitSize;
     const roundedContainers = Math.ceil(containersNeeded);
     const estimatedCost = effectiveCost
       ? roundedContainers * effectiveCost
@@ -108,13 +126,22 @@ export function PaintPlanningForm({
 
     return {
       containersNeeded,
+      litresBeforeWastage,
+      wastageLitres,
       litresNeeded,
       roundedContainers,
       estimatedCost,
       halfUsageLitres,
       halfUsageContainers,
     };
-  }, [effectiveArea, effectiveCoverageM2, effectiveUnitSize, effectiveCost]);
+  }, [
+    effectiveArea,
+    effectiveCoverageM2PerLitre,
+    effectiveUnitSize,
+    effectiveCoatFactor,
+    effectiveWastagePercent,
+    effectiveCost,
+  ]);
 
   async function handleSave() {
     setError("");
@@ -122,7 +149,7 @@ export function PaintPlanningForm({
       setError("Please fill in site, description, area, and product.");
       return;
     }
-    if (!effectiveCoverageM2) {
+    if (!effectiveCoverageM2PerLitre) {
       setError("Select a coverage profile or enter a manual coverage rate.");
       return;
     }
@@ -134,9 +161,12 @@ export function PaintPlanningForm({
       areaM2: parseFloat(areaM2),
       productId,
       coverageId: coverageId || null,
-      coats: parseInt(coats) || 1,
-      coverageM2PerUnit: effectiveCoverageM2,
-      unitSizeLitres: effectiveUnitSize,
+      coats: coatsInt,
+      coverageBasis: effectiveBasis,
+      coverageNameSnapshot: selectedCoverage?.name ?? null,
+      coverageM2PerLitre: effectiveCoverageM2PerLitre,
+      containerSizeLitres: effectiveUnitSize,
+      wastagePercent: effectiveWastagePercent,
       costPerContainer: effectiveCost || null,
       note: note || null,
     });
@@ -150,7 +180,8 @@ export function PaintPlanningForm({
     setBoqReference("");
     setAreaM2("");
     setCoverageId("");
-    setCoverageM2Override("");
+    setCoverageM2PerLitreOverride("");
+    setWastagePercent("0");
     setCostPerContainer("");
     setNote("");
     onPlanCreated();
@@ -161,14 +192,22 @@ export function PaintPlanningForm({
     setSavingCoverage(true);
     await upsertCoverageProfile({
       productId,
-      coverageM2: parseFloat(newCoverageM2),
+      name: newCoverageName || `Coverage ${new Date().toLocaleDateString()}`,
+      coverageM2PerLitre: parseFloat(newCoverageM2),
+      coverageBasis: newCoverageBasis,
+      coverageType: newCoverageType,
+      recommendedCoats: parseInt(newRecommendedCoats) || 1,
       unitSize: parseFloat(newCoverageUnitSize) || null,
       uom: "L",
       note: newCoverageNote || null,
     });
     setSavingCoverage(false);
     setCoverageDialogOpen(false);
+    setNewCoverageName("");
     setNewCoverageM2("");
+    setNewCoverageBasis("PER_COAT");
+    setNewCoverageType("PRACTICAL");
+    setNewRecommendedCoats("1");
     setNewCoverageNote("");
     onCoverageCreated();
   }
@@ -206,6 +245,7 @@ export function PaintPlanningForm({
                 onValueChange={(v) => {
                   setProductId(v);
                   setCoverageId("");
+                  setCoverageM2PerLitreOverride("");
                 }}
                 placeholder="Search products..."
                 options={products.map((p) => ({
@@ -275,8 +315,11 @@ export function PaintPlanningForm({
                   <SelectContent>
                     {productCoverages.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.coverageM2} m² / {c.unitSize ?? "?"}L
-                        {c.note ? ` — ${c.note}` : ""}
+                        {c.name} — {c.coverageM2PerLitre} m²/L (
+                        {c.coverageBasis === "PER_COAT"
+                          ? "per coat"
+                          : "total system"}
+                        )
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -299,13 +342,13 @@ export function PaintPlanningForm({
 
             {/* Manual coverage override */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Manual Coverage (m² per unit)</Label>
+              <Label className="text-xs">Manual Coverage (m²/L)</Label>
               <Input
                 type="number"
                 min="0"
                 step="0.01"
-                value={coverageM2Override}
-                onChange={(e) => setCoverageM2Override(e.target.value)}
+                value={coverageM2PerLitreOverride}
+                onChange={(e) => setCoverageM2PerLitreOverride(e.target.value)}
                 placeholder="Overrides profile"
               />
             </div>
@@ -335,6 +378,18 @@ export function PaintPlanningForm({
                 value={unitSizeLitres}
                 onChange={(e) => setUnitSizeLitres(e.target.value)}
                 placeholder="e.g. 20"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Wastage (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.1"
+                value={wastagePercent}
+                onChange={(e) => setWastagePercent(e.target.value)}
+                placeholder="e.g. 5"
               />
             </div>
 
@@ -394,16 +449,24 @@ export function PaintPlanningForm({
               />
               {parseInt(coats) > 1 && (
                 <Row
-                  label="Effective area"
-                  value={`${effectiveArea.toLocaleString()} m² (${coats} coats)`}
+                  label="Coat factor"
+                  value={`${effectiveCoatFactor} (${effectiveBasis === "PER_COAT" ? `${coats} coats` : "total system"})`}
                   muted
                 />
               )}
               <Row
                 label="Coverage"
-                value={`${effectiveCoverageM2} m² per ${effectiveUnitSize}L`}
+                value={`${effectiveCoverageM2PerLitre} m²/L`}
               />
               <div className="border-t pt-3 space-y-3">
+                <Row
+                  label="Before wastage"
+                  value={`${calc.litresBeforeWastage.toFixed(2)} L`}
+                />
+                <Row
+                  label="Wastage"
+                  value={`${calc.wastageLitres.toFixed(2)} L (${effectiveWastagePercent.toFixed(1)}%)`}
+                />
                 <Row
                   label="Litres needed"
                   value={`${calc.litresNeeded.toFixed(2)} L`}
@@ -458,12 +521,66 @@ export function PaintPlanningForm({
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Coverage per unit (m²)</Label>
+              <Label className="text-xs">Profile name</Label>
+              <Input
+                value={newCoverageName}
+                onChange={(e) => setNewCoverageName(e.target.value)}
+                placeholder="e.g. Two-coat stipple finish"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Coverage (m²/L)</Label>
               <Input
                 type="number"
                 value={newCoverageM2}
                 onChange={(e) => setNewCoverageM2(e.target.value)}
-                placeholder="e.g. 140"
+                placeholder="e.g. 4"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Coverage basis</Label>
+                <Select
+                  value={newCoverageBasis}
+                  onValueChange={(value) =>
+                    setNewCoverageBasis(value as "PER_COAT" | "TOTAL_SYSTEM")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PER_COAT">Per coat</SelectItem>
+                    <SelectItem value="TOTAL_SYSTEM">Total system</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Coverage type</Label>
+                <Select
+                  value={newCoverageType}
+                  onValueChange={(value) =>
+                    setNewCoverageType(value as "THEORETICAL" | "PRACTICAL")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRACTICAL">Practical</SelectItem>
+                    <SelectItem value="THEORETICAL">Theoretical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Recommended coats</Label>
+              <Input
+                type="number"
+                min="1"
+                value={newRecommendedCoats}
+                onChange={(e) => setNewRecommendedCoats(e.target.value)}
+                placeholder="e.g. 2"
               />
             </div>
             <div className="space-y-1.5">

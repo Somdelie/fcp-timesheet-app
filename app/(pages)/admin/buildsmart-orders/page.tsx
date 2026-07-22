@@ -187,6 +187,10 @@ export default function BuildsmartPdfSeedPage() {
             <History className="mr-2 h-4 w-4" />
             Historical Costs
           </TabsTrigger>
+          <TabsTrigger value="catalogue" className="rounded">
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Catalogue Builder
+          </TabsTrigger>
           <TabsTrigger value="claims" className="rounded">
             <Receipt className="mr-2 h-4 w-4" />
             Claims
@@ -205,6 +209,9 @@ export default function BuildsmartPdfSeedPage() {
         </TabsContent>
         <TabsContent value="historical">
           <HistoricalCostsTab />
+        </TabsContent>
+        <TabsContent value="catalogue">
+          <CatalogueBuilderTab />
         </TabsContent>
         <TabsContent value="claims">
           <ClaimsTab />
@@ -1532,6 +1539,542 @@ function HistoricalMaterialsTab() {
 }
 
 // ─── Historical Costs tab ─────────────────────────────────────────────────────
+
+type CatalogueSummary = {
+  suppliersCreated: number;
+  suppliersUpdated: number;
+  materialsCreated: number;
+  materialsUpdated: number;
+  basesCreated: number;
+  coloursCreated: number;
+  sizesCreated: number;
+  pricesCreated: number;
+  pricesUpdated: number;
+  duplicatePrices: number;
+  skippedRows: number;
+};
+
+type CataloguePreviewItem = {
+  fileName: string;
+  supplier: string | null;
+  material: string;
+  sku: string | null;
+  base: string;
+  colour: string | null;
+  unitSize: number | null;
+  uom: string | null;
+  price: string;
+  sourceDescription: string;
+};
+
+type CataloguePreviewResponse = {
+  action: "parse";
+  totalLines: number;
+  rawLines: number;
+  duplicateLinesRemoved: number;
+  parseWarnings: string[];
+  items: CataloguePreviewItem[];
+};
+
+type CatalogueImportResponse = {
+  action: "import";
+  totalLines: number;
+  rawLines: number;
+  duplicateLinesRemoved: number;
+  summary: CatalogueSummary;
+  parseWarnings: string[];
+};
+
+function CatalogueBuilderTab() {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isBusy, setIsBusy] = useState(false);
+  const [activeAction, setActiveAction] = useState<"parse" | "import" | null>(
+    null,
+  );
+  const [preview, setPreview] = useState<CataloguePreviewResponse | null>(null);
+  const [importResult, setImportResult] =
+    useState<CatalogueImportResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const catalogueMetrics = [
+    {
+      label: "Suppliers Created",
+      value: importResult?.summary.suppliersCreated ?? 0,
+    },
+    {
+      label: "Suppliers Updated",
+      value: importResult?.summary.suppliersUpdated ?? 0,
+    },
+    {
+      label: "Materials Created",
+      value: importResult?.summary.materialsCreated ?? 0,
+    },
+    { label: "Bases Created", value: importResult?.summary.basesCreated ?? 0 },
+    {
+      label: "Colours Created",
+      value: importResult?.summary.coloursCreated ?? 0,
+    },
+    { label: "Sizes Created", value: importResult?.summary.sizesCreated ?? 0 },
+    {
+      label: "Prices Created",
+      value: importResult?.summary.pricesCreated ?? 0,
+    },
+    {
+      label: "Prices Updated",
+      value: importResult?.summary.pricesUpdated ?? 0,
+    },
+    {
+      label: "Duplicate Prices",
+      value: importResult?.summary.duplicatePrices ?? 0,
+    },
+  ];
+
+  const warnings = importResult?.parseWarnings ?? preview?.parseWarnings ?? [];
+  const previewItems = preview?.items ?? [];
+  const previewImportableCount = previewItems.filter(
+    (item) => item.supplier && item.material && Number(item.price) > 0,
+  ).length;
+
+  function addFiles(list: FileList | File[]) {
+    const incoming = Array.from(list).filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+
+    setFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      return [
+        ...prev,
+        ...incoming.filter((f) => !seen.has(`${f.name}-${f.size}`)),
+      ];
+    });
+    setPreview(null);
+    setImportResult(null);
+    setError(null);
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+    setPreview(null);
+    setImportResult(null);
+    setError(null);
+  }
+
+  function clearAll() {
+    setFiles([]);
+    setPreview(null);
+    setImportResult(null);
+    setError(null);
+  }
+
+  async function callCatalogueApi(action: "parse" | "import") {
+    if (!files.length || isBusy) return;
+
+    setIsBusy(true);
+    setActiveAction(action);
+    setError(null);
+
+    if (action === "parse") {
+      setPreview(null);
+      setImportResult(null);
+    }
+
+    try {
+      const formData = new FormData();
+
+      formData.append("action", action);
+
+      for (const file of files) {
+        formData.append("pdfs", file, file.name);
+      }
+
+      const response = await fetch("/api/admin/buildsmart/catalogue-builder", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(await getResponseErrorMessage(response));
+      }
+
+      const data = (await response.json()) as
+        | CataloguePreviewResponse
+        | CatalogueImportResponse;
+
+      if (data.action === "parse") {
+        setPreview(data);
+        setImportResult(null);
+      } else {
+        setImportResult(data);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to process catalogue PDF.",
+      );
+    } finally {
+      setIsBusy(false);
+      setActiveAction(null);
+    }
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded border shadow-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl font-semibold tracking-tight">
+                  Catalogue Builder
+                </CardTitle>
+                <CardDescription className="mt-1 text-sm">
+                  Build supplier, material, base, colour, size, and price
+                  records from PDFs without creating site orders.
+                </CardDescription>
+              </div>
+              <Badge
+                variant="secondary"
+                className="rounded-full px-3 py-1 text-xs"
+              >
+                Catalogue only
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                if (e.dataTransfer.files?.length)
+                  addFiles(e.dataTransfer.files);
+              }}
+              className={cn(
+                "group rounded border-2 border-dashed p-8 transition",
+                dragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+              )}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="mb-4 rounded border bg-background p-4 shadow-sm">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-medium">
+                  Drop catalogue PDFs here
+                </h3>
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                  This area is separated from historical ordering so catalogue
+                  learning cannot create SiteProductOrder records.
+                </p>
+
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <Button
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded"
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Choose PDFs
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={clearAll}
+                    disabled={!files.length}
+                    className="rounded"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {catalogueMetrics.map((metric) => (
+                <MetricCard
+                  key={metric.label}
+                  label={metric.label}
+                  value={metric.value}
+                />
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => callCatalogueApi("parse")}
+                disabled={!files.length || isBusy}
+                size="lg"
+                variant="outline"
+                className="rounded px-6"
+              >
+                {isBusy && activeAction === "parse" ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+
+                {isBusy && activeAction === "parse"
+                  ? "Previewing..."
+                  : "Preview catalogue"}
+              </Button>
+              <Button
+                onClick={() => callCatalogueApi("import")}
+                disabled={!files.length || isBusy || !preview}
+                size="lg"
+                className="rounded px-6"
+              >
+                {isBusy && activeAction === "import" ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+
+                {isBusy && activeAction === "import"
+                  ? "Importing..."
+                  : "Import catalogue"}
+              </Button>
+            </div>
+
+            {error && (
+              <div className="rounded border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Upload queue</CardTitle>
+            <CardDescription>
+              PDFs staged for catalogue extraction only.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-96 pr-3">
+              <div className="space-y-3">
+                {!files.length ? (
+                  <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No PDFs added yet.
+                  </div>
+                ) : (
+                  files.map((f) => (
+                    <div
+                      key={`${f.name}-${f.size}`}
+                      className="rounded border bg-card p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="shrink-0 rounded border bg-muted p-2">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              {f.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {fileSizeLabel(f.size)}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 rounded"
+                          onClick={() => removeFile(f.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {preview && (
+        <Card className="rounded border shadow-sm">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-lg">
+                  Catalogue preview
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    {preview.items.length} of {preview.totalLines} rows shown
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Review the supplier, material, colour, size, and price rows
+                  before importing.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="rounded-full">
+                  {preview.rawLines} raw
+                </Badge>
+                <Badge variant="secondary" className="rounded-full">
+                  {preview.totalLines} unique
+                </Badge>
+                <Badge variant="outline" className="rounded-full">
+                  {preview.duplicateLinesRemoved} duplicates removed
+                </Badge>
+                <Badge variant="default" className="rounded-full">
+                  {previewImportableCount} ready
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-125">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">File</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Supplier
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Material
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">Base</th>
+                    <th className="px-4 py-2 text-left font-medium">Colour</th>
+                    <th className="px-4 py-2 text-left font-medium">Size</th>
+                    <th className="px-4 py-2 text-right font-medium">Price</th>
+                    <th className="px-4 py-2 text-left font-medium">
+                      Source description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {preview.items.map((item, index) => {
+                    const isReady =
+                      Boolean(item.supplier) &&
+                      Boolean(item.material) &&
+                      Number(item.price) > 0;
+
+                    return (
+                      <tr
+                        key={`${item.fileName}-${index}`}
+                        className={cn(
+                          "transition-colors hover:bg-muted/20",
+                          !isReady && "bg-amber-50/50",
+                        )}
+                      >
+                        <td className="max-w-[10.5rem] px-4 py-2 text-xs">
+                          <div className="truncate" title={item.fileName}>
+                            {item.fileName}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {item.supplier ?? (
+                            <span className="text-amber-700">
+                              Unknown supplier
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-xs font-medium">
+                          {item.material || (
+                            <span className="text-amber-700">
+                              Unknown material
+                            </span>
+                          )}
+                          {item.sku && (
+                            <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                              {item.sku}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-xs">{item.base}</td>
+                        <td className="px-4 py-2 text-xs">
+                          {item.colour ?? (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 font-mono text-xs">
+                          {item.unitSize ?? (
+                            <span className="text-muted-foreground">-</span>
+                          )}{" "}
+                          {item.uom ?? ""}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-xs">
+                          R
+                          {Number(item.price).toLocaleString("en-ZA", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="max-w-96 px-4 py-2 text-xs text-muted-foreground">
+                          <div
+                            className="truncate"
+                            title={item.sourceDescription}
+                          >
+                            {item.sourceDescription}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {warnings.length > 0 && (
+        <Card className="rounded border border-amber-200 bg-amber-50 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-amber-800">
+              <TriangleAlert className="h-4 w-4" />
+              Warnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm text-amber-700">
+              {warnings.map((warning, index) => (
+                <li key={index}>&bull; {warning}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
 
 type CostPreviewRow = {
   fileName: string;

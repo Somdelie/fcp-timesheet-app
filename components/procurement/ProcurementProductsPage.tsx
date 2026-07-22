@@ -165,10 +165,12 @@ type ProductVariantStock = {
   qty: number;
 };
 
-type ProcurementProduct = {
+type CatalogueProduct = {
   createdAt: any;
   updatedAt: any;
   id: string;
+  masterCatalogueProductId?: string | null;
+  catalogueSource?: "MASTER" | "LEGACY";
   name: string;
   sku: string | null;
   description: string | null;
@@ -239,12 +241,12 @@ function supplierPriceLabel(price: SupplierPriceEntry) {
   return `${size} - ${formatRand(price.price)}`;
 }
 
-function productExportName(product: ProcurementProduct) {
+function productExportName(product: CatalogueProduct) {
   return [product.sku, product.name].filter(Boolean).join(" - ");
 }
 
 function buildSupplierPriceGroups(
-  products: ProcurementProduct[],
+  products: CatalogueProduct[],
 ): SupplierPriceGroup[] {
   const grouped = new Map<
     string,
@@ -326,7 +328,7 @@ export default function ProcurementProductsPage({
   supplierId?: string;
 }) {
   const showTypeTabs = !defaultProductType || defaultProductType === "ALL";
-  const [products, setProducts] = useState<ProcurementProduct[]>([]);
+  const [products, setProducts] = useState<CatalogueProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -346,7 +348,7 @@ export default function ProcurementProductsPage({
   }, [supplierIdProp]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<ProcurementProduct | null>(null);
+  const [editing, setEditing] = useState<CatalogueProduct | null>(null);
   const [form, setForm] = useState({
     name: "",
     sku: "",
@@ -368,7 +370,7 @@ export default function ProcurementProductsPage({
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [deleteTarget, setDeleteTarget] = useState<ProcurementProduct | null>(
+  const [deleteTarget, setDeleteTarget] = useState<CatalogueProduct | null>(
     null,
   );
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -380,11 +382,11 @@ export default function ProcurementProductsPage({
   } | null>(null);
 
   const [pricesOpen, setPricesOpen] = useState(false);
-  const [pricesProduct, setPricesProduct] = useState<ProcurementProduct | null>(
+  const [pricesProduct, setPricesProduct] = useState<CatalogueProduct | null>(
     null,
   );
   const [suppliersProduct, setSuppliersProduct] =
-    useState<ProcurementProduct | null>(null);
+    useState<CatalogueProduct | null>(null);
   const [dialogPrices, setDialogPrices] = useState<SupplierPriceEntry[]>([]);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
@@ -410,9 +412,7 @@ export default function ProcurementProductsPage({
   const [exporting, setExporting] = useState(false);
 
   // merge state
-  const [mergeSource, setMergeSource] = useState<ProcurementProduct | null>(
-    null,
-  );
+  const [mergeSource, setMergeSource] = useState<CatalogueProduct | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [mergeSearch, setMergeSearch] = useState("");
   const [mergeSaving, setMergeSaving] = useState(false);
@@ -490,7 +490,7 @@ export default function ProcurementProductsPage({
     setDialogOpen(true);
   }
 
-  function openEdit(p: ProcurementProduct) {
+  function openEdit(p: CatalogueProduct) {
     setEditing(p);
     const variantQtys: Record<string, number> = {};
     for (const v of p.variantStocks ?? []) {
@@ -644,7 +644,7 @@ export default function ProcurementProductsPage({
     }
   }
 
-  function openPricesDialog(product: ProcurementProduct) {
+  function openPricesDialog(product: CatalogueProduct) {
     setPricesProduct(product);
     setDialogPrices(product.supplierPrices);
     setEditingPriceId(null);
@@ -1229,7 +1229,7 @@ export default function ProcurementProductsPage({
     }
   }, [filteredProducts]);
 
-  function getProductSuppliers(product: ProcurementProduct) {
+  function getProductSuppliers(product: CatalogueProduct) {
     const supplierMap = new Map<
       string,
       {
@@ -1269,7 +1269,7 @@ export default function ProcurementProductsPage({
     });
   }
 
-  const columns: ColumnDef<ProcurementProduct>[] = [
+  const columns: ColumnDef<CatalogueProduct>[] = [
     {
       id: "select",
       size: 40,
@@ -1347,6 +1347,16 @@ export default function ProcurementProductsPage({
             </div>
             {/* SKU/code is shown in the separate 'Code' column — omit duplicate under name */}
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              {p.catalogueSource === "MASTER" && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  Master
+                </span>
+              )}
+              {p.catalogueSource === "LEGACY" && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  Needs review
+                </span>
+              )}
               {isPpeTab && !p.isDeductible && (
                 <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                   Non-deductible

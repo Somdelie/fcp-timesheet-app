@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:paint-tds-brands": "tsx ./scripts/test-paint-tds-brands.ts",
     "backfill:material-order-totals": "tsx ./scripts/backfill-site-product-order-totals.ts",
     "backfill:stock-from-orders": "tsx ./scripts/backfill-stock-from-orders.ts",
     "backfill:orders-stock-from-ppe-orders": "tsx ./scripts/backfill-orders-stock-from-ppe-orders.ts",
@@ -96,6 +97,7 @@
     "recharts": "2.15.4",
     "tailwind-merge": "^3.4.0",
     "three": "^0.185.1",
+    "unpdf": "^1.6.2",
     "zod": "^4.3.6",
     "zundo": "^2.3.0",
     "zustand": "^5.0.14"

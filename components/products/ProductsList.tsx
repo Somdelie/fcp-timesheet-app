@@ -52,7 +52,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { printCatalogue, type CataloguePrintRow } from "@/lib/generateCataloguePrint";
+import {
+  printCatalogue,
+  type CataloguePrintRow,
+} from "@/lib/generateCataloguePrint";
 import ProductRowActions from "@/components/products/ProductRowActions";
 
 export interface AdminProductDto {
@@ -67,7 +70,12 @@ export interface AdminProductDto {
   colors: string[];
   stockQty: number;
   thumbnailUrl: string | null;
-  variants: { id: string; size: string | null; color: string | null; qty: number }[];
+  variants: {
+    id: string;
+    size: string | null;
+    color: string | null;
+    qty: number;
+  }[];
 }
 
 type Tab = "PPE" | "TOOL";
@@ -78,7 +86,9 @@ function ColorDot({ color }: { color: string }) {
     <span
       title={color}
       className="inline-block h-3 w-3 rounded-full border border-border shrink-0"
-      style={isHex ? { backgroundColor: color } : { backgroundColor: "#e5e7eb" }}
+      style={
+        isHex ? { backgroundColor: color } : { backgroundColor: "#e5e7eb" }
+      }
     />
   );
 }
@@ -109,9 +119,11 @@ function makeColumns(
           />
         ) : (
           <div className="flex h-9 w-9 items-center justify-center rounded bg-muted">
-            {tab === "PPE"
-              ? <Package className="h-4 w-4 text-muted-foreground" />
-              : <Wrench className="h-4 w-4 text-muted-foreground" />}
+            {tab === "PPE" ? (
+              <Package className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
         ),
       enableSorting: false,
@@ -142,7 +154,9 @@ function makeColumns(
           <div className="min-w-[160px]">
             <div className="font-medium leading-tight">{p.name}</div>
             {showSku && p.sku && (
-              <div className="text-[10px] text-muted-foreground mt-0.5">SKU: {p.sku}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                SKU: {p.sku}
+              </div>
             )}
           </div>
         );
@@ -215,12 +229,16 @@ function makeColumns(
       cell: ({ row }) => {
         const qty = row.original.stockQty ?? 0;
         return (
-          <Badge variant={qty > 0 ? "secondary" : "outline"} className="tabular-nums">
+          <Badge
+            variant={qty > 0 ? "secondary" : "outline"}
+            className="tabular-nums"
+          >
             {qty}
           </Badge>
         );
       },
-      sortingFn: (a, b) => (a.original.stockQty ?? 0) - (b.original.stockQty ?? 0),
+      sortingFn: (a, b) =>
+        (a.original.stockQty ?? 0) - (b.original.stockQty ?? 0),
     },
     {
       accessorKey: "price",
@@ -310,7 +328,10 @@ function ProductTable({
 }) {
   const [q, setQ] = React.useState("");
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
   const [detail, setDetail] = React.useState<{
     product: AdminProductDto;
     color: string | null;
@@ -373,7 +394,13 @@ function ProductTable({
       return;
     }
 
-    if (!printCatalogue({ title, subtitle: q ? `Filtered by "${q}"` : undefined, rows: printableRows })) {
+    if (
+      !printCatalogue({
+        title,
+        subtitle: q ? `Filtered by "${q}"` : undefined,
+        rows: printableRows,
+      })
+    ) {
       toast.error("Allow pop-ups to print");
     }
   }
@@ -382,9 +409,7 @@ function ProductTable({
     if (!detail) return [];
 
     const matchingVariants = detail.product.variants.filter((variant) =>
-      detail.color === null
-        ? !variant.color
-        : variant.color === detail.color,
+      detail.color === null ? !variant.color : variant.color === detail.color,
     );
 
     if (matchingVariants.length > 0) {
@@ -448,15 +473,21 @@ function ProductTable({
             onClick={onReload}
             className="gap-1.5"
           >
-            <RotateCw className={`h-4 w-4 ${loading ? "animate-spin text-muted-foreground" : ""}`} />
-            <span className="text-xs font-medium">{loading ? "Loading" : "Refresh"}</span>
+            <RotateCw
+              className={`h-4 w-4 ${loading ? "animate-spin text-muted-foreground" : ""}`}
+            />
+            <span className="text-xs font-medium">
+              {loading ? "Loading" : "Refresh"}
+            </span>
           </Button>
           <Button
             size="sm"
             variant="default"
             onClick={() =>
               document.dispatchEvent(
-                new CustomEvent("admin-products:create", { detail: { category: tab } }),
+                new CustomEvent("admin-products:create", {
+                  detail: { category: tab },
+                }),
               )
             }
           >
@@ -467,7 +498,9 @@ function ProductTable({
 
       {!loading && filtered.length === 0 ? (
         <div className="border border-dashed border-zinc-300 bg-white/50 p-12 text-center dark:border-zinc-700/50 dark:bg-card/30">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">No {label} found</h3>
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+            No {label} found
+          </h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Adjust your search or add a new item.
           </p>
@@ -478,7 +511,10 @@ function ProductTable({
             <Table className="border-collapse">
               <TableHeader className="bg-muted/60">
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  <TableRow
+                    key={headerGroup.id}
+                    className="hover:bg-transparent"
+                  >
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
@@ -486,7 +522,10 @@ function ProductTable({
                       >
                         {header.isPlaceholder
                           ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -496,20 +535,29 @@ function ProductTable({
               <TableBody>
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
+                    <TableRow
+                      key={row.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                    >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
                           className="border border-zinc-200 px-3 py-2 dark:border-zinc-700"
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       No results.
                     </TableCell>
                   </TableRow>
@@ -523,10 +571,13 @@ function ProductTable({
               Showing{" "}
               {filtered.length === 0
                 ? 0
-                : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}{" "}
+                : table.getState().pagination.pageIndex *
+                    table.getState().pagination.pageSize +
+                  1}{" "}
               to{" "}
               {Math.min(
-                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                (table.getState().pagination.pageIndex + 1) *
+                  table.getState().pagination.pageSize,
                 filtered.length,
               )}{" "}
               of {filtered.length} {label}
@@ -539,11 +590,15 @@ function ProductTable({
                   onValueChange={(v) => table.setPageSize(Number(v))}
                 >
                   <SelectTrigger className="h-8 w-20">
-                    <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    <SelectValue
+                      placeholder={table.getState().pagination.pageSize}
+                    />
                   </SelectTrigger>
                   <SelectContent side="top">
                     {[5, 10, 25, 50, 100].map((s) => (
-                      <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                      <SelectItem key={s} value={String(s)}>
+                        {s}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -554,28 +609,39 @@ function ProductTable({
               </div>
               <div className="ml-auto flex items-center gap-2 lg:ml-0">
                 <Button
-                  variant="outline" size="icon" className="hidden h-8 w-8 lg:flex"
-                  onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
                 >
                   <span className="sr-only">Go to first page</span>
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant="outline" size="icon" className="h-8 w-8"
-                  onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
                 >
                   <span className="sr-only">Go to previous page</span>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant="outline" size="icon" className="h-8 w-8"
-                  onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
                 >
                   <span className="sr-only">Go to next page</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant="outline" size="icon" className="hidden h-8 w-8 lg:flex"
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:flex"
                   onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                   disabled={!table.getCanNextPage()}
                 >
@@ -588,7 +654,10 @@ function ProductTable({
         </div>
       )}
 
-      <Dialog open={detail !== null} onOpenChange={(open) => !open && setDetail(null)}>
+      <Dialog
+        open={detail !== null}
+        onOpenChange={(open) => !open && setDetail(null)}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
@@ -648,18 +717,28 @@ export default function ProductsList({
   const reload = React.useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/app/admin/products?includeInactive=${includeInactive ? "true" : "false"}`, {
-        credentials: "include",
-        headers: { accept: "application/json" },
-      });
+      const res = await fetch(
+        `/api/app/admin/products?includeInactive=${includeInactive ? "true" : "false"}`,
+        {
+          credentials: "include",
+          headers: { accept: "application/json" },
+        },
+      );
       const json = await res.json().catch(() => null as any);
-      if (!res.ok) throw new Error(json?.error ?? `Failed to load (${res.status})`);
+      if (!res.ok)
+        throw new Error(json?.error ?? `Failed to load (${res.status})`);
       if (json?.ok && Array.isArray(json.products)) {
-        setPpe(json.products.filter((p: AdminProductDto) => p.category === "PPE"));
-        setTools(json.products.filter((p: AdminProductDto) => p.category === "TOOL"));
+        setPpe(
+          json.products.filter((p: AdminProductDto) => p.category === "PPE"),
+        );
+        setTools(
+          json.products.filter((p: AdminProductDto) => p.category === "TOOL"),
+        );
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load products");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to load products",
+      );
     } finally {
       setLoading(false);
     }
@@ -683,26 +762,30 @@ export default function ProductsList({
   return (
     <div className="space-y-4">
       {!hideTabs && (
-      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-zinc-300"
-            }`}
-          >
-            {t.key === "PPE" ? <Package className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
-            {t.label}
-            <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
-              {t.count}
-            </span>
-          </button>
-        ))}
-      </div>
+        <div className="flex border-b border-zinc-200 dark:border-zinc-700">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                tab === t.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-zinc-300"
+              }`}
+            >
+              {t.key === "PPE" ? (
+                <Package className="h-4 w-4" />
+              ) : (
+                <Wrench className="h-4 w-4" />
+              )}
+              {t.label}
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                {t.count}
+              </span>
+            </button>
+          ))}
+        </div>
       )}
 
       {tab === "PPE" ? (

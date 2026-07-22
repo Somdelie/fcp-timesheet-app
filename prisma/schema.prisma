@@ -71,7 +71,6 @@ model User {
   notifications                      Notification[]
   schedulerTasks                     SchedulerTask[]
 
-  // owner-created notes
   userNotes UserNote[]
 
   progressNotes SiteProgressNote[] @relation("SiteProgressNoteAuthor")
@@ -80,23 +79,27 @@ model User {
   ppeOrdersCreated ForemanPpeOrder[]     @relation("PpeOrderCreatedByUser")
   plantTransfers   PlantTransfer[]       @relation("PlantTransferredByUser")
 
-  // comments
   noteComments NoteComment[] @relation("UserNoteComments")
 
-  // NEW: room note memberships / invitations
   noteMemberships     NoteMember[]
   sentNoteInvites     NoteInvite[] @relation("NoteInviteSender")
   receivedNoteInvites NoteInvite[] @relation("NoteInviteRecipient")
 
-  // NEW: Real-time collaboration
   notePresences   NotePresence[]
   noteEditHistory NoteEditHistory[]
 
   siteProgrammes SiteProgramme[] @relation("SiteProgrammeCreatedBy")
 
-  uploadedSiteDocuments SiteDocument[] @relation("SiteDocumentUploadedBy")
+  supplierId String?
+  supplier   Supplier? @relation("SupplierUsers", fields: [supplierId], references: [id], onDelete: SetNull)
 
-  importJobs ImportJob[]
+  uploadedSiteDocuments SiteDocument[] @relation("SiteDocumentUploadedBy")
+  importJobs            ImportJob[]
+
+  // TDS files uploaded by this user.
+  paintTdsImports PaintTdsImport[]
+
+  @@index([supplierId])
 }
 
 model PushToken {
@@ -445,6 +448,7 @@ model SupervisorSiteAssignment {
   startsOn     DateTime  @default(now())
   endsOn       DateTime?
   createdAt    DateTime  @default(now())
+  team         String?   @db.VarChar(50) // Team this supervisor manages: PAINTERS, BUILDING, SPECIAL_COATINGS, CAPE_TOWN
 
   site       Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
   supervisor Supervisor @relation(fields: [supervisorId], references: [id], onDelete: Cascade)
@@ -1364,11 +1368,12 @@ model ProductCategory {
   name           String
   normalizedName String?
 
-  procurementProducts ProcurementProduct[]
+  procurementProducts     ProcurementProduct[]
+  materials               Material[]
+  masterCatalogueProducts MasterCatalogueProduct[]
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @default(now()) @updatedAt
-  materials Material[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([normalizedName])
 }
@@ -1391,21 +1396,27 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // NEW: brand/shop hierarchy
   supplierType SupplierType @default(VENDOR)
 
   parentSupplierId String?
   parentSupplier   Supplier?  @relation("SupplierHierarchy", fields: [parentSupplierId], references: [id], onDelete: SetNull)
   childSuppliers   Supplier[] @relation("SupplierHierarchy")
 
-  // relations
-  products               ProcurementProduct[]
-  orders                 SiteProductOrder[]
-  supplierProductPrices  SupplierProductPrice[]
-  finishingScheduleItems SiteFinishingScheduleItem[] @relation("FinishingScheduleItemSupplier")
-  sitePaintColors        SitePaintColor[]
-  materials              Material[]
-  materialPrices         MaterialPrice[]
+  products                ProcurementProduct[]
+  orders                  SiteProductOrder[]
+  supplierProductPrices   SupplierProductPrice[]
+  finishingScheduleItems  SiteFinishingScheduleItem[] @relation("FinishingScheduleItemSupplier")
+  sitePaintColors         SitePaintColor[]
+  materials               Material[]
+  materialPrices          MaterialPrice[]
+  materialPriceHistory    MaterialPriceHistory[]
+  masterCatalogueProducts MasterCatalogueProduct[]
+
+  // Users linked to this supplier.
+  users User[] @relation("SupplierUsers")
+
+  // Paint TDS imports linked to this supplier.
+  paintTdsImports PaintTdsImport[] @relation("SupplierPaintTdsImports")
 
   @@unique([name])
   @@index([isActive])
@@ -1423,67 +1434,50 @@ model ProcurementProduct {
   categoryId   String?
   category     ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  // Product classification
   productType  ProductType @default(MATERIAL)
   isReturnable Boolean     @default(false)
 
-  // Color variants (e.g. for paints: ["White", "Sandstone", "Light Grey"])
   colors String[]
+  sizes  String[]
 
-  // Size variants (e.g. for PPE: ["S","M","L","XL"] or plant: ["3m","5m"])
-  sizes String[]
-
-  // Inventory count
   stockQty Int @default(0)
 
-  // Legacy base unit info (sizes now live on SupplierProductPrice)
   uom         ProductUom?
   unitSize    Decimal?    @db.Decimal(12, 3)
   description String?
 
   isActive Boolean @default(true)
 
-  // Deduction settings (PPE only)
   isDeductible    Boolean @default(true)
   deductionSplits Int     @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Optional default supplier
   supplierId String?
   supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
-  // Prices can vary by supplier (and over time)
-  supplierPrices  SupplierProductPrice[]
-  sitePaintColors SitePaintColor[]
+  // Stage 1 compatibility bridge. The live app can keep using this model while
+  // MasterCatalogueProduct becomes the canonical product record.
+  masterCatalogueProductId String?                 @unique
+  masterCatalogueProduct   MasterCatalogueProduct? @relation("ProcurementProductMaster", fields: [masterCatalogueProductId], references: [id], onDelete: SetNull)
 
-  // order items using this product
-  orderItems SiteProductOrderItem[]
-
-  // Sites where this product is expected to be used
-  siteMaterials SiteMaterial[]
-
+  supplierPrices         SupplierProductPrice[]
+  sitePaintColors        SitePaintColor[]
+  orderItems             SiteProductOrderItem[]
+  siteMaterials          SiteMaterial[]
   finishingScheduleItems SiteFinishingScheduleItem[]
 
   normalizedName String?
 
   coverageProfiles ProcurementProductCoverage[]
+  packSizes        ProcurementProductPackSize[]
   paintPlans       SitePaintPlan[]
-
-  // Plant assignments to sites
   plantAssignments SitePlantAssignment[]
-
-  // PPE order items
-  ppeOrderItems ForemanPpeOrderItem[]
-
-  // Plant transfer audit trail
-  plantTransfers PlantTransfer[]
-
-  // Per-variant inventory (size × color)
-  variantStocks ProductVariantStock[]
-
-  colorVariants ProductColorVariant[]
+  ppeOrderItems    ForemanPpeOrderItem[]
+  plantTransfers   PlantTransfer[]
+  variantStocks    ProductVariantStock[]
+  colorVariants    ProductColorVariant[]
 
   @@unique([sku])
   @@index([isActive])
@@ -1492,6 +1486,7 @@ model ProcurementProduct {
   @@index([normalizedName])
   @@index([productType])
   @@index([isReturnable])
+  @@index([masterCatalogueProductId])
 }
 
 // ============================
@@ -1902,8 +1897,19 @@ model Material {
   supplierId String?
   supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
+  // Hybrid cutover: 1:1 link to the shadow ProcurementProduct that acts as the
+  // relational anchor for orders/deductions/plant/PPE/paint-plans/finishing.
+  // App-managed (no DB FK) so ProcurementProduct's schema is untouched.
+  procurementProductId String? @unique
+
   // Prices by supplier with size variants
   prices MaterialPrice[]
+
+  // Base variants for paints (White, Pastel, Deep, Clear, Neutral, etc.)
+  bases MaterialBase[]
+
+  // Catalogue price changes imported from supplier/order PDFs
+  priceHistory MaterialPriceHistory[]
 
   // Color variants for paints, etc.
   colorVariants MaterialColorVariant[]
@@ -1928,7 +1934,12 @@ model MaterialPrice {
   materialId String
   material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
-  // Optional: link to color variant
+  // Optional: link to paint base (White, Pastel, Deep, Clear, Neutral, etc.)
+  baseId String?
+  base   MaterialBase? @relation(fields: [baseId], references: [id], onDelete: SetNull)
+
+  // Deprecated for catalogue imports: prices are keyed by material + base + size,
+  // not by colour. Kept nullable for existing rows and older app surfaces.
   colorVariantId String?
   colorVariant   MaterialColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: SetNull)
 
@@ -1941,6 +1952,13 @@ model MaterialPrice {
   // Current price for this supplier/size/color combo
   price Decimal @db.Decimal(12, 2)
 
+  // Catalogue-import provenance
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  sourcePdf   String?
+  barcode     String?
+  sku         String?
+
   // Optional effective date range
   startsOn DateTime  @default(now())
   endsOn   DateTime?
@@ -1950,9 +1968,32 @@ model MaterialPrice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  history MaterialPriceHistory[]
+
   @@index([supplierId, materialId])
+  @@index([baseId])
+  @@index([colorVariantId])
   @@index([materialId, isActive])
   @@index([supplierId, isActive])
+  @@index([lastSeenAt])
+}
+
+model MaterialBase {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  name String
+
+  prices        MaterialPrice[]
+  priceHistory  MaterialPriceHistory[]
+  colorVariants MaterialColorVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([materialId, name])
+  @@index([materialId])
 }
 
 model MaterialColorVariant {
@@ -1960,18 +2001,57 @@ model MaterialColorVariant {
   materialId String
   material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
+  baseId String?
+  base   MaterialBase? @relation(fields: [baseId], references: [id], onDelete: SetNull)
+
   colorName String
   colorCode String?
   baseType  ColorBaseType @default(DEEP)
   isTinted  Boolean       @default(false)
 
-  prices MaterialPrice[]
+  prices       MaterialPrice[]
+  priceHistory MaterialPriceHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([materialId, colorName, baseType])
   @@index([materialId])
+  @@index([baseId])
+}
+
+model MaterialPriceHistory {
+  id String @id @default(cuid())
+
+  materialPriceId String?
+  materialPrice   MaterialPrice? @relation(fields: [materialPriceId], references: [id], onDelete: SetNull)
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  baseId String?
+  base   MaterialBase? @relation(fields: [baseId], references: [id], onDelete: SetNull)
+
+  colorVariantId String?
+  colorVariant   MaterialColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: SetNull)
+
+  unitSize Decimal?    @db.Decimal(12, 3)
+  uom      ProductUom?
+
+  oldPrice Decimal? @db.Decimal(12, 2)
+  newPrice Decimal  @db.Decimal(12, 2)
+
+  sourcePdf  String?
+  importedAt DateTime @default(now())
+
+  @@index([supplierId, materialId])
+  @@index([materialPriceId])
+  @@index([baseId])
+  @@index([colorVariantId])
+  @@index([importedAt])
 }
 
 // ============================
@@ -2275,30 +2355,159 @@ model SiteClaim {
 // PAINT PLANNING & USAGE
 // ============================
 
+enum PaintCoverageBasis {
+  PER_COAT
+  TOTAL_SYSTEM
+}
+
+enum PaintCoverageType {
+  THEORETICAL
+  PRACTICAL
+}
+
+enum ProductRateMode {
+  COVERAGE
+  CONSUMPTION
+  CONTAINER_COVERAGE
+}
+
+enum ProductRateUnit {
+  M2_PER_L
+  M2_PER_KG
+  L_PER_M2
+  KG_PER_M2
+  M2_PER_CONTAINER
+}
+
+enum ProductThicknessUnit {
+  MICRON
+  MM
+}
+
+enum TdsImportStatus {
+  UPLOADED
+  EXTRACTING
+  PARSING
+  NEEDS_REVIEW
+  APPROVED
+  IMPORTED
+  FAILED
+}
+
 model ProcurementProductCoverage {
   id String @id @default(cuid())
 
   productId String
   product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // optional size this coverage applies to, e.g. 20L
+  name String
+
+  applicationMethod  String?
+  applicationMethods Json?
+
+  rateMode ProductRateMode @default(COVERAGE)
+  rateUnit ProductRateUnit @default(M2_PER_L)
+
+  rateMin Decimal? @db.Decimal(12, 3)
+  rateMax Decimal? @db.Decimal(12, 3)
+
+  coverageType PaintCoverageType?
+
+  // Legacy coverage value already present in the database.
+  // Keep it during the migration so existing records are not deleted.
+  coverageM2 Decimal? @db.Decimal(12, 2)
+
+  coverageM2PerLitre Decimal? @db.Decimal(12, 3)
+
+  coverageBasis PaintCoverageBasis?
+
+  recommendedCoats Int?
+
+  recommendedCoatsMin Int?
+  recommendedCoatsMax Int?
+
+  thicknessMin  Decimal?              @db.Decimal(12, 3)
+  thicknessMax  Decimal?              @db.Decimal(12, 3)
+  thicknessUnit ProductThicknessUnit?
+
+  preferredPackSizeId String?
+  preferredPackSize   ProcurementProductPackSize? @relation("PreferredCoveragePackSize", fields: [preferredPackSizeId], references: [id], onDelete: SetNull)
+
   uom      ProductUom?
   unitSize Decimal?    @db.Decimal(12, 3)
 
-  // how many square metres this size covers
-  coverageM2 Decimal @db.Decimal(12, 2)
+  recommendedDftMicrons Decimal? @db.Decimal(12, 2)
+  recommendedWftMicrons Decimal? @db.Decimal(12, 2)
 
-  // optional note, e.g. "2 coats on smooth plaster"
+  sourceDocument        String?
+  sourceRevision        String?
+  sourceRevisionDate    DateTime?
+  sourcePage            Int?
+  manufacturerRateLabel String?
+  sourceSnippet         String?
+
   note String?
 
-  isActive Boolean @default(true)
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  coatSteps  ProcurementProductCoverageStep[]
   paintPlans SitePaintPlan[]
 
+  @@unique([productId, name])
+  @@index([productId])
   @@index([productId, isActive])
+  @@index([productId, isDefault])
+  @@index([rateMode])
+  @@index([rateUnit])
+  @@index([preferredPackSizeId])
+}
+
+model ProcurementProductPackSize {
+  id String @id @default(cuid())
+
+  productId String
+  product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity Decimal    @db.Decimal(12, 3)
+  uom      ProductUom
+  label    String?
+
+  isActive Boolean @default(true)
+
+  preferredByProfiles ProcurementProductCoverage[] @relation("PreferredCoveragePackSize")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, quantity, uom])
+  @@index([productId, isActive])
+}
+
+model ProcurementProductCoverageStep {
+  id String @id @default(cuid())
+
+  profileId String
+  profile   ProcurementProductCoverage @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  stepNumber Int
+  name       String
+
+  rateMin  Decimal?         @db.Decimal(12, 3)
+  rateMax  Decimal?         @db.Decimal(12, 3)
+  rateUnit ProductRateUnit?
+
+  wetFilmThicknessMicrons Decimal? @db.Decimal(12, 3)
+  dryFilmThicknessMicrons Decimal? @db.Decimal(12, 3)
+
+  applicationMethod String?
+  note              String?
+
+  @@unique([profileId, stepNumber])
+  @@index([profileId])
 }
 
 model ImportJob {
@@ -2345,6 +2554,16 @@ model SitePaintPlan {
 
   coats Int @default(1)
 
+  // Calculation snapshots
+  coverageNameSnapshot        String?
+  coverageM2PerLitreSnapshot  Decimal            @db.Decimal(12, 3)
+  coverageBasisSnapshot       PaintCoverageBasis @default(PER_COAT)
+  containerSizeLitresSnapshot Decimal            @db.Decimal(12, 3)
+  wastagePercent              Decimal            @default(0) @db.Decimal(5, 2)
+
+  requiredLitresBeforeWastage Decimal @db.Decimal(12, 2)
+  wastageLitres               Decimal @default(0) @db.Decimal(12, 2)
+
   requiredLitres     Decimal @db.Decimal(12, 2)
   requiredContainers Decimal @db.Decimal(12, 2)
   roundedContainers  Int
@@ -2363,6 +2582,90 @@ model SitePaintPlan {
 
   @@index([siteId, createdAt])
   @@index([productId])
+}
+
+model PaintTdsImport {
+  id String @id @default(cuid())
+
+  fileName String
+  fileUrl  String?
+  status   TdsImportStatus @default(UPLOADED)
+
+  extractedText String?
+  parsedJson    Json?
+  warnings      Json?
+
+  productCodeDetected  String?
+  productNameDetected  String?
+  manufacturerDetected String?
+  descriptionDetected  String?
+  revisionDetected     String?
+  revisionDateDetected DateTime?
+  packSizesLitres      Float[]   @default([])
+  packSizes            Json?
+
+  errorMessage String?
+
+  uploadedByUserId String?
+  uploadedByUser   User?   @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  // Selected supplier/brand for the catalogue product.
+  supplierId String?
+  supplier   Supplier? @relation("SupplierPaintTdsImports", fields: [supplierId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profiles PaintTdsImportProfile[]
+
+  @@index([supplierId])
+  @@index([manufacturerDetected])
+  @@index([status])
+  @@index([productCodeDetected])
+}
+
+model PaintTdsImportProfile {
+  id String @id @default(cuid())
+
+  importId String
+  import   PaintTdsImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  name String
+
+  applicationMethod  String?
+  applicationMethods Json?
+
+  rateMode ProductRateMode?
+  rateUnit ProductRateUnit?
+  rateMin  Decimal?         @db.Decimal(12, 3)
+  rateMax  Decimal?         @db.Decimal(12, 3)
+
+  coverageM2PerLitre Decimal?            @db.Decimal(12, 3)
+  coverageBasis      PaintCoverageBasis?
+  coverageType       PaintCoverageType?
+
+  recommendedCoats      Int?
+  recommendedCoatsMin   Int?
+  recommendedCoatsMax   Int?
+  recommendedDftMicrons Decimal? @db.Decimal(12, 2)
+  recommendedWftMicrons Decimal? @db.Decimal(12, 2)
+
+  thicknessMin  Decimal?              @db.Decimal(12, 3)
+  thicknessMax  Decimal?              @db.Decimal(12, 3)
+  thicknessUnit ProductThicknessUnit?
+
+  sourcePage            Int?
+  manufacturerRateLabel String?
+  sourceSnippet         String?
+  note                  String?
+  confidence            Decimal? @db.Decimal(5, 4)
+
+  isSelected Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([importId])
 }
 
 model SitePaintUsage {
@@ -3002,4 +3305,138 @@ model SiteProgrammeItem {
   @@index([plannedFinishDate])
   @@index([actualFinishDate])
   @@index([status])
+}
+
+enum MasterProductUsage {
+  INT     @map("Int")
+  EXT     @map("Ext")
+  INT_EXT @map("Int/Ext")
+}
+
+model MasterCatalogueProduct {
+  id             String  @id @default(cuid())
+  supplierId     String
+  name           String
+  normalizedName String
+  description    String?
+
+  // Keep the legacy category text during the transition so existing code does
+  // not break. New code should use categoryId/categoryRef.
+  category    String           @default("Paints")
+  categoryId  String?
+  categoryRef ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  sku          String?
+  thumbnailUrl String?
+
+  productType  ProductType @default(MATERIAL)
+  isReturnable Boolean     @default(false)
+
+  colors String[] @default([])
+  sizes  String[] @default([])
+
+  stockQty Int @default(0)
+
+  uom      ProductUom?
+  unitSize Decimal?    @db.Decimal(12, 3)
+
+  isDeductible    Boolean @default(true)
+  deductionSplits Int     @default(1)
+
+  usage    MasterProductUsage @default(INT_EXT)
+  isActive Boolean            @default(true)
+
+  // During stage 1 this remains the brand/default supplier used by the current
+  // catalogue. Vendor-specific prices stay outside the master identity.
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  finishes            MasterProductFinish[]
+  masterProductBases  MasterProductBase[]
+  masterProductPrices MasterProductPrice[]
+
+  // Compatibility record used by current orders, plant, PPE and paint planning.
+  legacyProcurementProduct ProcurementProduct? @relation("ProcurementProductMaster")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([supplierId, normalizedName])
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([name])
+  @@index([normalizedName])
+  @@index([category])
+  @@index([sku])
+  @@index([productType])
+  @@index([usage])
+  @@index([isActive])
+}
+
+model MasterProductFinish {
+  id             String @id @default(cuid())
+  productId      String
+  name           String
+  normalizedName String
+
+  product MasterCatalogueProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  masterProductPrices MasterProductPrice[]
+
+  @@unique([productId, normalizedName])
+  @@index([productId])
+  @@index([normalizedName])
+}
+
+model MasterProductBase {
+  id             String @id @default(cuid())
+  productId      String
+  name           String
+  normalizedName String
+
+  product MasterCatalogueProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  prices  MasterProductPrice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, normalizedName])
+  @@index([productId])
+  @@index([normalizedName])
+}
+
+model MasterProductPrice {
+  id        String @id @default(cuid())
+  lookupKey String @unique
+
+  productId String
+  product   MasterCatalogueProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  finishId String?
+  finish   MasterProductFinish? @relation(fields: [finishId], references: [id], onDelete: SetNull)
+
+  baseId String
+  base   MasterProductBase @relation(fields: [baseId], references: [id], onDelete: Restrict)
+
+  unitSize Decimal    @db.Decimal(12, 3)
+  uom      ProductUom
+  price    Decimal    @db.Decimal(12, 2)
+  currency String     @default("ZAR")
+
+  effectiveFrom DateTime
+  sourceFile    String?
+  sourceRow     Int?
+  note          String?
+  isActive      Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([finishId])
+  @@index([baseId])
+  @@index([productId, baseId, unitSize, uom])
+  @@index([effectiveFrom])
+  @@index([isActive])
 }

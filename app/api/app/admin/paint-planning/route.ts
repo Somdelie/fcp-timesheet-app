@@ -29,7 +29,10 @@ async function getAuth(req: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
   if (session?.user && (role === "ADMIN" || role === "OFFICE"))
-    return { id: (session.user as any).id as string, role: role as "ADMIN" | "OFFICE" };
+    return {
+      id: (session.user as any).id as string,
+      role: role as "ADMIN" | "OFFICE",
+    };
   return null;
 }
 
@@ -49,7 +52,10 @@ function serialize(row: any) {
 export async function GET(req: Request) {
   const auth = await getAuth(req);
   if (!auth)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS },
+    );
 
   const { searchParams } = new URL(req.url);
   const siteId = searchParams.get("siteId") || undefined;
@@ -66,11 +72,27 @@ export async function GET(req: Request) {
       site: { select: { id: true, name: true, code: true } },
       product: { select: { id: true, name: true, uom: true, unitSize: true } },
       coverage: {
-        select: { id: true, coverageM2: true, uom: true, unitSize: true, note: true },
+        select: {
+          id: true,
+          name: true,
+          coverageM2PerLitre: true,
+          coverageBasis: true,
+          coverageType: true,
+          recommendedCoats: true,
+          uom: true,
+          unitSize: true,
+          note: true,
+        },
       },
       usages: {
         orderBy: { usedOn: "desc" },
-        select: { id: true, usedLitres: true, usedContainers: true, note: true, usedOn: true },
+        select: {
+          id: true,
+          usedLitres: true,
+          usedContainers: true,
+          note: true,
+          usedOn: true,
+        },
       },
     },
   });
@@ -90,7 +112,11 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json(
-    { plans: serialize(plans), sites: serialize(sites), products: serialize(products) },
+    {
+      plans: serialize(plans),
+      sites: serialize(sites),
+      products: serialize(products),
+    },
     { headers: CORS },
   );
 }
@@ -99,7 +125,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = await getAuth(req);
   if (!auth)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS },
+    );
 
   const body = await req.json();
   const {
@@ -110,33 +139,69 @@ export async function POST(req: Request) {
     productId,
     coverageId,
     coats,
-    coverageM2PerUnit,
+    coverageBasis,
+    coverageNameSnapshot,
+    coverageM2PerLitre,
     unitSizeLitres,
+    containerSizeLitres,
+    wastagePercent,
     costPerContainer,
     note,
   } = body;
 
-  if (!siteId) return NextResponse.json({ error: "Site is required" }, { status: 400, headers: CORS });
-  if (!productId) return NextResponse.json({ error: "Product is required" }, { status: 400, headers: CORS });
-  if (!description) return NextResponse.json({ error: "Description is required" }, { status: 400, headers: CORS });
+  if (!siteId)
+    return NextResponse.json(
+      { error: "Site is required" },
+      { status: 400, headers: CORS },
+    );
+  if (!productId)
+    return NextResponse.json(
+      { error: "Product is required" },
+      { status: 400, headers: CORS },
+    );
+  if (!description)
+    return NextResponse.json(
+      { error: "Description is required" },
+      { status: 400, headers: CORS },
+    );
 
   const parsedAreaM2 = Number(areaM2);
   const parsedCoats = Math.max(1, Math.round(Number(coats) || 1));
-  const parsedCoverageM2PerUnit = Number(coverageM2PerUnit);
-  const parsedUnitSizeLitres = Number(unitSizeLitres);
+  const parsedCoverageM2PerLitre = Number(coverageM2PerLitre);
+  const parsedContainerSizeLitres = Number(
+    containerSizeLitres ?? unitSizeLitres,
+  );
+  const parsedWastagePercent = Math.max(0, Number(wastagePercent ?? 0));
+  const parsedCoverageBasis =
+    coverageBasis === "TOTAL_SYSTEM" ? "TOTAL_SYSTEM" : "PER_COAT";
 
   if (!parsedAreaM2 || parsedAreaM2 <= 0)
-    return NextResponse.json({ error: "Area must be positive" }, { status: 400, headers: CORS });
-  if (!parsedCoverageM2PerUnit || parsedCoverageM2PerUnit <= 0)
-    return NextResponse.json({ error: "Coverage rate must be positive" }, { status: 400, headers: CORS });
-  if (!parsedUnitSizeLitres || parsedUnitSizeLitres <= 0)
-    return NextResponse.json({ error: "Unit size must be positive" }, { status: 400, headers: CORS });
+    return NextResponse.json(
+      { error: "Area must be positive" },
+      { status: 400, headers: CORS },
+    );
+  if (!parsedCoverageM2PerLitre || parsedCoverageM2PerLitre <= 0)
+    return NextResponse.json(
+      { error: "Coverage rate must be positive" },
+      { status: 400, headers: CORS },
+    );
+  if (!parsedContainerSizeLitres || parsedContainerSizeLitres <= 0)
+    return NextResponse.json(
+      { error: "Unit size must be positive" },
+      { status: 400, headers: CORS },
+    );
 
-  const effectiveArea = parsedAreaM2 * parsedCoats;
-  const containersNeeded = effectiveArea / parsedCoverageM2PerUnit;
-  const requiredLitres = containersNeeded * parsedUnitSizeLitres;
+  const coatFactor = parsedCoverageBasis === "PER_COAT" ? parsedCoats : 1;
+  const requiredLitresBeforeWastage =
+    (parsedAreaM2 * coatFactor) / parsedCoverageM2PerLitre;
+  const wastageLitres =
+    requiredLitresBeforeWastage * (parsedWastagePercent / 100);
+  const requiredLitres = requiredLitresBeforeWastage + wastageLitres;
+  const containersNeeded = requiredLitres / parsedContainerSizeLitres;
   const roundedContainers = Math.ceil(containersNeeded);
-  const parsedCostPerContainer = costPerContainer ? Number(costPerContainer) : null;
+  const parsedCostPerContainer = costPerContainer
+    ? Number(costPerContainer)
+    : null;
   const estimatedCost =
     parsedCostPerContainer && parsedCostPerContainer > 0
       ? roundedContainers * parsedCostPerContainer
@@ -151,6 +216,15 @@ export async function POST(req: Request) {
       productId,
       coverageId: coverageId || null,
       coats: parsedCoats,
+      coverageNameSnapshot: coverageNameSnapshot || null,
+      coverageM2PerLitreSnapshot: Number(parsedCoverageM2PerLitre.toFixed(3)),
+      coverageBasisSnapshot: parsedCoverageBasis,
+      containerSizeLitresSnapshot: Number(parsedContainerSizeLitres.toFixed(3)),
+      wastagePercent: Number(parsedWastagePercent.toFixed(2)),
+      requiredLitresBeforeWastage: Number(
+        requiredLitresBeforeWastage.toFixed(2),
+      ),
+      wastageLitres: Number(wastageLitres.toFixed(2)),
       requiredLitres: parseFloat(requiredLitres.toFixed(2)),
       requiredContainers: parseFloat(containersNeeded.toFixed(2)),
       roundedContainers,
@@ -160,5 +234,8 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ ok: true, id: plan.id }, { status: 201, headers: CORS });
+  return NextResponse.json(
+    { ok: true, id: plan.id },
+    { status: 201, headers: CORS },
+  );
 }

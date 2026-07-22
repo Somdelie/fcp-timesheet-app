@@ -64,9 +64,24 @@ function siteHasFinishingSchedule(s: {
 }
 
 function serializeSite(s: any) {
-  // Get supervisor name from first active assignment
-  const supervisorName =
-    s.supervisorAssignments?.[0]?.supervisor?.user?.name ?? null;
+  const activeSupervisorAssignments = s.supervisorAssignments ?? [];
+
+  const paintingSupervisor =
+    activeSupervisorAssignments.find(
+      (assignment: any) =>
+        String(assignment.team ?? "").toUpperCase() === "PAINTERS",
+    ) ?? activeSupervisorAssignments[0];
+
+  const supervisorName = paintingSupervisor?.supervisor?.user?.name ?? null;
+
+  const supervisorNames = activeSupervisorAssignments
+    .map((assignment: any) => assignment.supervisor?.user?.name)
+    .filter((name: unknown): name is string => Boolean(name));
+
+  const supervisors = activeSupervisorAssignments.map((assignment: any) => ({
+    name: assignment.supervisor?.user?.name ?? "Unknown",
+    team: assignment.team ?? null,
+  }));
   // Calculate total wages from all attendance scans
   const totalWages = (s.attendanceScans ?? []).reduce(
     (sum: number, scan: { dayRateAtScan: unknown }) =>
@@ -77,7 +92,8 @@ function serializeSite(s: any) {
     (s.attendanceScans ?? [])
       .map((scan: { workDate?: unknown }) => {
         const workDate = scan.workDate;
-        if (workDate instanceof Date) return workDate.toISOString().slice(0, 10);
+        if (workDate instanceof Date)
+          return workDate.toISOString().slice(0, 10);
         if (workDate) return String(workDate).slice(0, 10);
         return null;
       })
@@ -168,6 +184,8 @@ function serializeSite(s: any) {
         ? s.createdAt.toISOString()
         : String(s.createdAt),
     supervisorName,
+    supervisorNames,
+    supervisors,
     daysWorked,
     totalWages,
     totalMaterialCost,
@@ -273,7 +291,11 @@ export async function listSites(input?: {
       stagePct: true,
       createdAt: true,
       supervisorAssignments: {
+        where: {
+          endsOn: null,
+        },
         select: {
+          team: true,
           supervisor: {
             select: {
               user: {
@@ -283,7 +305,6 @@ export async function listSites(input?: {
           },
         },
         orderBy: { startsOn: "desc" },
-        take: 1,
       },
       attendanceScans: {
         where: hasDateFilter ? { workDate: dateFilter } : undefined,
@@ -328,41 +349,45 @@ export async function listSites(input?: {
 
   const [histWages, histMaterial, periodClaims, latestPeriodClaims] =
     await Promise.all([
-    prisma.historicalSiteCost.groupBy({
-      by: ["siteId"],
-      where: { siteId: { in: siteIds }, category: "LABOUR", ...histDateWhere },
-      _sum: { amount: true },
-    }),
-    prisma.historicalSiteCost.groupBy({
-      by: ["siteId"],
-      where: {
-        siteId: { in: siteIds },
-        category: { not: "LABOUR" },
-        ...histDateWhere,
-      },
-      _sum: { amount: true },
-    }),
-    prisma.siteClaim.groupBy({
-      by: ["siteId"],
-      where: {
-        siteId: { in: siteIds },
-        ...(hasDateFilter ? { claimDate: dateFilter } : {}),
-      },
-      _sum: { amountClaimed: true, amountReceived: true },
-    }),
-    prisma.siteClaim.findMany({
-      where: {
-        siteId: { in: siteIds },
-        ...(hasDateFilter ? { claimDate: dateFilter } : {}),
-      },
-      orderBy: { claimDate: "desc" },
-      select: {
-        siteId: true,
-        claimDate: true,
-        status: true,
-      },
-    }),
-  ]);
+      prisma.historicalSiteCost.groupBy({
+        by: ["siteId"],
+        where: {
+          siteId: { in: siteIds },
+          category: "LABOUR",
+          ...histDateWhere,
+        },
+        _sum: { amount: true },
+      }),
+      prisma.historicalSiteCost.groupBy({
+        by: ["siteId"],
+        where: {
+          siteId: { in: siteIds },
+          category: { not: "LABOUR" },
+          ...histDateWhere,
+        },
+        _sum: { amount: true },
+      }),
+      prisma.siteClaim.groupBy({
+        by: ["siteId"],
+        where: {
+          siteId: { in: siteIds },
+          ...(hasDateFilter ? { claimDate: dateFilter } : {}),
+        },
+        _sum: { amountClaimed: true, amountReceived: true },
+      }),
+      prisma.siteClaim.findMany({
+        where: {
+          siteId: { in: siteIds },
+          ...(hasDateFilter ? { claimDate: dateFilter } : {}),
+        },
+        orderBy: { claimDate: "desc" },
+        select: {
+          siteId: true,
+          claimDate: true,
+          status: true,
+        },
+      }),
+    ]);
 
   const histWagesMap = new Map(
     histWages.map((r) => [r.siteId, Number(r._sum.amount ?? 0)]),
@@ -528,7 +553,10 @@ export async function createSite(input: {
     return { ok: false as const, error: "Invalid assignment type." };
   }
   if (assignmentType && !assignmentUserId) {
-    return { ok: false as const, error: "Please select who manages this site." };
+    return {
+      ok: false as const,
+      error: "Please select who manages this site.",
+    };
   }
   if (latitude !== null && !isValidLatitude(latitude)) {
     return {
@@ -687,7 +715,9 @@ export async function updateSiteLocation(input: {
   const longitude =
     input.longitude === undefined ? undefined : cleanNumber(input.longitude);
   const specAvailable =
-    input.specAvailable === undefined ? undefined : Boolean(input.specAvailable);
+    input.specAvailable === undefined
+      ? undefined
+      : Boolean(input.specAvailable);
   const finishingScheduleDone =
     input.finishingScheduleDone === undefined
       ? undefined
@@ -835,11 +865,20 @@ export async function listOngoingSites() {
       stagePct: true,
       createdAt: true,
       supervisorAssignments: {
+        where: {
+          endsOn: null,
+        },
         select: {
-          supervisor: { select: { user: { select: { name: true } } } },
+          team: true,
+          supervisor: {
+            select: {
+              user: {
+                select: { name: true },
+              },
+            },
+          },
         },
         orderBy: { startsOn: "desc" },
-        take: 1,
       },
       attendanceScans: { select: { dayRateAtScan: true } },
       siteProductOrders: {
@@ -1006,51 +1045,6 @@ export async function updateSiteStageIndex(input: {
   } catch {
     return { ok: false as const, error: "Failed to update stage." };
   }
-}
-
-/**
- * Assign supervisor to a site (ADMIN only)
- */
-export async function assignSupervisorToSite(input: {
-  supervisorUserId: string; // user.id
-  siteId: string;
-}) {
-  const auth = await requireServerAuth();
-  if (auth.role !== "ADMIN") {
-    return { ok: false as const, error: "Only admin can assign supervisors." };
-  }
-
-  const supervisorUserId = clean(input.supervisorUserId);
-  const siteId = clean(input.siteId);
-
-  const supervisor = await prisma.supervisor.findUnique({
-    where: { userId: supervisorUserId },
-    select: { id: true },
-  });
-
-  if (!supervisor) {
-    return { ok: false as const, error: "Supervisor not found." };
-  }
-
-  // Close any active assignment first (optional hygiene)
-  await prisma.supervisorSiteAssignment.updateMany({
-    where: {
-      supervisorId: supervisor.id,
-      siteId,
-      endsOn: null,
-    },
-    data: { endsOn: new Date() },
-  });
-
-  await prisma.supervisorSiteAssignment.create({
-    data: {
-      supervisor: { connect: { id: supervisor.id } },
-      site: { connect: { id: siteId } },
-      startsOn: new Date(),
-    },
-  });
-
-  return { ok: true as const };
 }
 
 export async function listSiteDays(input: {

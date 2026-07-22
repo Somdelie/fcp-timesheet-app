@@ -32,12 +32,17 @@ function serialize(row: any) {
 export async function listCoverageProfiles(productId?: string) {
   await requireServerAuth();
 
-  const where: any = { isActive: true };
+  const where: any = {
+    isActive: true,
+    rateMode: "COVERAGE",
+    rateUnit: "M2_PER_L",
+    coverageM2PerLitre: { not: null },
+  };
   if (productId) where.productId = productId;
 
   const rows = await prisma.procurementProductCoverage.findMany({
     where,
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     include: {
       product: { select: { id: true, name: true, uom: true, unitSize: true } },
     },
@@ -49,10 +54,23 @@ export async function listCoverageProfiles(productId?: string) {
 export async function upsertCoverageProfile(input: {
   id?: string;
   productId: string;
+  name?: string | null;
+  applicationMethod?: string | null;
+  coverageType?: "THEORETICAL" | "PRACTICAL";
+  coverageBasis?: "PER_COAT" | "TOTAL_SYSTEM";
+  recommendedCoats?: number | null;
   uom?: string | null;
   unitSize?: number | null;
-  coverageM2: number;
+  coverageM2PerLitre?: number | null;
+  coverageM2?: number | null;
+  recommendedDftMicrons?: number | null;
+  recommendedWftMicrons?: number | null;
+  sourceDocument?: string | null;
+  sourceRevision?: string | null;
+  sourceRevisionDate?: string | null;
+  sourcePage?: number | null;
   note?: string | null;
+  isDefault?: boolean;
 }) {
   const auth = await requireServerAuth();
   if (auth.role !== "ADMIN" && auth.role !== "OFFICE") {
@@ -62,17 +80,74 @@ export async function upsertCoverageProfile(input: {
   const productId = clean(input.productId);
   if (!productId) return { ok: false as const, error: "Product is required." };
 
-  const coverageM2 = cleanDecimal(input.coverageM2);
-  if (!coverageM2 || coverageM2 <= 0)
+  const unitSize = cleanDecimal(input.unitSize);
+  const providedPerLitre = cleanDecimal(input.coverageM2PerLitre);
+  const providedPerUnit = cleanDecimal(input.coverageM2);
+  const coverageM2PerLitre =
+    providedPerLitre && providedPerLitre > 0
+      ? providedPerLitre
+      : providedPerUnit && providedPerUnit > 0 && unitSize && unitSize > 0
+        ? providedPerUnit / unitSize
+        : null;
+
+  if (!coverageM2PerLitre || coverageM2PerLitre <= 0)
     return { ok: false as const, error: "Coverage must be positive." };
+
+  const name = clean(input.name) || `Coverage ${new Date().toISOString()}`;
+  const recommendedCoats = Math.max(
+    1,
+    Math.round(Number(input.recommendedCoats) || 1),
+  );
+  const recommendedDftMicrons = cleanDecimal(input.recommendedDftMicrons);
+  const recommendedWftMicrons = cleanDecimal(input.recommendedWftMicrons);
 
   const data: any = {
     productId,
-    coverageM2,
+    name,
+    applicationMethod: clean(input.applicationMethod) || null,
+    applicationMethods: input.applicationMethod
+      ? [clean(input.applicationMethod)]
+      : undefined,
+    rateMode: "COVERAGE",
+    rateUnit: "M2_PER_L",
+    rateMin: coverageM2PerLitre,
+    rateMax: coverageM2PerLitre,
+    coverageType: input.coverageType ?? "PRACTICAL",
+    coverageM2: coverageM2PerLitre,
+    coverageM2PerLitre,
+    coverageBasis: input.coverageBasis ?? "PER_COAT",
+    recommendedCoats,
+    recommendedCoatsMin: recommendedCoats,
+    recommendedCoatsMax: recommendedCoats,
     uom: input.uom || null,
-    unitSize: input.unitSize != null ? input.unitSize : null,
+    unitSize: unitSize != null ? unitSize : null,
+    recommendedDftMicrons,
+    recommendedWftMicrons,
+    thicknessMin: recommendedDftMicrons ?? recommendedWftMicrons,
+    thicknessMax: recommendedDftMicrons ?? recommendedWftMicrons,
+    thicknessUnit:
+      recommendedDftMicrons != null || recommendedWftMicrons != null
+        ? "MICRON"
+        : null,
+    sourceDocument: clean(input.sourceDocument) || null,
+    sourceRevision: clean(input.sourceRevision) || null,
+    sourceRevisionDate: input.sourceRevisionDate
+      ? new Date(input.sourceRevisionDate)
+      : null,
+    sourcePage:
+      input.sourcePage != null && Number.isFinite(Number(input.sourcePage))
+        ? Math.max(1, Math.round(Number(input.sourcePage)))
+        : null,
     note: clean(input.note) || null,
+    isDefault: Boolean(input.isDefault),
   };
+
+  if (data.isDefault) {
+    await prisma.procurementProductCoverage.updateMany({
+      where: { productId, isDefault: true },
+      data: { isDefault: false },
+    });
+  }
 
   if (input.id) {
     const row = await prisma.procurementProductCoverage.update({
@@ -107,7 +182,13 @@ export async function listPaintPlans(filters?: {
       coverage: {
         select: {
           id: true,
-          coverageM2: true,
+          name: true,
+          rateMode: true,
+          rateUnit: true,
+          coverageM2PerLitre: true,
+          coverageBasis: true,
+          coverageType: true,
+          recommendedCoats: true,
           uom: true,
           unitSize: true,
           note: true,
@@ -140,7 +221,11 @@ export async function getPaintPlan(id: string) {
       coverage: {
         select: {
           id: true,
-          coverageM2: true,
+          name: true,
+          coverageM2PerLitre: true,
+          coverageBasis: true,
+          coverageType: true,
+          recommendedCoats: true,
           uom: true,
           unitSize: true,
           note: true,
@@ -173,8 +258,13 @@ export async function createPaintPlan(input: {
   productId: string;
   coverageId?: string | null;
   coats: number;
-  coverageM2PerUnit: number;
-  unitSizeLitres: number;
+  coverageBasis?: "PER_COAT" | "TOTAL_SYSTEM";
+  coverageNameSnapshot?: string | null;
+  coverageM2PerLitre?: number | null;
+  coverageM2PerUnit?: number | null;
+  unitSizeLitres?: number | null;
+  containerSizeLitres?: number | null;
+  wastagePercent?: number | null;
   costPerContainer?: number | null;
   note?: string | null;
 }) {
@@ -196,17 +286,73 @@ export async function createPaintPlan(input: {
     return { ok: false as const, error: "Area must be positive." };
 
   const coats = Math.max(1, Math.round(Number(input.coats) || 1));
-  const coverageM2PerUnit = cleanDecimal(input.coverageM2PerUnit);
-  const unitSizeLitres = cleanDecimal(input.unitSizeLitres);
+  const containerSizeLitres =
+    cleanDecimal(input.containerSizeLitres) ??
+    cleanDecimal(input.unitSizeLitres);
 
-  if (!coverageM2PerUnit || coverageM2PerUnit <= 0)
+  let coverageBasis: "PER_COAT" | "TOTAL_SYSTEM" =
+    input.coverageBasis ?? "PER_COAT";
+
+  let coverageNameSnapshot = clean(input.coverageNameSnapshot) || null;
+
+  let coverageM2PerLitre = cleanDecimal(input.coverageM2PerLitre);
+  const coverageM2PerUnit = cleanDecimal(input.coverageM2PerUnit);
+  if (!coverageM2PerLitre && coverageM2PerUnit && containerSizeLitres) {
+    coverageM2PerLitre = coverageM2PerUnit / containerSizeLitres;
+  }
+
+  if (input.coverageId) {
+    const selectedCoverage = await prisma.procurementProductCoverage.findUnique(
+      {
+        where: { id: input.coverageId },
+        select: {
+          id: true,
+          productId: true,
+          name: true,
+          rateMode: true,
+          rateUnit: true,
+          coverageM2PerLitre: true,
+          coverageBasis: true,
+        },
+      },
+    );
+
+    if (
+      !selectedCoverage ||
+      selectedCoverage.productId !== productId ||
+      selectedCoverage.rateMode !== "COVERAGE" ||
+      selectedCoverage.rateUnit !== "M2_PER_L" ||
+      selectedCoverage.coverageM2PerLitre === null
+    ) {
+      return {
+        ok: false as const,
+        error: "Select a compatible m²/L coverage profile.",
+      };
+    }
+
+    if (!coverageM2PerLitre || coverageM2PerLitre <= 0) {
+      coverageM2PerLitre = Number(selectedCoverage.coverageM2PerLitre);
+    }
+
+    if (!coverageNameSnapshot) coverageNameSnapshot = selectedCoverage.name;
+    if (!input.coverageBasis) {
+      coverageBasis = selectedCoverage.coverageBasis ?? "PER_COAT";
+    }
+  }
+
+  const wastagePercent = Math.max(0, cleanDecimal(input.wastagePercent) ?? 0);
+
+  if (!coverageM2PerLitre || coverageM2PerLitre <= 0)
     return { ok: false as const, error: "Coverage rate must be positive." };
-  if (!unitSizeLitres || unitSizeLitres <= 0)
+  if (!containerSizeLitres || containerSizeLitres <= 0)
     return { ok: false as const, error: "Unit size must be positive." };
 
-  const effectiveArea = areaM2 * coats;
-  const containersNeeded = effectiveArea / coverageM2PerUnit;
-  const requiredLitres = containersNeeded * unitSizeLitres;
+  const coatFactor = coverageBasis === "PER_COAT" ? coats : 1;
+  const requiredLitresBeforeWastage =
+    (areaM2 * coatFactor) / coverageM2PerLitre;
+  const wastageLitres = requiredLitresBeforeWastage * (wastagePercent / 100);
+  const requiredLitres = requiredLitresBeforeWastage + wastageLitres;
+  const containersNeeded = requiredLitres / containerSizeLitres;
   const roundedContainers = Math.ceil(containersNeeded);
 
   const costPerContainer = cleanDecimal(input.costPerContainer);
@@ -223,6 +369,15 @@ export async function createPaintPlan(input: {
       productId,
       coverageId: clean(input.coverageId) || null,
       coats,
+      coverageNameSnapshot,
+      coverageM2PerLitreSnapshot: parseFloat(coverageM2PerLitre.toFixed(3)),
+      coverageBasisSnapshot: coverageBasis,
+      containerSizeLitresSnapshot: parseFloat(containerSizeLitres.toFixed(3)),
+      wastagePercent: parseFloat(wastagePercent.toFixed(2)),
+      requiredLitresBeforeWastage: parseFloat(
+        requiredLitresBeforeWastage.toFixed(2),
+      ),
+      wastageLitres: parseFloat(wastageLitres.toFixed(2)),
       requiredLitres: parseFloat(requiredLitres.toFixed(2)),
       requiredContainers: parseFloat(containersNeeded.toFixed(2)),
       roundedContainers,
@@ -233,6 +388,7 @@ export async function createPaintPlan(input: {
   });
 
   revalidatePath("/admin/paint-planning");
+  revalidatePath("/admin/sites-operations");
   return { ok: true as const, id: plan.id };
 }
 

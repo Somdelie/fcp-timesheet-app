@@ -26,6 +26,7 @@ async function getAuth(req: Request) {
     if (p && (p.role === "ADMIN" || p.role === "OFFICE"))
       return { id: p.sub, role: p.role as "ADMIN" | "OFFICE" };
   }
+
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
   if (session?.user && (role === "ADMIN" || role === "OFFICE"))
@@ -33,12 +34,43 @@ async function getAuth(req: Request) {
       id: (session.user as any).id as string,
       role: role as "ADMIN" | "OFFICE",
     };
+
   return null;
+}
+
+function serialiseSupplierProductPrice(updated: any) {
+  const master = updated.product?.masterCatalogueProduct ?? null;
+
+  return {
+    ...updated,
+    productId: updated.productId,
+    masterCatalogueProductId:
+      updated.product?.masterCatalogueProductId ?? master?.id ?? null,
+    catalogueSource: master ? "MASTER" : "LEGACY",
+    price: decimalToNumber(updated.price),
+    unitSize: updated.unitSize ? decimalToNumber(updated.unitSize) : null,
+    product: {
+      ...updated.product,
+      name: master?.name ?? updated.product.name,
+      sku: master?.sku ?? updated.product.sku,
+      uom: master?.uom ?? updated.product.uom,
+      unitSize:
+        master?.unitSize != null
+          ? decimalToNumber(master.unitSize)
+          : updated.product.unitSize
+            ? decimalToNumber(updated.product.unitSize)
+            : null,
+      masterCatalogueProductId:
+        updated.product.masterCatalogueProductId ?? master?.id ?? null,
+      catalogueSource: master ? "MASTER" : "LEGACY",
+      masterCatalogueProduct: undefined,
+    },
+  };
 }
 
 /**
  * PATCH /api/app/admin/supplier-prices/[id]
- * Body: { price?, startsOn?, endsOn?, isActive? }
+ * Body: { price?, startsOn?, endsOn?, isActive?, uom?, unitSize? }
  */
 export async function PATCH(
   req: Request,
@@ -63,6 +95,13 @@ export async function PATCH(
       unitSize?: number | string | null;
     };
 
+    if (price !== undefined && Number(price) < 0) {
+      return NextResponse.json(
+        { error: "price must be a non-negative number" },
+        { status: 400, headers: CORS },
+      );
+    }
+
     const data: Record<string, unknown> = {};
     if (price !== undefined) data.price = Number(price);
     if (startsOn !== undefined) data.startsOn = new Date(startsOn);
@@ -80,7 +119,17 @@ export async function PATCH(
         include: {
           supplier: { select: { id: true, name: true } },
           product: {
-            select: { id: true, name: true, uom: true, unitSize: true },
+            include: {
+              masterCatalogueProduct: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  uom: true,
+                  unitSize: true,
+                },
+              },
+            },
           },
         },
       });
@@ -88,36 +137,28 @@ export async function PATCH(
       return NextResponse.json(
         {
           ok: true,
-          data: {
-            ...updated,
-            price: decimalToNumber(updated.price),
-            unitSize: updated.unitSize
-              ? decimalToNumber(updated.unitSize)
-              : null,
-            product: {
-              ...updated.product,
-              unitSize: updated.product.unitSize
-                ? decimalToNumber(updated.product.unitSize)
-                : null,
-            },
-          },
+          data: serialiseSupplierProductPrice(updated),
         },
         { headers: CORS },
       );
     } catch (e: any) {
-      // If not found in supplierProductPrice, try MaterialPrice (legacy material prices)
       if (e?.code === "P2025") {
         try {
+          const materialData: Record<string, unknown> = {};
+          if (price !== undefined) materialData.price = Number(price);
+          if (uom !== undefined) materialData.uom = uom || null;
+          if (unitSize !== undefined)
+            materialData.unitSize =
+              unitSize != null && unitSize !== "" ? Number(unitSize) : null;
+          if (startsOn !== undefined)
+            materialData.startsOn = new Date(startsOn);
+          if (endsOn !== undefined)
+            materialData.endsOn = endsOn ? new Date(endsOn) : null;
+          if (isActive !== undefined) materialData.isActive = isActive;
+
           const matUpdated = await prisma.materialPrice.update({
             where: { id },
-            data: {
-              price: data.price as any,
-              uom: (data.uom as any) || undefined,
-              unitSize: data.unitSize as any,
-              startsOn: data.startsOn as any,
-              endsOn: data.endsOn as any,
-              isActive: data.isActive as any,
-            },
+            data: materialData,
             include: {
               supplier: { select: { id: true, name: true } },
               material: {
@@ -135,6 +176,9 @@ export async function PATCH(
               ok: true,
               data: {
                 ...matUpdated,
+                productId: matUpdated.materialId,
+                masterCatalogueProductId: null,
+                catalogueSource: "MATERIAL",
                 price: decimalToNumber(matUpdated.price),
                 unitSize: matUpdated.unitSize
                   ? decimalToNumber(matUpdated.unitSize)
@@ -143,8 +187,12 @@ export async function PATCH(
                   id: matUpdated.material.id,
                   name: matUpdated.material.name,
                   sku: matUpdated.material.sku,
-                  uom: null,
-                  unitSize: null,
+                  uom: matUpdated.uom,
+                  unitSize: matUpdated.unitSize
+                    ? decimalToNumber(matUpdated.unitSize)
+                    : null,
+                  masterCatalogueProductId: null,
+                  catalogueSource: "MATERIAL",
                 },
               },
             },
@@ -156,6 +204,7 @@ export async function PATCH(
               { error: "Price record not found" },
               { status: 404, headers: CORS },
             );
+
           console.error("PATCH material-price error:", e2);
           return NextResponse.json(
             { error: "Internal error" },
@@ -163,6 +212,7 @@ export async function PATCH(
           );
         }
       }
+
       throw e;
     }
   } catch (e: any) {
@@ -171,6 +221,7 @@ export async function PATCH(
         { error: "Price record not found" },
         { status: 404, headers: CORS },
       );
+
     console.error("PATCH supplier-price error:", e);
     return NextResponse.json(
       { error: "Internal error" },
@@ -210,6 +261,7 @@ export async function DELETE(
         { error: "Price record not found" },
         { status: 404, headers: CORS },
       );
+
     console.error("DELETE supplier-price error:", e);
     return NextResponse.json(
       { error: "Internal error" },

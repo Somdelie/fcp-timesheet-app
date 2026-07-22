@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   listPaintPlans,
   listSitesForSelect,
@@ -19,6 +20,7 @@ import type {
 } from "@/types/paint-planning";
 
 export default function PaintPlanningPage() {
+  const pathname = usePathname();
   const [sites, setSites] = useState<SiteOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [plans, setPlans] = useState<PaintPlan[]>([]);
@@ -67,6 +69,11 @@ export default function PaintPlanningPage() {
         (p.boqReference && p.boqReference.toLowerCase().includes(q)),
     );
   }, [plans, query]);
+
+  const returnTo =
+    pathname === "/admin/sites-operations"
+      ? "/admin/sites-operations?tab=paint-planning"
+      : "/admin/paint-planning";
 
   if (loading) {
     return (
@@ -123,7 +130,9 @@ export default function PaintPlanningPage() {
 
           {/* Actions — right side */}
           <div className="flex items-center gap-1.5 ml-auto">
-            <Link href="/admin/paint-planning/new">
+            <Link
+              href={`/admin/paint-planning/new?returnTo=${encodeURIComponent(returnTo)}`}
+            >
               <Button size="sm" className="h-8 gap-1.5 px-3">
                 <Plus className="h-3.5 w-3.5" />
                 New Paint Plan
@@ -146,7 +155,9 @@ export default function PaintPlanningPage() {
             Create a new paint plan to start tracking paint requirements and
             usage.
           </p>
-          <Link href="/admin/paint-planning/new">
+          <Link
+            href={`/admin/paint-planning/new?returnTo=${encodeURIComponent(returnTo)}`}
+          >
             <Button size="sm" className="mt-4 gap-1.5">
               <Plus className="h-3.5 w-3.5" />
               New Paint Plan

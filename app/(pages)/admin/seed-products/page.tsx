@@ -491,20 +491,19 @@ export default function SeedProductsPage() {
 
     // Dynamically import pdfjs-dist on the client to avoid server-side
     // externalization/resolution issues when building with Next/Turbopack.
-    const pdfjsLib: any = await import("pdfjs-dist/legacy/build/pdf");
+    const pdfjsLib: any = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
-    // Use a workerless extraction in browser/dev to avoid dynamic worker fetches
-    // which can fail under Turbopack / file:// contexts. This is slightly
-    // slower but much more reliable for uploads.
+    // Resolve the worker from the installed package so extraction does not depend
+    // on an external CDN or a version-specific public asset.
     if (typeof window !== "undefined") {
-      try {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-      } catch {}
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/legacy/build/pdf.worker.mjs",
+        import.meta.url,
+      ).toString();
     }
 
     const pdf = await pdfjsLib.getDocument({
       data: arrayBuffer,
-      disableWorker: true,
     }).promise;
 
     let fullText = "";

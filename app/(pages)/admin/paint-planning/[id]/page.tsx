@@ -51,6 +51,13 @@ type PlanDetail = {
   boqReference: string | null;
   areaM2: number;
   coats: number;
+  coverageNameSnapshot: string | null;
+  coverageM2PerLitreSnapshot: number;
+  coverageBasisSnapshot: "PER_COAT" | "TOTAL_SYSTEM";
+  containerSizeLitresSnapshot: number;
+  wastagePercent: number;
+  requiredLitresBeforeWastage: number;
+  wastageLitres: number;
   requiredLitres: number;
   requiredContainers: number;
   roundedContainers: number;
@@ -66,7 +73,11 @@ type PlanDetail = {
   };
   coverage: {
     id: string;
-    coverageM2: number;
+    name: string;
+    coverageM2PerLitre: number;
+    coverageBasis: "PER_COAT" | "TOTAL_SYSTEM";
+    coverageType: "THEORETICAL" | "PRACTICAL";
+    recommendedCoats: number;
     uom: string | null;
     unitSize: number | null;
     note: string | null;
@@ -359,7 +370,7 @@ export default function PaintPlanDetailPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
         <StatCard
           label="Planned"
-          value={`${plan.roundedContainers} × ${plan.product.unitSize ?? 20}L`}
+          value={`${plan.roundedContainers} × ${plan.containerSizeLitresSnapshot ?? plan.product.unitSize ?? 20}L`}
           sub={`${plan.requiredLitres.toFixed(1)} L total`}
           icon={<Calculator className="h-4 w-4 text-indigo-500" />}
         />
@@ -396,8 +407,8 @@ export default function PaintPlanDetailPage() {
           }
           sub={
             plan.coverage
-              ? `Coverage: ${plan.coverage.coverageM2} m²/unit`
-              : "Manual coverage"
+              ? `Coverage: ${plan.coverage.coverageM2PerLitre} m²/L`
+              : `Coverage: ${plan.coverageM2PerLitreSnapshot} m²/L`
           }
           icon={<Calculator className="h-4 w-4 text-emerald-500" />}
         />

@@ -26,6 +26,7 @@ async function getAuth(req: Request) {
     if (p && (p.role === "ADMIN" || p.role === "OFFICE"))
       return { id: p.sub, role: p.role as "ADMIN" | "OFFICE" };
   }
+
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
   if (session?.user && (role === "ADMIN" || role === "OFFICE"))
@@ -33,19 +34,45 @@ async function getAuth(req: Request) {
       id: (session.user as any).id as string,
       role: role as "ADMIN" | "OFFICE",
     };
+
   return null;
 }
 
+function normalizeCatalogueName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function serialiseSupplierProductPrice(p: any) {
+  const master = p.product?.masterCatalogueProduct ?? null;
+
   return {
     ...p,
+    productId: p.productId,
+    masterCatalogueProductId:
+      p.product?.masterCatalogueProductId ?? master?.id ?? null,
+    catalogueSource: master ? "MASTER" : "LEGACY",
     price: decimalToNumber(p.price),
     unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
     product: {
       ...p.product,
-      unitSize: p.product.unitSize
-        ? decimalToNumber(p.product.unitSize)
-        : null,
+      name: master?.name ?? p.product.name,
+      sku: master?.sku ?? p.product.sku,
+      uom: master?.uom ?? p.product.uom,
+      unitSize:
+        master?.unitSize != null
+          ? decimalToNumber(master.unitSize)
+          : p.product.unitSize
+            ? decimalToNumber(p.product.unitSize)
+            : null,
+      masterCatalogueProductId:
+        p.product.masterCatalogueProductId ?? master?.id ?? null,
+      catalogueSource: master ? "MASTER" : "LEGACY",
+      masterCatalogueProduct: undefined,
     },
   };
 }
@@ -54,6 +81,8 @@ function serialiseMaterialPrice(p: any) {
   return {
     ...p,
     productId: p.materialId,
+    masterCatalogueProductId: null,
+    catalogueSource: "MATERIAL",
     price: decimalToNumber(p.price),
     unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
     product: {
@@ -62,14 +91,88 @@ function serialiseMaterialPrice(p: any) {
       sku: p.material.sku,
       uom: p.uom,
       unitSize: p.unitSize ? decimalToNumber(p.unitSize) : null,
+      masterCatalogueProductId: null,
+      catalogueSource: "MATERIAL",
     },
+  };
+}
+
+/**
+ * Resolve either a legacy ProcurementProduct id or MasterCatalogueProduct id.
+ *
+ * SupplierProductPrice still stores ProcurementProduct ids during Stage 1.
+ * When a master row has no compatibility product, one is created.
+ */
+async function resolvePriceProduct(productId: string) {
+  const legacy = await prisma.procurementProduct.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      masterCatalogueProductId: true,
+    },
+  });
+
+  if (legacy) {
+    return {
+      legacyProductId: legacy.id,
+      masterCatalogueProductId: legacy.masterCatalogueProductId,
+    };
+  }
+
+  const master = await prisma.masterCatalogueProduct.findUnique({
+    where: { id: productId },
+    include: {
+      legacyProcurementProduct: {
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!master) return null;
+
+  if (master.legacyProcurementProduct) {
+    return {
+      legacyProductId: master.legacyProcurementProduct.id,
+      masterCatalogueProductId: master.id,
+    };
+  }
+
+  const compatibilityProduct = await prisma.procurementProduct.create({
+    data: {
+      name: master.name,
+      normalizedName:
+        master.normalizedName || normalizeCatalogueName(master.name),
+      sku: master.sku,
+      description: master.description,
+      categoryId: master.categoryId,
+      supplierId: master.supplierId,
+      thumbnailUrl: master.thumbnailUrl,
+      productType: master.productType,
+      uom: master.uom,
+      unitSize: master.unitSize,
+      isReturnable: master.isReturnable,
+      isDeductible: master.isDeductible,
+      deductionSplits: master.deductionSplits,
+      colors: master.colors,
+      sizes: master.sizes,
+      stockQty: master.stockQty,
+      isActive: master.isActive,
+      masterCatalogueProductId: master.id,
+    },
+  });
+
+  return {
+    legacyProductId: compatibilityProduct.id,
+    masterCatalogueProductId: master.id,
   };
 }
 
 /**
  * GET /api/app/admin/supplier-prices
  * Query: ?productId=xxx&supplierId=xxx&includeInactive=true
- * Returns all supplier prices, filterable by product or supplier.
+ *
+ * productId may be a ProcurementProduct id, MasterCatalogueProduct id,
+ * or legacy Material id.
  */
 export async function GET(req: Request) {
   try {
@@ -81,20 +184,52 @@ export async function GET(req: Request) {
       );
 
     const url = new URL(req.url);
-    const productId = url.searchParams.get("productId");
+    const requestedProductId = url.searchParams.get("productId");
     const supplierId = url.searchParams.get("supplierId");
     const includeInactive = url.searchParams.get("includeInactive") === "true";
 
+    let legacyProductId: string | null = null;
+    let materialId: string | null = null;
+
+    if (requestedProductId) {
+      const legacy = await prisma.procurementProduct.findUnique({
+        where: { id: requestedProductId },
+        select: { id: true },
+      });
+
+      if (legacy) {
+        legacyProductId = legacy.id;
+      } else {
+        const master = await prisma.masterCatalogueProduct.findUnique({
+          where: { id: requestedProductId },
+          select: {
+            legacyProcurementProduct: {
+              select: { id: true },
+            },
+          },
+        });
+
+        if (master) {
+          legacyProductId = master.legacyProcurementProduct?.id ?? "__none__";
+        } else {
+          materialId = requestedProductId;
+        }
+      }
+    }
+
     const where: Record<string, unknown> = {};
     const materialWhere: Record<string, unknown> = {};
+
     if (!includeInactive) {
       where.isActive = true;
       materialWhere.isActive = true;
     }
-    if (productId) {
-      where.productId = productId;
-      materialWhere.materialId = productId;
+
+    if (requestedProductId) {
+      where.productId = legacyProductId ?? "__none__";
+      materialWhere.materialId = materialId ?? "__none__";
     }
+
     if (supplierId) {
       where.supplierId = supplierId;
       materialWhere.supplierId = supplierId;
@@ -107,12 +242,16 @@ export async function GET(req: Request) {
         include: {
           supplier: { select: { id: true, name: true } },
           product: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              uom: true,
-              unitSize: true,
+            include: {
+              masterCatalogueProduct: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  uom: true,
+                  unitSize: true,
+                },
+              },
             },
           },
         },
@@ -137,8 +276,7 @@ export async function GET(req: Request) {
       ...productPrices.map(serialiseSupplierProductPrice),
       ...materialPrices.map(serialiseMaterialPrice),
     ].sort(
-      (a, b) =>
-        new Date(b.startsOn).getTime() - new Date(a.startsOn).getTime(),
+      (a, b) => new Date(b.startsOn).getTime() - new Date(a.startsOn).getTime(),
     );
 
     return NextResponse.json({ ok: true, data }, { headers: CORS });
@@ -153,7 +291,10 @@ export async function GET(req: Request) {
 
 /**
  * POST /api/app/admin/supplier-prices
- * Body: { supplierId, productId, price, startsOn?, endsOn? }
+ * Body: { supplierId, productId, price, startsOn?, endsOn?, uom?, unitSize? }
+ *
+ * productId may be a ProcurementProduct id, MasterCatalogueProduct id,
+ * or legacy Material id.
  */
 export async function POST(req: Request) {
   try {
@@ -181,22 +322,20 @@ export async function POST(req: Request) {
         { error: "supplierId and productId are required" },
         { status: 400, headers: CORS },
       );
+
     if (price == null || Number(price) < 0)
       return NextResponse.json(
         { error: "price must be a non-negative number" },
         { status: 400, headers: CORS },
       );
 
-    const product = await prisma.procurementProduct.findUnique({
-      where: { id: productId },
-      select: { id: true },
-    });
+    const resolved = await resolvePriceProduct(productId);
 
-    if (product) {
+    if (resolved) {
       const record = await prisma.supplierProductPrice.create({
         data: {
           supplier: { connect: { id: supplierId } },
-          product: { connect: { id: productId } },
+          product: { connect: { id: resolved.legacyProductId } },
           price: Number(price),
           uom: (uom as any) || null,
           unitSize:
@@ -207,7 +346,17 @@ export async function POST(req: Request) {
         include: {
           supplier: { select: { id: true, name: true } },
           product: {
-            select: { id: true, name: true, uom: true, unitSize: true },
+            include: {
+              masterCatalogueProduct: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  uom: true,
+                  unitSize: true,
+                },
+              },
+            },
           },
         },
       });
@@ -257,6 +406,16 @@ export async function POST(req: Request) {
       { status: 201, headers: CORS },
     );
   } catch (e: any) {
+    if (e?.code === "P2002") {
+      return NextResponse.json(
+        {
+          error:
+            "A compatibility product already exists for this master catalogue product. Please retry.",
+        },
+        { status: 409, headers: CORS },
+      );
+    }
+
     console.error("POST supplier-prices error:", e);
     return NextResponse.json(
       { error: "Internal error" },

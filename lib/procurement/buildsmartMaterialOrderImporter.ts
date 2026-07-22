@@ -9,10 +9,7 @@ import {
   normalizeSkuKey,
 } from "@/lib/procurement/buildsmartProductCodes";
 import type { ParsedMaterialLine } from "@/lib/buildsmart-cost-parser";
-import {
-  Prisma,
-  type ProductUom,
-} from "@/generated/prisma/client";
+import { Prisma, type ProductUom } from "@/generated/prisma/client";
 import {
   resolveSupplierForOrderItems,
   resolveSupplierForProduct,
@@ -42,21 +39,25 @@ export interface MaterialOrderImportResult {
   totalAmount: string;
 }
 
-function toDecimal(
-  value: unknown,
-  fallback = "0",
-): Prisma.Decimal {
+function toDecimal(value: unknown, fallback = "0"): Prisma.Decimal {
   try {
     if (value === null || value === undefined || value === "") {
       return new Prisma.Decimal(fallback);
     }
 
-    return new Prisma.Decimal(
-      value as string | number | Prisma.Decimal,
-    );
+    return new Prisma.Decimal(value as string | number | Prisma.Decimal);
   } catch {
     return new Prisma.Decimal(fallback);
   }
+}
+
+function normalizeCatalogueName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function resolveStoredUnitPrice({
@@ -92,160 +93,113 @@ async function resolveStoredUnitPrice({
   const now = new Date();
 
   const unitSizeDecimal =
-    unitSize !== null
-      ? new Prisma.Decimal(unitSize)
-      : null;
+    unitSize !== null ? new Prisma.Decimal(unitSize) : null;
 
   if (supplierId) {
-    const exactSupplierPrice =
-      await prisma.supplierProductPrice.findFirst({
-        where: {
-          supplierId,
-          productId,
-          isActive: true,
-          price: { gt: 0 },
-          startsOn: { lte: now },
-          OR: [
-            { endsOn: null },
-            { endsOn: { gte: now } },
-          ],
-          ...(uom ? { uom } : {}),
-          ...(unitSizeDecimal
-            ? { unitSize: unitSizeDecimal }
-            : {}),
-        },
-        orderBy: [
-          { startsOn: "desc" },
-          { updatedAt: "desc" },
-        ],
-        select: {
-          price: true,
-        },
-      });
+    const exactSupplierPrice = await prisma.supplierProductPrice.findFirst({
+      where: {
+        supplierId,
+        productId,
+        isActive: true,
+        price: { gt: 0 },
+        startsOn: { lte: now },
+        OR: [{ endsOn: null }, { endsOn: { gte: now } }],
+        ...(uom ? { uom } : {}),
+        ...(unitSizeDecimal ? { unitSize: unitSizeDecimal } : {}),
+      },
+      orderBy: [{ startsOn: "desc" }, { updatedAt: "desc" }],
+      select: {
+        price: true,
+      },
+    });
 
-    if (
-      exactSupplierPrice?.price &&
-      exactSupplierPrice.price.gt(0)
-    ) {
+    if (exactSupplierPrice?.price && exactSupplierPrice.price.gt(0)) {
       return exactSupplierPrice.price;
     }
 
-    const supplierPrice =
-      await prisma.supplierProductPrice.findFirst({
-        where: {
-          supplierId,
-          productId,
-          isActive: true,
-          price: { gt: 0 },
-          startsOn: { lte: now },
-          OR: [
-            { endsOn: null },
-            { endsOn: { gte: now } },
-          ],
-        },
-        orderBy: [
-          { startsOn: "desc" },
-          { updatedAt: "desc" },
-        ],
-        select: {
-          price: true,
-        },
-      });
+    const supplierPrice = await prisma.supplierProductPrice.findFirst({
+      where: {
+        supplierId,
+        productId,
+        isActive: true,
+        price: { gt: 0 },
+        startsOn: { lte: now },
+        OR: [{ endsOn: null }, { endsOn: { gte: now } }],
+      },
+      orderBy: [{ startsOn: "desc" }, { updatedAt: "desc" }],
+      select: {
+        price: true,
+      },
+    });
 
-    if (
-      supplierPrice?.price &&
-      supplierPrice.price.gt(0)
-    ) {
+    if (supplierPrice?.price && supplierPrice.price.gt(0)) {
       return supplierPrice.price;
     }
   }
 
-  const exactProductPrice =
-    await prisma.supplierProductPrice.findFirst({
-      where: {
-        productId,
-        isActive: true,
-        price: { gt: 0 },
-        startsOn: { lte: now },
-        OR: [
-          { endsOn: null },
-          { endsOn: { gte: now } },
-        ],
-        ...(uom ? { uom } : {}),
-        ...(unitSizeDecimal
-          ? { unitSize: unitSizeDecimal }
-          : {}),
-      },
-      orderBy: [
-        { startsOn: "desc" },
-        { updatedAt: "desc" },
-      ],
-      select: {
-        price: true,
-      },
-    });
+  const exactProductPrice = await prisma.supplierProductPrice.findFirst({
+    where: {
+      productId,
+      isActive: true,
+      price: { gt: 0 },
+      startsOn: { lte: now },
+      OR: [{ endsOn: null }, { endsOn: { gte: now } }],
+      ...(uom ? { uom } : {}),
+      ...(unitSizeDecimal ? { unitSize: unitSizeDecimal } : {}),
+    },
+    orderBy: [{ startsOn: "desc" }, { updatedAt: "desc" }],
+    select: {
+      price: true,
+    },
+  });
 
-  if (
-    exactProductPrice?.price &&
-    exactProductPrice.price.gt(0)
-  ) {
+  if (exactProductPrice?.price && exactProductPrice.price.gt(0)) {
     return exactProductPrice.price;
   }
 
-  const generalProductPrice =
-    await prisma.supplierProductPrice.findFirst({
-      where: {
-        productId,
-        isActive: true,
-        price: { gt: 0 },
-        startsOn: { lte: now },
-        OR: [
-          { endsOn: null },
-          { endsOn: { gte: now } },
-        ],
-      },
-      orderBy: [
-        { startsOn: "desc" },
-        { updatedAt: "desc" },
-      ],
-      select: {
-        price: true,
-      },
-    });
+  const generalProductPrice = await prisma.supplierProductPrice.findFirst({
+    where: {
+      productId,
+      isActive: true,
+      price: { gt: 0 },
+      startsOn: { lte: now },
+      OR: [{ endsOn: null }, { endsOn: { gte: now } }],
+    },
+    orderBy: [{ startsOn: "desc" }, { updatedAt: "desc" }],
+    select: {
+      price: true,
+    },
+  });
 
-  if (
-    generalProductPrice?.price &&
-    generalProductPrice.price.gt(0)
-  ) {
+  if (generalProductPrice?.price && generalProductPrice.price.gt(0)) {
     return generalProductPrice.price;
   }
 
-  const previousOrderPrice =
-    await prisma.siteProductOrderItem.findFirst({
-      where: {
-        productId,
-        unitPriceAtOrder: { gt: 0 },
-        ...(supplierId
-          ? {
-              order: {
-                supplierId,
-              },
-            }
-          : {}),
-        ...(uom ? { uomAtOrder: uom } : {}),
-        ...(unitSizeDecimal
-          ? {
-              unitSizeAtOrder: unitSizeDecimal,
-            }
-          : {}),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        unitPriceAtOrder: true,
-      },
-    });
+  const previousOrderPrice = await prisma.siteProductOrderItem.findFirst({
+    where: {
+      productId,
+      unitPriceAtOrder: { gt: 0 },
+      ...(supplierId
+        ? {
+            order: {
+              supplierId,
+            },
+          }
+        : {}),
+      ...(uom ? { uomAtOrder: uom } : {}),
+      ...(unitSizeDecimal
+        ? {
+            unitSizeAtOrder: unitSizeDecimal,
+          }
+        : {}),
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      unitPriceAtOrder: true,
+    },
+  });
 
   if (
     previousOrderPrice?.unitPriceAtOrder &&
@@ -254,19 +208,18 @@ async function resolveStoredUnitPrice({
     return previousOrderPrice.unitPriceAtOrder;
   }
 
-  const anyPreviousPrice =
-    await prisma.siteProductOrderItem.findFirst({
-      where: {
-        productId,
-        unitPriceAtOrder: { gt: 0 },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        unitPriceAtOrder: true,
-      },
-    });
+  const anyPreviousPrice = await prisma.siteProductOrderItem.findFirst({
+    where: {
+      productId,
+      unitPriceAtOrder: { gt: 0 },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      unitPriceAtOrder: true,
+    },
+  });
 
   if (
     anyPreviousPrice?.unitPriceAtOrder &&
@@ -282,19 +235,20 @@ async function resolveStoredUnitPrice({
 }
 
 /**
- * Find or create a ProcurementProduct by clean name, then find or create a
- * ProductColorVariant if a color was detected in the raw description.
+ * Resolve a BuildSmart description against the canonical master catalogue.
  *
- * Returns the product id (always) and the color variant id (when applicable).
+ * SiteProductOrderItem, SupplierProductPrice and ProductColorVariant still use
+ * ProcurementProduct during Stage 1, so this function always returns the linked
+ * compatibility ProcurementProduct id.
  */
 async function resolveProduct(
   description: string,
   orderReference?: string | null,
 ): Promise<{
   productId: string;
+  masterCatalogueProductId: string | null;
   colorVariantId: string | null;
 }> {
-  // Explicit override mapping takes priority over parser
   const mapped = mapDescriptionToProduct(description);
 
   const {
@@ -304,73 +258,388 @@ async function resolveProduct(
     baseType,
     isTinted,
   } = parseBuildSmartProduct(description.trim());
+
   const productCode = parsedSku ?? inferBuildSmartProductCode(description);
 
-  const canonicalName = mapped ?? cleanName;
+  const canonicalName = (mapped ?? cleanName).trim();
+  const normalizedName = normalizeCatalogueName(canonicalName);
+  const normalizedSku = normalizeSkuKey(productCode);
 
-  // ── Find or create base product ──────────────────────────────────────────
-  const products = await prisma.procurementProduct.findMany({
+  /*
+   * First inspect legacy products. This catches:
+   * - existing imported products,
+   * - products already linked by the backfill,
+   * - old records that still need a master link.
+   */
+  const legacyCandidates = await prisma.procurementProduct.findMany({
     where: {
       OR: [
-        { name: { equals: canonicalName, mode: "insensitive" } },
+        {
+          name: {
+            equals: canonicalName,
+            mode: "insensitive",
+          },
+        },
+        { normalizedName },
         ...(productCode ? [{ sku: { not: null } }] : []),
       ],
     },
-    select: { id: true, sku: true, name: true, supplierId: true },
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      normalizedName: true,
+      supplierId: true,
+      masterCatalogueProductId: true,
+    },
   });
 
-  let product = productCode
-    ? products.find(
-        (p) => normalizeSkuKey(p.sku) === normalizeSkuKey(productCode),
+  let legacyProduct = normalizedSku
+    ? legacyCandidates.find(
+        (candidate) => normalizeSkuKey(candidate.sku) === normalizedSku,
       )
     : undefined;
 
-  product ??= products.find(
-    (p) => p.name.toLowerCase() === canonicalName.toLowerCase(),
+  legacyProduct ??= legacyCandidates.find(
+    (candidate) =>
+      normalizeCatalogueName(candidate.name) === normalizedName ||
+      candidate.normalizedName === normalizedName,
   );
 
-  if (!product) {
-    const supplierResolution = await resolveSupplierForProduct({
-      description,
-      sku: productCode,
-      orderReference,
+  /*
+   * Resolve the brand/default supplier used by MasterCatalogueProduct.
+   * Existing legacy supplier takes priority. The supplier resolver can then
+   * infer from description, SKU and PO reference.
+   */
+  const supplierResolution = await resolveSupplierForProduct({
+    productId: legacyProduct?.id,
+    description,
+    sku: legacyProduct?.sku ?? productCode,
+    orderReference,
+    existingSupplierId: legacyProduct?.supplierId ?? null,
+  });
+
+  const supplierId =
+    legacyProduct?.supplierId ?? supplierResolution.supplierId ?? null;
+
+  let masterProduct: {
+    id: string;
+    supplierId: string;
+    name: string;
+    normalizedName: string;
+    sku: string | null;
+    legacyProcurementProduct: {
+      id: string;
+      supplierId: string | null;
+    } | null;
+  } | null = null;
+
+  if (legacyProduct?.masterCatalogueProductId) {
+    masterProduct = await prisma.masterCatalogueProduct.findUnique({
+      where: {
+        id: legacyProduct.masterCatalogueProductId,
+      },
+      select: {
+        id: true,
+        supplierId: true,
+        name: true,
+        normalizedName: true,
+        sku: true,
+        legacyProcurementProduct: {
+          select: {
+            id: true,
+            supplierId: true,
+          },
+        },
+      },
+    });
+  }
+
+  /*
+   * Master catalogue identity is supplier + normalizedName.
+   * SKU is also checked first when present because BuildSmart descriptions can
+   * vary while the manufacturer's product code remains stable.
+   */
+  if (!masterProduct && supplierId) {
+    const masterCandidates = await prisma.masterCatalogueProduct.findMany({
+      where: {
+        supplierId,
+        OR: [
+          { normalizedName },
+          {
+            name: {
+              equals: canonicalName,
+              mode: "insensitive",
+            },
+          },
+          ...(productCode ? [{ sku: { not: null } }] : []),
+        ],
+      },
+      select: {
+        id: true,
+        supplierId: true,
+        name: true,
+        normalizedName: true,
+        sku: true,
+        legacyProcurementProduct: {
+          select: {
+            id: true,
+            supplierId: true,
+          },
+        },
+      },
     });
 
-    product = await prisma.procurementProduct.create({
-      data: {
-        name: canonicalName,
-        productType: "MATERIAL",
-        ...(productCode && !mapped ? { sku: productCode } : {}),
-        ...(supplierResolution.supplierId
-          ? { supplier: { connect: { id: supplierResolution.supplierId } } }
-          : {}),
-      },
-      select: { id: true, sku: true, name: true, supplierId: true },
-    });
-  } else if (!product.supplierId) {
-    const supplierResolution = await resolveSupplierForProduct({
-      productId: product.id,
-      description,
-      sku: product.sku ?? productCode,
-      orderReference,
-      existingSupplierId: null,
-    });
-    if (supplierResolution.supplierId) {
-      await prisma.procurementProduct.update({
-        where: { id: product.id },
-        data: { supplierId: supplierResolution.supplierId },
+    masterProduct = normalizedSku
+      ? (masterCandidates.find(
+          (candidate) => normalizeSkuKey(candidate.sku) === normalizedSku,
+        ) ?? null)
+      : null;
+
+    masterProduct ??=
+      masterCandidates.find(
+        (candidate) =>
+          candidate.normalizedName === normalizedName ||
+          normalizeCatalogueName(candidate.name) === normalizedName,
+      ) ?? null;
+  }
+
+  /*
+   * Create the canonical master product when supplier identity is known.
+   * A required supplier relation prevents creating unsafe ownerless master
+   * records. In that rare case the legacy product remains usable and can be
+   * linked later after supplier cleanup.
+   */
+  if (!masterProduct && supplierId) {
+    try {
+      masterProduct = await prisma.masterCatalogueProduct.create({
+        data: {
+          supplierId,
+          name: canonicalName,
+          normalizedName,
+          description: description.trim() || null,
+          category: "Materials",
+          sku: productCode ?? null,
+          productType: "MATERIAL",
+          colors: [],
+          sizes: [],
+          stockQty: 0,
+          isReturnable: false,
+          isDeductible: true,
+          deductionSplits: 1,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          supplierId: true,
+          name: true,
+          normalizedName: true,
+          sku: true,
+          legacyProcurementProduct: {
+            select: {
+              id: true,
+              supplierId: true,
+            },
+          },
+        },
       });
-      product = { ...product, supplierId: supplierResolution.supplierId };
+    } catch (error: any) {
+      /*
+       * Concurrent imports can race on @@unique([supplierId, normalizedName]).
+       * Re-read the row created by the other request.
+       */
+      if (error?.code !== "P2002") throw error;
+
+      masterProduct = await prisma.masterCatalogueProduct.findUnique({
+        where: {
+          supplierId_normalizedName: {
+            supplierId,
+            normalizedName,
+          },
+        },
+        select: {
+          id: true,
+          supplierId: true,
+          name: true,
+          normalizedName: true,
+          sku: true,
+          legacyProcurementProduct: {
+            select: {
+              id: true,
+              supplierId: true,
+            },
+          },
+        },
+      });
     }
   }
 
-  // ── Find or create color variant (if a color was detected) ───────────────
+  /*
+   * Prefer the compatibility product already connected to the master.
+   */
+  if (masterProduct?.legacyProcurementProduct) {
+    legacyProduct = {
+      id: masterProduct.legacyProcurementProduct.id,
+      sku: masterProduct.sku,
+      name: masterProduct.name,
+      normalizedName: masterProduct.normalizedName,
+      supplierId: masterProduct.legacyProcurementProduct.supplierId,
+      masterCatalogueProductId: masterProduct.id,
+    };
+  }
+
+  /*
+   * Create the compatibility ProcurementProduct when the master exists but no
+   * legacy anchor has been created yet.
+   */
+  if (!legacyProduct && masterProduct) {
+    try {
+      legacyProduct = await prisma.procurementProduct.create({
+        data: {
+          name: masterProduct.name,
+          normalizedName: masterProduct.normalizedName,
+          sku: masterProduct.sku,
+          productType: "MATERIAL",
+          supplierId: masterProduct.supplierId,
+          masterCatalogueProductId: masterProduct.id,
+        },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          normalizedName: true,
+          supplierId: true,
+          masterCatalogueProductId: true,
+        },
+      });
+    } catch (error: any) {
+      if (error?.code !== "P2002") throw error;
+
+      const linked = await prisma.procurementProduct.findFirst({
+        where: {
+          OR: [
+            {
+              masterCatalogueProductId: masterProduct.id,
+            },
+            ...(masterProduct.sku ? [{ sku: masterProduct.sku }] : []),
+          ],
+        },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          normalizedName: true,
+          supplierId: true,
+          masterCatalogueProductId: true,
+        },
+      });
+
+      if (linked) {
+        legacyProduct = linked;
+      }
+    }
+  }
+
+  /*
+   * If an old ProcurementProduct exists but is not linked, connect it to the
+   * master. The unique bridge guarantees one compatibility row per master.
+   */
+  if (
+    legacyProduct &&
+    masterProduct &&
+    legacyProduct.masterCatalogueProductId !== masterProduct.id
+  ) {
+    try {
+      legacyProduct = await prisma.procurementProduct.update({
+        where: { id: legacyProduct.id },
+        data: {
+          masterCatalogueProductId: masterProduct.id,
+          normalizedName,
+          supplierId: legacyProduct.supplierId ?? masterProduct.supplierId,
+        },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          normalizedName: true,
+          supplierId: true,
+          masterCatalogueProductId: true,
+        },
+      });
+    } catch (error: any) {
+      if (error?.code !== "P2002") throw error;
+
+      const linked = await prisma.procurementProduct.findUnique({
+        where: {
+          masterCatalogueProductId: masterProduct.id,
+        },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          normalizedName: true,
+          supplierId: true,
+          masterCatalogueProductId: true,
+        },
+      });
+
+      if (linked) legacyProduct = linked;
+    }
+  }
+
+  /*
+   * Supplier could not be resolved, so a canonical master cannot safely be
+   * created. Preserve the import by falling back to the legacy anchor.
+   */
+  if (!legacyProduct) {
+    legacyProduct = await prisma.procurementProduct.create({
+      data: {
+        name: canonicalName,
+        normalizedName,
+        productType: "MATERIAL",
+        ...(productCode && !mapped ? { sku: productCode } : {}),
+        ...(supplierId ? { supplierId } : {}),
+      },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        normalizedName: true,
+        supplierId: true,
+        masterCatalogueProductId: true,
+      },
+    });
+  } else if (!legacyProduct.supplierId && supplierId) {
+    legacyProduct = await prisma.procurementProduct.update({
+      where: { id: legacyProduct.id },
+      data: {
+        supplierId,
+        normalizedName: legacyProduct.normalizedName ?? normalizedName,
+      },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        normalizedName: true,
+        supplierId: true,
+        masterCatalogueProductId: true,
+      },
+    });
+  }
+
+  /*
+   * Color variants remain attached to ProcurementProduct during Stage 1.
+   */
   let colorVariantId: string | null = null;
+
   if (colorName) {
     const existing = await prisma.productColorVariant.findFirst({
       where: {
-        productId: product.id,
-        colorName: { equals: colorName, mode: "insensitive" },
+        productId: legacyProduct.id,
+        colorName: {
+          equals: colorName,
+          mode: "insensitive",
+        },
         baseType,
       },
       select: { id: true },
@@ -382,30 +651,39 @@ async function resolveProduct(
       try {
         const created = await prisma.productColorVariant.create({
           data: {
-            productId: product.id,
+            productId: legacyProduct.id,
             colorName,
             baseType,
             isTinted,
           },
           select: { id: true },
         });
+
         colorVariantId = created.id;
       } catch {
-        // Unique constraint race — fetch whatever was just inserted
         const raced = await prisma.productColorVariant.findFirst({
           where: {
-            productId: product.id,
-            colorName: { equals: colorName, mode: "insensitive" },
+            productId: legacyProduct.id,
+            colorName: {
+              equals: colorName,
+              mode: "insensitive",
+            },
             baseType,
           },
           select: { id: true },
         });
+
         colorVariantId = raced?.id ?? null;
       }
     }
   }
 
-  return { productId: product.id, colorVariantId };
+  return {
+    productId: legacyProduct.id,
+    masterCatalogueProductId:
+      masterProduct?.id ?? legacyProduct.masterCatalogueProductId ?? null,
+    colorVariantId,
+  };
 }
 
 /** Process a single order group against the already-resolved site map. */
@@ -419,6 +697,7 @@ async function processOrderGroup(
 
   if (!orderNumber) {
     const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
+
     return {
       orderNumber: null,
       siteCode: first.siteCode,
@@ -432,8 +711,10 @@ async function processOrderGroup(
   }
 
   const siteId = siteMap.get(first.siteCode);
+
   if (!siteId) {
     const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
+
     return {
       orderNumber,
       siteCode: first.siteCode,
@@ -448,6 +729,7 @@ async function processOrderGroup(
 
   if (isOrderReferenceTaken(existingOrderRefs, orderNumber)) {
     const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
+
     return {
       orderNumber,
       siteCode: first.siteCode,
@@ -462,10 +744,11 @@ async function processOrderGroup(
 
   try {
     const orderDate = groupLines.reduce(
-      (earliest, l) =>
-        l.transactionDate < earliest ? l.transactionDate : earliest,
+      (earliest, line) =>
+        line.transactionDate < earliest ? line.transactionDate : earliest,
       groupLines[0].transactionDate,
     );
+
     const resolvedLines: {
       productId: string;
       quantity: number;
@@ -475,20 +758,12 @@ async function processOrderGroup(
     }[] = [];
 
     for (const line of groupLines) {
-      const { productId } = await resolveProduct(
-        line.description,
-        orderNumber,
-      );
+      const { productId } = await resolveProduct(line.description, orderNumber);
 
       const quantity =
-        line.quantity && line.quantity > 0
-          ? Math.round(line.quantity)
-          : 1;
+        line.quantity && line.quantity > 0 ? Math.round(line.quantity) : 1;
 
-      const {
-        uomAtOrder,
-        unitSizeAtOrder,
-      } = parseUnitToken(line.unit ?? null);
+      const { uomAtOrder, unitSizeAtOrder } = parseUnitToken(line.unit ?? null);
 
       resolvedLines.push({
         productId,
@@ -501,35 +776,32 @@ async function processOrderGroup(
 
     let orderSupplierId: string | null = null;
 
-    const fromItems =
-      await resolveSupplierForOrderItems(
-        resolvedLines.map((item) => item.productId),
-      );
+    const fromItems = await resolveSupplierForOrderItems(
+      resolvedLines.map((item) => item.productId),
+    );
 
     orderSupplierId = fromItems.supplierId;
 
     if (!orderSupplierId) {
-      const refSupplier =
-        await resolveSupplierForProduct({
-          description: groupLines[0].description,
-          orderReference: orderNumber,
-        });
+      const refSupplier = await resolveSupplierForProduct({
+        description: groupLines[0].description,
+        orderReference: orderNumber,
+      });
 
       orderSupplierId = refSupplier.supplierId;
     }
 
     const itemData = await Promise.all(
       resolvedLines.map(async (resolved) => {
-        const unitPriceAtOrder =
-          await resolveStoredUnitPrice({
-            supplierId: orderSupplierId,
-            productId: resolved.productId,
-            uom: resolved.uomAtOrder,
-            unitSize: resolved.unitSizeAtOrder,
-            pdfUnitPrice: resolved.line.unitPrice,
-            pdfLineTotal: resolved.line.totalAmount,
-            quantity: resolved.quantity,
-          });
+        const unitPriceAtOrder = await resolveStoredUnitPrice({
+          supplierId: orderSupplierId,
+          productId: resolved.productId,
+          uom: resolved.uomAtOrder,
+          unitSize: resolved.unitSizeAtOrder,
+          pdfUnitPrice: resolved.line.unitPrice,
+          pdfLineTotal: resolved.line.totalAmount,
+          quantity: resolved.quantity,
+        });
 
         return {
           productId: resolved.productId,
@@ -542,10 +814,7 @@ async function processOrderGroup(
     );
 
     const totalAmountDecimal = itemData.reduce(
-      (sum, item) =>
-        sum.add(
-          item.unitPriceAtOrder.mul(item.quantity),
-        ),
+      (sum, item) => sum.add(item.unitPriceAtOrder.mul(item.quantity)),
       new Prisma.Decimal(0),
     );
 
@@ -555,7 +824,7 @@ async function processOrderGroup(
       data: {
         siteId,
         reference: orderNumber,
-        note: `Seeded from BuildSmart historical cost report`,
+        note: "Seeded from BuildSmart historical cost report",
         createdAt: orderDate,
         totalCost: totalAmountDecimal,
         supplierId: orderSupplierId,
@@ -586,6 +855,7 @@ async function processOrderGroup(
     };
   } catch (err) {
     const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
+
     return {
       orderNumber,
       siteCode: first.siteCode,
@@ -600,14 +870,20 @@ async function processOrderGroup(
 }
 
 function buildGroupsAndSiteMap(lines: ParsedMaterialLine[]) {
-  const siteCodes = [...new Set(lines.map((l) => l.siteCode).filter(Boolean))];
+  const siteCodes = [
+    ...new Set(lines.map((line) => line.siteCode).filter(Boolean)),
+  ];
+
   const groups = new Map<string, ParsedMaterialLine[]>();
+
   for (const line of lines) {
-    const key = `${line.siteCode}::${line.orderNumber ?? "__NO_ORDER__"}`;
+    const key = `${line.siteCode}::` + `${line.orderNumber ?? "__NO_ORDER__"}`;
+
     const group = groups.get(key) ?? [];
     group.push(line);
     groups.set(key, group);
   }
+
   return { siteCodes, groups };
 }
 
@@ -625,10 +901,17 @@ export async function* importMaterialOrdersStream(
   const { siteCodes, groups } = buildGroupsAndSiteMap(lines);
 
   const sites = await prisma.site.findMany({
-    where: { code: { in: siteCodes } },
-    select: { id: true, code: true },
+    where: {
+      code: { in: siteCodes },
+    },
+    select: {
+      id: true,
+      code: true,
+    },
   });
-  const siteMap = new Map(sites.map((s) => [s.code!, s.id]));
+
+  const siteMap = new Map(sites.map((site) => [site.code!, site.id]));
+
   const existingOrderRefs = await loadExistingOrderReferences();
 
   const total = groups.size;
@@ -640,6 +923,7 @@ export async function* importMaterialOrdersStream(
       siteMap,
       existingOrderRefs,
     );
+
     done++;
     yield { total, done, result };
   }
@@ -653,8 +937,10 @@ export async function importMaterialOrders(
   lines: ParsedMaterialLine[],
 ): Promise<MaterialOrderImportResult[]> {
   const results: MaterialOrderImportResult[] = [];
+
   for await (const { result } of importMaterialOrdersStream(lines)) {
     results.push(result);
   }
+
   return results;
 }

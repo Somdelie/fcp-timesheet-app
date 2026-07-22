@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   listSitesForSelect,
   listProductsForSelect,
@@ -18,6 +18,7 @@ import type {
 
 export default function NewPaintPlanPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sites, setSites] = useState<SiteOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [coverages, setCoverages] = useState<CoverageOption[]>([]);
@@ -27,6 +28,12 @@ export default function NewPaintPlanPage() {
     const res = await listCoverageProfiles();
     if (res.ok) setCoverages(res.coverages);
   }, []);
+
+  const requestedReturnTo = searchParams.get("returnTo");
+  const returnTo =
+    requestedReturnTo && requestedReturnTo.startsWith("/admin")
+      ? requestedReturnTo
+      : "/admin/paint-planning";
 
   useEffect(() => {
     async function init() {
@@ -56,7 +63,7 @@ export default function NewPaintPlanPage() {
       {/* Back navigation */}
       <div className="mb-2">
         <Link
-          href="/admin/paint-planning"
+          href={returnTo}
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -79,7 +86,7 @@ export default function NewPaintPlanPage() {
         sites={sites}
         products={products}
         coverages={coverages}
-        onPlanCreated={() => router.push("/admin/paint-planning")}
+        onPlanCreated={() => router.push(returnTo)}
         onCoverageCreated={loadCoverages}
       />
     </div>

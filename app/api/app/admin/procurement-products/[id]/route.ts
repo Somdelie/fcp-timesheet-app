@@ -38,6 +38,53 @@ async function getAuth(req: Request) {
   return null;
 }
 
+function normalizeCatalogueName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function serialiseCatalogueProduct(product: any) {
+  const master = product.masterCatalogueProduct ?? null;
+  return {
+    ...product,
+    id: product.id,
+    name: master?.name ?? product.name,
+    sku: master?.sku ?? product.sku,
+    description: master?.description ?? product.description,
+    thumbnailUrl: master?.thumbnailUrl ?? product.thumbnailUrl,
+    isActive: master?.isActive ?? product.isActive,
+    productType: master?.productType ?? product.productType,
+    isReturnable: master?.isReturnable ?? product.isReturnable,
+    isDeductible: master?.isDeductible ?? product.isDeductible,
+    deductionSplits: master?.deductionSplits ?? product.deductionSplits,
+    colors: master?.colors ?? product.colors ?? [],
+    sizes: master?.sizes ?? product.sizes ?? [],
+    stockQty: master?.stockQty ?? product.stockQty ?? 0,
+    category: master?.categoryRef ?? product.category ?? null,
+    supplier: master?.supplier ?? product.supplier ?? null,
+    uom: master?.uom ?? product.uom ?? null,
+    unitSize:
+      master?.unitSize != null
+        ? decimalToNumber(master.unitSize)
+        : product.unitSize
+          ? decimalToNumber(product.unitSize)
+          : null,
+    masterCatalogueProductId:
+      product.masterCatalogueProductId ?? master?.id ?? null,
+    catalogueSource: master ? "MASTER" : "LEGACY",
+    supplierPrices: (product.supplierPrices ?? []).map((sp: any) => ({
+      ...sp,
+      price: decimalToNumber(sp.price),
+      unitSize: sp.unitSize ? decimalToNumber(sp.unitSize) : null,
+    })),
+    masterCatalogueProduct: undefined,
+  };
+}
+
 async function findDuplicatePlantName(name: string, excludeId: string) {
   const canonicalName = canonicalPlantName(name);
   if (!canonicalName) return null;
@@ -78,6 +125,12 @@ export async function GET(
       include: {
         category: { select: { id: true, name: true } },
         supplier: { select: { id: true, name: true } },
+        masterCatalogueProduct: {
+          include: {
+            categoryRef: { select: { id: true, name: true } },
+            supplier: { select: { id: true, name: true } },
+          },
+        },
         supplierPrices: {
           where: { isActive: true },
           include: { supplier: { select: { id: true, name: true } } },
@@ -96,14 +149,7 @@ export async function GET(
         { status: 404, headers: CORS },
       );
 
-    const data = {
-      ...product,
-      unitSize: product.unitSize ? decimalToNumber(product.unitSize) : null,
-      supplierPrices: product.supplierPrices.map((sp) => ({
-        ...sp,
-        price: decimalToNumber(sp.price),
-      })),
-    };
+    const data = serialiseCatalogueProduct(product);
 
     return NextResponse.json({ ok: true, data }, { headers: CORS });
   } catch (e: any) {
@@ -318,20 +364,140 @@ export async function PATCH(
 
     const ppUpdated = await prisma.$transaction(
       async (tx) => {
+        const existing = await tx.procurementProduct.findUnique({
+          where: { id },
+          include: { masterCatalogueProduct: true },
+        });
+        if (!existing)
+          throw Object.assign(new Error("Product not found"), {
+            code: "P2025",
+          });
+
+        const nextSupplierId =
+          supplierId !== undefined ? supplierId : existing.supplierId;
+        const nextName = name !== undefined ? name.trim() : existing.name;
+        const nextNormalizedName = normalizeCatalogueName(nextName);
+
+        if (nextSupplierId) {
+          const category = categoryId
+            ? await tx.productCategory.findUnique({
+                where: { id: categoryId },
+                select: { name: true },
+              })
+            : null;
+
+          const duplicate = await tx.masterCatalogueProduct.findUnique({
+            where: {
+              supplierId_normalizedName: {
+                supplierId: nextSupplierId,
+                normalizedName: nextNormalizedName,
+              },
+            },
+            include: { legacyProcurementProduct: { select: { id: true } } },
+          });
+
+          if (
+            duplicate &&
+            duplicate.id !== existing.masterCatalogueProductId &&
+            duplicate.legacyProcurementProduct
+          ) {
+            throw Object.assign(
+              new Error(
+                `A catalogue product named "${duplicate.name}" already exists for this supplier`,
+              ),
+              { code: "CATALOGUE_DUPLICATE" },
+            );
+          }
+
+          const masterData: Record<string, unknown> = {
+            supplier: { connect: { id: nextSupplierId } },
+            name: nextName,
+            normalizedName: nextNormalizedName,
+            sku: sku !== undefined ? sku?.trim() || null : existing.sku,
+            description:
+              description !== undefined
+                ? description?.trim() || null
+                : existing.description,
+            thumbnailUrl:
+              thumbnailUrl !== undefined
+                ? thumbnailUrl?.trim() || null
+                : existing.thumbnailUrl,
+            categoryId:
+              categoryId !== undefined
+                ? categoryId || null
+                : existing.categoryId,
+            category: category?.name ?? "Uncategorised",
+            uom: uom !== undefined ? uom : existing.uom,
+            unitSize:
+              unitSize !== undefined
+                ? unitSize != null
+                  ? Number(unitSize)
+                  : null
+                : existing.unitSize,
+            productType: productType ?? existing.productType,
+            isReturnable: isReturnable ?? existing.isReturnable,
+            isDeductible: (body as any).isDeductible ?? existing.isDeductible,
+            deductionSplits:
+              (body as any).deductionSplits !== undefined
+                ? Number((body as any).deductionSplits) || 1
+                : existing.deductionSplits,
+            colors: colors ?? existing.colors,
+            sizes: (body as any).sizes ?? existing.sizes,
+            stockQty:
+              variantStocksInput !== undefined
+                ? variantStocksInput.reduce(
+                    (sum, v) => sum + (Number(v.qty) || 0),
+                    0,
+                  )
+                : stockQty !== undefined
+                  ? Number(stockQty)
+                  : existing.stockQty,
+            isActive: isActive ?? existing.isActive,
+          };
+
+          if (existing.masterCatalogueProductId) {
+            await tx.masterCatalogueProduct.update({
+              where: { id: existing.masterCatalogueProductId },
+              data: masterData,
+            });
+          } else {
+            const master =
+              duplicate ??
+              (await tx.masterCatalogueProduct.create({
+                data: masterData as any,
+              }));
+            ppData.masterCatalogueProduct = { connect: { id: master.id } };
+          }
+        }
+
         if (variantStocksInput !== undefined) {
           await tx.productVariantStock.deleteMany({ where: { productId: id } });
         }
+
         const product = await tx.procurementProduct.update({
           where: { id },
           data: ppData,
           include: {
             category: { select: { id: true, name: true } },
             supplier: { select: { id: true, name: true } },
+            masterCatalogueProduct: {
+              include: {
+                categoryRef: { select: { id: true, name: true } },
+                supplier: { select: { id: true, name: true } },
+              },
+            },
+            supplierPrices: {
+              where: { isActive: true },
+              include: { supplier: { select: { id: true, name: true } } },
+              orderBy: { startsOn: "desc" },
+            },
             variantStocks: {
               select: { id: true, size: true, color: true, qty: true },
             },
+            _count: { select: { orderItems: true } },
           },
         });
+
         if (variantStocksInput?.length) {
           await tx.productVariantStock.createMany({
             data: variantStocksInput.map((v) => ({
@@ -351,13 +517,15 @@ export async function PATCH(
       { maxWait: 10000, timeout: 30000 },
     );
 
-    const ppResult = {
-      ...ppUpdated,
-      unitSize: ppUpdated.unitSize ? decimalToNumber(ppUpdated.unitSize) : null,
-    };
+    const ppResult = serialiseCatalogueProduct(ppUpdated);
 
     return NextResponse.json({ ok: true, data: ppResult }, { headers: CORS });
   } catch (e: any) {
+    if (e?.code === "CATALOGUE_DUPLICATE")
+      return NextResponse.json(
+        { error: e.message },
+        { status: 409, headers: CORS },
+      );
     if (e?.code === "P2025")
       return NextResponse.json(
         { error: "Product not found" },
@@ -395,7 +563,22 @@ export async function DELETE(
     const { id } = await ctx.params;
 
     try {
-      await prisma.procurementProduct.delete({ where: { id } });
+      await prisma.$transaction(async (tx) => {
+        const product = await tx.procurementProduct.findUnique({
+          where: { id },
+          select: { masterCatalogueProductId: true },
+        });
+        if (!product)
+          throw Object.assign(new Error("Product not found"), {
+            code: "P2025",
+          });
+        await tx.procurementProduct.delete({ where: { id } });
+        if (product.masterCatalogueProductId) {
+          await tx.masterCatalogueProduct.delete({
+            where: { id: product.masterCatalogueProductId },
+          });
+        }
+      });
       return NextResponse.json({ ok: true }, { headers: CORS });
     } catch (e: any) {
       // If not found in ProcurementProduct, try Material

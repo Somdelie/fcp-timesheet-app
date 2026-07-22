@@ -42,3 +42,11 @@ yarn-error.log*
 next-env.d.ts
 
 /generated/prisma
+old-migrations.zip
+prisma/migrations-current-backup/
+prisma/migrations-new-tds-backup-*/
+prisma/migrations_broken_history_*/
+prisma/schema.master-product-stage-1.prisma
+tmp_test_write.txt
+procurement-product-prisma-usage.txt
+procurement-product-type-usage.txt
