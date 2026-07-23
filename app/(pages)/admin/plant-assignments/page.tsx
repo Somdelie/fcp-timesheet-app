@@ -29,6 +29,7 @@ import {
   ChevronUp,
   ChevronDown,
   Merge,
+  PackagePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -88,6 +89,7 @@ import PlantDeployPOS, {
   type PlantItemDto,
 } from "@/components/orders/PlantDeployPOS";
 import { Truck } from "lucide-react";
+import { PlantDeployDialog } from "@/components/products/PlantDeployDialog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -480,6 +482,7 @@ function OfficeTab({
   const [sortField, setSortField] = useState<"name" | "atOffice">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(0);
+  const [deployOpen, setDeployOpen] = useState(false);
 
   // merge state
   const [mergeSource, setMergeSource] = useState<OfficePlantItem | null>(null);
@@ -565,23 +568,31 @@ function OfficeTab({
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search item…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+      <div className="flex items-center justify-between max-full">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search item…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Button onClick={() => setDeployOpen(true)}>
+          <PackagePlus className="mr-2 h-4 w-4" />
+          Deploy Plant
+        </Button>
       </div>
+
+      <PlantDeployDialog open={deployOpen} onOpenChange={setDeployOpen} />
 
       {paged.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
@@ -636,10 +647,10 @@ function OfficeTab({
                           <img
                             src={p.thumbnailUrl}
                             alt={p.name}
-                            className="h-8 w-8 rounded object-cover flex-shrink-0"
+                            className="h-8 w-8 rounded object-cover shrink-0"
                           />
                         ) : (
-                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
                             <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                         )}
@@ -849,9 +860,9 @@ function SupervisorTab({
   const [transferSaving, setTransferSaving] = useState(false);
 
   const [reprinting, setReprinting] = useState<string | null>(null);
-  const [selectedProductKeys, setSelectedProductKeys] = useState<
-    Set<string>
-  >(() => new Set());
+  const [selectedProductKeys, setSelectedProductKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const transferSupervisors = allSupervisors.filter(
     (s) => s.id !== supervisor.id,

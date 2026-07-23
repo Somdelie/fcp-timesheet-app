@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import { toast } from "react-toastify";
-import { Check, ChevronsUpDown, Loader2, Plus, Printer, X } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  Loader2,
+  Minus,
+  Plus,
+  Printer,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -432,9 +440,9 @@ export default function PlantDeployPOS({
         )}
       </div>
 
-      <div className="max-w-350 mx-auto p-6">
+      <div className="max-w-full mx-auto p-6">
         {/* Page title block */}
-        <div className="border-b border-border pb-4 mb-6">
+        <div className="border-b border-border pb-0 mb-4">
           <p className="text-[11px] tracking-[0.15em] text-muted-foreground uppercase mb-1">
             Deploy plant &amp; equipment to one or more sites — creates tracked
             assignments with full transfer history
@@ -442,94 +450,97 @@ export default function PlantDeployPOS({
         </div>
 
         {/* Main grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-0 border border-border rounded-md overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-border rounded overflow-hidden">
           {/* LEFT PANEL */}
-          <div className="border-r border-border flex flex-col">
-            {/* Order Number */}
-            <div className="border-b border-border p-5 bg-card">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  Order Number
-                </span>
+          <div className="border-r border-border flex flex-col col-span-2 h-full md:max-h-[calc(100vh-15rem)]">
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {/* Order Number */}
+              <div className="border-b border-border p-5 bg-card">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                    Order Number
+                  </span>
+                </div>
+                <Input
+                  placeholder="e.g. 68090 (BuildSmart PO #)"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  className="h-10 text-sm font-medium"
+                />
               </div>
-              <Input
-                placeholder="e.g. 68090 (BuildSmart PO #)"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                className="h-10 text-sm font-medium"
-              />
-            </div>
 
-            {/* Step 1 — Supervisor selector */}
-            <div className="border-b border-border p-5 bg-card">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                  1
-                </span>
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
-                  Select Supervisor
-                </span>
+              {/* Step 1 — Supervisor selector */}
+              <div className="border-b border-border p-5 bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    1
+                  </span>
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground">
+                    Select Supervisor
+                  </span>
+                </div>
+                <Popover open={supervisorOpen} onOpenChange={setSupervisorOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={supervisorOpen}
+                      className="w-full justify-between h-10 text-sm font-medium"
+                    >
+                      <span className="truncate">
+                        {selectedSupervisor
+                          ? (selectedSupervisor.name ??
+                            selectedSupervisor.email)
+                          : "Select supervisor…"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search supervisor…"
+                        className="text-sm"
+                      />
+                      <CommandList>
+                        <CommandEmpty>No supervisor found.</CommandEmpty>
+                        <CommandGroup>
+                          {supervisors.map((sv) => (
+                            <CommandItem
+                              key={sv.id}
+                              value={sv.name ?? sv.email}
+                              onSelect={() => handleSelectSupervisor(sv.id)}
+                              className="text-sm"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedSupervisorId === sv.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span className="flex-1">
+                                {sv.name ?? sv.email}
+                              </span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                {sv?.sites?.length} site
+                                {sv?.sites?.length !== 1 ? "s" : ""}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <Popover open={supervisorOpen} onOpenChange={setSupervisorOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={supervisorOpen}
-                    className="w-full justify-between h-10 text-sm font-medium"
-                  >
-                    <span className="truncate">
-                      {selectedSupervisor
-                        ? (selectedSupervisor.name ?? selectedSupervisor.email)
-                        : "Select supervisor…"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput
-                      placeholder="Search supervisor…"
-                      className="text-sm"
-                    />
-                    <CommandList>
-                      <CommandEmpty>No supervisor found.</CommandEmpty>
-                      <CommandGroup>
-                        {supervisors.map((sv) => (
-                          <CommandItem
-                            key={sv.id}
-                            value={sv.name ?? sv.email}
-                            onSelect={() => handleSelectSupervisor(sv.id)}
-                            className="text-sm"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedSupervisorId === sv.id
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            <span className="flex-1">
-                              {sv.name ?? sv.email}
-                            </span>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {sv.sites.length} site
-                              {sv.sites.length !== 1 ? "s" : ""}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
             </div>
 
             {/* Step 2 — Sites */}
             <div className="border-b border-border p-5 bg-card">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
@@ -658,7 +669,7 @@ export default function PlantDeployPOS({
             </div>
 
             {/* Cart section header */}
-            <div className="border-b border-border px-5 py-3 bg-muted/40 flex items-center justify-between gap-3">
+            <div className="border-b border-border px-5 py-2 bg-muted/40 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground truncate">
@@ -735,28 +746,29 @@ export default function PlantDeployPOS({
                   </p>
                 </div>
               ) : (
-                <Table>
+                <Table className="border-r">
                   <TableHeader>
                     <TableRow className="border-b border-border hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5 w-48 text-left">
                         Item
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
                         Size
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-20 text-right">
-                        Qty
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
+                        Quantity
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-right">
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
                         Unit Price
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-32">
-                        Note
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-10 text-center">
+                        Actions
                       </TableHead>
-                      <TableHead className="w-10" />
+
+                      {/* <TableHead className="w-10" /> */}
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="[&_tr:last-child]:border-b [&_tr:last-child]:border-border">
                     {activeCart.map((item, idx) => {
                       const hasSizes = item.sizes.length > 0;
                       return (
@@ -766,10 +778,10 @@ export default function PlantDeployPOS({
                             idx % 2 === 0 ? "" : "bg-muted/20"
                           }`}
                         >
-                          <TableCell className="py-2.5 pl-5 text-sm font-medium text-foreground">
+                          <TableCell className="py-1 pl-5 text-sm font-medium text-foreground w-68 truncate max-w-68">
                             {item.productName}
                           </TableCell>
-                          <TableCell className="py-2 pr-2">
+                          <TableCell className="py-1 pr-2">
                             {hasSizes ? (
                               <div className="flex flex-wrap gap-0.5">
                                 {item.sizes.map((s) => (
@@ -803,40 +815,78 @@ export default function PlantDeployPOS({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="py-2 pr-2">
-                            <Input
-                              type="number"
-                              min={1}
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const n = Number(e.target.value);
-                                if (!Number.isFinite(n)) return;
-                                updateQuantity(
-                                  item.productId,
-                                  Math.max(1, Math.floor(n)),
-                                );
-                              }}
-                              className="h-7 w-16 text-sm text-right tabular-nums px-2"
-                            />
+                          <TableCell className="py-1 pr-2">
+                            <div className="inline-flex items-center rounded-md border border-border/70 overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.productId,
+                                    Math.max(1, item.quantity - 1),
+                                  )
+                                }
+                                disabled={item.quantity <= 1}
+                                className="h-7 w-7 bg-primary flex items-center justify-center text-white hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const n = Number(
+                                    e.target.value.replace(/\D/g, ""),
+                                  );
+                                  if (!Number.isFinite(n)) return;
+                                  updateQuantity(
+                                    item.productId,
+                                    Math.max(1, n),
+                                  );
+                                }}
+                                className="h-7 w-8 text-center text-sm tabular-nums bg-transparent outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.productId,
+                                    item.quantity + 1,
+                                  )
+                                }
+                                className="h-7 w-7 bg-primary flex items-center justify-center text-white hover:bg-muted hover:text-foreground transition-colors"
+                                aria-label="Increase quantity"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
                           </TableCell>
-                          <TableCell className="py-2 pr-2">
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={item.unitPrice ?? ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                updateUnitPrice(
-                                  item.productId,
-                                  val === "" ? null : Math.max(0, Number(val)),
-                                );
-                              }}
-                              placeholder="—"
-                              className="h-7 w-20 text-sm text-right tabular-nums px-2"
-                            />
+                          <TableCell className="py-1 pr-2">
+                            <div className="inline-flex items-center gap-1 h-7 px-2 rounded bg-muted/40 border focus-within:border-primary/50 focus-within:bg-card transition-colors">
+                              <span className="text-xs text-muted-foreground font-bold">
+                                R
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={item.unitPrice ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  updateUnitPrice(
+                                    item.productId,
+                                    val === ""
+                                      ? null
+                                      : Math.max(0, Number(val)),
+                                  );
+                                }}
+                                placeholder="0.00"
+                                className="w-full text-sm text-right tabular-nums bg-transparent outline-none placeholder:text-muted-foreground/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </div>
                           </TableCell>
-                          <TableCell className="py-2">
+                          {/* <TableCell className="py-2">
                             <Input
                               value={item.note}
                               onChange={(e) =>
@@ -845,14 +895,14 @@ export default function PlantDeployPOS({
                               placeholder="Note…"
                               className="h-7 text-xs px-2"
                             />
-                          </TableCell>
-                          <TableCell className="py-2 pr-3 text-center">
+                          </TableCell> */}
+                          <TableCell className="py-1 pr-3 text-center">
                             <button
                               onClick={() => removeFromCart(item.productId)}
-                              className="text-muted-foreground/50 hover:text-destructive transition-colors text-lg leading-none font-light"
+                              className="text-muted-foreground/50 hover:text-destructive transition-colors text-xl leading-none font-light cursor-pointer"
                               aria-label="Remove item"
                             >
-                              ×
+                              <X className="h-6 w-6" />
                             </button>
                           </TableCell>
                         </TableRow>
@@ -864,7 +914,7 @@ export default function PlantDeployPOS({
             </div>
 
             {/* Submit bar */}
-            <div className="border-t border-border p-4 bg-primary flex items-center justify-between gap-4">
+            <div className="border-t border-border px-4 py-1 bg-primary flex items-center justify-between gap-4">
               <div className="text-primary-foreground">
                 {totalUnits > 0 ? (
                   <div>
@@ -930,7 +980,7 @@ export default function PlantDeployPOS({
           </div>
 
           {/* RIGHT PANEL — Plant Item Picker */}
-          <div className="flex flex-col min-h-0">
+          <div className="flex flex-col min-h-0 max-h-560 md:max-h-[calc(100vh-15rem)]">
             {/* Picker header */}
             <div className="border-b border-border p-5 bg-muted/40 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-2 shrink-0">

@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/common/theme-provider";
 import { ColorThemeProvider } from "@/components/common/color-theme-provider";
 import { ToastRoot } from "@/components/common/toast-root";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider } from "@/components/common/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,10 +47,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ColorThemeProvider>
-            <TooltipProvider>{children}</TooltipProvider>
-            <ToastRoot />
-          </ColorThemeProvider>
+          <QueryProvider>
+            <ColorThemeProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+              <ToastRoot />
+            </ColorThemeProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
