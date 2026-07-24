@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { toISODate } from "@/lib/workdate";
 import { addDaysUTC, isoFromDateUTC } from "@/lib/dateUtc";
-import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+import {
+  getCurrentFortnightRange,
+  getCurrentWeekStart,
+} from "@/lib/timesheetPeriods";
 import { logApiRequest } from "@/lib/apiRequestLogger";
 
 export const runtime = "nodejs";
@@ -210,19 +213,7 @@ async function getWeeklyAttendanceData(auth: { sub: string; role: string }) {
     select: { anchorSat: true },
   });
 
-  let weekStart: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    const week2Start = addDaysUTC(fortnight.startDate, 7);
-    weekStart =
-      today.getTime() >= week2Start.getTime()
-        ? week2Start
-        : fortnight.startDate;
-  } else {
-    const backToSat = (today.getUTCDay() + 1) % 7;
-    weekStart = addDaysUTC(today, -backToSat);
-  }
-
+  const weekStart = getCurrentWeekStart(today, yearRow?.anchorSat);
   const weekEndExclusive = addDaysUTC(weekStart, 7);
 
   if (
@@ -293,17 +284,10 @@ async function getTopSiteWages(auth: { sub: string; role: string }) {
     select: { anchorSat: true },
   });
 
-  let fnStart: Date;
-  let fnEnd: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    fnStart = fortnight.startDate;
-    fnEnd = addDaysUTC(fortnight.startDate, 14);
-  } else {
-    const backToSat = (today.getUTCDay() + 1) % 7;
-    fnStart = addDaysUTC(today, -backToSat);
-    fnEnd = addDaysUTC(fnStart, 14);
-  }
+  const { startDate: fnStart, endDate: fnEnd } = getCurrentFortnightRange(
+    today,
+    yearRow?.anchorSat,
+  );
 
   let siteFilter: any = {};
   if (auth.role === "SUPERVISOR") {
@@ -375,17 +359,10 @@ async function getSiteActivityData(auth: { sub: string; role: string }) {
     select: { anchorSat: true },
   });
 
-  let fnStart: Date;
-  let fnEnd: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    fnStart = fortnight.startDate;
-    fnEnd = addDaysUTC(fortnight.startDate, 14);
-  } else {
-    const backToSat = (today.getUTCDay() + 1) % 7;
-    fnStart = addDaysUTC(today, -backToSat - 7);
-    fnEnd = addDaysUTC(fnStart, 14);
-  }
+  const { startDate: fnStart, endDate: fnEnd } = getCurrentFortnightRange(
+    today,
+    yearRow?.anchorSat,
+  );
 
   // Scope to supervisor's sites if needed
   let siteIdFilter: string[] | undefined;

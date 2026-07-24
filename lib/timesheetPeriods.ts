@@ -108,3 +108,44 @@ export function getFortnightForDateUTC(date: Date, anchorSat: Date) {
     id: `${toISODateUTC(start)}_${toISODateUTC(end)}`,
   };
 }
+
+/**
+ * Resolve the "current" 14-day fortnight window (end exclusive) as of `today`.
+ * Uses the year's anchorSat when available; falls back to the most recent
+ * Saturday when it isn't configured. `today` must already be UTC-midnight.
+ *
+ * This fallback is intentionally lenient (dashboard/reporting use only) —
+ * period-generation routes require anchorSat and throw instead of guessing.
+ */
+export function getCurrentFortnightRange(
+  today: Date,
+  anchorSat: Date | null | undefined,
+) {
+  if (anchorSat) {
+    const fortnight = getFortnightForDateUTC(today, anchorSat);
+    return {
+      startDate: fortnight.startDate,
+      endDate: addDaysUTC(fortnight.startDate, 14),
+    };
+  }
+
+  const backToSat = (today.getUTCDay() + 1) % 7; // Sat->0, Sun->1, Mon->2 ... Fri->6
+  const startDate = addDaysUTC(today, -backToSat);
+  return { startDate, endDate: addDaysUTC(startDate, 14) };
+}
+
+/**
+ * Resolve the "current week" start (Sat) within the current fortnight, for
+ * the weekly attendance chart: week 2 once `today` reaches its start, else
+ * week 1. `today` must already be UTC-midnight.
+ */
+export function getCurrentWeekStart(
+  today: Date,
+  anchorSat: Date | null | undefined,
+) {
+  const { startDate: fnStart } = getCurrentFortnightRange(today, anchorSat);
+  if (!anchorSat) return fnStart;
+
+  const week2Start = addDaysUTC(fnStart, 7);
+  return today.getTime() >= week2Start.getTime() ? week2Start : fnStart;
+}

@@ -4,7 +4,7 @@ import { requireServerAuth } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { toISODate } from "@/lib/workdate";
 import { addDaysUTC, isoFromDateUTC } from "@/lib/dateUtc";
-import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+import { getCurrentWeekStart } from "@/lib/timesheetPeriods";
 
 export async function getDashboardMetrics() {
   const auth = await requireServerAuth();
@@ -63,20 +63,7 @@ export async function getWeeklyAttendanceData() {
     select: { anchorSat: true },
   });
 
-  let weekStart: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    const week2Start = addDaysUTC(fortnight.startDate, 7);
-    weekStart =
-      today.getTime() >= week2Start.getTime()
-        ? week2Start
-        : fortnight.startDate;
-  } else {
-    // Most recent Saturday (UTC midnight)
-    const backToSat = (today.getUTCDay() + 1) % 7; // Sat->0, Sun->1, Mon->2 ... Fri->6
-    weekStart = addDaysUTC(today, -backToSat);
-  }
-
+  const weekStart = getCurrentWeekStart(today, yearRow?.anchorSat);
   const weekEndExclusive = addDaysUTC(weekStart, 7);
 
   // If supervisor has no assigned sites, return the week window with zeros.

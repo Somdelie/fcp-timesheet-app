@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { toISODate } from "@/lib/workdate";
 import { addDaysUTC, isoFromDateUTC } from "@/lib/dateUtc";
-import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+import {
+  getCurrentFortnightRange,
+  getCurrentWeekStart,
+} from "@/lib/timesheetPeriods";
 import { logApiRequest } from "@/lib/apiRequestLogger";
 import { shouldTreatForemanScanAsIndividual } from "@/lib/individualForemanScan";
 
@@ -100,19 +103,7 @@ async function getWeeklyAttendanceData() {
     select: { anchorSat: true },
   });
 
-  let weekStart: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    const week2Start = addDaysUTC(fortnight.startDate, 7);
-    weekStart =
-      today.getTime() >= week2Start.getTime()
-        ? week2Start
-        : fortnight.startDate;
-  } else {
-    const backToSat = (today.getUTCDay() + 1) % 7;
-    weekStart = addDaysUTC(today, -backToSat);
-  }
-
+  const weekStart = getCurrentWeekStart(today, yearRow?.anchorSat);
   const weekEndExclusive = addDaysUTC(weekStart, 7);
 
   const [scanGroups, siteDayGroups] = await Promise.all([
@@ -166,17 +157,10 @@ async function getFortnightSiteWages() {
     select: { anchorSat: true },
   });
 
-  let fnStart: Date;
-  let fnEnd: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    fnStart = fortnight.startDate;
-    fnEnd = addDaysUTC(fortnight.startDate, 14);
-  } else {
-    const backToSat = (today.getUTCDay() + 1) % 7;
-    fnStart = addDaysUTC(today, -backToSat);
-    fnEnd = addDaysUTC(fnStart, 14);
-  }
+  const { startDate: fnStart, endDate: fnEnd } = getCurrentFortnightRange(
+    today,
+    yearRow?.anchorSat,
+  );
 
   // Sum dayRateAtScan from attendance scans grouped by site for the full fortnight.
   const [rows, scans] = await Promise.all([
@@ -298,17 +282,10 @@ async function getSiteActivityData() {
     select: { anchorSat: true },
   });
 
-  let fnStart: Date;
-  let fnEnd: Date;
-  if (yearRow?.anchorSat) {
-    const fortnight = getFortnightForDateUTC(today, yearRow.anchorSat);
-    fnStart = fortnight.startDate;
-    fnEnd = addDaysUTC(fortnight.startDate, 14);
-  } else {
-    const backToSat = (today.getUTCDay() + 1) % 7;
-    fnStart = addDaysUTC(today, -backToSat - 7);
-    fnEnd = addDaysUTC(fnStart, 14);
-  }
+  const { startDate: fnStart, endDate: fnEnd } = getCurrentFortnightRange(
+    today,
+    yearRow?.anchorSat,
+  );
 
   // Group attendance scans by site within the current fortnight
   const scanGroups = await prisma.attendanceScan.groupBy({
