@@ -379,12 +379,21 @@ export async function GET(req: Request) {
 
       combined.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 
+      // NOTE: intentionally not sliced by page/limit. Material and legacy
+      // MATERIAL ProcurementProduct rows are deduped by SKU/name across two
+      // separate tables in memory (see `keyOf` above), so a correct DB-level
+      // paginated union isn't available without a larger read-model change.
+      // The metadata below is honest about the request that was made
+      // (page/limit as parsed, true total, hasMore always false because
+      // `data` already contains the complete deduped set) rather than the
+      // previous hardcoded `page: 1, limit: combined.length, hasMore: false`,
+      // which silently ignored any page/limit the caller actually sent.
       return NextResponse.json(
         {
           ok: true,
           data: combined.map((p) => ({ ...serialise(p), deployedQty: 0 })),
-          page: 1,
-          limit: combined.length,
+          page,
+          limit,
           total: combined.length,
           hasMore: false,
         },
