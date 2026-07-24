@@ -72,7 +72,18 @@ type CartItem = {
   quantity: number;
   note: string;
   unitPrice: number | null;
+  // How many of `quantity` to bill the site for. Null = charge for all
+  // deployed (same as `quantity`) — e.g. deploy 6 drop sheets, charge 2.
+  chargeQuantity: number | null;
 };
+
+function isSameLine(item: CartItem, productId: string, size: string | null) {
+  return item.productId === productId && item.size === size;
+}
+
+function billableQty(item: CartItem) {
+  return item.chargeQuantity ?? item.quantity;
+}
 
 type SiteCart = {
   siteId: string;
@@ -187,10 +198,12 @@ export default function PlantDeployPOS({
       return;
     }
     updateSiteCart(activeSiteId, (prev) => {
-      const existing = prev.find((i) => i.productId === item.id);
+      const existing = prev.find((i) => isSameLine(i, item.id, null));
       if (existing)
         return prev.map((i) =>
-          i.productId === item.id ? { ...i, quantity: i.quantity + 1 } : i,
+          isSameLine(i, item.id, null)
+            ? { ...i, quantity: i.quantity + 1 }
+            : i,
         );
       return [
         ...prev,
@@ -202,34 +215,102 @@ export default function PlantDeployPOS({
           quantity: 1,
           note: "",
           unitPrice: null,
+          chargeQuantity: null,
         },
       ];
     });
   }
 
-  function updateQuantity(productId: string, quantity: number) {
+  // Sizes are shown as chips in the picker — clicking one adds/increments
+  // a dedicated cart line for that (product, size) pair, so e.g. 3x 6ft +
+  // 1x 8ft step ladders can coexist as two separate lines.
+  function addSizeToCart(item: PlantItemDto, size: string) {
+    if (!activeSiteId) {
+      toast.info("Add a site first");
+      return;
+    }
+    updateSiteCart(activeSiteId, (prev) => {
+      const existing = prev.find((i) => isSameLine(i, item.id, size));
+      if (existing)
+        return prev.map((i) =>
+          isSameLine(i, item.id, size)
+            ? { ...i, quantity: i.quantity + 1 }
+            : i,
+        );
+      return [
+        ...prev,
+        {
+          productId: item.id,
+          productName: item.name,
+          size,
+          sizes: item.sizes ?? [],
+          quantity: 1,
+          note: "",
+          unitPrice: null,
+          chargeQuantity: null,
+        },
+      ];
+    });
+  }
+
+  function updateQuantity(
+    productId: string,
+    size: string | null,
+    quantity: number,
+  ) {
     updateSiteCart(activeSiteId, (prev) =>
       prev
-        .map((i) => (i.productId === productId ? { ...i, quantity } : i))
+        .map((i) =>
+          isSameLine(i, productId, size)
+            ? {
+                ...i,
+                quantity,
+                // Keep charge quantity from exceeding what's actually
+                // deployed if the deploy quantity shrinks below it.
+                chargeQuantity:
+                  i.chargeQuantity != null
+                    ? Math.min(i.chargeQuantity, quantity)
+                    : i.chargeQuantity,
+              }
+            : i,
+        )
         .filter((i) => i.quantity > 0),
     );
   }
 
-  function updateNote(productId: string, note: string) {
+  function updateNote(productId: string, size: string | null, note: string) {
     updateSiteCart(activeSiteId, (prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, note } : i)),
+      prev.map((i) => (isSameLine(i, productId, size) ? { ...i, note } : i)),
     );
   }
 
-  function removeFromCart(productId: string) {
+  function removeFromCart(productId: string, size: string | null) {
     updateSiteCart(activeSiteId, (prev) =>
-      prev.filter((i) => i.productId !== productId),
+      prev.filter((i) => !isSameLine(i, productId, size)),
     );
   }
 
-  function updateUnitPrice(productId: string, unitPrice: number | null) {
+  function updateUnitPrice(
+    productId: string,
+    size: string | null,
+    unitPrice: number | null,
+  ) {
     updateSiteCart(activeSiteId, (prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, unitPrice } : i)),
+      prev.map((i) =>
+        isSameLine(i, productId, size) ? { ...i, unitPrice } : i,
+      ),
+    );
+  }
+
+  function updateChargeQuantity(
+    productId: string,
+    size: string | null,
+    chargeQuantity: number | null,
+  ) {
+    updateSiteCart(activeSiteId, (prev) =>
+      prev.map((i) =>
+        isSameLine(i, productId, size) ? { ...i, chargeQuantity } : i,
+      ),
     );
   }
 
@@ -251,14 +332,16 @@ export default function PlantDeployPOS({
       (sum, sc) =>
         sum +
         sc.items.reduce(
-          (s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0),
+          (s, i) =>
+            s + (i.unitPrice != null ? i.unitPrice * billableQty(i) : 0),
           0,
         ),
       0,
     );
   const activeCartCharged = activeSiteCart?.chargeToSite
     ? activeCart.reduce(
-        (s, i) => s + (i.unitPrice != null ? i.unitPrice * i.quantity : 0),
+        (s, i) =>
+          s + (i.unitPrice != null ? i.unitPrice * billableQty(i) : 0),
         0,
       )
     : 0;
@@ -335,6 +418,7 @@ export default function PlantDeployPOS({
               note: item.note.trim() || undefined,
               unitPrice: item.unitPrice,
               chargeToSite: siteCart.chargeToSite,
+              chargeQuantity: item.chargeQuantity,
             }),
           }).then(async (res) => {
             const json = await res.json().catch(() => null);
@@ -759,6 +843,9 @@ export default function PlantDeployPOS({
                         Quantity
                       </TableHead>
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
+                        Charge Qty
+                      </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
                         Unit Price
                       </TableHead>
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-10 text-center">
@@ -770,10 +857,10 @@ export default function PlantDeployPOS({
                   </TableHeader>
                   <TableBody className="[&_tr:last-child]:border-b [&_tr:last-child]:border-border">
                     {activeCart.map((item, idx) => {
-                      const hasSizes = item.sizes.length > 0;
+                      const hasSize = item.size != null;
                       return (
                         <TableRow
-                          key={item.productId}
+                          key={`${item.productId}::${item.size ?? ""}`}
                           className={`border-b border-border transition-colors ${
                             idx % 2 === 0 ? "" : "bg-muted/20"
                           }`}
@@ -782,33 +869,10 @@ export default function PlantDeployPOS({
                             {item.productName}
                           </TableCell>
                           <TableCell className="py-1 pr-2">
-                            {hasSizes ? (
-                              <div className="flex flex-wrap gap-0.5">
-                                {item.sizes.map((s) => (
-                                  <button
-                                    key={s}
-                                    onClick={() => {
-                                      updateSiteCart(activeSiteId, (prev) =>
-                                        prev.map((i) =>
-                                          i.productId === item.productId
-                                            ? {
-                                                ...i,
-                                                size: i.size === s ? null : s,
-                                              }
-                                            : i,
-                                        ),
-                                      );
-                                    }}
-                                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded border transition-all ${
-                                      item.size === s
-                                        ? "border-primary bg-primary text-primary-foreground"
-                                        : "border-border text-muted-foreground hover:border-primary/50"
-                                    }`}
-                                  >
-                                    {s}
-                                  </button>
-                                ))}
-                              </div>
+                            {hasSize ? (
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-primary bg-primary text-primary-foreground">
+                                {item.size}
+                              </span>
                             ) : (
                               <span className="text-xs text-muted-foreground">
                                 —
@@ -822,6 +886,7 @@ export default function PlantDeployPOS({
                                 onClick={() =>
                                   updateQuantity(
                                     item.productId,
+                                    item.size,
                                     Math.max(1, item.quantity - 1),
                                   )
                                 }
@@ -842,6 +907,7 @@ export default function PlantDeployPOS({
                                   if (!Number.isFinite(n)) return;
                                   updateQuantity(
                                     item.productId,
+                                    item.size,
                                     Math.max(1, n),
                                   );
                                 }}
@@ -852,6 +918,7 @@ export default function PlantDeployPOS({
                                 onClick={() =>
                                   updateQuantity(
                                     item.productId,
+                                    item.size,
                                     item.quantity + 1,
                                   )
                                 }
@@ -861,6 +928,34 @@ export default function PlantDeployPOS({
                                 <Plus className="h-3 w-3" />
                               </button>
                             </div>
+                          </TableCell>
+                          <TableCell className="py-1 pr-2">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={item.chargeQuantity ?? ""}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/\D/g, "");
+                                if (raw === "") {
+                                  updateChargeQuantity(
+                                    item.productId,
+                                    item.size,
+                                    null,
+                                  );
+                                  return;
+                                }
+                                const n = Number(raw);
+                                if (!Number.isFinite(n)) return;
+                                updateChargeQuantity(
+                                  item.productId,
+                                  item.size,
+                                  Math.min(item.quantity, n),
+                                );
+                              }}
+                              placeholder={String(item.quantity)}
+                              title="Units to bill the site for (blank = charge for all deployed)"
+                              className="h-7 w-14 rounded-md border border-border/70 text-center text-sm tabular-nums bg-transparent outline-none focus:border-primary/50 placeholder:text-muted-foreground/50"
+                            />
                           </TableCell>
                           <TableCell className="py-1 pr-2">
                             <div className="inline-flex items-center gap-1 h-7 px-2 rounded bg-muted/40 border focus-within:border-primary/50 focus-within:bg-card transition-colors">
@@ -876,6 +971,7 @@ export default function PlantDeployPOS({
                                   const val = e.target.value;
                                   updateUnitPrice(
                                     item.productId,
+                                    item.size,
                                     val === ""
                                       ? null
                                       : Math.max(0, Number(val)),
@@ -890,7 +986,7 @@ export default function PlantDeployPOS({
                             <Input
                               value={item.note}
                               onChange={(e) =>
-                                updateNote(item.productId, e.target.value)
+                                updateNote(item.productId, item.size, e.target.value)
                               }
                               placeholder="Note…"
                               className="h-7 text-xs px-2"
@@ -898,7 +994,9 @@ export default function PlantDeployPOS({
                           </TableCell> */}
                           <TableCell className="py-1 pr-3 text-center">
                             <button
-                              onClick={() => removeFromCart(item.productId)}
+                              onClick={() =>
+                                removeFromCart(item.productId, item.size)
+                              }
                               className="text-muted-foreground/50 hover:text-destructive transition-colors text-xl leading-none font-light cursor-pointer"
                               aria-label="Remove item"
                             >
@@ -1030,9 +1128,15 @@ export default function PlantDeployPOS({
                   </TableHeader>
                   <TableBody>
                     {filteredItems.map((p, idx) => {
-                      const inActiveCart = activeSiteId
-                        ? activeCart.find((c) => c.productId === p.id)
-                        : null;
+                      const hasSizes = (p.sizes ?? []).length > 0;
+                      const linesForProduct = activeSiteId
+                        ? activeCart.filter((c) => c.productId === p.id)
+                        : [];
+                      const totalQtyInActiveCart = linesForProduct.reduce(
+                        (s, c) => s + c.quantity,
+                        0,
+                      );
+                      const inActiveCart = linesForProduct.length > 0;
                       const inAnyCart = sitesCarts.some((sc) =>
                         sc.items.some((i) => i.productId === p.id),
                       );
@@ -1065,21 +1169,35 @@ export default function PlantDeployPOS({
                             </div>
                             {inActiveCart && (
                               <span className="text-[10px] text-primary tracking-wider mt-0.5 ml-3.5 block">
-                                ×{inActiveCart.quantity} in this site
+                                ×{totalQtyInActiveCart} in this site
                               </span>
                             )}
                           </TableCell>
                           <TableCell className="py-3">
-                            {(p.sizes ?? []).length > 0 ? (
+                            {hasSizes ? (
                               <div className="flex flex-wrap gap-1">
-                                {(p.sizes ?? []).map((s) => (
-                                  <span
-                                    key={s}
-                                    className="rounded border border-border bg-muted/60 px-1.5 py-0.5 text-xs font-medium"
-                                  >
-                                    {s}
-                                  </span>
-                                ))}
+                                {(p.sizes ?? []).map((s) => {
+                                  const line = linesForProduct.find(
+                                    (c) => c.size === s,
+                                  );
+                                  return (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={() => addSizeToCart(p, s)}
+                                      disabled={!activeSiteId}
+                                      title={`Add ${s}`}
+                                      className={`rounded border px-1.5 py-0.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
+                                        line
+                                          ? "border-primary bg-primary text-primary-foreground"
+                                          : "border-border bg-muted/60 text-foreground hover:border-primary/50"
+                                      }`}
+                                    >
+                                      {s}
+                                      {line ? ` ×${line.quantity}` : ""}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">
@@ -1088,17 +1206,23 @@ export default function PlantDeployPOS({
                             )}
                           </TableCell>
                           <TableCell className="py-3 text-right pr-5">
-                            <button
-                              onClick={() => addToCart(p)}
-                              disabled={!activeSiteId}
-                              className={`text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                                inActiveCart
-                                  ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                                  : "border-border text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                              }`}
-                            >
-                              {inActiveCart ? "+ Add" : "Add"}
-                            </button>
+                            {hasSizes ? (
+                              <span className="text-[10px] text-muted-foreground tracking-wide">
+                                Pick a size ←
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => addToCart(p)}
+                                disabled={!activeSiteId}
+                                className={`text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                  inActiveCart
+                                    ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                    : "border-border text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                }`}
+                              >
+                                {inActiveCart ? "+ Add" : "Add"}
+                              </button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
