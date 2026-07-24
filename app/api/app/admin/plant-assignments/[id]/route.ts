@@ -34,6 +34,7 @@ export async function PATCH(
       quantity,
       unitPrice,
       chargeToSite,
+      chargeQuantity,
       size,
     } = body as {
       status?: PlantStatus;
@@ -42,6 +43,7 @@ export async function PATCH(
       quantity?: number;
       unitPrice?: number | null;
       chargeToSite?: boolean;
+      chargeQuantity?: number | null;
       size?: string | null;
     };
 
@@ -51,6 +53,7 @@ export async function PATCH(
     if (quantity !== undefined) data.quantity = quantity;
     if (unitPrice !== undefined) data.unitPrice = unitPrice;
     if (chargeToSite !== undefined) data.chargeToSite = chargeToSite;
+    if (chargeQuantity !== undefined) data.chargeQuantity = chargeQuantity;
     if (size !== undefined) data.size = size?.trim() || null;
     if (returnedOn !== undefined)
       data.returnedOn = returnedOn ? new Date(returnedOn) : null;

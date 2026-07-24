@@ -2944,6 +2944,11 @@ model SitePlantAssignment {
   unitPrice    Decimal? @db.Decimal(12, 2)
   chargeToSite Boolean  @default(false)
 
+  // How many of `quantity` deployed units to actually bill the site for.
+  // Null means "charge for all deployed" (quantity) — e.g. deploy 6 drop
+  // sheets but only charge for 2.
+  chargeQuantity Int?
+
   assignedByUserId String?
 
   // Transfer provenance — set when this assignment was created via a transfer

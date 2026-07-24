@@ -96,6 +96,7 @@ export async function POST(req: Request) {
       deployedOn,
       unitPrice,
       chargeToSite,
+      chargeQuantity,
       reference,
       supervisorName,
       size,
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
       deployedOn?: string;
       unitPrice?: number | null;
       chargeToSite?: boolean;
+      chargeQuantity?: number | null;
       reference?: string | null;
       supervisorName?: string | null;
       size?: string | null;
@@ -146,6 +148,7 @@ export async function POST(req: Request) {
         assignedByUserId: auth.id,
         unitPrice: unitPrice != null ? unitPrice : null,
         chargeToSite: chargeToSite ?? false,
+        chargeQuantity: chargeQuantity != null ? chargeQuantity : null,
       },
       include: {
         product: { select: { id: true, name: true, thumbnailUrl: true } },
