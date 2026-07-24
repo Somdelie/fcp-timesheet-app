@@ -8,6 +8,7 @@ import {
   ensureSiteMaterialsForProducts,
   resolveUnitPrice,
   recalcOrderTotal,
+  resolveCatalogueProduct,
 } from "@/lib/procurement";
 
 export const runtime = "nodejs";
@@ -47,78 +48,6 @@ async function getAuth(req: Request) {
     };
 
   return null;
-}
-
-function normalizeCatalogueName(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async function resolveOrderProduct(productId: string) {
-  const legacy = await prisma.procurementProduct.findUnique({
-    where: { id: productId },
-    include: { masterCatalogueProduct: true },
-  });
-
-  if (legacy) {
-    return {
-      legacyProductId: legacy.id,
-      masterCatalogueProductId: legacy.masterCatalogueProductId,
-      uom: legacy.masterCatalogueProduct?.uom ?? legacy.uom,
-      unitSize: legacy.masterCatalogueProduct?.unitSize ?? legacy.unitSize,
-    };
-  }
-
-  const master = await prisma.masterCatalogueProduct.findUnique({
-    where: { id: productId },
-    include: { legacyProcurementProduct: true },
-  });
-
-  if (!master) return null;
-
-  if (master.legacyProcurementProduct) {
-    return {
-      legacyProductId: master.legacyProcurementProduct.id,
-      masterCatalogueProductId: master.id,
-      uom: master.uom ?? master.legacyProcurementProduct.uom,
-      unitSize: master.unitSize ?? master.legacyProcurementProduct.unitSize,
-    };
-  }
-
-  const compatibilityProduct = await prisma.procurementProduct.create({
-    data: {
-      name: master.name,
-      normalizedName:
-        master.normalizedName || normalizeCatalogueName(master.name),
-      sku: master.sku,
-      description: master.description,
-      categoryId: master.categoryId,
-      supplierId: master.supplierId,
-      thumbnailUrl: master.thumbnailUrl,
-      productType: master.productType,
-      uom: master.uom,
-      unitSize: master.unitSize,
-      isReturnable: master.isReturnable,
-      isDeductible: master.isDeductible,
-      deductionSplits: master.deductionSplits,
-      colors: master.colors,
-      sizes: master.sizes,
-      stockQty: master.stockQty,
-      isActive: master.isActive,
-      masterCatalogueProductId: master.id,
-    },
-  });
-
-  return {
-    legacyProductId: compatibilityProduct.id,
-    masterCatalogueProductId: master.id,
-    uom: master.uom,
-    unitSize: master.unitSize,
-  };
 }
 
 export async function GET(req: Request) {
@@ -281,11 +210,13 @@ export async function POST(req: Request) {
 
     const resolvedItems: {
       item: (typeof validItems)[number];
-      resolved: NonNullable<Awaited<ReturnType<typeof resolveOrderProduct>>>;
+      resolved: NonNullable<
+        Awaited<ReturnType<typeof resolveCatalogueProduct>>
+      >;
     }[] = [];
 
     for (const item of validItems) {
-      const resolved = await resolveOrderProduct(item.productId);
+      const resolved = await resolveCatalogueProduct(item.productId);
       if (!resolved)
         return NextResponse.json(
           { error: `Product not found: ${item.productId}` },

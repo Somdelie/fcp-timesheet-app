@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
+import { resolveCatalogueProduct } from "@/lib/procurement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,15 +37,6 @@ async function getAuth(req: Request) {
     };
 
   return null;
-}
-
-function normalizeCatalogueName(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function serialiseSupplierProductPrice(p: any) {
@@ -94,76 +86,6 @@ function serialiseMaterialPrice(p: any) {
       masterCatalogueProductId: null,
       catalogueSource: "MATERIAL",
     },
-  };
-}
-
-/**
- * Resolve either a legacy ProcurementProduct id or MasterCatalogueProduct id.
- *
- * SupplierProductPrice still stores ProcurementProduct ids during Stage 1.
- * When a master row has no compatibility product, one is created.
- */
-async function resolvePriceProduct(productId: string) {
-  const legacy = await prisma.procurementProduct.findUnique({
-    where: { id: productId },
-    select: {
-      id: true,
-      masterCatalogueProductId: true,
-    },
-  });
-
-  if (legacy) {
-    return {
-      legacyProductId: legacy.id,
-      masterCatalogueProductId: legacy.masterCatalogueProductId,
-    };
-  }
-
-  const master = await prisma.masterCatalogueProduct.findUnique({
-    where: { id: productId },
-    include: {
-      legacyProcurementProduct: {
-        select: { id: true },
-      },
-    },
-  });
-
-  if (!master) return null;
-
-  if (master.legacyProcurementProduct) {
-    return {
-      legacyProductId: master.legacyProcurementProduct.id,
-      masterCatalogueProductId: master.id,
-    };
-  }
-
-  const compatibilityProduct = await prisma.procurementProduct.create({
-    data: {
-      name: master.name,
-      normalizedName:
-        master.normalizedName || normalizeCatalogueName(master.name),
-      sku: master.sku,
-      description: master.description,
-      categoryId: master.categoryId,
-      supplierId: master.supplierId,
-      thumbnailUrl: master.thumbnailUrl,
-      productType: master.productType,
-      uom: master.uom,
-      unitSize: master.unitSize,
-      isReturnable: master.isReturnable,
-      isDeductible: master.isDeductible,
-      deductionSplits: master.deductionSplits,
-      colors: master.colors,
-      sizes: master.sizes,
-      stockQty: master.stockQty,
-      isActive: master.isActive,
-      masterCatalogueProductId: master.id,
-    },
-  });
-
-  return {
-    legacyProductId: compatibilityProduct.id,
-    masterCatalogueProductId: master.id,
   };
 }
 
@@ -329,7 +251,7 @@ export async function POST(req: Request) {
         { status: 400, headers: CORS },
       );
 
-    const resolved = await resolvePriceProduct(productId);
+    const resolved = await resolveCatalogueProduct(productId);
 
     if (resolved) {
       const record = await prisma.supplierProductPrice.create({
