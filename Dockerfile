@@ -11,6 +11,9 @@ RUN pnpm install --no-frozen-lockfile
 
 COPY . .
 
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/dummy"
+ENV DIRECT_URL="postgresql://user:password@localhost:5432/dummy"
+
 RUN pnpm prisma generate
 RUN pnpm build
 
