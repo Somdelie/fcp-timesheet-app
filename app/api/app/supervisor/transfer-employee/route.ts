@@ -76,13 +76,6 @@ export async function POST(req: Request) {
     reason,
   } = body.data;
 
-  if (fromSiteId === toSiteId) {
-    return NextResponse.json(
-      { error: "Source and destination sites must be different" },
-      { status: 400 },
-    );
-  }
-
   // Verify the employee exists
   const employee = await prisma.employee.findUnique({
     where: { id: employeeId },
@@ -201,7 +194,7 @@ export async function POST(req: Request) {
       team: true,
       scannedAt: true,
       scannedOutAt: true,
-      siteDay: { select: { isLocked: true } },
+      siteDay: { select: { isLocked: true, foremanId: true } },
     },
   });
 
@@ -229,6 +222,16 @@ export async function POST(req: Request) {
     );
   }
 
+  const isSameSiteMove = fromSiteId === toSiteId;
+  if (isSameSiteMove && existingScan.siteDay.foremanId === toForemanId) {
+    return NextResponse.json(
+      {
+        error: `Employee ${employee.firstName} ${employee.lastName} is already assigned to that foreman at ${fromSite.name}`,
+      },
+      { status: 409 },
+    );
+  }
+
   // Verify the selected foreman is assigned to the destination site
   const foremanAssignment = await prisma.foremanSiteAssignment.findFirst({
     where: {
@@ -237,7 +240,10 @@ export async function POST(req: Request) {
       startsOn: { lte: now },
       OR: [{ endsOn: null }, { endsOn: { gt: now } }],
     },
-    select: { foremanId: true },
+    select: {
+      foremanId: true,
+      foreman: { select: { user: { select: { name: true } } } },
+    },
   });
 
   if (!foremanAssignment) {
@@ -301,6 +307,15 @@ export async function POST(req: Request) {
     workDate,
   });
 
+  const toForemanName = foremanAssignment.foreman.user?.name ?? "the selected foreman";
+
+  const outReason = isSameSiteMove
+    ? `Reassigned to foreman ${toForemanName} at ${toSite.name}`
+    : `Transferred to ${toSite.name}`;
+  const inReason = isSameSiteMove
+    ? `Reassigned from another foreman at ${fromSite.name}`
+    : `Transferred from ${fromSite.name}`;
+
   // Perform the transfer in a transaction:
   // 1. Mark existing scan at source as scanned out
   // 2. Delete the existing scan (to free up the unique constraint on [employeeId, workDate])
@@ -313,9 +328,7 @@ export async function POST(req: Request) {
         data: {
           scannedOutAt: now,
           direction: "OUT",
-          manualReason: reason
-            ? `Transferred to ${toSite.name}: ${reason}`
-            : `Transferred to ${toSite.name}`,
+          manualReason: reason ? `${outReason}: ${reason}` : outReason,
         },
       });
 
@@ -337,9 +350,7 @@ export async function POST(req: Request) {
           scannedAt: now,
           scanType: "MANUAL",
           direction: "IN",
-          manualReason: reason
-            ? `Transferred from ${fromSite.name}: ${reason}`
-            : `Transferred from ${fromSite.name}`,
+          manualReason: reason ? `${inReason}: ${reason}` : inReason,
           transferredFromSiteId: fromSiteId,
           transferredFromScanId: existingScan.id,
           transferredAt: now,
@@ -371,8 +382,12 @@ export async function POST(req: Request) {
         newScanId: result.id,
         transferredAt: now.toISOString(),
         reason: reason ?? null,
+        toForemanName,
+        sameSite: isSameSiteMove,
       },
-      message: `${fullName} transferred from ${fromSite.name} to ${toSite.name}`,
+      message: isSameSiteMove
+        ? `${fullName} reassigned to ${toForemanName} at ${toSite.name}`
+        : `${fullName} transferred from ${fromSite.name} to ${toSite.name}`,
     });
   } catch (e: any) {
     console.error("Employee transfer error:", e);

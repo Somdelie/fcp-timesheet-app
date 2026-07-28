@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   ArrowRightLeft,
+  Calendar as CalendarIcon,
   Check,
   ChevronsUpDown,
   Clock,
@@ -17,6 +18,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -71,6 +73,7 @@ interface SiteScan {
   isScannedOut: boolean;
   dayRate: string;
   isTransferred: boolean;
+  workDateISO: string;
 }
 
 interface SiteOption {
@@ -109,6 +112,8 @@ type PendingAction =
       siteId: string;
       siteName: string;
       foremanId: string;
+      foremanName: string;
+      sameSite: boolean;
       employeeCount: number;
     }
   | {
@@ -142,10 +147,31 @@ function siteLabel(site: SiteOption) {
   return site.code ? `${site.code} - ${site.name}` : site.name;
 }
 
+function dateKeyFromDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromDateKey(key: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function dateLabel(dateISO: string) {
+  return dateFromDateKey(dateISO).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
 export default function AdminTransferEmployeePage() {
   const [sites, setSites] = useState<SiteOption[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState("");
-  const [selectedDateISO, setSelectedDateISO] = useState(todayISO);
+  const [selectedDateISOs, setSelectedDateISOs] = useState<string[]>(() => [todayISO()]);
+  const [dateCalendarMonth, setDateCalendarMonth] = useState(new Date());
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [siteOpen, setSiteOpen] = useState(false);
   const [scans, setScans] = useState<SiteScan[]>([]);
   const [loadingScans, setLoadingScans] = useState(false);
@@ -169,7 +195,7 @@ export default function AdminTransferEmployeePage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/admin/attendance-scans");
+        const res = await fetch("/api/app/admin/sites?fields=lite&isActive=true");
         if (!res.ok) throw new Error("Failed to load sites");
         const data = await res.json();
         setSites(data.sites || []);
@@ -179,20 +205,46 @@ export default function AdminTransferEmployeePage() {
     })();
   }, []);
 
-  const loadScans = useCallback(async (siteId: string, dateISO: string) => {
-    if (!siteId) return;
+  const loadScans = useCallback(async (siteId: string, dateISOs: string[]) => {
+    if (!siteId || dateISOs.length === 0) {
+      setScans([]);
+      setSelectedScanIds([]);
+      return;
+    }
     setLoadingScans(true);
     try {
-      const res = await fetch(
-        `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(dateISO)}`,
+      const settled = await Promise.allSettled(
+        dateISOs.map(async (dateISO) => {
+          const res = await fetch(
+            `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(dateISO)}`,
+          );
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `Failed to load scans for ${dateISO}`);
+          const scansForDate: SiteScan[] = (data.scans || []).map((scan: SiteScan) => ({
+            ...scan,
+            workDateISO: dateISO,
+          }));
+          return scansForDate;
+        }),
       );
-      if (!res.ok) throw new Error("Failed to load today's scans");
-      const data = await res.json();
-      const nextScans: SiteScan[] = data.scans || [];
+
+      const nextScans: SiteScan[] = [];
+      const errors: string[] = [];
+      settled.forEach((result) => {
+        if (result.status === "fulfilled") {
+          nextScans.push(...result.value);
+        } else {
+          errors.push(result.reason instanceof Error ? result.reason.message : "Failed to load scans");
+        }
+      });
+
       setScans(nextScans);
       setSelectedScanIds((ids) =>
         ids.filter((id) => nextScans.some((scan) => scan.id === id)),
       );
+      if (errors.length > 0) {
+        toast.error(errors.length === 1 ? errors[0] : `${errors.length} dates failed to load`);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load scans");
       setScans([]);
@@ -203,13 +255,14 @@ export default function AdminTransferEmployeePage() {
   }, []);
 
   useEffect(() => {
-    if (selectedSiteId) {
-      void loadScans(selectedSiteId, selectedDateISO);
+    if (selectedSiteId && selectedDateISOs.length > 0) {
+      void loadScans(selectedSiteId, selectedDateISOs);
     } else {
       setScans([]);
       setSelectedScanIds([]);
     }
-  }, [selectedSiteId, selectedDateISO, loadScans]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSiteId, selectedDateISOs.join(","), loadScans]);
 
   const ensureForemenForSite = useCallback(
     async (siteId: string) => {
@@ -223,7 +276,7 @@ export default function AdminTransferEmployeePage() {
 
       try {
         const res = await fetch(
-          `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(selectedDateISO)}`,
+          `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(todayISO())}`,
         );
         if (!res.ok) throw new Error("Failed to load foremen");
         const data = await res.json();
@@ -248,7 +301,7 @@ export default function AdminTransferEmployeePage() {
         return nextState;
       }
     },
-    [foremenBySite, selectedDateISO],
+    [foremenBySite],
   );
 
   const selectedSite = sites.find((site) => site.id === selectedSiteId);
@@ -256,13 +309,17 @@ export default function AdminTransferEmployeePage() {
   const destinationSites = useMemo(() => {
     const term = siteSearch.trim().toLowerCase();
     return sites
-      .filter((site) => site.id !== selectedSiteId)
       .filter(
         (site) =>
           !term ||
           site.name.toLowerCase().includes(term) ||
           (site.code ?? "").toLowerCase().includes(term),
-      );
+      )
+      .sort((a, b) => {
+        if (a.id === selectedSiteId) return -1;
+        if (b.id === selectedSiteId) return 1;
+        return 0;
+      });
   }, [sites, selectedSiteId, siteSearch]);
 
   const filteredScans = useMemo(() => {
@@ -395,11 +452,16 @@ export default function AdminTransferEmployeePage() {
     }
 
     const destinationSite = sites.find((site) => site.id === siteId);
+    const foremanName =
+      foremenState.foremen.find((foreman) => foreman.id === foremanId)?.name ??
+      "the selected foreman";
     setPendingAction({
       type: "transfer",
       siteId,
       siteName: destinationSite ? siteLabel(destinationSite) : "selected site",
       foremanId,
+      foremanName,
+      sameSite: siteId === selectedSiteId,
       employeeCount: selectedTransferScans.length,
     });
   }
@@ -424,7 +486,7 @@ export default function AdminTransferEmployeePage() {
             fromSiteId: selectedSiteId,
             toSiteId: siteId,
             toForemanId: foremanId,
-            workDateISO: selectedDateISO,
+            workDateISO: scan.workDateISO,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -452,7 +514,7 @@ export default function AdminTransferEmployeePage() {
         );
       }
 
-      await loadScans(selectedSiteId, selectedDateISO);
+      await loadScans(selectedSiteId, selectedDateISOs);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Transfer failed");
     } finally {
@@ -502,7 +564,7 @@ export default function AdminTransferEmployeePage() {
       }
 
       if (selectedSiteId) {
-        await loadScans(selectedSiteId, selectedDateISO);
+        await loadScans(selectedSiteId, selectedDateISOs);
       }
       if (trashOpen) {
         await loadTrash();
@@ -650,16 +712,56 @@ export default function AdminTransferEmployeePage() {
 
             <div>
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
-                Work Date
+                Work Date{selectedDateISOs.length > 1 ? "s" : ""}
               </label>
-              <Input
-                type="date"
-                value={selectedDateISO}
-                onChange={(event) => {
-                  setSelectedDateISO(event.target.value || todayISO());
-                  setSelectedScanIds([]);
-                }}
-              />
+              <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedDateISOs.length === 0
+                        ? "Select date(s)..."
+                        : selectedDateISOs.length === 1
+                          ? dateLabel(selectedDateISOs[0])
+                          : `${selectedDateISOs.length} dates selected`}
+                    </span>
+                    <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="multiple"
+                    month={dateCalendarMonth}
+                    onMonthChange={setDateCalendarMonth}
+                    selected={selectedDateISOs.map(dateFromDateKey)}
+                    onSelect={(dates) => {
+                      const keys = Array.from(
+                        new Set((dates ?? []).map(dateKeyFromDate)),
+                      ).sort();
+                      setSelectedDateISOs(keys.length ? keys : [todayISO()]);
+                      setSelectedScanIds([]);
+                    }}
+                  />
+                  <div className="flex items-center justify-between gap-2 border-t p-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDateISOs([todayISO()]);
+                        setSelectedScanIds([]);
+                      }}
+                    >
+                      Today only
+                    </Button>
+                    <Button type="button" size="sm" onClick={() => setDatePopoverOpen(false)}>
+                      Done
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>
@@ -840,6 +942,12 @@ export default function AdminTransferEmployeePage() {
                               <Clock className="h-3 w-3" />
                               {timeLabel(scan.scannedAt)}
                             </span>
+                            {selectedDateISOs.length > 1 ? (
+                              <span className="inline-flex items-center gap-1">
+                                <CalendarIcon className="h-3 w-3" />
+                                {dateLabel(scan.workDateISO)}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                         {scan.isTransferred ? (
@@ -869,7 +977,10 @@ export default function AdminTransferEmployeePage() {
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <CardTitle>Destination Sites</CardTitle>
-                  <CardDescription>Drop selected employees onto a destination site.</CardDescription>
+                  <CardDescription>
+                    Drop selected employees onto a destination site, or onto the source site
+                    itself to move them to a different foreman.
+                  </CardDescription>
                 </div>
                 <div className="relative w-full md:w-72">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -888,6 +999,7 @@ export default function AdminTransferEmployeePage() {
                   const state = foremenBySite[site.id] ?? emptyForemenState;
                   const isOver = dragOverSiteId === site.id;
                   const isTransferring = transferringSiteId === site.id;
+                  const isSameSite = site.id === selectedSiteId;
 
                   return (
                     <div
@@ -908,18 +1020,28 @@ export default function AdminTransferEmployeePage() {
                       className={cn(
                         "rounded border bg-background p-3 transition-colors",
                         dragging && "border-dashed",
+                        isSameSite && "border-amber-300 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/10",
                         isOver && "border-primary bg-primary/10 ring-2 ring-primary/20",
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold">{siteLabel(site)}</div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="truncate text-sm font-semibold">{siteLabel(site)}</div>
+                            {isSameSite ? (
+                              <Badge variant="outline" className="shrink-0 text-[10px]">
+                                Same site
+                              </Badge>
+                            ) : null}
+                          </div>
                           <div className="text-xs text-muted-foreground">
-                            {state.loaded
-                              ? state.foremen.length
-                                ? `${state.foremen.length} foreman option${state.foremen.length === 1 ? "" : "s"}`
-                                : "No foreman assigned"
-                              : "Foreman loads on hover/drop"}
+                            {isSameSite
+                              ? "Reassign selected employees to a different foreman here"
+                              : state.loaded
+                                ? state.foremen.length
+                                  ? `${state.foremen.length} foreman option${state.foremen.length === 1 ? "" : "s"}`
+                                  : "No foreman assigned"
+                                : "Foreman loads on hover/drop"}
                           </div>
                         </div>
                         <Button
@@ -973,7 +1095,7 @@ export default function AdminTransferEmployeePage() {
                         ) : (
                           <ArrowRightLeft className="h-4 w-4" />
                         )}
-                        Transfer Here
+                        {isSameSite ? "Reassign Foreman" : "Transfer Here"}
                       </Button>
                     </div>
                   );
@@ -1100,7 +1222,9 @@ export default function AdminTransferEmployeePage() {
                 ? "Move selected scans to trash?"
                 : pendingAction?.type === "clear-trash"
                   ? "Clear the trash bin?"
-                  : "Transfer selected employees?"}
+                  : pendingAction?.sameSite
+                    ? "Reassign selected employees to a different foreman?"
+                    : "Transfer selected employees?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingAction?.type === "delete"
@@ -1111,10 +1235,14 @@ export default function AdminTransferEmployeePage() {
                   ? `This will permanently clear ${pendingAction.employeeCount} item${
                       pendingAction.employeeCount === 1 ? "" : "s"
                     } from the trash bin.`
+                : pendingAction?.sameSite
+                  ? `This will reassign ${pendingAction.employeeCount} open scan${
+                      pendingAction.employeeCount === 1 ? "" : "s"
+                    } at ${selectedSiteName || "this site"} to foreman ${pendingAction.foremanName}.`
                 : pendingAction
                   ? `This will transfer ${pendingAction.employeeCount} open scan${
                       pendingAction.employeeCount === 1 ? "" : "s"
-                    } from ${selectedSiteName || "the source site"} to ${pendingAction.siteName}.`
+                    } from ${selectedSiteName || "the source site"} to ${pendingAction.siteName} (foreman ${pendingAction.foremanName}).`
                   : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1131,7 +1259,9 @@ export default function AdminTransferEmployeePage() {
                 ? "Move to Trash"
                 : pendingAction?.type === "clear-trash"
                   ? "Clear Bin"
-                  : "Transfer"}
+                  : pendingAction?.sameSite
+                    ? "Reassign"
+                    : "Transfer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
