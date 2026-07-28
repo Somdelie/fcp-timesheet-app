@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "prisma generate",
     "test:paint-tds-brands": "tsx ./scripts/test-paint-tds-brands.ts",
     "backfill:material-order-totals": "tsx ./scripts/backfill-site-product-order-totals.ts",
     "backfill:stock-from-orders": "tsx ./scripts/backfill-stock-from-orders.ts",
