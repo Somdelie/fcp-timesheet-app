@@ -88,7 +88,7 @@ export function parseClaimText(text: string): ParsedClaim | null {
 export async function parseClaimBuffers(
   buffers: { name: string; buffer: Buffer }[],
 ): Promise<{ fileName: string; claim: ParsedClaim | null; error?: string }[]> {
-  const pdfParse = (await import("pdf-parse")).default;
+  const { PDFParse } = await import("pdf-parse");
 
   const results: {
     fileName: string;
@@ -97,8 +97,9 @@ export async function parseClaimBuffers(
   }[] = [];
 
   for (const { name, buffer } of buffers) {
+    const parser = new PDFParse({ data: buffer });
     try {
-      const result = await pdfParse(buffer);
+      const result = await parser.getText();
       const text: string = result.text;
 
       const claim = parseClaimText(text);
@@ -114,6 +115,8 @@ export async function parseClaimBuffers(
         claim: null,
         error: e instanceof Error ? e.message : "PDF parse error",
       });
+    } finally {
+      await parser.destroy();
     }
   }
 

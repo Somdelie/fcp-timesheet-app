@@ -1,5 +1,12 @@
-import { WorkspaceCanvas } from "./Canvas";
+"use client";
+
+import dynamic from "next/dynamic";
 import { LeftSidebar } from "./Sidebar";
+
+const WorkspaceCanvas = dynamic(() => import("./Canvas").then(mod => mod.WorkspaceCanvas), {
+  ssr: false,
+  loading: () => <div className="flex h-full w-full items-center justify-center bg-white">Loading Canvas...</div>
+});
 
 export function WorkspaceShell() {
   return (

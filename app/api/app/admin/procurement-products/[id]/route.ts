@@ -5,7 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
 import { canonicalPlantName } from "@/lib/procurement/plantName";
-import type { ProductUom, ProductType } from "@/generated/prisma/client";
+import type {
+  ProductUom,
+  ProductType,
+  PlantCondition,
+} from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,7 +141,7 @@ export async function GET(
           orderBy: { startsOn: "desc" },
         },
         variantStocks: {
-          select: { id: true, size: true, color: true, qty: true },
+          select: { id: true, size: true, color: true, condition: true, qty: true },
         },
         _count: { select: { orderItems: true } },
       },
@@ -214,6 +218,7 @@ export async function PATCH(
       variantStocks?: {
         size?: string | null;
         color?: string | null;
+        condition?: PlantCondition | null;
         qty?: number;
       }[];
     };
@@ -306,7 +311,12 @@ export async function PATCH(
 
     // Fall back to ProcurementProduct
     const variantStocksInput = (body as any).variantStocks as
-      | { size?: string | null; color?: string | null; qty?: number }[]
+      | {
+          size?: string | null;
+          color?: string | null;
+          condition?: PlantCondition | null;
+          qty?: number;
+        }[]
       | undefined;
 
     const ppData: Record<string, unknown> = {};
@@ -492,7 +502,7 @@ export async function PATCH(
               orderBy: { startsOn: "desc" },
             },
             variantStocks: {
-              select: { id: true, size: true, color: true, qty: true },
+              select: { id: true, size: true, color: true, condition: true, qty: true },
             },
             _count: { select: { orderItems: true } },
           },
@@ -504,12 +514,13 @@ export async function PATCH(
               productId: id,
               size: v.size || null,
               color: v.color || null,
+              condition: v.condition ?? "OLD",
               qty: Math.max(0, Number(v.qty) || 0),
             })),
           });
           product.variantStocks = await tx.productVariantStock.findMany({
             where: { productId: id },
-            select: { id: true, size: true, color: true, qty: true },
+            select: { id: true, size: true, color: true, condition: true, qty: true },
           });
         }
         return product;

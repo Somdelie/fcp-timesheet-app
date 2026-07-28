@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
-import type { PlantStatus } from "@/generated/prisma/client";
+import type { PlantCondition, PlantStatus } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +100,7 @@ export async function POST(req: Request) {
       reference,
       supervisorName,
       size,
+      condition,
     } = body as {
       siteId: string;
       productId: string;
@@ -112,6 +113,7 @@ export async function POST(req: Request) {
       reference?: string | null;
       supervisorName?: string | null;
       size?: string | null;
+      condition?: PlantCondition | null;
     };
 
     if (!siteId || !productId)
@@ -141,6 +143,7 @@ export async function POST(req: Request) {
         productId,
         quantity: quantity ?? 1,
         size: size?.trim() || null,
+        condition: condition ?? "OLD",
         note: note?.trim() || null,
         supervisorName: supervisorName?.trim() || null,
         deployedOn: deployedOn ? new Date(deployedOn) : new Date(),

@@ -81,6 +81,8 @@ export async function POST(
           siteId: toSiteId,
           productId: source.productId,
           quantity,
+          size: source.size,
+          condition: source.condition,
           status: "DEPLOYED",
           deployedOn: new Date(),
           note: note?.trim() || null,

@@ -30,8 +30,6 @@ import {
   normalizeBuildSmartProductCode,
 } from "@/lib/procurement/buildsmartProductCodes";
 import { Workbook } from "exceljs";
-import jsPDF from "jspdf";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -1032,9 +1030,10 @@ export default function ProcurementProductsPage({
     }
   }, [filteredProducts, isPaintsTab]);
 
-  const exportProductsToPdf = useCallback(() => {
+  const exportProductsToPdf = useCallback(async () => {
     setExporting(true);
     try {
+      const { default: jsPDF } = await import("jspdf");
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",

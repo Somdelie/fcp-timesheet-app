@@ -98,6 +98,8 @@ type Assignment = {
   reference: string | null;
   quantity: number;
   status: string;
+  size: string | null;
+  condition: string;
   deployedOn: string;
   note: string | null;
   supervisorName: string | null;
@@ -1705,6 +1707,8 @@ export function PlantAssignmentsTab({
             sku: p.sku ?? null,
             thumbnailUrl: p.thumbnailUrl ?? null,
             sizes: p.sizes ?? [],
+            colors: p.colors ?? [],
+            variants: p.variants ?? [],
           })),
         );
       });
@@ -2040,7 +2044,27 @@ export function PlantAssignmentsTab({
                       )}
                     </TableCell>
                     <TableCell className="font-medium border-r">
-                      {a.product.name}
+                      <div>{a.product.name}</div>
+                      {(a.size || a.condition) && (
+                        <div className="mt-0.5 flex items-center gap-1">
+                          {a.size && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border bg-muted/60 text-muted-foreground">
+                              {a.size}
+                            </span>
+                          )}
+                          {a.condition && (
+                            <span
+                              className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${
+                                a.condition === "NEW"
+                                  ? "border-emerald-600/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+                                  : "border-border bg-muted/60 text-muted-foreground"
+                              }`}
+                            >
+                              {a.condition === "NEW" ? "New" : "Old"}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm border-r whitespace-nowrap">
                       {a.site.code

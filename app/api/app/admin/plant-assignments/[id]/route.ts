@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { PlantStatus } from "@/generated/prisma/client";
+import type { PlantCondition, PlantStatus } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +36,7 @@ export async function PATCH(
       chargeToSite,
       chargeQuantity,
       size,
+      condition,
     } = body as {
       status?: PlantStatus;
       note?: string;
@@ -45,6 +46,7 @@ export async function PATCH(
       chargeToSite?: boolean;
       chargeQuantity?: number | null;
       size?: string | null;
+      condition?: PlantCondition;
     };
 
     const data: Record<string, unknown> = {};
@@ -55,6 +57,7 @@ export async function PATCH(
     if (chargeToSite !== undefined) data.chargeToSite = chargeToSite;
     if (chargeQuantity !== undefined) data.chargeQuantity = chargeQuantity;
     if (size !== undefined) data.size = size?.trim() || null;
+    if (condition !== undefined) data.condition = condition;
     if (returnedOn !== undefined)
       data.returnedOn = returnedOn ? new Date(returnedOn) : null;
     else if (status === "RETURNED" && !returnedOn) data.returnedOn = new Date();

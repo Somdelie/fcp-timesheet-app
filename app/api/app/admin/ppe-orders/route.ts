@@ -363,7 +363,12 @@ export async function POST(req: Request) {
             if (size && color) {
               await tx.productVariantStock.upsert({
                 where: {
-                  productId_size_color: { productId: i.productId, size, color },
+                  productId_size_color_condition: {
+                    productId: i.productId,
+                    size,
+                    color,
+                    condition: "OLD",
+                  },
                 },
                 update: { qty: { decrement: i.quantity } },
                 create: {
@@ -396,7 +401,12 @@ export async function POST(req: Request) {
           if (size && color) {
             await tx.productVariantStock.upsert({
               where: {
-                productId_size_color: { productId: i.productId, size, color },
+                productId_size_color_condition: {
+                  productId: i.productId,
+                  size,
+                  color,
+                  condition: "OLD",
+                },
               },
               update: { qty: { decrement: i.quantity } },
               create: { productId: i.productId, size, color, qty: -i.quantity },

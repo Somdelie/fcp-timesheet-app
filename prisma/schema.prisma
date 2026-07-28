@@ -1312,6 +1312,11 @@ enum PlantStatus {
   LOST
 }
 
+enum PlantCondition {
+  NEW
+  OLD
+}
+
 enum PpeOrderStatus {
   PENDING
   APPROVED
@@ -1583,9 +1588,10 @@ model ProductVariantStock {
   product   ProcurementProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
   size      String?
   color     String?
+  condition PlantCondition     @default(OLD)
   qty       Int                @default(0)
 
-  @@unique([productId, size, color])
+  @@unique([productId, size, color, condition])
   @@index([productId])
 }
 
@@ -2961,6 +2967,9 @@ model SitePlantAssignment {
 
   // Size variant deployed (e.g. "3m", "5m")
   size String?
+
+  // Condition deployed — new stock vs already-in-service stock
+  condition PlantCondition @default(OLD)
 
   // Transfer history
   transfersOut PlantTransfer[] @relation("PlantTransferFromAssignment")

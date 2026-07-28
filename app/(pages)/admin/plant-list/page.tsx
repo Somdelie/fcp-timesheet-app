@@ -77,6 +77,7 @@ type PlantItem = {
     id: string;
     size: string | null;
     color: string | null;
+    condition: "NEW" | "OLD";
     qty: number;
   }[];
   deployedQty: number;
@@ -90,16 +91,25 @@ type PlantItem = {
 type Category = { id: string; name: string };
 type Supplier = { id: string; name: string };
 
-function variantKey(size: string) {
-  return size.trim();
+type Condition = "NEW" | "OLD";
+const CONDITIONS: Condition[] = ["NEW", "OLD"];
+
+function variantKey(size: string, condition: Condition) {
+  return `${size.trim()}\x00${condition}`;
 }
 
-function buildSizeVariantStocks(sizes: string[], qtys: Record<string, string>) {
-  return sizes.map((size) => ({
-    size,
-    color: null,
-    qty: Math.max(0, Number(qtys[variantKey(size)]) || 0),
-  }));
+// Always emits a NEW and an OLD row per size (or, with no sizes, one flat
+// NEW/OLD pair) — a blank input is just qty 0, not "no row".
+function buildVariantStocks(sizes: string[], qtys: Record<string, string>) {
+  const sizeList = sizes.length > 0 ? sizes : [""];
+  return sizeList.flatMap((size) =>
+    CONDITIONS.map((condition) => ({
+      size: size || null,
+      color: null,
+      condition,
+      qty: Math.max(0, Number(qtys[variantKey(size, condition)]) || 0),
+    })),
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -127,7 +137,6 @@ export default function PlantListPage() {
     isReturnable: true,
     sizesRaw: "",
     colorsRaw: "",
-    stockQty: 0,
     variantQtys: {} as Record<string, string>,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -140,14 +149,10 @@ export default function PlantListPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const formSizes = parseTags(form.sizesRaw);
-  const hasSizeQtys = formSizes.some(
-    (size) => (form.variantQtys[variantKey(size)] ?? "").trim() !== "",
-  );
-  const sizeQtyTotal = formSizes.reduce(
-    (sum, size) => sum + (Number(form.variantQtys[variantKey(size)]) || 0),
-    0,
-  );
-  const displayedStockQty = hasSizeQtys ? sizeQtyTotal : form.stockQty;
+  const displayedStockQty = buildVariantStocks(
+    formSizes,
+    form.variantQtys,
+  ).reduce((sum, v) => sum + v.qty, 0);
 
   /* -------- load lookups -------- */
   useEffect(() => {
@@ -208,7 +213,6 @@ export default function PlantListPage() {
       isReturnable: true,
       sizesRaw: "",
       colorsRaw: "",
-      stockQty: 0,
       variantQtys: {},
     });
     setDialogOpen(true);
@@ -217,8 +221,9 @@ export default function PlantListPage() {
   function openEdit(p: PlantItem) {
     const variantQtys: Record<string, string> = {};
     for (const variant of p.variantStocks ?? []) {
-      if (variant.size)
-        variantQtys[variantKey(variant.size)] = String(variant.qty);
+      variantQtys[variantKey(variant.size ?? "", variant.condition)] = String(
+        variant.qty,
+      );
     }
     setEditing(p);
     setForm({
@@ -231,7 +236,6 @@ export default function PlantListPage() {
       isReturnable: p.isReturnable,
       sizesRaw: (p.sizes ?? []).join(", "),
       colorsRaw: (p.colors ?? []).join(", "),
-      stockQty: p.stockQty ?? 0,
       variantQtys,
     });
     setDialogOpen(true);
@@ -288,15 +292,8 @@ export default function PlantListPage() {
     }
     const sizes = parseTags(form.sizesRaw);
     const colors = parseTags(form.colorsRaw);
-    const hasSizeQtys = sizes.some(
-      (size) => (form.variantQtys[variantKey(size)] ?? "").trim() !== "",
-    );
-    const variantStocks = hasSizeQtys
-      ? buildSizeVariantStocks(sizes, form.variantQtys)
-      : undefined;
-    const stockQty = variantStocks
-      ? variantStocks.reduce((sum, variant) => sum + variant.qty, 0)
-      : form.stockQty;
+    const variantStocks = buildVariantStocks(sizes, form.variantQtys);
+    const stockQty = variantStocks.reduce((sum, variant) => sum + variant.qty, 0);
     setSubmitting(true);
     try {
       const url = editing
@@ -319,7 +316,7 @@ export default function PlantListPage() {
           sizes,
           colors,
           stockQty,
-          ...(variantStocks ? { variantStocks } : {}),
+          variantStocks,
         }),
       });
       const json = await res.json();
@@ -967,30 +964,92 @@ export default function PlantListPage() {
               />
             </div>
 
-            {formSizes.length > 0 && (
-              <div className="space-y-2 rounded border border-border p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <label className="text-sm font-medium">
-                    Quantity by Size
-                  </label>
-                  <Badge variant="secondary">Total {displayedStockQty}</Badge>
+            {/* Quantity by condition (and size, if any) */}
+            <div className="space-y-2 rounded border border-border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-sm font-medium">
+                  {formSizes.length > 0
+                    ? "Quantity by Size & Condition"
+                    : "Quantity by Condition"}
+                </label>
+                <Badge variant="secondary">Total {displayedStockQty}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total owned = New + Old, deployed units + units at the office
+                combined.
+              </p>
+              {formSizes.length > 0 ? (
+                <div className="overflow-x-auto rounded border border-border">
+                  <table className="w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-muted/60">
+                        <th className="border-b border-border px-2 py-1.5 text-left font-medium">
+                          Size
+                        </th>
+                        <th className="border-b border-border px-2 py-1.5 text-center font-medium">
+                          New
+                        </th>
+                        <th className="border-b border-border px-2 py-1.5 text-center font-medium">
+                          Old
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formSizes.map((size) => (
+                        <tr key={size}>
+                          <td className="border-b border-border px-2 py-1.5 font-medium">
+                            {size}
+                          </td>
+                          {CONDITIONS.map((condition) => (
+                            <td
+                              key={condition}
+                              className="border-b border-border px-2 py-1.5 text-center"
+                            >
+                              <Input
+                                type="number"
+                                min={0}
+                                value={
+                                  form.variantQtys[
+                                    variantKey(size, condition)
+                                  ] ?? ""
+                                }
+                                onChange={(e) =>
+                                  setForm({
+                                    ...form,
+                                    variantQtys: {
+                                      ...form.variantQtys,
+                                      [variantKey(size, condition)]:
+                                        e.target.value,
+                                    },
+                                  })
+                                }
+                                placeholder="0"
+                                className="h-7 w-16 text-center text-xs"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {formSizes.map((size) => (
-                    <label key={size} className="space-y-1">
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {CONDITIONS.map((condition) => (
+                    <label key={condition} className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">
-                        {size}
+                        {condition === "NEW" ? "New" : "Old"}
                       </span>
                       <Input
                         type="number"
                         min={0}
-                        value={form.variantQtys[variantKey(size)] ?? ""}
+                        value={form.variantQtys[variantKey("", condition)] ?? ""}
                         onChange={(e) =>
                           setForm({
                             ...form,
                             variantQtys: {
                               ...form.variantQtys,
-                              [variantKey(size)]: e.target.value,
+                              [variantKey("", condition)]: e.target.value,
                             },
                           })
                         }
@@ -999,8 +1058,8 @@ export default function PlantListPage() {
                     </label>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Returnable */}
             <div className="space-y-1">
@@ -1018,29 +1077,6 @@ export default function PlantListPage() {
               </label>
             </div>
 
-            {/* Description */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Total Quantity Owned
-              </label>
-              <p className="text-xs text-muted-foreground">
-                Enter the full company total — deployed units + units at the
-                office combined.
-              </p>
-              <Input
-                type="number"
-                min={0}
-                value={displayedStockQty}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    stockQty: Math.max(0, Number(e.target.value)),
-                  })
-                }
-                disabled={hasSizeQtys}
-                placeholder="0"
-              />
-            </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Notes / Description</label>
               <Input

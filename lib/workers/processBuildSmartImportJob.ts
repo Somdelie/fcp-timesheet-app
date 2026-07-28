@@ -61,6 +61,9 @@ export async function processBuildSmartImportJob(jobId: string) {
       data: {
         status: "COMPLETED",
         finishedAt: new Date(),
+        // The uploaded PDF is only needed during processing — clear it so we
+        // don't keep every original file's base64 bytes in the DB forever.
+        fileUrl: "",
         resultJson: {
           ...(result as any),
           progress: {
@@ -80,6 +83,7 @@ export async function processBuildSmartImportJob(jobId: string) {
         status: "FAILED",
         finishedAt: new Date(),
         error: error instanceof Error ? error.message : String(error),
+        fileUrl: "",
         resultJson: {
           progress: {
             current: 3,

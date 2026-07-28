@@ -119,7 +119,12 @@ async function adjustProcurementOrderStock(
   if (size || color) {
     await tx.productVariantStock.upsert({
       where: {
-        productId_size_color: { productId: item.productId, size, color },
+        productId_size_color_condition: {
+          productId: item.productId,
+          size,
+          color,
+          condition: "OLD",
+        },
       },
       update: { qty: quantityChange },
       create: {

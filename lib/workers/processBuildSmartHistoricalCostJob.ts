@@ -148,6 +148,7 @@ export async function processBuildSmartHistoricalCostJob(jobId: string) {
         data: {
           status: "COMPLETED",
           finishedAt: new Date(),
+          fileUrl: "",
           resultJson: resultJson as any,
         },
       });
@@ -210,16 +211,16 @@ export async function processBuildSmartHistoricalCostJob(jobId: string) {
         reason: item.result.reason,
       });
 
+      // Only write the lightweight progress marker on every row — writing the
+      // full (ever-growing) `results` array here too made each row's update
+      // rewrite the whole accumulated payload, which is O(n^2) bytes written
+      // per job and left large dead TOAST chunks behind for Postgres to
+      // reclaim. The full results array is written once, after the loop.
       await prisma.importJob.update({
         where: { id: jobId },
         data: {
           resultJson: {
-            action: "import",
-            summary: counts,
-            totalProcessed: done,
-            rowsByCategory,
-            parseWarnings,
-            results,
+            ...meta,
             progress: {
               current: done,
               total,
@@ -249,6 +250,7 @@ export async function processBuildSmartHistoricalCostJob(jobId: string) {
       data: {
         status: "COMPLETED",
         finishedAt: new Date(),
+        fileUrl: "",
         resultJson: resultJson as any,
       },
     });
@@ -261,6 +263,7 @@ export async function processBuildSmartHistoricalCostJob(jobId: string) {
         status: "FAILED",
         finishedAt: new Date(),
         error: error instanceof Error ? error.message : String(error),
+        fileUrl: "",
         resultJson: {
           ...meta,
           progress: {

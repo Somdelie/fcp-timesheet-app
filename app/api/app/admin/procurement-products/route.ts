@@ -5,7 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { decimalToNumber } from "@/lib/dateUtc";
 import { canonicalPlantName } from "@/lib/procurement/plantName";
-import type { ProductUom, ProductType } from "@/generated/prisma/client";
+import { getPlantAvailability } from "@/lib/procurement/plantAvailability";
+import type {
+  ProductUom,
+  ProductType,
+  PlantCondition,
+} from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -307,7 +312,7 @@ export async function GET(req: Request) {
               },
             },
             variantStocks: {
-              select: { id: true, size: true, color: true, qty: true },
+              select: { id: true, size: true, color: true, condition: true, qty: true },
             },
             _count: {
               select: { orderItems: true, supplierPrices: true },
@@ -430,7 +435,7 @@ export async function GET(req: Request) {
             },
           },
           variantStocks: {
-            select: { id: true, size: true, color: true, qty: true },
+            select: { id: true, size: true, color: true, condition: true, qty: true },
           },
           _count: {
             select: {
@@ -566,6 +571,12 @@ export async function GET(req: Request) {
       deployedQtyMap = new Map(
         deployedSums.map((d) => [d.productId, d._sum.quantity ?? 0]),
       );
+
+      const availabilityByProduct = await getPlantAvailability(productIds);
+      products = products.map((p) => ({
+        ...p,
+        variants: availabilityByProduct.get(p.id) ?? [],
+      }));
     }
 
     if (productType === "PLANT") {
@@ -645,12 +656,18 @@ export async function POST(req: Request) {
       variantStocks?: {
         size?: string | null;
         color?: string | null;
+        condition?: PlantCondition | null;
         qty?: number;
       }[];
     };
 
     const variantStocksInput = (body as any).variantStocks as
-      | { size?: string | null; color?: string | null; qty?: number }[]
+      | {
+          size?: string | null;
+          color?: string | null;
+          condition?: PlantCondition | null;
+          qty?: number;
+        }[]
       | undefined;
 
     if (!name?.trim())
@@ -787,6 +804,7 @@ export async function POST(req: Request) {
                     data: variantStocksInput.map((v) => ({
                       size: v.size || null,
                       color: v.color || null,
+                      condition: v.condition ?? "OLD",
                       qty: Math.max(0, Number(v.qty) || 0),
                     })),
                   },
@@ -804,7 +822,7 @@ export async function POST(req: Request) {
             },
           },
           variantStocks: {
-            select: { id: true, size: true, color: true, qty: true },
+            select: { id: true, size: true, color: true, condition: true, qty: true },
           },
         },
       });

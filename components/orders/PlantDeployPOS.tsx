@@ -34,7 +34,24 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+
+export type PlantConditionValue = "NEW" | "OLD";
 
 export interface PlantSiteDto {
   id: string;
@@ -49,12 +66,23 @@ export interface PlantSupervisorDto {
   sites: PlantSiteDto[];
 }
 
+export interface PlantVariantAvailabilityDto {
+  size: string | null;
+  color: string | null;
+  condition: PlantConditionValue;
+  total: number;
+  deployed: number;
+  available: number;
+}
+
 export interface PlantItemDto {
   id: string;
   name: string;
   sku: string | null;
   thumbnailUrl: string | null;
   sizes: string[];
+  colors: string[];
+  variants: PlantVariantAvailabilityDto[];
 }
 
 interface PlantDeployPOSProps {
@@ -65,9 +93,12 @@ interface PlantDeployPOSProps {
 }
 
 type CartItem = {
+  cartKey: string; // productId|size|color|condition
   productId: string;
   productName: string;
   size: string | null;
+  color: string | null;
+  condition: PlantConditionValue;
   sizes: string[];
   quantity: number;
   note: string;
@@ -77,12 +108,173 @@ type CartItem = {
   chargeQuantity: number | null;
 };
 
-function isSameLine(item: CartItem, productId: string, size: string | null) {
-  return item.productId === productId && item.size === size;
+function makeCartKey(
+  productId: string,
+  size: string | null,
+  color: string | null,
+  condition: PlantConditionValue,
+) {
+  return `${productId}|${size ?? ""}|${color ?? ""}|${condition}`;
 }
 
 function billableQty(item: CartItem) {
   return item.chargeQuantity ?? item.quantity;
+}
+
+function findAvailability(
+  item: PlantItemDto,
+  size: string | null,
+  color: string | null,
+  condition: PlantConditionValue,
+) {
+  return item.variants.find(
+    (v) => (v.size ?? null) === size && (v.color ?? null) === color && v.condition === condition,
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Variant Picker Dialog                                              */
+/* ------------------------------------------------------------------ */
+
+function PlantVariantPickerDialog({
+  item,
+  open,
+  onClose,
+  onAdd,
+}: {
+  item: PlantItemDto | null;
+  open: boolean;
+  onClose: () => void;
+  onAdd: (
+    size: string | null,
+    color: string | null,
+    condition: PlantConditionValue,
+    qty: number,
+  ) => void;
+}) {
+  const [size, setSize] = React.useState<string>("");
+  const [color, setColor] = React.useState<string>("");
+  const [condition, setCondition] = React.useState<PlantConditionValue>("OLD");
+  const [qty, setQty] = React.useState(1);
+
+  React.useEffect(() => {
+    if (open) {
+      setSize(item?.sizes?.[0] ?? "");
+      setColor(item?.colors?.[0] ?? "");
+      setCondition("OLD");
+      setQty(1);
+    }
+  }, [open, item]);
+
+  if (!item) return null;
+
+  const hasSizes = item.sizes.length > 0;
+  const hasColors = item.colors.length > 0;
+  const availability = findAvailability(
+    item,
+    hasSizes ? size || null : null,
+    hasColors ? color || null : null,
+    condition,
+  );
+
+  function handleAdd() {
+    if (hasSizes && !size) {
+      toast.error("Please select a size");
+      return;
+    }
+    if (hasColors && !color) {
+      toast.error("Please select a color");
+      return;
+    }
+    onAdd(hasSizes ? size : null, hasColors ? color : null, condition, qty);
+    onClose();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base">{item.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {hasSizes && (
+            <div className="space-y-1.5">
+              <Label>Size</Label>
+              <Select value={size} onValueChange={setSize}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {item.sizes.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {hasColors && (
+            <div className="space-y-1.5">
+              <Label>Color</Label>
+              <Select value={color} onValueChange={setColor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select color" />
+                </SelectTrigger>
+                <SelectContent>
+                  {item.colors.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Condition</Label>
+            <Select
+              value={condition}
+              onValueChange={(v) => setCondition(v as PlantConditionValue)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select condition" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="OLD">Old</SelectItem>
+                <SelectItem value="NEW">New</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label>Quantity</Label>
+              {availability && (
+                <span className="text-xs text-muted-foreground">
+                  Available: {availability.available}
+                </span>
+              )}
+            </div>
+            <Input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) =>
+                setQty(Math.max(1, Math.floor(Number(e.target.value))))
+              }
+              className="w-28"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleAdd}>Add to Deployment</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 type SiteCart = {
@@ -121,6 +313,10 @@ export default function PlantDeployPOS({
   const [submitting, setSubmitting] = React.useState(false);
   const [printing, setPrinting] = React.useState(false);
   const [lastOrder, setLastOrder] = React.useState<LastOrder | null>(null);
+  const [pickerItem, setPickerItem] = React.useState<PlantItemDto | null>(
+    null,
+  );
+  const [pickerOpen, setPickerOpen] = React.useState(false);
 
   const selectedSupervisor = React.useMemo(
     () => supervisors.find((s) => s.id === selectedSupervisorId) ?? null,
@@ -192,59 +388,44 @@ export default function PlantDeployPOS({
     );
   }
 
-  function addToCart(item: PlantItemDto) {
+  function openAddItem(item: PlantItemDto) {
     if (!activeSiteId) {
       toast.info("Add a site first");
       return;
     }
-    updateSiteCart(activeSiteId, (prev) => {
-      const existing = prev.find((i) => isSameLine(i, item.id, null));
-      if (existing)
-        return prev.map((i) =>
-          isSameLine(i, item.id, null)
-            ? { ...i, quantity: i.quantity + 1 }
-            : i,
-        );
-      return [
-        ...prev,
-        {
-          productId: item.id,
-          productName: item.name,
-          size: null,
-          sizes: item.sizes ?? [],
-          quantity: 1,
-          note: "",
-          unitPrice: null,
-          chargeQuantity: null,
-        },
-      ];
-    });
+    setPickerItem(item);
+    setPickerOpen(true);
   }
 
-  // Sizes are shown as chips in the picker — clicking one adds/increments
-  // a dedicated cart line for that (product, size) pair, so e.g. 3x 6ft +
-  // 1x 8ft step ladders can coexist as two separate lines.
-  function addSizeToCart(item: PlantItemDto, size: string) {
+  function addToCart(
+    item: PlantItemDto,
+    size: string | null,
+    color: string | null,
+    condition: PlantConditionValue,
+    qty: number,
+  ) {
     if (!activeSiteId) {
       toast.info("Add a site first");
       return;
     }
+    const key = makeCartKey(item.id, size, color, condition);
     updateSiteCart(activeSiteId, (prev) => {
-      const existing = prev.find((i) => isSameLine(i, item.id, size));
+      const existing = prev.find((i) => i.cartKey === key);
       if (existing)
         return prev.map((i) =>
-          isSameLine(i, item.id, size)
-            ? { ...i, quantity: i.quantity + 1 }
-            : i,
+          i.cartKey === key ? { ...i, quantity: i.quantity + qty } : i,
         );
       return [
         ...prev,
         {
+          cartKey: key,
           productId: item.id,
           productName: item.name,
           size,
+          color,
+          condition,
           sizes: item.sizes ?? [],
-          quantity: 1,
+          quantity: qty,
           note: "",
           unitPrice: null,
           chargeQuantity: null,
@@ -253,15 +434,11 @@ export default function PlantDeployPOS({
     });
   }
 
-  function updateQuantity(
-    productId: string,
-    size: string | null,
-    quantity: number,
-  ) {
+  function updateQuantity(cartKey: string, quantity: number) {
     updateSiteCart(activeSiteId, (prev) =>
       prev
         .map((i) =>
-          isSameLine(i, productId, size)
+          i.cartKey === cartKey
             ? {
                 ...i,
                 quantity,
@@ -278,38 +455,31 @@ export default function PlantDeployPOS({
     );
   }
 
-  function updateNote(productId: string, size: string | null, note: string) {
+  function updateNote(cartKey: string, note: string) {
     updateSiteCart(activeSiteId, (prev) =>
-      prev.map((i) => (isSameLine(i, productId, size) ? { ...i, note } : i)),
+      prev.map((i) => (i.cartKey === cartKey ? { ...i, note } : i)),
     );
   }
 
-  function removeFromCart(productId: string, size: string | null) {
+  function removeFromCart(cartKey: string) {
     updateSiteCart(activeSiteId, (prev) =>
-      prev.filter((i) => !isSameLine(i, productId, size)),
+      prev.filter((i) => i.cartKey !== cartKey),
     );
   }
 
-  function updateUnitPrice(
-    productId: string,
-    size: string | null,
-    unitPrice: number | null,
-  ) {
+  function updateUnitPrice(cartKey: string, unitPrice: number | null) {
     updateSiteCart(activeSiteId, (prev) =>
-      prev.map((i) =>
-        isSameLine(i, productId, size) ? { ...i, unitPrice } : i,
-      ),
+      prev.map((i) => (i.cartKey === cartKey ? { ...i, unitPrice } : i)),
     );
   }
 
   function updateChargeQuantity(
-    productId: string,
-    size: string | null,
+    cartKey: string,
     chargeQuantity: number | null,
   ) {
     updateSiteCart(activeSiteId, (prev) =>
       prev.map((i) =>
-        isSameLine(i, productId, size) ? { ...i, chargeQuantity } : i,
+        i.cartKey === cartKey ? { ...i, chargeQuantity } : i,
       ),
     );
   }
@@ -414,6 +584,7 @@ export default function PlantDeployPOS({
               siteId: siteCart.siteId,
               productId: item.productId,
               size: item.size || undefined,
+              condition: item.condition,
               quantity: item.quantity,
               note: item.note.trim() || undefined,
               unitPrice: item.unitPrice,
@@ -839,6 +1010,9 @@ export default function PlantDeployPOS({
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
                         Size
                       </TableHead>
+                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-24 text-left">
+                        Condition
+                      </TableHead>
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 w-34 text-left">
                         Quantity
                       </TableHead>
@@ -860,7 +1034,7 @@ export default function PlantDeployPOS({
                       const hasSize = item.size != null;
                       return (
                         <TableRow
-                          key={`${item.productId}::${item.size ?? ""}`}
+                          key={item.cartKey}
                           className={`border-b border-border transition-colors ${
                             idx % 2 === 0 ? "" : "bg-muted/20"
                           }`}
@@ -880,13 +1054,24 @@ export default function PlantDeployPOS({
                             )}
                           </TableCell>
                           <TableCell className="py-1 pr-2">
+                            <span
+                              className={cn(
+                                "text-[10px] font-medium px-1.5 py-0.5 rounded border",
+                                item.condition === "NEW"
+                                  ? "border-emerald-600/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
+                                  : "border-border bg-muted/60 text-muted-foreground",
+                              )}
+                            >
+                              {item.condition === "NEW" ? "New" : "Old"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-1 pr-2">
                             <div className="inline-flex items-center rounded-md border border-border/70 overflow-hidden">
                               <button
                                 type="button"
                                 onClick={() =>
                                   updateQuantity(
-                                    item.productId,
-                                    item.size,
+                                    item.cartKey,
                                     Math.max(1, item.quantity - 1),
                                   )
                                 }
@@ -905,11 +1090,7 @@ export default function PlantDeployPOS({
                                     e.target.value.replace(/\D/g, ""),
                                   );
                                   if (!Number.isFinite(n)) return;
-                                  updateQuantity(
-                                    item.productId,
-                                    item.size,
-                                    Math.max(1, n),
-                                  );
+                                  updateQuantity(item.cartKey, Math.max(1, n));
                                 }}
                                 className="h-7 w-8 text-center text-sm tabular-nums bg-transparent outline-none"
                               />
@@ -917,8 +1098,7 @@ export default function PlantDeployPOS({
                                 type="button"
                                 onClick={() =>
                                   updateQuantity(
-                                    item.productId,
-                                    item.size,
+                                    item.cartKey,
                                     item.quantity + 1,
                                   )
                                 }
@@ -937,18 +1117,13 @@ export default function PlantDeployPOS({
                               onChange={(e) => {
                                 const raw = e.target.value.replace(/\D/g, "");
                                 if (raw === "") {
-                                  updateChargeQuantity(
-                                    item.productId,
-                                    item.size,
-                                    null,
-                                  );
+                                  updateChargeQuantity(item.cartKey, null);
                                   return;
                                 }
                                 const n = Number(raw);
                                 if (!Number.isFinite(n)) return;
                                 updateChargeQuantity(
-                                  item.productId,
-                                  item.size,
+                                  item.cartKey,
                                   Math.min(item.quantity, n),
                                 );
                               }}
@@ -970,8 +1145,7 @@ export default function PlantDeployPOS({
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   updateUnitPrice(
-                                    item.productId,
-                                    item.size,
+                                    item.cartKey,
                                     val === ""
                                       ? null
                                       : Math.max(0, Number(val)),
@@ -986,7 +1160,7 @@ export default function PlantDeployPOS({
                             <Input
                               value={item.note}
                               onChange={(e) =>
-                                updateNote(item.productId, item.size, e.target.value)
+                                updateNote(item.cartKey, e.target.value)
                               }
                               placeholder="Note…"
                               className="h-7 text-xs px-2"
@@ -994,9 +1168,7 @@ export default function PlantDeployPOS({
                           </TableCell> */}
                           <TableCell className="py-1 pr-3 text-center">
                             <button
-                              onClick={() =>
-                                removeFromCart(item.productId, item.size)
-                              }
+                              onClick={() => removeFromCart(item.cartKey)}
                               className="text-muted-foreground/50 hover:text-destructive transition-colors text-xl leading-none font-light cursor-pointer"
                               aria-label="Remove item"
                             >
@@ -1118,9 +1290,6 @@ export default function PlantDeployPOS({
                       <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 pl-5">
                         Item Name
                       </TableHead>
-                      <TableHead className="text-[10px] font-bold tracking-[0.15em] uppercase py-2.5">
-                        Sizes
-                      </TableHead>
                       <TableHead className="w-24 text-[10px] font-bold tracking-[0.15em] uppercase py-2.5 text-right pr-5">
                         Action
                       </TableHead>
@@ -1128,7 +1297,8 @@ export default function PlantDeployPOS({
                   </TableHeader>
                   <TableBody>
                     {filteredItems.map((p, idx) => {
-                      const hasSizes = (p.sizes ?? []).length > 0;
+                      const hasVariants =
+                        (p.sizes ?? []).length > 0 || (p.colors ?? []).length > 0;
                       const linesForProduct = activeSiteId
                         ? activeCart.filter((c) => c.productId === p.id)
                         : [];
@@ -1172,57 +1342,49 @@ export default function PlantDeployPOS({
                                 ×{totalQtyInActiveCart} in this site
                               </span>
                             )}
-                          </TableCell>
-                          <TableCell className="py-3">
-                            {hasSizes ? (
-                              <div className="flex flex-wrap gap-1">
-                                {(p.sizes ?? []).map((s) => {
-                                  const line = linesForProduct.find(
-                                    (c) => c.size === s,
-                                  );
-                                  return (
-                                    <button
-                                      key={s}
-                                      type="button"
-                                      onClick={() => addSizeToCart(p, s)}
-                                      disabled={!activeSiteId}
-                                      title={`Add ${s}`}
-                                      className={`rounded border px-1.5 py-0.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
-                                        line
-                                          ? "border-primary bg-primary text-primary-foreground"
-                                          : "border-border bg-muted/60 text-foreground hover:border-primary/50"
-                                      }`}
-                                    >
-                                      {s}
-                                      {line ? ` ×${line.quantity}` : ""}
-                                    </button>
-                                  );
-                                })}
+                            {hasVariants && (
+                              <div className="mt-0.5 ml-3.5 flex flex-wrap gap-1">
+                                {(p.sizes ?? []).slice(0, 3).map((s) => (
+                                  <span
+                                    key={s}
+                                    className="text-[9px] border border-border rounded px-1 text-muted-foreground/70"
+                                  >
+                                    {s}
+                                  </span>
+                                ))}
+                                {(p.sizes ?? []).length > 3 && (
+                                  <span className="text-[9px] text-muted-foreground/50">
+                                    +{(p.sizes ?? []).length - 3}
+                                  </span>
+                                )}
+                                {(p.colors ?? []).slice(0, 3).map((c) => (
+                                  <span
+                                    key={c}
+                                    className="text-[9px] border border-border rounded px-1 text-muted-foreground/70"
+                                  >
+                                    {c}
+                                  </span>
+                                ))}
+                                {(p.colors ?? []).length > 3 && (
+                                  <span className="text-[9px] text-muted-foreground/50">
+                                    +{(p.colors ?? []).length - 3}
+                                  </span>
+                                )}
                               </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                —
-                              </span>
                             )}
                           </TableCell>
                           <TableCell className="py-3 text-right pr-5">
-                            {hasSizes ? (
-                              <span className="text-[10px] text-muted-foreground tracking-wide">
-                                Pick a size ←
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => addToCart(p)}
-                                disabled={!activeSiteId}
-                                className={`text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                                  inActiveCart
-                                    ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                                    : "border-border text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                                }`}
-                              >
-                                {inActiveCart ? "+ Add" : "Add"}
-                              </button>
-                            )}
+                            <button
+                              onClick={() => openAddItem(p)}
+                              disabled={!activeSiteId}
+                              className={`text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 border rounded transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                inActiveCart
+                                  ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                  : "border-border text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                              }`}
+                            >
+                              {inActiveCart ? "+ Add" : "Add"}
+                            </button>
                           </TableCell>
                         </TableRow>
                       );
@@ -1250,6 +1412,15 @@ export default function PlantDeployPOS({
           </div>
         </div>
       </div>
+
+      <PlantVariantPickerDialog
+        item={pickerItem}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onAdd={(size, color, condition, qty) => {
+          if (pickerItem) addToCart(pickerItem, size, color, condition, qty);
+        }}
+      />
     </div>
   );
 }

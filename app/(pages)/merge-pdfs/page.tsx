@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
+// Remove static import of PDFDocument
 import {
   Upload,
   FileText,
@@ -91,6 +91,7 @@ export default function MergePdfsPage() {
     try {
       setMerging(true);
 
+      const { PDFDocument } = await import("pdf-lib");
       const mergedPdf = await PDFDocument.create();
 
       for (const item of files) {

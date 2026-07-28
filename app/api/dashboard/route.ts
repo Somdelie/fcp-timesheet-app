@@ -413,30 +413,34 @@ async function getSiteActivityData(auth: { sub: string; role: string }) {
 
 async function getPhotoVerificationData(auth: { sub: string; role: string }) {
   const currentYear = new Date().getFullYear();
-  const data = [];
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(currentYear, i, 1);
-    const month = date.toLocaleDateString("en-US", { month: "short" });
-    const monthStart = new Date(currentYear, i, 1);
-    const monthEnd = new Date(currentYear, i + 1, 0);
+  const yearStart = new Date(currentYear, 0, 1);
+  const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
 
-    const [verified, flagged] = await Promise.all([
-      prisma.photoVerification.count({
-        where: {
-          status: "VERIFIED",
-          verifiedAt: { gte: monthStart, lte: monthEnd },
-        },
-      }),
-      prisma.photoVerification.count({
-        where: {
-          status: "FLAGGED",
-          verifiedAt: { gte: monthStart, lte: monthEnd },
-        },
-      }),
-    ]);
+  const records = await prisma.photoVerification.findMany({
+    where: {
+      verifiedAt: { gte: yearStart, lte: yearEnd },
+      status: { in: ["VERIFIED", "FLAGGED"] },
+    },
+    select: {
+      status: true,
+      verifiedAt: true,
+    },
+  });
 
-    data.push({ month, verified, flagged });
+  const monthData = Array.from({ length: 12 }, (_, i) => ({
+    month: new Date(currentYear, i, 1).toLocaleDateString("en-US", { month: "short" }),
+    verified: 0,
+    flagged: 0,
+  }));
+
+  for (const rec of records) {
+    if (!rec.verifiedAt) continue;
+    const monthIdx = rec.verifiedAt.getMonth();
+    if (monthIdx >= 0 && monthIdx < 12) {
+      if (rec.status === "VERIFIED") monthData[monthIdx].verified++;
+      if (rec.status === "FLAGGED") monthData[monthIdx].flagged++;
+    }
   }
 
-  return data;
+  return monthData;
 }
