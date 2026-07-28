@@ -4,22 +4,30 @@ import {
   type UploadApiResponse,
 } from "cloudinary";
 
-const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
-  process.env;
+let configured = false;
 
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-  // We throw only when this module is imported on the server and config is missing.
-  throw new Error(
-    "Missing Cloudinary config. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in your environment.",
-  );
+function getCloudinary() {
+  if (!configured) {
+    const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
+      process.env;
+
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+      throw new Error(
+        "Missing Cloudinary config. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in your environment.",
+      );
+    }
+
+    cloudinary.config({
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+    configured = true;
+  }
+
+  return cloudinary;
 }
-
-cloudinary.config({
-  cloud_name: CLOUDINARY_CLOUD_NAME,
-  api_key: CLOUDINARY_API_KEY,
-  api_secret: CLOUDINARY_API_SECRET,
-  secure: true,
-});
 
 export type CloudinaryFolder =
   | "employees"
@@ -34,7 +42,7 @@ export async function uploadImageBuffer(
   const folder = options.folder ?? "misc";
 
   return new Promise<UploadApiResponse>((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
+    const stream = getCloudinary().uploader.upload_stream(
       { folder, ...options },
       (error, result) => {
         if (error || !result)
@@ -62,9 +70,11 @@ export function getSecureUrl(result: UploadApiResponse): string {
 
 export async function deleteImage(publicId: string): Promise<void> {
   if (!publicId) return;
-  await cloudinary.uploader.destroy(publicId).catch(() => {
-    // Ignore deletion errors to avoid blocking cleanup.
-  });
+  await getCloudinary()
+    .uploader.destroy(publicId)
+    .catch(() => {
+      // Ignore deletion errors to avoid blocking cleanup.
+    });
 }
 
 export async function deleteCloudinaryResource(
@@ -72,8 +82,8 @@ export async function deleteCloudinaryResource(
   resourceType: "image" | "video" | "raw" | "auto" = "image",
 ): Promise<void> {
   if (!publicId) return;
-  await cloudinary.uploader
-    .destroy(publicId, { resource_type: resourceType })
+  await getCloudinary()
+    .uploader.destroy(publicId, { resource_type: resourceType })
     .catch(() => {
       // Ignore deletion errors to avoid blocking cleanup.
     });
