@@ -1,7 +1,7 @@
 import { getAllForemen } from "@/actions/user";
 import { AdminForemenContent } from "./AdminForemenContent";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function AdminForemenPage() {
   const foremen = await getAllForemen();
