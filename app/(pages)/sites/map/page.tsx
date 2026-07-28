@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireServerAuth } from "@/lib/auth-server";
 import { siteWhereFor } from "@/lib/site-scope";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 export default async function SitesMapPage() {

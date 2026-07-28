@@ -5,6 +5,7 @@ import FinishingSchedulesTable, {
   type ScheduleRow,
 } from "@/components/finishing-schedules/FinishingSchedulesTable";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Finishing Schedules" };
 
 export default async function FinishingSchedulesPage() {

@@ -1,6 +1,8 @@
 import CreateSiteForm from "@/components/sites/CreateSiteForm";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewSitePage() {
   const [supervisors, admins] = await Promise.all([
     prisma.user.findMany({

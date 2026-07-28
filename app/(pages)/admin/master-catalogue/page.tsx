@@ -15,6 +15,8 @@ import {
   MasterCatalogueTableProduct,
 } from "@/components/products/ProductsCatTable";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   searchParams?: Promise<{
     supplierId?: string;

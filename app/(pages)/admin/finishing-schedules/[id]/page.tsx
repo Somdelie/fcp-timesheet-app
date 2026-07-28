@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import FinishingScheduleBuilder from "@/components/finishing-schedules/FinishingScheduleBuilder";
 
+export const dynamic = "force-dynamic";
+
 export default async function FinishingScheduleDetailPage({
   params,
 }: {

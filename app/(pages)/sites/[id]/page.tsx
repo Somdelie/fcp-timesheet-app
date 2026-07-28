@@ -16,6 +16,8 @@ import SiteFinishingSchedulePanel from "@/components/finishing-schedules/SiteFin
 import { ArrowLeft, CheckCircle, MapPin, Hash, User } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function SiteManagePage({
   params,
 }: {
