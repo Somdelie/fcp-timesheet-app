@@ -2,10 +2,7 @@ const INDIVIDUAL_FOREMAN_EMPLOYEE_IDS = new Set(["cmql0e76t000p09l2bhri3kdl"]);
 
 const INDIVIDUAL_FOREMAN_USER_IDS = new Set(["cmql0e74k000n09l2qxz429ld"]);
 
-const INDIVIDUAL_FOREMAN_NAMES = new Set([
-  "sphiwe ngomani",
-  "thandazani ndlovu",
-]);
+const INDIVIDUAL_FOREMAN_NAMES = new Set(["sphiwe ngomani"]);
 
 function normalizeName(name: string | null | undefined) {
   return String(name ?? "")
