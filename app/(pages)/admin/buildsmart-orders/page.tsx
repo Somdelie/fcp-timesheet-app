@@ -185,7 +185,7 @@ export default function BuildsmartPdfSeedPage() {
           </TabsTrigger>
           <TabsTrigger value="historical" className="rounded">
             <History className="mr-2 h-4 w-4" />
-            Historical Costs
+            Historical Wages
           </TabsTrigger>
           <TabsTrigger value="catalogue" className="rounded">
             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -2320,7 +2320,7 @@ function HistoricalCostsTab() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <CardTitle className="text-2xl font-semibold tracking-tight">
-                  Historical Cost Import
+                  Historical Wages Import
                 </CardTitle>
                 <CardDescription className="mt-1 text-sm">
                   Upload BuildSmart &quot;Detail Contract Cost Report&quot; PDFs
@@ -2334,7 +2334,7 @@ function HistoricalCostsTab() {
                 variant="secondary"
                 className="rounded-full px-3 py-1 text-xs"
               >
-                Historical costs
+                Historical wages
               </Badge>
             </div>
           </CardHeader>
