@@ -181,7 +181,7 @@ export default function BuildsmartPdfSeedPage() {
           </TabsTrigger>
           <TabsTrigger value="materials" className="rounded">
             <ShoppingCart className="mr-2 h-4 w-4" />
-            Historical Materials
+            Historical Paints
           </TabsTrigger>
           <TabsTrigger value="historical" className="rounded">
             <History className="mr-2 h-4 w-4" />
@@ -1713,9 +1713,7 @@ function CatalogueBuilderTab() {
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to process catalogue PDF.",
+        err instanceof Error ? err.message : "Failed to process catalogue PDF.",
       );
     } finally {
       setIsBusy(false);
