@@ -61,6 +61,7 @@ type OrderItem = {
   uomAtOrder: string | null;
   unitSizeAtOrder: number | null;
   note: string | null;
+  rawDescription: string | null;
   product: {
     id: string;
     name: string;
@@ -192,12 +193,19 @@ function fmtDateOnly(value: string) {
     year: "numeric",
   });
 }
+// Tint-base SKUs (e.g. Micatex, TLS) are shared across many colors, so the
+// linked product's name is generic — the description actually ordered on
+// this line only survives in rawDescription. Prefer it when present.
+function itemProductName(item: OrderItem) {
+  return item.rawDescription?.trim() || item.product.name;
+}
+
 function itemDisplay(item: OrderItem) {
   const size = fmtSize(
     item.unitSizeAtOrder ?? item.product.unitSize,
     item.uomAtOrder ?? item.product.uom,
   );
-  return `${item.quantity} × ${size} ${item.product.name}`;
+  return `${item.quantity} × ${size} ${itemProductName(item)}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -215,7 +223,7 @@ function buildSummaryLines(orders: Order[]): SummaryLine[] {
           orderRef: order.reference ?? "-",
           orderDate: order.createdAt,
           productId: item.productId,
-          productName: item.product.name,
+          productName: itemProductName(item),
           uom: uom || null,
           unitSize: size,
           quantity: item.quantity,
@@ -1820,7 +1828,7 @@ ${nonEmpty
                                           >
                                             <td className="px-4 py-2.5">
                                               <div className="font-medium text-slate-900 dark:text-white">
-                                                {item.product.name}
+                                                {itemProductName(item)}
                                               </div>
                                               {(item.unitSizeAtOrder ??
                                                 item.product.unitSize ??

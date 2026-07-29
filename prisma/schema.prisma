@@ -1690,6 +1690,12 @@ model SiteProductOrderItem {
 
   note String?
 
+  // Verbatim product description from the source PO/cost-report line. The
+  // linked `product` is a shared catalogue row (e.g. a tint base SKU used
+  // across many colors), so this is the only place that preserves what was
+  // actually ordered on THIS line — used for display instead of product.name.
+  rawDescription String?
+
   costCodeId String?
   costCode   SiteCostCode? @relation(fields: [costCodeId], references: [id], onDelete: SetNull)
 

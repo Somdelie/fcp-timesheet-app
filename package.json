@@ -17,6 +17,7 @@
     "backfill:site-materials-from-orders": "tsx ./scripts/backfill-site-materials-from-orders.ts",
     "import:buildsmart": "tsx ./scripts/import-buildsmart.ts",
     "backfill:buildsmart-suppliers": "tsx ./scripts/backfill-buildsmart-product-suppliers.ts",
+    "backfill:order-item-raw-descriptions": "tsx ./scripts/backfill-order-item-raw-descriptions.ts",
     "cleanup:price-prefixed-products": "tsx prisma/cleanup-price-prefixed-products.ts",
     "seed:materials": "tsx ./scripts/seed-materials.ts",
     "cleanup:seed-materials": "tsx ./scripts/cleanup-seeded-materials.ts",

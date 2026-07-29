@@ -947,6 +947,7 @@ const MAT_STATUS_BADGE: Record<
 > = {
   CREATED: { label: "Created", variant: "default" },
   DUPLICATE: { label: "Already imported", variant: "secondary" },
+  REPAIRED: { label: "Repaired", variant: "default" },
   MISSING_SITE: { label: "Missing site", variant: "destructive" },
   NO_ORDER_NUMBER: { label: "No order number", variant: "outline" },
   ERROR: { label: "Error", variant: "destructive" },
@@ -1478,7 +1479,8 @@ function HistoricalMaterialsTab() {
                         key={i}
                         className={cn(
                           "transition-colors",
-                          r.status === "CREATED" && "bg-green-50/50",
+                          (r.status === "CREATED" || r.status === "REPAIRED") &&
+                            "bg-green-50/50",
                           r.status === "DUPLICATE" && "bg-muted/30",
                           (r.status === "MISSING_SITE" ||
                             r.status === "ERROR") &&

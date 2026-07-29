@@ -321,19 +321,13 @@ function extractMaterialFields(afterDate: string): {
 
 // ── State machine parser ──────────────────────────────────────────────────────
 
-export async function parseCostReportBuffer(
-  buffer: Buffer,
-): Promise<ParsedCostReport> {
-  const parser = new PDFParse({ data: buffer });
-
-  let text = "";
-
-  try {
-    const result = await parser.getText();
-    text = result.text;
-  } finally {
-    await parser.destroy?.();
-  }
+/**
+ * Runs the state-machine parser directly against already-extracted report
+ * text. Split out from parseCostReportBuffer so repair/backfill tooling can
+ * feed it text recovered by other means (e.g. text pasted from a report that
+ * can no longer be re-uploaded as a PDF) without going through pdf-parse.
+ */
+export function parseCostReportText(text: string): ParsedCostReport {
   const lines = text
     .split(/\r?\n/)
     .map((l: string) => l.trim())
@@ -531,6 +525,23 @@ export async function parseCostReportBuffer(
     materialLines,
     warnings,
   };
+}
+
+export async function parseCostReportBuffer(
+  buffer: Buffer,
+): Promise<ParsedCostReport> {
+  const parser = new PDFParse({ data: buffer });
+
+  let text = "";
+
+  try {
+    const result = await parser.getText();
+    text = result.text;
+  } finally {
+    await parser.destroy?.();
+  }
+
+  return parseCostReportText(text);
 }
 
 export async function parseCostReportBuffers(

@@ -42,6 +42,7 @@ type OrderPreview = {
 type ImportStatus =
   | "CREATED"
   | "DUPLICATE"
+  | "REPAIRED"
   | "MISSING_SITE"
   | "NO_ORDER_NUMBER"
   | "ERROR";
@@ -274,6 +275,7 @@ function createInitialCounts(): ImportCounts {
   return {
     CREATED: 0,
     DUPLICATE: 0,
+    REPAIRED: 0,
     MISSING_SITE: 0,
     NO_ORDER_NUMBER: 0,
     ERROR: 0,

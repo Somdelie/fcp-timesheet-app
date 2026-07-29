@@ -337,10 +337,6 @@ export default function AdminTransferEmployeePage() {
     () => scans.filter((scan) => selectedScanIdSet.has(scan.id)),
     [scans, selectedScanIdSet],
   );
-  const selectedTransferScans = useMemo(
-    () => selectedScans.filter((scan) => !scan.isScannedOut),
-    [selectedScans],
-  );
   const scannedCount = scans.length;
   const photoScanOutCount = scans.filter((scan) => scan.isScannedOut).length;
   const allVisibleSelected =
@@ -433,8 +429,8 @@ export default function AdminTransferEmployeePage() {
   }
 
   async function requestTransferToSite(siteId: string) {
-    if (!selectedSiteId || selectedTransferScans.length === 0) {
-      toast.info("Select employees that have not been closed by site photo");
+    if (!selectedSiteId || selectedScans.length === 0) {
+      toast.info("Select one or more employees first");
       return;
     }
 
@@ -462,13 +458,13 @@ export default function AdminTransferEmployeePage() {
       foremanId,
       foremanName,
       sameSite: siteId === selectedSiteId,
-      employeeCount: selectedTransferScans.length,
+      employeeCount: selectedScans.length,
     });
   }
 
   async function transferToSite(siteId: string, foremanId: string) {
-    if (!selectedSiteId || selectedTransferScans.length === 0) {
-      toast.info("Select employees that have not been closed by site photo");
+    if (!selectedSiteId || selectedScans.length === 0) {
+      toast.info("Select one or more employees first");
       return;
     }
 
@@ -477,7 +473,7 @@ export default function AdminTransferEmployeePage() {
       const failures: string[] = [];
       const transferredIds: string[] = [];
 
-      for (const scan of selectedTransferScans) {
+      for (const scan of selectedScans) {
         const res = await fetch("/api/app/supervisor/transfer-employee", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1086,7 +1082,7 @@ export default function AdminTransferEmployeePage() {
                         type="button"
                         className="mt-3 w-full gap-2"
                         size="sm"
-                        disabled={selectedTransferScans.length === 0 || state.loading || isTransferring}
+                        disabled={selectedScans.length === 0 || state.loading || isTransferring}
                         onMouseEnter={() => void ensureForemenForSite(site.id)}
                         onClick={() => void requestTransferToSite(site.id)}
                       >

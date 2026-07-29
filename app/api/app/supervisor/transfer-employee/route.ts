@@ -193,7 +193,6 @@ export async function POST(req: Request) {
       dayRateAtScan: true,
       team: true,
       scannedAt: true,
-      scannedOutAt: true,
       siteDay: { select: { isLocked: true, foremanId: true } },
     },
   });
@@ -207,14 +206,6 @@ export async function POST(req: Request) {
     );
   }
 
-  if (existingScan.scannedOutAt) {
-    return NextResponse.json(
-      {
-        error: `Employee ${employee.firstName} ${employee.lastName} has already been scanned out at ${fromSite.name}`,
-      },
-      { status: 409 },
-    );
-  }
   if (existingScan.siteDay.isLocked) {
     return NextResponse.json(
       { error: "This attendance day is locked and cannot be transferred." },

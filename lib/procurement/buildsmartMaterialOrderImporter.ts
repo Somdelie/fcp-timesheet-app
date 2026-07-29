@@ -9,7 +9,11 @@ import {
   normalizeSkuKey,
 } from "@/lib/procurement/buildsmartProductCodes";
 import type { ParsedMaterialLine } from "@/lib/buildsmart-cost-parser";
-import { Prisma, type ProductUom } from "@/generated/prisma/client";
+import {
+  Prisma,
+  type ColorBaseType,
+  type ProductUom,
+} from "@/generated/prisma/client";
 import {
   resolveSupplierForOrderItems,
   resolveSupplierForProduct,
@@ -23,9 +27,17 @@ import {
 export type MaterialOrderImportStatus =
   | "CREATED"
   | "DUPLICATE"
+  | "REPAIRED"
   | "MISSING_SITE"
   | "NO_ORDER_NUMBER"
   | "ERROR";
+
+/**
+ * Note set on every SiteProductOrder created by this importer. Used to guard
+ * repairExistingOrder() so it only ever touches orders it created itself —
+ * never a manually created order that happens to share a PO reference.
+ */
+const SEEDED_ORDER_NOTE = "Seeded from BuildSmart historical cost report";
 
 export interface MaterialOrderImportResult {
   orderNumber: string | null;
@@ -248,6 +260,10 @@ async function resolveProduct(
   productId: string;
   masterCatalogueProductId: string | null;
   colorVariantId: string | null;
+  colorName: string | null;
+  colorCode: string | null;
+  baseType: ColorBaseType;
+  isTinted: boolean;
 }> {
   const mapped = mapDescriptionToProduct(description);
 
@@ -255,6 +271,7 @@ async function resolveProduct(
     cleanName,
     sku: parsedSku,
     colorName,
+    colorCode,
     baseType,
     isTinted,
   } = parseBuildSmartProduct(description.trim());
@@ -683,6 +700,138 @@ async function resolveProduct(
     masterCatalogueProductId:
       masterProduct?.id ?? legacyProduct.masterCatalogueProductId ?? null,
     colorVariantId,
+    colorName,
+    colorCode: colorCode ?? null,
+    baseType,
+    isTinted,
+  };
+}
+
+/**
+ * Handles a PO reference that already exists in the database.
+ *
+ * Older imports (before rawDescription/SitePaintColor existed) only ever
+ * stored a productId per line. Since tint-base SKUs are shared across many
+ * colors, that made every order using the same SKU display whichever
+ * description happened to create the shared product row first. Rather than
+ * just skipping already-imported orders as plain duplicates, check whether
+ * this order's items are missing that per-line data and repair them from
+ * the PDF being re-uploaded — instead of requiring a separate backfill run.
+ *
+ * Only ever fills rawDescription where it is currently NULL (never
+ * overwrites), and only ever touches orders this importer created itself
+ * (note === SEEDED_ORDER_NOTE) — a manually created order that happens to
+ * share a PO reference is left untouched.
+ */
+async function repairExistingOrder(
+  orderNumber: string,
+  siteId: string,
+  groupLines: ParsedMaterialLine[],
+): Promise<MaterialOrderImportResult> {
+  const first = groupLines[0];
+  const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
+
+  const baseResult = {
+    orderNumber,
+    siteCode: first.siteCode,
+    siteName: first.siteName,
+    transactionDate: first.transactionDate,
+    linesCreated: 0,
+    totalAmount: total.toFixed(2),
+  };
+
+  const order = await prisma.siteProductOrder.findFirst({
+    where: { siteId, reference: orderNumber },
+    select: {
+      id: true,
+      note: true,
+      items: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true, productId: true, rawDescription: true },
+      },
+    },
+  });
+
+  if (!order) {
+    return {
+      ...baseResult,
+      status: "DUPLICATE",
+      reason: `PO ${orderNumber} already imported but the existing order could not be re-located for repair`,
+    };
+  }
+
+  if (order.note !== SEEDED_ORDER_NOTE) {
+    return {
+      ...baseResult,
+      status: "DUPLICATE",
+      reason: `PO ${orderNumber} already imported (order was not created by this importer, skipping repair)`,
+    };
+  }
+
+  if (order.items.length !== groupLines.length) {
+    return {
+      ...baseResult,
+      status: "DUPLICATE",
+      reason:
+        `PO ${orderNumber} already imported (item count mismatch: ` +
+        `DB has ${order.items.length}, PDF has ${groupLines.length} — cannot safely repair)`,
+    };
+  }
+
+  const pending = order.items
+    .map((item, i) => ({ item, line: groupLines[i] }))
+    .filter(({ item }) => !item.rawDescription);
+
+  if (pending.length === 0) {
+    return {
+      ...baseResult,
+      status: "DUPLICATE",
+      reason: `PO ${orderNumber} already imported (up to date, nothing to repair)`,
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const { item, line } of pending) {
+      await tx.siteProductOrderItem.update({
+        where: { id: item.id },
+        data: { rawDescription: line.description },
+      });
+
+      const { colorName, colorCode, baseType, isTinted } =
+        parseBuildSmartProduct(line.description);
+
+      if (!colorName) continue;
+
+      const existingColor = await tx.sitePaintColor.findFirst({
+        where: { sourceOrderItemId: item.id },
+        select: { id: true },
+      });
+
+      if (existingColor) continue;
+
+      await tx.sitePaintColor.create({
+        data: {
+          siteId,
+          productId: item.productId,
+          sourceOrderId: order.id,
+          sourceOrderItemId: item.id,
+          orderReference: orderNumber,
+          rawDescription: line.description,
+          colorName,
+          colorCode: colorCode ?? undefined,
+          baseType,
+          isTinted,
+        },
+      });
+    }
+  });
+
+  return {
+    ...baseResult,
+    status: "REPAIRED",
+    reason: `PO ${orderNumber} was missing per-line description data on ${pending.length} item(s) — repaired from this PDF`,
+    orderId: order.id,
+    linesCreated: pending.length,
   };
 }
 
@@ -728,18 +877,7 @@ async function processOrderGroup(
   }
 
   if (isOrderReferenceTaken(existingOrderRefs, orderNumber)) {
-    const total = groupLines.reduce((s, l) => s + parseFloat(l.totalAmount), 0);
-
-    return {
-      orderNumber,
-      siteCode: first.siteCode,
-      siteName: first.siteName,
-      transactionDate: first.transactionDate,
-      status: "DUPLICATE",
-      reason: `PO ${orderNumber} already imported (PDF Orders or Historical Materials)`,
-      linesCreated: 0,
-      totalAmount: total.toFixed(2),
-    };
+    return repairExistingOrder(orderNumber, siteId, groupLines);
   }
 
   try {
@@ -751,6 +889,11 @@ async function processOrderGroup(
 
     const resolvedLines: {
       productId: string;
+      colorVariantId: string | null;
+      colorName: string | null;
+      colorCode: string | null;
+      baseType: ColorBaseType;
+      isTinted: boolean;
       quantity: number;
       uomAtOrder: ProductUom | null;
       unitSizeAtOrder: number | null;
@@ -758,7 +901,7 @@ async function processOrderGroup(
     }[] = [];
 
     for (const line of groupLines) {
-      const { productId } = await resolveProduct(line.description, orderNumber);
+      const resolved = await resolveProduct(line.description, orderNumber);
 
       const quantity =
         line.quantity && line.quantity > 0 ? Math.round(line.quantity) : 1;
@@ -766,7 +909,12 @@ async function processOrderGroup(
       const { uomAtOrder, unitSizeAtOrder } = parseUnitToken(line.unit ?? null);
 
       resolvedLines.push({
-        productId,
+        productId: resolved.productId,
+        colorVariantId: resolved.colorVariantId,
+        colorName: resolved.colorName,
+        colorCode: resolved.colorCode,
+        baseType: resolved.baseType,
+        isTinted: resolved.isTinted,
         quantity,
         uomAtOrder,
         unitSizeAtOrder,
@@ -820,25 +968,65 @@ async function processOrderGroup(
 
     const totalAmount = totalAmountDecimal.toFixed(2);
 
-    const order = await prisma.siteProductOrder.create({
-      data: {
-        siteId,
-        reference: orderNumber,
-        note: "Seeded from BuildSmart historical cost report",
-        createdAt: orderDate,
-        totalCost: totalAmountDecimal,
-        supplierId: orderSupplierId,
-        items: {
-          create: itemData.map((item) => ({
+    /*
+     * Items and their SitePaintColor records are created sequentially (not as
+     * a single nested `create`) so each created item's id can be paired with
+     * the resolvedLines/itemData entry it came from. Several order lines can
+     * share one shared catalogue product (a tint base SKU tinted to many
+     * different colors), so the pairing must be by array position, not by
+     * productId.
+     */
+    const order = await prisma.$transaction(async (tx) => {
+      const createdOrder = await tx.siteProductOrder.create({
+        data: {
+          siteId,
+          reference: orderNumber,
+          note: SEEDED_ORDER_NOTE,
+          createdAt: orderDate,
+          totalCost: totalAmountDecimal,
+          supplierId: orderSupplierId,
+        },
+        select: { id: true },
+      });
+
+      for (let i = 0; i < itemData.length; i++) {
+        const item = itemData[i];
+        const resolved = resolvedLines[i];
+
+        const createdItem = await tx.siteProductOrderItem.create({
+          data: {
+            orderId: createdOrder.id,
             productId: item.productId,
             quantity: item.quantity,
             unitPriceAtOrder: item.unitPriceAtOrder,
             uomAtOrder: item.uomAtOrder ?? undefined,
             unitSizeAtOrder: item.unitSizeAtOrder ?? undefined,
-          })),
-        },
-      },
-      select: { id: true },
+            rawDescription: resolved.line.description,
+          },
+          select: { id: true },
+        });
+
+        if (resolved.colorName) {
+          await tx.sitePaintColor.create({
+            data: {
+              siteId,
+              productId: item.productId,
+              colorVariantId: resolved.colorVariantId ?? undefined,
+              supplierId: orderSupplierId ?? undefined,
+              sourceOrderId: createdOrder.id,
+              sourceOrderItemId: createdItem.id,
+              orderReference: orderNumber,
+              rawDescription: resolved.line.description,
+              colorName: resolved.colorName,
+              colorCode: resolved.colorCode ?? undefined,
+              baseType: resolved.baseType,
+              isTinted: resolved.isTinted,
+            },
+          });
+        }
+      }
+
+      return createdOrder;
     });
 
     trackOrderReference(existingOrderRefs, orderNumber);
