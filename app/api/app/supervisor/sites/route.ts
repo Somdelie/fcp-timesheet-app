@@ -71,6 +71,17 @@ export async function GET(req: Request) {
   const siteIds = Array.from(new Set(assignments.map((a) => a.siteId)));
   if (siteIds.length === 0) return NextResponse.json({ sites: [] });
 
+  let dateFilter = {};
+  if (dateISO) {
+    const dayStart = startOfDayUTC(dateISO);
+    const dayEnd = addDaysUTC(dayStart, 1);
+    dateFilter = {
+      attendanceScans: {
+        some: { workDate: { gte: dayStart, lt: dayEnd } },
+      },
+    };
+  }
+
   const sites = await prisma.site.findMany({
     where: {
       id: { in: siteIds },
@@ -84,6 +95,7 @@ export async function GET(req: Request) {
             ],
           }
         : {}),
+      ...dateFilter,
     },
     select: {
       id: true,
@@ -121,37 +133,18 @@ export async function GET(req: Request) {
     wagesBysite.map((w) => [w.siteId, decimalToNumber(w._sum.dayRateAtScan)]),
   );
 
-  // Optionally compute how many attendance scans each site has on a specific
-  // work date (used by the mobile app to only list sites with scans to move/delete).
-  let scanCountMap: Map<string, number> | null = null;
-  if (dateISO) {
-    const dayStart = startOfDayUTC(dateISO);
-    const dayEnd = addDaysUTC(dayStart, 1);
-
-    const scanCountsBySite = await prisma.attendanceScan.groupBy({
-      by: ["siteId"],
-      where: {
-        siteId: { in: sites.map((s) => s.id) },
-        workDate: { gte: dayStart, lt: dayEnd },
-      },
-      _count: { id: true },
-    });
-
-    scanCountMap = new Map(
-      scanCountsBySite.map((c) => [c.siteId, c._count.id]),
-    );
-  }
-
-  return NextResponse.json({
-    sites: sites.map((s) => ({
-      id: s.id,
-      name: s.name,
-      code: s.code,
-      location: s.location,
-      isActive: s.isActive,
-      foremenCount: s.foremanAssignments.length,
-      totalWages: wagesMap.get(s.id) ?? 0,
-      ...(scanCountMap ? { scanCount: scanCountMap.get(s.id) ?? 0 } : {}),
-    })),
-  });
+  return NextResponse.json(
+    {
+      sites: sites.map((s) => ({
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        location: s.location,
+        isActive: s.isActive,
+        foremenCount: s.foremanAssignments.length,
+        totalWages: wagesMap.get(s.id) ?? 0,
+      })),
+    },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }
