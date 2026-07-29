@@ -181,7 +181,7 @@ export default function BuildsmartPdfSeedPage() {
           </TabsTrigger>
           <TabsTrigger value="materials" className="rounded">
             <ShoppingCart className="mr-2 h-4 w-4" />
-            Historical Paints
+            Historical Material
           </TabsTrigger>
           <TabsTrigger value="historical" className="rounded">
             <History className="mr-2 h-4 w-4" />
