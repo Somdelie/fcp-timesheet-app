@@ -39,18 +39,11 @@ export async function GET(req: Request) {
   const { userId, role } = await getAuth(req);
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (role !== "SUPERVISOR")
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const supervisor = await prisma.supervisor.findUnique({
-    where: { userId },
-    select: { id: true },
-  });
-  if (!supervisor)
-    return NextResponse.json(
-      { error: "Supervisor not found" },
-      { status: 404 },
-    );
+  // Allow SUPERVISOR (scoped to their assigned sites) and ADMIN (all sites)
+  if (role !== "SUPERVISOR" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
@@ -58,18 +51,32 @@ export async function GET(req: Request) {
   const dateISO = url.searchParams.get("dateISO");
   const now = new Date();
 
-  // Active assignments for this supervisor
-  const assignments = await prisma.supervisorSiteAssignment.findMany({
-    where: {
-      supervisorId: supervisor.id,
-      startsOn: { lte: now },
-      OR: [{ endsOn: null }, { endsOn: { gt: now } }],
-    },
-    select: { siteId: true },
-  });
+  let siteIds: string[] | null = null;
 
-  const siteIds = Array.from(new Set(assignments.map((a) => a.siteId)));
-  if (siteIds.length === 0) return NextResponse.json({ sites: [] });
+  if (role === "SUPERVISOR") {
+    const supervisor = await prisma.supervisor.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!supervisor)
+      return NextResponse.json(
+        { error: "Supervisor not found" },
+        { status: 404 },
+      );
+
+    // Active assignments for this supervisor
+    const assignments = await prisma.supervisorSiteAssignment.findMany({
+      where: {
+        supervisorId: supervisor.id,
+        startsOn: { lte: now },
+        OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+      },
+      select: { siteId: true },
+    });
+
+    siteIds = Array.from(new Set(assignments.map((a) => a.siteId)));
+    if (siteIds.length === 0) return NextResponse.json({ sites: [] });
+  }
 
   let dateFilter = {};
   if (dateISO) {
@@ -84,7 +91,7 @@ export async function GET(req: Request) {
 
   const sites = await prisma.site.findMany({
     where: {
-      id: { in: siteIds },
+      ...(siteIds ? { id: { in: siteIds } } : {}),
       ...(show === "active" ? { isActive: true } : {}),
       ...(q
         ? {

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,19 +6,56 @@ import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { startOfDayUTC } from "@/lib/dateUtc";
 import { writeAuditEvent } from "@/lib/audit";
 import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks";
+import { requireApiAuth } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  const user = session?.user as any;
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
-  if (!user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: CORS_HEADERS });
+}
+
+async function getAdminFromRequest(req: NextRequest) {
+  // 1) Prefer API Bearer token (mobile/desktop clients)
+  const apiCtx = await requireApiAuth(req, ["ADMIN"]);
+  if (apiCtx) {
+    return {
+      id: apiCtx.user.sub,
+      role: apiCtx.user.role,
+      name: undefined as string | undefined,
+      email: apiCtx.user.email as string | undefined,
+    };
   }
-  if (user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // 2) Fallback to NextAuth web session (admin dashboard)
+  const session = await getServerSession(authOptions);
+  const sessionUser = session?.user as any;
+  if (sessionUser?.id && sessionUser.role === "ADMIN") {
+    return {
+      id: sessionUser.id as string,
+      role: sessionUser.role as string,
+      name: sessionUser.name as string | undefined,
+      email: sessionUser.email as string | undefined,
+    } as const;
+  }
+
+  return null;
+}
+
+export async function GET(req: NextRequest) {
+  const user = await getAdminFromRequest(req);
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS_HEADERS },
+    );
   }
 
   const url = new URL(req.url);
@@ -27,7 +64,7 @@ export async function GET(req: Request) {
   if (!dateStr) {
     return NextResponse.json(
       { error: "date query param is required (YYYY-MM-DD)" },
-      { status: 400 },
+      { status: 400, headers: CORS_HEADERS },
     );
   }
 
@@ -35,7 +72,10 @@ export async function GET(req: Request) {
   try {
     date = startOfDayUTC(dateStr);
   } catch {
-    return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid date format" },
+      { status: 400, headers: CORS_HEADERS },
+    );
   }
 
   try {
@@ -44,33 +84,36 @@ export async function GET(req: Request) {
       select: { employeeId: true },
     });
 
-    return NextResponse.json({
-      scannedEmployeeIds: scans.map((scan) => scan.employeeId),
-    });
+    return NextResponse.json(
+      { scannedEmployeeIds: scans.map((scan) => scan.employeeId) },
+      { headers: CORS_HEADERS },
+    );
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Internal server error" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }
 
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const user = session?.user as any;
+export async function POST(req: NextRequest) {
+  const user = await getAdminFromRequest(req);
 
-  if (!user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: CORS_HEADERS },
+    );
   }
 
   let body: any;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400, headers: CORS_HEADERS },
+    );
   }
 
   const { siteId, foremanId, reason } = body;
@@ -93,7 +136,7 @@ export async function POST(req: Request) {
   ) {
     return NextResponse.json(
       { error: "siteId, foremanId, employeeIds, and workDates are required" },
-      { status: 400 },
+      { status: 400, headers: CORS_HEADERS },
     );
   }
 
@@ -107,14 +150,14 @@ export async function POST(req: Request) {
       if (date > today) {
         return NextResponse.json(
           { error: "Cannot create scans for future dates." },
-          { status: 400 },
+          { status: 400, headers: CORS_HEADERS },
         );
       }
       parsedWorkDates.push({ label: workDateStr, date });
     } catch {
       return NextResponse.json(
         { error: "Invalid workDate format. Use YYYY-MM-DD." },
-        { status: 400 },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
   }
@@ -125,7 +168,10 @@ export async function POST(req: Request) {
       select: { id: true, name: true },
     });
     if (!site) {
-      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Site not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
     }
 
     const foreman = await prisma.foreman.findUnique({
@@ -136,7 +182,10 @@ export async function POST(req: Request) {
       },
     });
     if (!foreman) {
-      return NextResponse.json({ error: "Foreman not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Foreman not found" },
+        { status: 404, headers: CORS_HEADERS },
+      );
     }
 
     const uniqueEmployeeIds: string[] = Array.from(new Set(employeeIds));
@@ -155,7 +204,7 @@ export async function POST(req: Request) {
     if (employees.length !== uniqueEmployeeIds.length) {
       return NextResponse.json(
         { error: "One or more employees were not found." },
-        { status: 404 },
+        { status: 404, headers: CORS_HEADERS },
       );
     }
 
@@ -165,7 +214,7 @@ export async function POST(req: Request) {
         {
           error: `Employee ${inactiveEmployee.firstName} ${inactiveEmployee.lastName} is deactivated.`,
         },
-        { status: 409 },
+        { status: 409, headers: CORS_HEADERS },
       );
     }
 
@@ -320,27 +369,30 @@ export async function POST(req: Request) {
               : "No scans were created.",
           skipped,
         },
-        { status: 409 },
+        { status: 409, headers: CORS_HEADERS },
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      scan: createdScans[0],
-      scans: createdScans,
-      skipped,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        scan: createdScans[0],
+        scans: createdScans,
+        skipped,
+      },
+      { headers: CORS_HEADERS },
+    );
   } catch (err: any) {
     console.error("[admin-manual-scan] Error:", err);
     if (err?.code === "P2002") {
       return NextResponse.json(
         { error: "Employee already has a scan for this date." },
-        { status: 409 },
+        { status: 409, headers: CORS_HEADERS },
       );
     }
     return NextResponse.json(
       { error: err.message || "Internal server error" },
-      { status: 500 },
+      { status: 500, headers: CORS_HEADERS },
     );
   }
 }

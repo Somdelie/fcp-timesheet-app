@@ -26,7 +26,11 @@ export async function DELETE(
   const payload = await verifyApiToken(token);
   if (!payload)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (payload.role !== "FOREMAN" && payload.role !== "SUPERVISOR")
+  if (
+    payload.role !== "FOREMAN" &&
+    payload.role !== "SUPERVISOR" &&
+    payload.role !== "ADMIN"
+  )
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const scan = await prisma.attendanceScan.findUnique({
@@ -51,7 +55,7 @@ export async function DELETE(
     if (scan.siteDay.foremanId !== foreman.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else {
+  } else if (payload.role === "SUPERVISOR") {
     const supervisor = await prisma.supervisor.findUnique({
       where: { userId: payload.sub },
       select: { id: true },
