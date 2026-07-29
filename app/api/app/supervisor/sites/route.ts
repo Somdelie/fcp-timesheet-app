@@ -55,6 +55,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
   const show = (url.searchParams.get("show") ?? "active").trim().toLowerCase(); // active | all
+  const dateISO = url.searchParams.get("dateISO");
   const now = new Date();
 
   // Active assignments for this supervisor
@@ -120,6 +121,27 @@ export async function GET(req: Request) {
     wagesBysite.map((w) => [w.siteId, decimalToNumber(w._sum.dayRateAtScan)]),
   );
 
+  // Optionally compute how many attendance scans each site has on a specific
+  // work date (used by the mobile app to only list sites with scans to move/delete).
+  let scanCountMap: Map<string, number> | null = null;
+  if (dateISO) {
+    const dayStart = startOfDayUTC(dateISO);
+    const dayEnd = addDaysUTC(dayStart, 1);
+
+    const scanCountsBySite = await prisma.attendanceScan.groupBy({
+      by: ["siteId"],
+      where: {
+        siteId: { in: sites.map((s) => s.id) },
+        workDate: { gte: dayStart, lt: dayEnd },
+      },
+      _count: { id: true },
+    });
+
+    scanCountMap = new Map(
+      scanCountsBySite.map((c) => [c.siteId, c._count.id]),
+    );
+  }
+
   return NextResponse.json({
     sites: sites.map((s) => ({
       id: s.id,
@@ -129,6 +151,7 @@ export async function GET(req: Request) {
       isActive: s.isActive,
       foremenCount: s.foremanAssignments.length,
       totalWages: wagesMap.get(s.id) ?? 0,
+      ...(scanCountMap ? { scanCount: scanCountMap.get(s.id) ?? 0 } : {}),
     })),
   });
 }
