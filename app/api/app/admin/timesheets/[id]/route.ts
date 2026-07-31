@@ -260,9 +260,9 @@ export async function GET(
     // the Employee record exists but isn't linked back to the User account).
     let foremanEmpId: string | null = foreman.user?.employee?.id ?? null;
     if (!foremanEmpId && foreman.user?.name) {
-      const foremanUserName = foreman.user.name.trim();
+      const foremanUserName = foreman.user.name.trim().toLowerCase();
       for (const agg of byEmp.values()) {
-        if (agg.fullName.trim() === foremanUserName) {
+        if (agg.fullName.trim().toLowerCase() === foremanUserName) {
           foremanEmpId = agg.employeeId;
           break;
         }

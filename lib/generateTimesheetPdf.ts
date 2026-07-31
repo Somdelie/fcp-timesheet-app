@@ -950,6 +950,8 @@ export interface TimesheetPrintMeta {
   deductionsTotal?: number;
   netTotal?: number;
   wagesCost?: number;
+  /** When true, omit all Rand amounts from the printed sheet (days/attendance only). */
+  hideAmounts?: boolean;
 }
 
 function escapeHTML(str: string): string {
@@ -969,6 +971,8 @@ export function generateTimesheetPrintHTML(
 ): string {
   const formatCurrencyHtml = (n: number) =>
     `R ${n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const hideAmounts = !!meta?.hideAmounts;
 
   const totals = model.totals;
 
@@ -997,8 +1001,7 @@ export function generateTimesheetPrintHTML(
       ${model.columns.map((c) => `<th class="day-col">${c.dayLabel}<br/>${c.dateLabel}</th>`).join("")}
       <th class="num-col">F/man Days</th>
       <th class="num-col">Man/Days</th>
-      <th class="num-col">F/man Pay</th>
-      <th class="num-col">Team Pay</th>
+      ${hideAmounts ? "" : `<th class="num-col">F/man Pay</th><th class="num-col">Team Pay</th>`}
     </tr>
   `;
 
@@ -1035,8 +1038,12 @@ export function generateTimesheetPrintHTML(
         ${row.present.map((p) => `<td class="day-col ${p ? "present" : "absent"}">${p ? "✓" : ""}</td>`).join("")}
         <td class="num-col summary-col ${foremanDays === 0 ? "zero-val" : ""}">${foremanDays}</td>
         <td class="num-col summary-col ${teamDays === 0 ? "zero-val" : ""}">${teamDays}</td>
-        <td class="num-col summary-col ${foremanPay === 0 ? "zero-val" : ""}">${foremanPay > 0 ? formatCurrencyHtml(foremanPay) : "0"}</td>
-        <td class="num-col summary-col ${teamPay === 0 ? "zero-val" : ""}">${teamPay > 0 ? formatCurrencyHtml(teamPay) : "0"}</td>
+        ${
+          hideAmounts
+            ? ""
+            : `<td class="num-col summary-col ${foremanPay === 0 ? "zero-val" : ""}">${foremanPay > 0 ? formatCurrencyHtml(foremanPay) : "0"}</td>
+        <td class="num-col summary-col ${teamPay === 0 ? "zero-val" : ""}">${teamPay > 0 ? formatCurrencyHtml(teamPay) : "0"}</td>`
+        }
       </tr>
     `;
     })
@@ -1049,8 +1056,12 @@ export function generateTimesheetPrintHTML(
       ${model.columns.map(() => `<td class="day-col total-day"></td>`).join("")}
       <td class="num-col summary-col">${totals.foremanDays}</td>
       <td class="num-col summary-col">${totals.teamDays}</td>
-      <td class="num-col summary-col">${formatCurrencyHtml(totals.foremanPay)}</td>
-      <td class="num-col summary-col">${formatCurrencyHtml(totals.teamPay)}</td>
+      ${
+        hideAmounts
+          ? ""
+          : `<td class="num-col summary-col">${formatCurrencyHtml(totals.foremanPay)}</td>
+      <td class="num-col summary-col">${formatCurrencyHtml(totals.teamPay)}</td>`
+      }
     </tr>
   `;
 
@@ -1346,22 +1357,28 @@ export function generateTimesheetPrintHTML(
           <div class="totals-card">
             <div class="totals-label">Foreman</div>
             <div class="totals-row"><span>Days</span><span class="totals-value">${totals.foremanDays}</span></div>
-            <div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.foremanPay)}</span></div>
+            ${hideAmounts ? "" : `<div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.foremanPay)}</span></div>`}
           </div>
           <div class="totals-card">
             <div class="totals-label">Team</div>
             <div class="totals-row"><span>Days</span><span class="totals-value">${totals.teamDays}</span></div>
-            <div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.teamPay)}</span></div>
+            ${hideAmounts ? "" : `<div class="totals-row"><span>Pay</span><span class="totals-value">${formatCurrencyHtml(totals.teamPay)}</span></div>`}
           </div>
           <div class="totals-card grand">
             <div class="totals-label">Grand Total</div>
             <div class="totals-row"><span>Days</span><span class="totals-value">${totals.totalDays}</span></div>
+            ${
+              hideAmounts
+                ? ""
+                : `
             <div class="totals-row"><span>Gross Wages</span><span class="totals-value">${formatCurrencyHtml(totals.totalPay)}</span></div>
             ${overtimeTotal > 0 ? `<div class="totals-row"><span>Overtime</span><span class="totals-value">${formatCurrencyHtml(overtimeTotal)}</span></div>` : ""}
             ${cashDeductionsTotal > 0 ? `<div class="totals-row"><span>Cash Deductions</span><span class="totals-value">-${formatCurrencyHtml(cashDeductionsTotal)}</span></div>` : ""}
             <div class="totals-row" style="border-top:1px solid #ccc;margin-top:2px;padding-top:2px"><span><strong>Site Wages Cost</strong></span><span class="totals-value"><strong>${formatCurrencyHtml(wagesCost)}</strong></span></div>
             ${productDeductionsTotal > 0 ? `<div class="totals-row" style="color:#b45309"><span>PPE/Tools Recovery</span><span class="totals-value">-${formatCurrencyHtml(productDeductionsTotal)}</span></div>` : ""}
             <div class="totals-row" style="border-top:1px solid #ccc;margin-top:2px;padding-top:2px"><span><strong>Foreman Net Pay</strong></span><span class="totals-value"><strong>${formatCurrencyHtml(netTotal)}</strong></span></div>
+            `
+            }
           </div>
         </div>
       </div>

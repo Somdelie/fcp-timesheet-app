@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import { printTimesheet } from "@/lib/generateTimesheetPdf";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 import { AnimatedLoader } from "@/components/ui/animated-loader";
 import { Textarea } from "@/components/ui/textarea";
@@ -115,6 +116,9 @@ export default function TimesheetDetailSheet<
     null,
   );
   const [reasonText, setReasonText] = React.useState("");
+
+  // Print: hide Rand amounts on the printed sheet
+  const [hidePrintAmounts, setHidePrintAmounts] = React.useState(false);
 
   // Manage Deductions dialog (ADMIN only)
   const [deductionDialogOpen, setDeductionDialogOpen] = React.useState(false);
@@ -567,6 +571,7 @@ export default function TimesheetDetailSheet<
                           productDeductionsTotal,
                           wagesCost,
                           netTotal,
+                          hideAmounts: hidePrintAmounts,
                         });
                       }}
                       disabled={!gridModel}
@@ -574,6 +579,14 @@ export default function TimesheetDetailSheet<
                       <Printer className="h-4 w-4 mr-1" />
                       Print
                     </Button>
+
+                    <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground select-none">
+                      <Checkbox
+                        checked={hidePrintAmounts}
+                        onCheckedChange={(v) => setHidePrintAmounts(!!v)}
+                      />
+                      Hide amounts
+                    </label>
 
                     <Button
                       variant="outline"

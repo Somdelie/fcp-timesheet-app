@@ -216,10 +216,13 @@ export default function OvertimeEntriesPage() {
 
   // Filters
   const [filterSiteId, setFilterSiteId] = useState("all");
+  const [filterForemanId, setFilterForemanId] = useState("ALL");
   const [filterSupervisorId, setFilterSupervisorId] = useState("ALL");
   const [filterPaid, setFilterPaid] = useState("ALL");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+  const [filterSiteOpen, setFilterSiteOpen] = useState(false);
+  const [filterForemanOpen, setFilterForemanOpen] = useState(false);
 
   // Pagination
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -290,6 +293,8 @@ export default function OvertimeEntriesPage() {
       const params = new URLSearchParams();
       if (filterSiteId && filterSiteId !== "all")
         params.set("siteId", filterSiteId);
+      if (filterForemanId && filterForemanId !== "ALL")
+        params.set("foremanId", filterForemanId);
       if (filterSupervisorId && filterSupervisorId !== "ALL")
         params.set("supervisorId", filterSupervisorId);
       if (filterPaid && filterPaid !== "ALL") params.set("paid", filterPaid);
@@ -310,7 +315,14 @@ export default function OvertimeEntriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterSiteId, filterSupervisorId, filterPaid, filterFrom, filterTo]);
+  }, [
+    filterSiteId,
+    filterForemanId,
+    filterSupervisorId,
+    filterPaid,
+    filterFrom,
+    filterTo,
+  ]);
 
   useEffect(() => {
     loadEntries();
@@ -900,25 +912,175 @@ export default function OvertimeEntriesPage() {
             </label>
             <div className="flex gap-2 flex-wrap items-end">
               <div>
-                <Select
-                  value={filterSiteId}
-                  onValueChange={(v) => {
-                    setFilterSiteId(v);
-                    setPagination((p) => ({ ...p, pageIndex: 0 }));
-                  }}
+                <Popover open={filterSiteOpen} onOpenChange={setFilterSiteOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={filterSiteOpen}
+                      className="h-10 w-52 justify-between font-normal"
+                    >
+                      <span className="truncate text-sm">
+                        {filterSiteId === "all"
+                          ? "All sites"
+                          : (() => {
+                              const s = sites.find(
+                                (s) => s.id === filterSiteId,
+                              );
+                              return s ? siteLabel(s.name, s.code) : "All sites";
+                            })()}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Search site..."
+                        className="text-sm"
+                      />
+                      <CommandList>
+                        <CommandEmpty className="text-xs text-muted-foreground py-4 text-center">
+                          No site found.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="All sites"
+                            onSelect={() => {
+                              setFilterSiteId("all");
+                              setPagination((p) => ({ ...p, pageIndex: 0 }));
+                              setFilterSiteOpen(false);
+                            }}
+                            className="text-sm"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-3.5 w-3.5",
+                                filterSiteId === "all"
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            All sites
+                          </CommandItem>
+                          {sites.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={siteLabel(s.name, s.code)}
+                              onSelect={() => {
+                                setFilterSiteId(s.id);
+                                setPagination((p) => ({
+                                  ...p,
+                                  pageIndex: 0,
+                                }));
+                                setFilterSiteOpen(false);
+                              }}
+                              className="text-sm"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-3.5 w-3.5",
+                                  filterSiteId === s.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {siteLabel(s.name, s.code)}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Popover
+                  open={filterForemanOpen}
+                  onOpenChange={setFilterForemanOpen}
                 >
-                  <SelectTrigger className="h-10 w-52">
-                    <SelectValue placeholder="All sites" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All sites</SelectItem>
-                    {sites.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {siteLabel(s.name, s.code)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={filterForemanOpen}
+                      className="h-10 w-52 justify-between font-normal"
+                    >
+                      <span className="truncate text-sm">
+                        {filterForemanId === "ALL"
+                          ? "All foremen"
+                          : (foremen.find((f) => f.id === filterForemanId)
+                              ?.name ?? "All foremen")}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Search foreman..."
+                        className="text-sm"
+                      />
+                      <CommandList>
+                        <CommandEmpty className="text-xs text-muted-foreground py-4 text-center">
+                          No foreman found.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="All foremen"
+                            onSelect={() => {
+                              setFilterForemanId("ALL");
+                              setPagination((p) => ({ ...p, pageIndex: 0 }));
+                              setFilterForemanOpen(false);
+                            }}
+                            className="text-sm"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-3.5 w-3.5",
+                                filterForemanId === "ALL"
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            All foremen
+                          </CommandItem>
+                          {foremen.map((f) => (
+                            <CommandItem
+                              key={f.id}
+                              value={f.name}
+                              onSelect={() => {
+                                setFilterForemanId(f.id);
+                                setPagination((p) => ({
+                                  ...p,
+                                  pageIndex: 0,
+                                }));
+                                setFilterForemanOpen(false);
+                              }}
+                              className="text-sm"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-3.5 w-3.5",
+                                  filterForemanId === f.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {f.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Select

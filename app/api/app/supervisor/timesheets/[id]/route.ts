@@ -127,7 +127,14 @@ export async function GET(
         period: {
           select: { id: true, startDate: true, endDate: true, label: true },
         },
-        foreman: { select: { id: true, user: { select: { name: true } } } },
+        foreman: {
+          select: {
+            id: true,
+            user: {
+              select: { name: true, employee: { select: { id: true } } },
+            },
+          },
+        },
         approvedBySupervisor: {
           select: { id: true, user: { select: { name: true } } },
         },
@@ -149,7 +156,14 @@ export async function GET(
           period: {
             select: { id: true, startDate: true, endDate: true, label: true },
           },
-          foreman: { select: { id: true, user: { select: { name: true } } } },
+          foreman: {
+          select: {
+            id: true,
+            user: {
+              select: { name: true, employee: { select: { id: true } } },
+            },
+          },
+        },
           approvedBySupervisor: {
             select: { id: true, user: { select: { name: true } } },
           },
@@ -324,6 +338,20 @@ export async function GET(
       if (name) agg.fullName = name;
     }
 
+    // Resolve foreman's employee ID: primary path via User→Employee link,
+    // fallback to name match against scanned employees (covers cases where
+    // the Employee record exists but isn't linked back to the User account).
+    let foremanEmpId: string | null = timesheet.foreman.user?.employee?.id ?? null;
+    if (!foremanEmpId && timesheet.foreman.user?.name) {
+      const foremanUserName = timesheet.foreman.user.name.trim().toLowerCase();
+      for (const agg of byEmp.values()) {
+        if (agg.fullName.trim().toLowerCase() === foremanUserName) {
+          foremanEmpId = agg.employeeId;
+          break;
+        }
+      }
+    }
+
     const rows = Array.from(byEmp.values())
       .sort((a, b) => a.fullName.localeCompare(b.fullName))
       .map((r) => {
@@ -336,6 +364,7 @@ export async function GET(
           present: r.present,
           daysWorked,
           pay,
+          isForeman: r.employeeId === foremanEmpId,
         };
       });
 
@@ -371,6 +400,7 @@ export async function GET(
         foreman: {
           id: timesheet.foreman.id,
           name: timesheet.foreman.user?.name ?? "Foreman",
+          employeeId: foremanEmpId,
         },
         supervisor,
         sites,
