@@ -768,15 +768,15 @@ body { margin: 0; }
 .ts-title { font-size: 15px; font-weight: bold; text-decoration: underline; letter-spacing: 1.5px; }
 .ts-table { width: 100%; border-collapse: collapse; font-size: 10px; font-family: Arial, sans-serif; }
 .ts-table th { border: 1.5px solid #222; padding: 6px 5px; background: #f2f2f2; font-weight: 700; text-align: center; white-space: nowrap; }
-.ts-table td { border: 1px solid #bbb; padding: 6px 4px; text-align: center; vertical-align: middle; }
+.ts-table td { border: 1px solid #bbb; padding: 2px 4px; text-align: center; vertical-align: middle; }
 .ts-th-name { text-align: left !important; min-width: 100px; }
 .ts-th-jobno { text-align: left !important; min-width: 60px; }
 .ts-th-site { text-align: left !important; min-width: 140px; }
 .ts-th-day { width: 42px; min-width: 42px; max-width: 42px; padding: 2px !important; }
 .ts-th-total { min-width: 70px; }
-.ts-td-name { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
+.ts-td-name { text-align: left !important; min-width: 100px; white-space: nowrap; font-size: 12px; font-weight: 400; }
 .ts-td-jobno { text-align: left !important; min-width: 80px; font-size: 14px; font-weight: 700; color: #555; }
-.ts-td-site { text-align: left !important; min-width: 140px; font-size: 9px; white-space: nowrap; }
+.ts-td-site { text-align: left !important; min-width: 140px; font-size: 11px; font-weight: 400; white-space: nowrap; }
 .ts-td-count { font-weight: 700; font-size: 9px; color: #111; }
 .ts-td-absent { padding: 2px; }
 .ts-td-total { font-weight: 700; font-size: 15px; }
@@ -860,7 +860,7 @@ body { margin: 0; }
           }
           .ts-table td {
             border: 1px solid #bbb;
-            padding: 6px 4px;
+            padding: 2px 4px;
             text-align: center;
             vertical-align: middle;
           }
@@ -874,9 +874,9 @@ body { margin: 0; }
             padding: 2px !important;
           }
           .ts-th-total { min-width: 70px; }
-          .ts-td-name  { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
+          .ts-td-name  { text-align: left !important; min-width: 100px; white-space: nowrap; font-size: 12px; font-weight: 400; }
           .ts-td-jobno { text-align: left !important; min-width: 80px; font-size: 14px; font-weight: 700; color: #555; }
-          .ts-td-site  { text-align: left !important; min-width: 140px; font-size: 9px; white-space: nowrap; }
+          .ts-td-site  { text-align: left !important; min-width: 140px; font-size: 11px; font-weight: 400; white-space: nowrap; }
           .ts-td-count { font-weight: 700; font-size: 9px; color: #111; }
           .ts-td-absent { padding: 2px; }
           .ts-td-total { font-weight: 700; font-size: 15px; }
