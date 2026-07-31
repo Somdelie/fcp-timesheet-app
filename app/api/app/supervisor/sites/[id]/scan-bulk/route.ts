@@ -164,23 +164,6 @@ export async function POST(
     if (!access) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
-    const supForeman = await prisma.supervisorForeman.findFirst({
-      where: {
-        supervisorId: sup.id,
-        foremanId,
-        startsOn: { lte: new Date() },
-        OR: [{ endsOn: null }, { endsOn: { gt: new Date() } }],
-      },
-      select: { foremanId: true },
-    });
-
-    if (!supForeman) {
-      return NextResponse.json(
-        { error: "Selected foreman is not under this supervisor" },
-        { status: 403 },
-      );
-    }
   }
 
   // Validate foreman is assigned to the site
