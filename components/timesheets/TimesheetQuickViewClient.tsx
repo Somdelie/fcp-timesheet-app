@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { Printer, FileText, Loader2 } from "lucide-react";
+import { Printer, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
@@ -517,6 +517,225 @@ export default function TimesheetQuickViewClient() {
     }
   }, [selectedPeriod]);
 
+  const handleExportExcel = useCallback(async () => {
+    if (!rows.length || !columns.length) {
+      toast.error("No timesheet data to export");
+      return;
+    }
+
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "FCP Timesheet App";
+      wb.created = new Date();
+
+      const ws = wb.addWorksheet("Time Sheet", {
+        pageSetup: { orientation: "landscape", fitToPage: true },
+      });
+
+      const dayColCount = columns.length;
+      const fdCol = 4 + dayColCount;
+      const mdCol = 5 + dayColCount;
+      const totalCols = mdCol;
+
+      const THIN = { style: "thin" as const, color: { argb: "FFBBBBBB" } };
+      const MED = { style: "medium" as const, color: { argb: "FF222222" } };
+      const cellBorder = { top: THIN, bottom: THIN, left: THIN, right: THIN };
+      const headerBorder = { top: MED, bottom: MED, left: MED, right: MED };
+
+      const fontTitle = {
+        name: "Arial",
+        size: 14,
+        bold: true,
+        underline: true,
+      };
+      const fontMeta = { name: "Arial", size: 10, bold: true };
+      const fontHeader = { name: "Arial", size: 10, bold: true };
+      const fontName = { name: "Arial", size: 10 };
+      const fontJobNo = {
+        name: "Arial",
+        size: 14,
+        bold: true,
+        color: { argb: "FF555555" },
+      };
+      const fontSite = { name: "Arial", size: 9 };
+      const fontCount = { name: "Arial", size: 9, bold: true };
+      const fontTotal = { name: "Arial", size: 16, bold: true };
+
+      // Title row
+      ws.mergeCells(1, 1, 1, totalCols);
+      const titleCell = ws.getCell(1, 1);
+      titleCell.value = "TIME SHEET";
+      titleCell.font = fontTitle;
+      titleCell.alignment = { horizontal: "center" };
+      ws.getRow(1).height = 22;
+
+      // Meta row: Date ... Contract Manager
+      const metaMid = Math.ceil(totalCols / 2);
+      ws.mergeCells(2, 1, 2, metaMid);
+      const dateCell = ws.getCell(2, 1);
+      dateCell.value = `Date: ${headerDate}`;
+      dateCell.font = fontMeta;
+
+      ws.mergeCells(2, metaMid + 1, 2, totalCols);
+      const mgrCell = ws.getCell(2, metaMid + 1);
+      mgrCell.value = `Contract Manager: ${supervisorName}`;
+      mgrCell.font = fontMeta;
+      mgrCell.alignment = { horizontal: "right" };
+      ws.getRow(2).height = 18;
+
+      // Header row
+      const headerRowIdx = 4;
+      const headerRow = ws.getRow(headerRowIdx);
+      const headers = [
+        "Name",
+        "Job No",
+        "Site",
+        ...columns.map((c) => `${c.day}\n${c.date}`),
+        "F/man\nDays",
+        "Man\nDays",
+      ];
+      headers.forEach((h, i) => {
+        const cell = headerRow.getCell(i + 1);
+        cell.value = h;
+        cell.font = fontHeader;
+        cell.alignment = {
+          horizontal: "center",
+          vertical: "middle",
+          wrapText: true,
+        };
+        cell.border = headerBorder;
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF2F2F2" },
+        };
+      });
+      headerRow.height = 28;
+
+      // Data rows
+      let rowIdx = headerRowIdx + 1;
+      for (const row of rows) {
+        const initial = foremanInitial(row.foremanName);
+        const r = ws.getRow(rowIdx++);
+
+        r.getCell(1).value = row.foremanName;
+        r.getCell(1).font = fontName;
+        r.getCell(1).alignment = { horizontal: "left", vertical: "middle" };
+
+        r.getCell(2).value = row.jobNo;
+        r.getCell(2).font = fontJobNo;
+        r.getCell(2).alignment = { horizontal: "left", vertical: "middle" };
+
+        r.getCell(3).value = row.siteName;
+        r.getCell(3).font = fontSite;
+        r.getCell(3).alignment = { horizontal: "left", vertical: "middle" };
+
+        row.dailyCounts.forEach((count, dayIdx) => {
+          const cell = r.getCell(4 + dayIdx);
+          const isFuture = (columns[dayIdx]?.iso ?? "") > todayISO;
+          const foremanIn = row.foremanPresence[dayIdx] ?? false;
+          const hasActivity = count > 0 || foremanIn;
+
+          if (isFuture) {
+            cell.value = "";
+          } else if (hasActivity) {
+            cell.value = foremanIn ? `${initial}+${count}` : `${count}`;
+            cell.font = fontCount;
+          } else {
+            cell.value = "-";
+            cell.font = fontSite;
+          }
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+        });
+
+        const fdCell = r.getCell(fdCol);
+        fdCell.value = row.foremanDays || "";
+        fdCell.font = fontTotal;
+        fdCell.alignment = { horizontal: "center", vertical: "middle" };
+
+        const mdCell = r.getCell(mdCol);
+        mdCell.value = row.manDays;
+        mdCell.font = fontTotal;
+        mdCell.alignment = { horizontal: "center", vertical: "middle" };
+
+        for (let c = 1; c <= totalCols; c++) {
+          r.getCell(c).border = cellBorder;
+        }
+        r.height = 22;
+      }
+
+      // Totals row
+      const totalsRow = ws.getRow(rowIdx);
+      ws.mergeCells(rowIdx, 1, rowIdx, 3 + dayColCount);
+      const totalsLabelCell = totalsRow.getCell(1);
+      totalsLabelCell.value = "TOTALS";
+      totalsLabelCell.font = fontMeta;
+      totalsLabelCell.alignment = { horizontal: "right", vertical: "middle" };
+
+      const totalFdCell = totalsRow.getCell(fdCol);
+      totalFdCell.value = totalForemanDays;
+      totalFdCell.font = fontTotal;
+      totalFdCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      const totalMdCell = totalsRow.getCell(mdCol);
+      totalMdCell.value = totalManDays;
+      totalMdCell.font = fontTotal;
+      totalMdCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      for (let c = 1; c <= totalCols; c++) {
+        totalsRow.getCell(c).border = { ...cellBorder, top: MED, bottom: MED };
+        totalsRow.getCell(c).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF0F0F0" },
+        };
+      }
+      totalsRow.height = 24;
+
+      // Column widths
+      ws.getColumn(1).width = 22;
+      ws.getColumn(2).width = 14;
+      ws.getColumn(3).width = 26;
+      for (let i = 0; i < dayColCount; i++) {
+        ws.getColumn(4 + i).width = 7;
+      }
+      ws.getColumn(fdCol).width = 12;
+      ws.getColumn(mdCol).width = 12;
+
+      const startISO = selectedPeriod?.startISO ?? "";
+      const endISO = selectedPeriod?.endISO ?? "";
+      const filename =
+        startISO && endISO
+          ? `timesheet-${startISO}-${endISO}.xlsx`
+          : "timesheet.xlsx";
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Excel exported");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to export Excel");
+    }
+  }, [
+    rows,
+    columns,
+    headerDate,
+    supervisorName,
+    totalForemanDays,
+    totalManDays,
+    todayISO,
+    selectedPeriod,
+  ]);
+
   const handlePrint = useCallback(() => {
     const printRoot = document.getElementById("ts-print-root");
     if (!printRoot) return;
@@ -554,13 +773,13 @@ body { margin: 0; }
 .ts-th-jobno { text-align: left !important; min-width: 60px; }
 .ts-th-site { text-align: left !important; min-width: 140px; }
 .ts-th-day { width: 42px; min-width: 42px; max-width: 42px; padding: 2px !important; }
-.ts-th-total { min-width: 52px; }
+.ts-th-total { min-width: 70px; }
 .ts-td-name { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
-.ts-td-jobno { text-align: left !important; min-width: 60px; font-size: 9px; color: #555; }
+.ts-td-jobno { text-align: left !important; min-width: 90px; font-size: 18px; font-weight: 700; color: #555; }
 .ts-td-site { text-align: left !important; min-width: 140px; font-size: 9px; white-space: nowrap; }
 .ts-td-count { font-weight: 700; font-size: 9px; color: #111; }
 .ts-td-absent { padding: 2px; }
-.ts-td-total { font-weight: 600; }
+.ts-td-total { font-weight: 700; font-size: 20px; }
 .ts-tfoot-row td { background: #f0f0f0; font-weight: 700; border-top: 2px solid #333; }
 .ts-tfoot-label { text-align: right !important; padding-right: 8px !important; letter-spacing: 0.5px; }
 .ts-dayhead-short { font-size: 8px; line-height: 1.2; font-weight: 400; }
@@ -654,13 +873,13 @@ body { margin: 0; }
             max-width: 42px;
             padding: 2px !important;
           }
-          .ts-th-total { min-width: 52px; }
+          .ts-th-total { min-width: 70px; }
           .ts-td-name  { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
-          .ts-td-jobno { text-align: left !important; min-width: 60px; font-size: 9px; color: #555; }
+          .ts-td-jobno { text-align: left !important; min-width: 90px; font-size: 18px; font-weight: 700; color: #555; }
           .ts-td-site  { text-align: left !important; min-width: 140px; font-size: 9px; white-space: nowrap; }
           .ts-td-count { font-weight: 700; font-size: 9px; color: #111; }
           .ts-td-absent { padding: 2px; }
-          .ts-td-total { font-weight: 600; }
+          .ts-td-total { font-weight: 700; font-size: 20px; }
           .ts-tfoot-row td {
             background: #f0f0f0;
             font-weight: 700;
@@ -765,6 +984,15 @@ body { margin: 0; }
               >
                 <FileText className="h-4 w-4" />
                 Save PDF
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleExportExcel}
+                className="gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Export Excel
               </Button>
             </div>
           )}
