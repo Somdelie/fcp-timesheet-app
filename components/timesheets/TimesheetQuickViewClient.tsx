@@ -775,11 +775,11 @@ body { margin: 0; }
 .ts-th-day { width: 42px; min-width: 42px; max-width: 42px; padding: 2px !important; }
 .ts-th-total { min-width: 70px; }
 .ts-td-name { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
-.ts-td-jobno { text-align: left !important; min-width: 90px; font-size: 18px; font-weight: 700; color: #555; }
+.ts-td-jobno { text-align: left !important; min-width: 80px; font-size: 14px; font-weight: 700; color: #555; }
 .ts-td-site { text-align: left !important; min-width: 140px; font-size: 9px; white-space: nowrap; }
 .ts-td-count { font-weight: 700; font-size: 9px; color: #111; }
 .ts-td-absent { padding: 2px; }
-.ts-td-total { font-weight: 700; font-size: 20px; }
+.ts-td-total { font-weight: 700; font-size: 15px; }
 .ts-tfoot-row td { background: #f0f0f0; font-weight: 700; border-top: 2px solid #333; }
 .ts-tfoot-label { text-align: right !important; padding-right: 8px !important; letter-spacing: 0.5px; }
 .ts-dayhead-short { font-size: 8px; line-height: 1.2; font-weight: 400; }
@@ -875,11 +875,11 @@ body { margin: 0; }
           }
           .ts-th-total { min-width: 70px; }
           .ts-td-name  { text-align: left !important; min-width: 100px; white-space: nowrap; font-weight: 500; }
-          .ts-td-jobno { text-align: left !important; min-width: 90px; font-size: 18px; font-weight: 700; color: #555; }
+          .ts-td-jobno { text-align: left !important; min-width: 80px; font-size: 14px; font-weight: 700; color: #555; }
           .ts-td-site  { text-align: left !important; min-width: 140px; font-size: 9px; white-space: nowrap; }
           .ts-td-count { font-weight: 700; font-size: 9px; color: #111; }
           .ts-td-absent { padding: 2px; }
-          .ts-td-total { font-weight: 700; font-size: 20px; }
+          .ts-td-total { font-weight: 700; font-size: 15px; }
           .ts-tfoot-row td {
             background: #f0f0f0;
             font-weight: 700;
@@ -1020,7 +1020,9 @@ body { margin: 0; }
         {!loading && rows.length > 0 && (
           <div
             id="ts-print-root"
-            className={embeddedPreview ? "ts-embedded-preview" : "overflow-x-auto"}
+            className={
+              embeddedPreview ? "ts-embedded-preview" : "overflow-x-auto"
+            }
           >
             {/* Header row — matches the handwritten sheet layout */}
             <div className="ts-sheet-header">
