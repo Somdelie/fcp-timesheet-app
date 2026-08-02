@@ -1,3 +1,12 @@
+export function joburgTodayISO() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export function startOfDayUTC(iso: string) {
   const d = new Date(`${iso}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${iso}`);

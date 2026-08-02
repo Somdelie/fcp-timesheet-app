@@ -1,15 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { isoFromDateUTC, startOfDayUTC } from "@/lib/dateUtc";
+import { isoFromDateUTC, joburgTodayISO, startOfDayUTC } from "@/lib/dateUtc";
 import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
-
-function joburgISODate() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Johannesburg",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
 
 export async function validateSupervisorScanDate(workDateISO: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(workDateISO)) {
@@ -36,7 +27,7 @@ export async function validateSupervisorScanDate(workDateISO: string) {
     };
   }
 
-  const todayISO = joburgISODate();
+  const todayISO = joburgTodayISO();
   const today = startOfDayUTC(todayISO);
 
   const yearCfg = await prisma.timesheetYear.findUnique({
