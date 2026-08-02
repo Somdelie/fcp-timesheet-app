@@ -2,11 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
+  Building2,
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ChevronsUpDown,
+  ClipboardCheck,
   Download,
   FileSpreadsheet,
   Loader2,
@@ -14,13 +19,27 @@ import {
   RefreshCw,
   TrendingDown,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -37,12 +56,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { addDays, currentFortnightSatFri, toISODate } from "@/lib/fortnight";
+import { cn } from "@/lib/utils";
 
 type DayRow = {
   date: string;
   total: number;
   overtimeTotal: number;
   percentChange: number | null;
+  isFuture: boolean;
 };
 
 type SiteDayRow = DayRow & {
@@ -115,14 +136,15 @@ function safeFilePart(value: string) {
   return value.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "");
 }
 
-function formatPercent(value: number | null) {
+function formatPercent(value: number | null, isFuture?: boolean) {
+  if (isFuture) return "—";
   if (value === null) return "New";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
 }
 
 function formatDayCell(day: DayRow) {
-  return `${day.total} | OT ${formatCompactNumber(day.overtimeTotal)} (${formatPercent(day.percentChange)})`;
+  return `${day.total} | OT ${formatCompactNumber(day.overtimeTotal)} (${formatPercent(day.percentChange, day.isFuture)})`;
 }
 
 function formatCompactNumber(value: number) {
@@ -439,8 +461,13 @@ async function exportAttendancePdf(input: {
     drawText(supervisorText, x + 3, y - 17, 5.6, regular, muted);
   }
 
-  function drawPercentBadge(value: number | null, x: number, yBadge: number) {
-    const label = formatPercent(value);
+  function drawPercentBadge(
+    value: number | null,
+    x: number,
+    yBadge: number,
+    isFuture?: boolean,
+  ) {
+    const label = formatPercent(value, isFuture);
     const isIncrease = value !== null && value > 0;
     const isDecrease = value !== null && value < 0;
     const fill = isIncrease
@@ -486,7 +513,7 @@ async function exportAttendancePdf(input: {
       muted,
     );
 
-    const badgeLabel = formatPercent(day.percentChange);
+    const badgeLabel = formatPercent(day.percentChange, day.isFuture);
     const badgeWidth = Math.max(
       18,
       regular.widthOfTextAtSize(badgeLabel, 5.4) + 8,
@@ -494,11 +521,16 @@ async function exportAttendancePdf(input: {
     const badgeX = x + width - badgeWidth - 3;
 
     if (badgeX > x + countTextWidth + 5) {
-      drawPercentBadge(day.percentChange, badgeX, y - 13.5);
+      drawPercentBadge(day.percentChange, badgeX, y - 13.5, day.isFuture);
       return;
     }
 
-    drawPercentBadge(day.percentChange, x + width - badgeWidth - 3, y - 13.5);
+    drawPercentBadge(
+      day.percentChange,
+      x + width - badgeWidth - 3,
+      y - 13.5,
+      day.isFuture,
+    );
   }
 
   function drawRow(site: SiteAnalyticsRow, index: number) {
@@ -567,7 +599,21 @@ async function exportAttendancePdf(input: {
   );
 }
 
-function PercentBadge({ value }: { value: number | null }) {
+function PercentBadge({
+  value,
+  isFuture,
+}: {
+  value: number | null;
+  isFuture?: boolean;
+}) {
+  if (isFuture) {
+    return (
+      <Badge variant="outline" className="gap-1 text-muted-foreground">
+        <Minus className="h-3 w-3" />—
+      </Badge>
+    );
+  }
+
   if (value === null) {
     return (
       <Badge variant="outline" className="gap-1 text-muted-foreground">
@@ -609,6 +655,7 @@ export default function AdminAttendanceAnalyticsPage() {
   const current = currentFortnightSatFri();
   const [startISO, setStartISO] = useState(current.startISO);
   const [siteId, setSiteId] = useState("ALL");
+  const [siteOpen, setSiteOpen] = useState(false);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [pageIndex, setPageIndex] = useState(0);
@@ -738,84 +785,120 @@ export default function AdminAttendanceAnalyticsPage() {
 
   return (
     <div className="space-y-4 px-4 pb-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">
-            Fortnight Attendance Report
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Daily attendance movement and per-site totals for the selected
-            fortnight.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            title="Previous fortnight"
-            onClick={() => setStartISO((value) => shiftISODate(value, -14))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="relative">
-            <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="date"
-              value={startISO}
-              onChange={(event) => setStartISO(event.target.value)}
-              className="w-[164px] pl-9"
-              aria-label="Fortnight start date"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            title="Next fortnight"
-            onClick={() => setStartISO((value) => shiftISODate(value, 14))}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setStartISO(current.startISO)}
-          >
-            Current
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            title="Refresh"
-            onClick={loadAnalytics}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={siteId} onValueChange={setSiteId}>
-          <SelectTrigger className="w-full sm:w-[280px]">
-            <SelectValue placeholder="All sites" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All sites</SelectItem>
-            {(data?.sites ?? []).map((site) => (
-              <SelectItem key={site.id} value={site.id}>
-                {site.code ? `${site.code} - ${site.name}` : site.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={siteOpen} onOpenChange={setSiteOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={siteOpen}
+              className="w-full justify-between font-normal sm:w-[280px]"
+            >
+              <span className="truncate">{selectedSiteLabel}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[280px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Search sites…" />
+              <CommandList>
+                <CommandEmpty>No sites found.</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem
+                    value="__all_sites__"
+                    keywords={["all", "sites"]}
+                    onSelect={() => {
+                      setSiteId("ALL");
+                      setSiteOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        siteId === "ALL" ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    All sites
+                  </CommandItem>
+                  {(data?.sites ?? []).map((site) => {
+                    const label = site.code
+                      ? `${site.code} - ${site.name}`
+                      : site.name;
+                    return (
+                      <CommandItem
+                        key={site.id}
+                        value={site.id}
+                        keywords={[label]}
+                        onSelect={() => {
+                          setSiteId(site.id);
+                          setSiteOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            siteId === site.id ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {label}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         {data ? (
-          <Badge variant="outline" className="h-9 px-3">
+          <Badge variant="outline" className="h-9 rounded px-3">
             {data.period.label}
           </Badge>
         ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          title="Previous fortnight"
+          onClick={() => setStartISO((value) => shiftISODate(value, -14))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="relative">
+          <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="date"
+            value={startISO}
+            onChange={(event) => setStartISO(event.target.value)}
+            className="w-[164px] pl-9"
+            aria-label="Fortnight start date"
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          title="Next fortnight"
+          onClick={() => setStartISO((value) => shiftISODate(value, 14))}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setStartISO(current.startISO)}
+        >
+          Current
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          title="Refresh"
+          onClick={loadAnalytics}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
         <div className="ml-auto flex items-center gap-2">
           <Button
             type="button"
@@ -859,55 +942,65 @@ export default function AdminAttendanceAnalyticsPage() {
 
       {data ? (
         <>
-          <div className="grid gap-3 md:grid-cols-5">
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Total attendance days
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 text-2xl font-semibold">
-                {data.summary.totalAttendance}
+          <div className="grid gap-3 md:grid-cols-4">
+            <Card className="gap-0 py-3">
+              <CardContent className="flex items-center gap-3 px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <ClipboardCheck className="h-4.5 w-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs text-muted-foreground">
+                    Total attendance days
+                  </div>
+                  <div className="text-xl font-semibold leading-tight">
+                    {data.summary.totalAttendance}
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Unpaid overtime days
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 text-2xl font-semibold">
-                {formatCompactNumber(data.summary.unpaidOvertimeDays)}
+            <Card className="gap-0 py-3">
+              <CardContent className="flex items-center gap-3 px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Activity className="h-4.5 w-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs text-muted-foreground">
+                    Average per day
+                  </div>
+                  <div className="text-xl font-semibold leading-tight">
+                    {data.summary.averagePerDay.toFixed(1)}
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Average per day
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 text-2xl font-semibold">
-                {data.summary.averagePerDay.toFixed(1)}
+            <Card className="gap-0 py-3">
+              <CardContent className="flex items-center gap-3 px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Trophy className="h-4.5 w-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs text-muted-foreground">
+                    Best day
+                  </div>
+                  <div className="text-xl font-semibold leading-tight">
+                    {bestDayLabel}
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Best day
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 text-2xl font-semibold">
-                {bestDayLabel}
-              </CardContent>
-            </Card>
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <CardTitle className="text-sm text-muted-foreground">
-                  Sites with attendance
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 text-2xl font-semibold">
-                {data.summary.activeSiteCount}
+            <Card className="gap-0 py-3">
+              <CardContent className="flex items-center gap-3 px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Building2 className="h-4.5 w-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-xs text-muted-foreground">
+                    Sites with attendance
+                  </div>
+                  <div className="text-xl font-semibold leading-tight">
+                    {data.summary.activeSiteCount}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -959,7 +1052,10 @@ export default function AdminAttendanceAnalyticsPage() {
                                 / OT {formatCompactNumber(day.overtimeTotal)}
                               </span>
                             </span>
-                            <PercentBadge value={day.percentChange} />
+                            <PercentBadge
+                              value={day.percentChange}
+                              isFuture={day.isFuture}
+                            />
                           </div>
                         </TableCell>
                       ))}

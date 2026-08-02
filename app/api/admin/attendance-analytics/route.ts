@@ -6,6 +6,7 @@ import {
   addDaysUTC,
   decimalToNumber,
   isoFromDateUTC,
+  joburgTodayISO,
   startOfDayUTC,
 } from "@/lib/dateUtc";
 import { currentFortnightSatFri } from "@/lib/fortnight";
@@ -27,6 +28,7 @@ type DayRow = {
   wageTotal: number;
   overtimeWageTotal: number;
   percentChange: number | null;
+  isFuture: boolean;
 };
 
 type SiteDayRow = DayRow & {
@@ -204,6 +206,7 @@ export async function GET(req: Request) {
   const dates = Array.from({ length: 14 }, (_, index) =>
     isoFromDateUTC(addDaysUTC(start, index)),
   );
+  const todayISO = joburgTodayISO();
 
   const totalByDate = new Map(
     dailyGroups.map((row) => [isoFromDateUTC(row.workDate), row._count._all]),
@@ -234,13 +237,15 @@ export async function GET(req: Request) {
   let previousTotal: number | null = null;
   const days: DayRow[] = dates.map((date) => {
     const total = totalByDate.get(date) ?? 0;
+    const isFuture = date > todayISO;
     const row = {
       date,
       total,
       overtimeTotal: overtimeByDate.get(date) ?? 0,
       wageTotal: wagesByDate.get(date) ?? 0,
       overtimeWageTotal: overtimeWagesByDate.get(date) ?? 0,
-      percentChange: pctChange(total, previousTotal),
+      percentChange: isFuture ? null : pctChange(total, previousTotal),
+      isFuture,
     };
     previousTotal = total;
     return row;
@@ -290,13 +295,15 @@ export async function GET(req: Request) {
 
     for (const date of dates) {
       const total = siteDateTotals.get(`${id}:${date}`) ?? 0;
+      const isFuture = date > todayISO;
       perSite.push({
         date,
         total,
         overtimeTotal: siteDateOvertimeTotals.get(`${id}:${date}`) ?? 0,
         wageTotal: siteDateWages.get(`${id}:${date}`) ?? 0,
         overtimeWageTotal: siteDateOvertimeWages.get(`${id}:${date}`) ?? 0,
-        percentChange: pctChange(total, previousSiteTotal),
+        percentChange: isFuture ? null : pctChange(total, previousSiteTotal),
+        isFuture,
         siteId: id,
         siteName: site?.name ?? "Unknown site",
         siteCode: site?.code ?? null,
