@@ -179,8 +179,11 @@ export async function GET(req: Request) {
       supervisorName: supervisorAssignment?.supervisor.user.name ?? null,
       workDateISO: scan.workDate.toISOString(),
       scannedAtISO: scan.scannedAt.toISOString(),
+      scannedOutAtISO: scan.scannedOutAt?.toISOString() ?? null,
       scanType: scan.scanType,
       overtimeType: scan.overtimeType,
+      scanOutMethod: scan.scanOutMethod,
+      verificationStatus: scan.verificationStatus,
       latitude: scan.latitude,
       longitude: scan.longitude,
       address: scan.address,
@@ -260,6 +263,12 @@ export async function DELETE(req: Request) {
     );
   }
 
+  const body = await req.json().catch(() => null);
+  const reason =
+    body && typeof body.reason === "string" && body.reason.trim()
+      ? body.reason.trim()
+      : null;
+
   try {
     const scan = await prisma.attendanceScan.findUnique({
       where: { id },
@@ -306,6 +315,7 @@ export async function DELETE(req: Request) {
     const deletedAt = new Date();
     const expiresAt = new Date(deletedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
     const metadata = JSON.stringify({
+      reason,
       attendanceScan: {
         id: scan.id,
         employeeId: scan.employeeId,

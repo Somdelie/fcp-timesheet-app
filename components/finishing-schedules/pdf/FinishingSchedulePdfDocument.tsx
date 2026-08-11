@@ -350,6 +350,7 @@ export function FinishingSchedulePdfDocument({
                   flexDirection: "row",
                   borderBottom: ai < areaGroups.length - 1 ? BORDER : undefined,
                 }}
+                wrap={false}
               >
                 {/* AREA cell — vertically centered, spans all child rows */}
                 <View
@@ -383,6 +384,7 @@ export function FinishingSchedulePdfDocument({
                         borderBottom:
                           zi < area.zones.length - 1 ? BORDER : undefined,
                       }}
+                      wrap={false}
                     >
                       {/* INT/EXT cell — vertically centered, spans all zone items */}
                       <View

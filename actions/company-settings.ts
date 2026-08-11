@@ -3,6 +3,7 @@
 import { requireServerAuth } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { writeAuditEvent } from "@/lib/audit";
 
 export type CompanySettingsDTO = {
   id: string;
@@ -12,6 +13,7 @@ export type CompanySettingsDTO = {
   defaultSpecialCoatingsDayRate: string;
   defaultCapeTownDayRate: string;
   teamRates: CompanyTeamRateDTO[];
+  fingerprintMandatory: boolean;
   updatedAt: string;
 };
 
@@ -98,6 +100,7 @@ function serializeSettings(s: any, teamRates: any[] = []): CompanySettingsDTO {
     ),
     defaultCapeTownDayRate: String(s.defaultCapeTownDayRate ?? "0"),
     teamRates: teamRates.map(serializeTeamRate),
+    fingerprintMandatory: Boolean(s.fingerprintMandatory),
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()
@@ -211,6 +214,42 @@ export async function updateCompanySettings(input: {
 
   revalidatePath("/settings");
   revalidatePath("/employees");
+  return { ok: true as const, settings: serializeSettings(result) };
+}
+
+/**
+ * Global fingerprint rollout gate. Stays false (fingerprint optional,
+ * QR/photo attendance always available) until an admin explicitly flips
+ * it — a deliberate future decision, never a side effect of anything else.
+ */
+export async function updateFingerprintMandatorySetting(input: {
+  fingerprintMandatory: boolean;
+}) {
+  const auth = await requireServerAuth();
+
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Unauthorized. Admin only." };
+  }
+
+  const result = await prisma.companySettings.upsert({
+    where: { id: "singleton" },
+    update: { fingerprintMandatory: input.fingerprintMandatory },
+    create: {
+      id: "singleton",
+      defaultEmployeeDayRate: 0,
+      fingerprintMandatory: input.fingerprintMandatory,
+    },
+  });
+
+  await writeAuditEvent({
+    actorUserId: auth.userId,
+    action: "company_settings_fingerprint_mandatory_updated",
+    entity: "CompanySettings",
+    entityId: "singleton",
+    metadata: { fingerprintMandatory: input.fingerprintMandatory },
+  });
+
+  revalidatePath("/settings");
   return { ok: true as const, settings: serializeSettings(result) };
 }
 

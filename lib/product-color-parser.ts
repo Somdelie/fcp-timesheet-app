@@ -88,9 +88,16 @@ const EMBEDDED_PRICE_RE = /\b\d{1,3}(?:,\d{3})*\.\d{2}\b/g;
 
 const TLS_CODE_RE = /\bTLS\d+\b\s*/gi;
 const TKM_CODE_RE = /\bTKM\s+\S+\s*/gi;
-const LEADING_PRODUCT_CODE_RE = /^[A-Z]{1,4}\s+\d{4,}[A-Z0-9]*\s+/i;
+// BuildSmart invoice references (INV31666, INV0004623, IN342859, INB64486, INC20163, ...):
+// 2-3 leading letters starting with "IN" directly followed by digits, no space.
+const LEADING_INVOICE_REF_RE = /^IN[A-Z]{0,2}\d{3,}\s+/i;
+// Real product SKUs are usually written with no space between the letter prefix
+// and the digits (PEM00060020, TSA001010, ACC192694), though a spaced form
+// (rare) is also accepted.
+const LEADING_PRODUCT_CODE_RE = /^[A-Z]{1,4}\s*\d{4,}[A-Z0-9]*\s+/i;
 const TBASE_RE = /\bT\/Base\b\s*/gi;
 const PACK_RE = /\bPack\s+\d+\s*$/i;
+const BOX_COUNT_SUFFIX_RE = /\s*[-–—]?\s*\(\s*\d+\s*boxe?s?\s*\)\s*$/i;
 const TRAILING_3DIGIT_RE = /\s+\d{3,}\s*$/;
 const TRAILING_SIZE_RE =
   /\s+\d+(?:\.\d+)?\s*(?:KG|G|L|ML|LTR|M2|M3|MM|CM|M)\s*$/i;
@@ -107,6 +114,15 @@ const TRAILING_PLASCON_COLOR_CODE_RE =
   /^(?<color>[A-Za-z][A-Za-z0-9\s]{1,80}?)\s+(?<code>[A-Z0-9]{1,5}(?:-[A-Z0-9]{1,5}){1,2})\s*$/i;
 
 const PROTECTED_WORDS = ["mix masala", "masala mix"];
+
+// Plascon/Marmoran-style colour code token (GS10255, GS09392-2, AS006, ...):
+// 1-3 letters directly followed by 2-6 digits, optional "-digit" suffix.
+const COLOR_CODE_TOKEN_RE = /^[A-Z]{1,3}\d{2,6}(?:-\d{1,3})?$/i;
+
+// Product SKUs that happen to share the letters+digits shape of a colour
+// code, but aren't one (e.g. Soudal Multibond sealant "SMX35"). Extend this
+// list when another non-colour code is found to false-positive.
+const NON_COLOR_CODE_TOKEN_RE = /^SMX\d+$/i;
 
 function baseTypeFromTBaseLabel(label: string): ColorBaseType {
   const normalized = label.trim().toLowerCase();
@@ -160,19 +176,29 @@ function extractColorNameAndCode(colorPortion: string): {
 
 /**
  * Remove BuildSmart noise from a product description:
- *   - Leading 6+ digit SKU/code
+ *   - Leading invoice reference (e.g. "INV31666 ", "INB64486 ")
+ *   - Leading 4+ digit bare SKU/line-item code
+ *   - Leading BuildSmart product code (spaced or unspaced, e.g. "PEM00060020")
  *   - Leading size token (e.g. "2.5L ", "500ML ")
  *   - Embedded prices (e.g. "58.70", "2,451.95")
  *   - Leading short quantity (bare 1-3 digit number)
  *   - TLS / TKM supplier codes
  *   - "T/Base" suffix
- *   - Trailing "Pack N", trailing size, trailing 3+ digit codes
+ *   - Trailing "Pack N", trailing size, trailing 3+ digit codes, trailing pack-count note
  */
 export function cleanProductName(rawName: string): string {
   let name = rawName.trim();
 
-  // 1. Remove leading 6+ digit SKU/code
-  name = name.replace(/^\d{6,}\s+/, "");
+  // -1. Remove a leading list-index prefix (e.g. "1-INV31666 ...", "2-INV33335 ...")
+  name = name.replace(/^\d{1,2}-\s*/, "");
+
+  // 0. Remove leading invoice reference (INV31666, INV0004623, INB64486, ...)
+  //    — this is a per-invoice number, not part of the product identity, and
+  //    left in place it splits one product into many duplicates.
+  name = name.replace(LEADING_INVOICE_REF_RE, "").trim();
+
+  // 1. Remove leading 4+ digit bare SKU/line-item code (e.g. "58551 ", "622759 ")
+  name = name.replace(/^\d{4,}\s+/, "");
 
   // 1b. Remove leading BuildSmart product codes from the display name
   name = name.replace(LEADING_PRODUCT_CODE_RE, "").trim();
@@ -201,8 +227,12 @@ export function cleanProductName(rawName: string): string {
   // 7. Remove trailing "Pack N"
   name = name.replace(PACK_RE, "").trim();
 
-  // 8. Remove trailing standalone 3+ digit numeric code (e.g. "292")
-  name = name.replace(TRAILING_3DIGIT_RE, "").trim();
+  // 8. Remove trailing standalone 3+ digit numeric code (e.g. "292"), unless
+  //    the number is actually the product line's name (e.g. "Trade 100",
+  //    "Trade 65") rather than a noise code.
+  if (!/\bTRADE\s*\d{2,4}\s*$/i.test(name)) {
+    name = name.replace(TRAILING_3DIGIT_RE, "").trim();
+  }
 
   // 9. Remove trailing size suffix, unless the name is a protected product
   const lower = name.toLowerCase();
@@ -212,6 +242,9 @@ export function cleanProductName(rawName: string): string {
 
   // 10. Remove trailing R-prefixed price
   name = name.replace(TRAILING_PRICE_RE, "").trim();
+
+  // 11. Remove trailing pack-count note, e.g. "(5boxes)", "- (2 boxes)"
+  name = name.replace(BOX_COUNT_SUFFIX_RE, "").trim();
 
   // Final cleanup
   name = name.replace(/\s{2,}/g, " ").trim();
@@ -322,6 +355,33 @@ export function extractColorVariant(rawDescription: string): {
         colorCode = candidateCode;
         isTinted = true;
       }
+    }
+  }
+
+  // 2c. Fallback: a Plascon/Marmoran-style colour code appears somewhere in
+  // the description, with no base-type keyword nearby (e.g. "Permasuede
+  // GS10255 Elephant Tail 46yy", "Permacrete GS09392-2"). Unlike the tint
+  // words above, an actual code token is specific enough that it doesn't
+  // need the base-type guard below — treat everything from the first such
+  // token onward as the colour, keeping the text before it as the name.
+  // Skip for sandpaper: "P60"/"P80"/"P100" etc are grit sizes, not colours.
+  if (!colorName && !/sandpaper/i.test(rawDescription)) {
+    const tokens = rawDescription.trim().split(/\s+/);
+    const codeIdx = tokens.findIndex(
+      (t) => COLOR_CODE_TOKEN_RE.test(t) && !NON_COLOR_CODE_TOKEN_RE.test(t),
+    );
+    // A bare "Name - CODE" (nothing but a dash between name and code) is the
+    // existing "name plus SKU reference" display convention, not a colour —
+    // leave it untouched rather than mistaking the SKU for a tint.
+    const isBareSkuReference = codeIdx > 0 && tokens[codeIdx - 1] === "-";
+    if (codeIdx > 0 && !isBareSkuReference) {
+      return {
+        cleanName: tokens.slice(0, codeIdx).join(" "),
+        colorName: tokens.slice(codeIdx).join(" ").toUpperCase(),
+        baseType,
+        isTinted: true,
+        colorCode: null,
+      };
     }
   }
 

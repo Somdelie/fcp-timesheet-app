@@ -109,6 +109,7 @@ export async function GET(
         specStatus: true,
         specAvailable: true,
         createdAt: true,
+        manualAttendanceRequiresSupervisorFingerprint: true,
       },
     });
 
@@ -186,6 +187,8 @@ export async function GET(
             (site.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
           specAvailable: site.specAvailable,
           createdAt: site.createdAt.toISOString(),
+          manualAttendanceRequiresSupervisorFingerprint:
+            site.manualAttendanceRequiresSupervisorFingerprint,
         },
         totalProjectWages,
         foremen: foremanAssignments.map((a) => ({
@@ -254,6 +257,7 @@ export async function PATCH(
       isActive,
       specStatus: rawSpecStatus,
       specAvailable,
+      manualAttendanceRequiresSupervisorFingerprint,
     } = body;
     const specStatus =
       rawSpecStatus !== undefined
@@ -322,6 +326,11 @@ export async function PATCH(
     } else if (specAvailable !== undefined) {
       updateData.specAvailable = Boolean(specAvailable);
     }
+    if (manualAttendanceRequiresSupervisorFingerprint !== undefined) {
+      updateData.manualAttendanceRequiresSupervisorFingerprint = Boolean(
+        manualAttendanceRequiresSupervisorFingerprint,
+      );
+    }
 
     const updatedSite = await prisma.site.update({
       where: { id },
@@ -338,6 +347,7 @@ export async function PATCH(
         specStatus: true,
         specAvailable: true,
         createdAt: true,
+        manualAttendanceRequiresSupervisorFingerprint: true,
       },
     });
 
@@ -358,6 +368,8 @@ export async function PATCH(
             (updatedSite.specAvailable ? "RECEIVED" : "NOT_REQUESTED"),
           specAvailable: updatedSite.specAvailable,
           createdAt: updatedSite.createdAt.toISOString(),
+          manualAttendanceRequiresSupervisorFingerprint:
+            updatedSite.manualAttendanceRequiresSupervisorFingerprint,
         },
       },
       { headers: CORS_HEADERS },

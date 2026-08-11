@@ -5,6 +5,7 @@ import { computeDayRateAtScan } from "@/lib/employeeDayRate";
 import { z } from "zod";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 import { getBlockedAttendanceScanEmployeeIds } from "@/lib/attendanceScanBlocks";
+import { joburgTodayISO, startOfDayUTC } from "@/lib/dateUtc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,12 +30,6 @@ const BodySchema = z
       (data.employeeCodes?.length ?? 0) > 0 || (data.scans?.length ?? 0) > 0,
     { message: "No scans submitted", path: ["employeeCodes"] },
   );
-
-function startOfTodayLocal() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 function normalizeCode(raw: string) {
   return String(raw ?? "")
@@ -182,7 +177,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: assigned.error }, { status: 403 });
   }
 
-  const workDate = startOfTodayLocal();
+  const workDate = startOfDayUTC(joburgTodayISO());
 
   let siteDay;
   try {

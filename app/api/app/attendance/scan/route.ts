@@ -5,6 +5,7 @@ import { requireServerAuth } from "@/lib/auth-server";
 import { z } from "zod";
 import { ensureSiteDayPhotoRequestForSiteDay } from "@/lib/siteDayPhotoRequest";
 import { getAttendanceScanBlock } from "@/lib/attendanceScanBlocks";
+import { joburgTodayISO, startOfDayUTC } from "@/lib/dateUtc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,14 +19,6 @@ const BodySchema = z.object({
   rawName: z.string().optional().nullable(),
   scanTime: z.string().optional().nullable(),
 });
-
-function startOfTodayLocal() {
-  // Use server local day boundary (fine if server timezone is your ops timezone).
-  // If you need SA-specific day boundary, we can force Africa/Johannesburg later.
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 function normalizeEmployeeCode(raw: string) {
   const t = String(raw ?? "")
@@ -141,7 +134,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: assigned.error }, { status: 403 });
   }
 
-  const workDate = startOfTodayLocal();
+  const workDate = startOfDayUTC(joburgTodayISO());
 
   const employee = await prisma.employee.findFirst({
     where: { qrCodeValue: employeeCode },

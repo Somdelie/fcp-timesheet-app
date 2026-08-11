@@ -43,7 +43,17 @@ export function inferBuildSmartProductCode(
   const digitsMatch = body.match(/\d+/);
   if (!digitsMatch) return null;
 
-  const digits = digitsMatch[0].padStart(6, "0");
+  let digits = digitsMatch[0];
+  // BuildSmart product codes are a zero-padded 6-digit code (e.g. "PEM600" ->
+  // "000600"). Some raw descriptions append a bare size with no unit letter
+  // straight after it (e.g. "PEM00060020" = product 600 + size 20L,
+  // "PEM0006005" = product 600 + size 5L) — the embeddedUnit branch above
+  // only catches sizes that keep their unit letter, so also strip any digits
+  // beyond the leading 6 here.
+  if (digits.length > 6) {
+    digits = digits.slice(0, 6);
+  }
+  digits = digits.padStart(6, "0");
   return hadSpace ? `${prefix} ${digits}` : `${prefix}${digits}`;
 }
 

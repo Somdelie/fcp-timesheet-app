@@ -70,6 +70,7 @@ export async function GET(
       code: true,
       location: true,
       isActive: true,
+      manualAttendanceRequiresSupervisorFingerprint: true,
     },
   });
   if (!site)

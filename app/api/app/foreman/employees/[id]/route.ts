@@ -112,6 +112,7 @@ export async function GET(
         dayRate: Number(employee.defaultDayRate),
         active: employee.isActive,
         fullName: `${employee.firstName} ${employee.lastName}`,
+        faceImageUrl: employee.faceImageUrl,
       },
     });
   } catch (error) {
@@ -274,6 +275,7 @@ export async function PUT(
         dayRate: Number(updatedEmployee.defaultDayRate),
         active: updatedEmployee.isActive,
         fullName: `${updatedEmployee.firstName} ${updatedEmployee.lastName}`,
+        faceImageUrl: updatedEmployee.faceImageUrl,
       },
     });
   } catch (error) {

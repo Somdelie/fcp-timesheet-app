@@ -17,227 +17,141 @@ type SeedItem = {
   note?: string;
 };
 
-const areas: Array<{
-  name: string;
-  label: string;
-  items: SeedItem[];
-}> = [
-  {
-    name: "External",
-    label: "External paint and steel finishes",
-    items: [
-      {
-        zone: "EXTERNAL",
-        position: "Main building walls",
-        product: "PTX1400",
-        colorCode: "PEM1000 White Top Coat",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Guardhouse main colour",
-        product: "PTX1400",
-        colorCode: "PEM1000 White Top Coat",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Guardhouse accent colour",
-        product: "PTX1400",
-        colorCode: "TLS GR-B09 Berlin Block",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Bollards",
-        product: "Road Marking Paint",
-        colorCode: "Medium Yellow",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Steel cat ladder",
-        product: "G2 Gloss Enamel",
-        colorCode: "Black",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Refuse yard gate",
-        product: "TVW",
-        colorCode: "RAL9005 Jet Black",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Transformer doors",
-        product: "TVW",
-        colorCode: "GR-B09 Berlin Block",
-      },
-      {
-        zone: "EXTERNAL",
-        position: "Transformer door frames",
-        product: "TVW",
-        colorCode: "RAL9005 Jet Black",
-      },
-    ],
-  },
-  {
-    name: "Internal",
-    label: "Internal paint finishes",
-    items: [
-      {
-        zone: "INTERNAL",
-        position: "Warehouse bathroom walls",
-        product: "TLS",
-        colorCode: "Aluminum Snow 45",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Warehouse bathroom doors",
-        product: "TVW",
-        colorCode: "GR-B09 Berlin Block",
-      },
-      {
-        zone: "INTERNAL",
-        position:
-          "Warehouse steel staircase & timber ceilings under mezzanine floor",
-        product: "G2 Gloss Enamel",
-        colorCode: "Black",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Warehouse door frames",
-        product: "Water Based Velvaglo",
-        colorCode: "RAL9005 Jet Black",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Fire doors",
-        product: "Water Based Velvaglo",
-        colorCode: "GR-B09 Berlin Block",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Fire door frames",
-        product: "Water Based Velvaglo",
-        colorCode: "RAL9005 Jet Black",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Warehouse bollards",
-        product: "Road Marking Paint",
-        colorCode: "Medium Yellow",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Backing boards",
-        product: "TVW",
-        colorCode: "GR-B09 Berlin Block",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Office steel staircase",
-        product: "Solvent Based Velvaglo",
-        colorCode: "RAL9005 Jet Black",
-      },
-      {
-        zone: "INTERNAL",
-        position: "Service duct walls",
-        product: "TSA",
-        colorCode: "Aluminum Snow 45",
-      },
-    ],
-  },
-];
+const integrityArea = {
+  name: "Integrity",
+  label: "Integrity finishing schedule",
+  items: [
+    {
+      zone: "INTERNAL" as FinishingZone,
+      position: "Internal walls",
+      product: "Dulux Trade 100",
+      colorCode: "Pelican 30YY 72/018",
+    },
+    {
+      zone: "INTERNAL" as FinishingZone,
+      position: "Internal walls",
+      product: "Dulux Trade 100",
+      colorCode: "Brakelight Red 16YR 13/558",
+    },
+    {
+      zone: "INTERNAL" as FinishingZone,
+      position: "Ceilings and Bulkhead",
+      product: "Dulux Trade 65",
+      colorCode: "White",
+    },
+    {
+      zone: "INTERNAL" as FinishingZone,
+      position: "Skirtings and Doors & Frames",
+      product: "Dulux Water-Based Pearlglo",
+      colorCode: "Black RAL 9005",
+    },
+  ],
+};
 
 async function main() {
+  // Site code = contract number
   const site = await prisma.site.findUnique({
-    where: { code: "6663" },
-    select: { id: true, name: true, code: true },
+    where: {
+      code: "6557",
+    },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+    },
   });
 
   if (!site) {
-    throw new Error("Site with code 6663 was not found.");
+    throw new Error("Site with code 6557 was not found.");
   }
 
-  const existing = await prisma.siteFinishingSchedule.findFirst({
+  // Find the EXISTING finishing schedule.
+  // We do not create a replacement schedule.
+  const schedule = await prisma.siteFinishingSchedule.findFirst({
     where: {
       siteId: site.id,
-      contractNo: "6663",
+      contractNo: "6557",
     },
     orderBy: {
       createdAt: "desc",
     },
     select: {
       id: true,
+      contractNo: true,
     },
   });
 
-  const schedule = await prisma.$transaction(async (tx) => {
-    const saved = existing
-      ? await tx.siteFinishingSchedule.update({
-          where: { id: existing.id },
-          data: {
-            siteAddress: "",
-            contractNo: "6663",
-            contractManager: "Gert Bodenstein",
-            siteForeman: "Jabu Mahlangu",
-            fcpContractManager: "Nicholas Kwinika",
-            fcpQs: "Shelly",
-            fcpSiteForeman: "David Nkwinika",
-            client: "Archstone Construction",
-            startDate: new Date("2026-03-31T00:00:00.000Z"),
-            completionDate: new Date("2026-05-15T00:00:00.000Z"),
-          },
-          select: {
-            id: true,
-          },
-        })
-      : await tx.siteFinishingSchedule.create({
-          data: {
-            siteId: site.id,
-            siteAddress: "",
-            contractNo: "6663",
-            contractManager: "Gert Bodenstein",
-            siteForeman: "Jabu Mahlangu",
-            fcpContractManager: "Nicholas Kwinika",
-            fcpQs: "Shelly",
-            fcpSiteForeman: "David Nkwinika",
-            client: "Archstone Construction",
-            startDate: new Date("2026-03-31T00:00:00.000Z"),
-            completionDate: new Date("2026-05-15T00:00:00.000Z"),
-          },
-          select: {
-            id: true,
-          },
-        });
+  if (!schedule) {
+    throw new Error(
+      "Existing finishing schedule for site 6557 was not found. " +
+        "This seed will not create a new schedule.",
+    );
+  }
 
-    await tx.siteFinishingScheduleArea.deleteMany({
+  await prisma.$transaction(async (tx) => {
+    // Find ONLY the Integrity area.
+    const existingArea = await tx.siteFinishingScheduleArea.findFirst({
       where: {
-        scheduleId: saved.id,
+        scheduleId: schedule.id,
+        name: integrityArea.name,
+      },
+      select: {
+        id: true,
       },
     });
 
-    for (const [areaIndex, area] of areas.entries()) {
-      await tx.siteFinishingScheduleArea.create({
+    let areaId: string;
+
+    if (existingArea) {
+      // Integrity already exists.
+      // Refresh ONLY Integrity's items.
+      areaId = existingArea.id;
+
+      await tx.siteFinishingScheduleArea.update({
+        where: {
+          id: existingArea.id,
+        },
         data: {
-          scheduleId: saved.id,
-          name: area.name,
-          label: area.label,
-          sortOrder: areaIndex,
-          items: {
-            create: area.items.map((item, itemIndex) => ({
-              zone: item.zone,
-              position: item.position,
-              product: item.product,
-              colorCode: item.colorCode,
-              supplier: null,
-              note: item.note ?? null,
-              sortOrder: itemIndex,
-            })),
-          },
+          label: integrityArea.label,
         },
       });
+
+      await tx.siteFinishingScheduleItem.deleteMany({
+        where: {
+          areaId: existingArea.id,
+        },
+      });
+    } else {
+      // Create Integrity without touching any existing areas.
+      const createdArea = await tx.siteFinishingScheduleArea.create({
+        data: {
+          scheduleId: schedule.id,
+          name: integrityArea.name,
+          label: integrityArea.label,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      areaId = createdArea.id;
     }
 
-    return saved;
+    // Add Integrity finishing items.
+    await tx.siteFinishingScheduleItem.createMany({
+      data: integrityArea.items.map((item, index) => ({
+        areaId,
+        zone: item.zone,
+        position: item.position,
+        product: item.product,
+        colorCode: item.colorCode,
+        supplier: "BUCO Montagu Gardens",
+        sortOrder: index,
+      })),
+    });
   });
 
+  // Verify result
   const summary = await prisma.siteFinishingSchedule.findUniqueOrThrow({
     where: {
       id: schedule.id,
@@ -254,9 +168,18 @@ async function main() {
       areas: {
         select: {
           name: true,
+          label: true,
           items: {
             select: {
               id: true,
+              zone: true,
+              position: true,
+              product: true,
+              colorCode: true,
+              supplier: true,
+            },
+            orderBy: {
+              sortOrder: "asc",
             },
           },
         },
@@ -270,13 +193,11 @@ async function main() {
   console.log(
     JSON.stringify(
       {
+        message: "Integrity finishing schedule added/updated successfully.",
         scheduleId: summary.id,
         contractNo: summary.contractNo,
         site: summary.site,
-        areas: summary.areas.map((area) => ({
-          name: area.name,
-          itemCount: area.items.length,
-        })),
+        integrity: summary.areas.find((area) => area.name === "Integrity"),
       },
       null,
       2,

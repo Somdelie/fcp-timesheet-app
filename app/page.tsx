@@ -40,7 +40,7 @@ const FEATURES = [
   {
     icon: "🪪",
     title: "Worker ID Cards",
-    body: "Generate and download PDF ID cards for any employee directly from the app, complete with a QR code.",
+    body: "Generate and download PDF ID cards for any team member directly from the app, complete with a QR code.",
   },
 ];
 
@@ -94,9 +94,7 @@ export default async function LandingPage() {
               height={36}
               className="rounded-lg"
             />
-            <span className="font-bold text-lg tracking-tight">
-              FirstClass
-            </span>
+            <span className="font-bold text-lg tracking-tight">FirstClass</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
@@ -149,11 +147,17 @@ export default async function LandingPage() {
               href="https://apps.apple.com/app/id/com.morrisndlovu.officeapp"
               className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors px-5 py-3 w-48"
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 shrink-0">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-7 h-7 shrink-0"
+              >
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
               </svg>
               <div className="text-left">
-                <p className="text-[10px] text-white/50 leading-none">Download on the</p>
+                <p className="text-[10px] text-white/50 leading-none">
+                  Download on the
+                </p>
                 <p className="text-sm font-bold leading-tight">App Store</p>
               </div>
             </a>
@@ -163,11 +167,17 @@ export default async function LandingPage() {
               href="https://play.google.com/store/apps/details?id=com.morrisndlovu.officeapp"
               className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors px-5 py-3 w-48"
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 shrink-0">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-7 h-7 shrink-0"
+              >
                 <path d="M3.18 23.76c.33.18.7.24 1.06.18l11.85-11.85L12.27 8.27 3.18 23.76zm15.6-12.1L16.1 10.1l-2.6 2.6 2.6 2.6 2.7-1.58c.77-.45.77-1.22-.02-1.06zM3.01.55C2.67.74 2.44 1.1 2.44 1.6v20.8c0 .5.23.86.57 1.05l.14.08L14.14 12.5v-.28L3.15.47l-.14.08zm8.7 8.68l3.56-3.56L4.24.55c-.37-.21-.7-.22-1.06-.06L11.71 9.23z" />
               </svg>
               <div className="text-left">
-                <p className="text-[10px] text-white/50 leading-none">Get it on</p>
+                <p className="text-[10px] text-white/50 leading-none">
+                  Get it on
+                </p>
                 <p className="text-sm font-bold leading-tight">Google Play</p>
               </div>
             </a>
@@ -193,7 +203,9 @@ export default async function LandingPage() {
               >
                 <div className="text-3xl mb-4">{f.icon}</div>
                 <h3 className="font-bold text-base mb-2">{f.title}</h3>
-                <p className="text-sm text-white/55 leading-relaxed">{f.body}</p>
+                <p className="text-sm text-white/55 leading-relaxed">
+                  {f.body}
+                </p>
               </div>
             ))}
           </div>
@@ -220,8 +232,13 @@ export default async function LandingPage() {
                   <h3 className="font-black text-xl mb-5">{r.role}</h3>
                   <ul className="space-y-3">
                     {r.points.map((p) => (
-                      <li key={p} className="flex items-start gap-2.5 text-sm text-white/70">
-                        <span className="mt-0.5 text-green-400 shrink-0">✓</span>
+                      <li
+                        key={p}
+                        className="flex items-start gap-2.5 text-sm text-white/70"
+                      >
+                        <span className="mt-0.5 text-green-400 shrink-0">
+                          ✓
+                        </span>
                         {p}
                       </li>
                     ))}
@@ -237,11 +254,15 @@ export default async function LandingPage() {
       <section id="privacy" className="px-6 py-20">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-3xl font-black mb-2">Privacy Policy</h2>
-          <p className="text-white/40 text-sm mb-10">Last updated: April 2026</p>
+          <p className="text-white/40 text-sm mb-10">
+            Last updated: April 2026
+          </p>
 
           <div className="space-y-8 text-white/70 text-sm leading-relaxed">
             <div>
-              <h3 className="font-bold text-white mb-2">What data we collect</h3>
+              <h3 className="font-bold text-white mb-2">
+                What data we collect
+              </h3>
               <p>
                 FirstClass collects employee names, ID numbers, photos, GPS
                 location at scan time, attendance records, and timesheet data.
@@ -252,9 +273,10 @@ export default async function LandingPage() {
             <div>
               <h3 className="font-bold text-white mb-2">How we use it</h3>
               <p>
-                Data is used to record daily site attendance, process fortnightly
-                timesheets, calculate wages, and generate internal reports. It is
-                not sold, shared with third parties, or used for advertising.
+                Data is used to record daily site attendance, process
+                fortnightly timesheets, calculate wages, and generate internal
+                reports. It is not sold, shared with third parties, or used for
+                advertising.
               </p>
             </div>
             <div>
@@ -278,7 +300,7 @@ export default async function LandingPage() {
             <div>
               <h3 className="font-bold text-white mb-2">Your rights</h3>
               <p>
-                Employees may request access to or deletion of their personal
+                Team members may request access to or deletion of their personal
                 data by contacting their site administrator or emailing us
                 directly.
               </p>
@@ -303,12 +325,25 @@ export default async function LandingPage() {
       <footer className="border-t border-white/10 px-6 py-10">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/40">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="FCP" width={20} height={20} className="rounded opacity-60" />
-            <span>© {new Date().getFullYear()} First Class Projects. All rights reserved.</span>
+            <Image
+              src="/logo.png"
+              alt="FCP"
+              width={20}
+              height={20}
+              className="rounded opacity-60"
+            />
+            <span>
+              © {new Date().getFullYear()} First Class Projects. All rights
+              reserved.
+            </span>
           </div>
           <div className="flex gap-5">
-            <a href="#privacy" className="hover:text-white transition-colors">Privacy Policy</a>
-            <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
+            <a href="#privacy" className="hover:text-white transition-colors">
+              Privacy Policy
+            </a>
+            <Link href="/login" className="hover:text-white transition-colors">
+              Sign in
+            </Link>
           </div>
         </div>
       </footer>

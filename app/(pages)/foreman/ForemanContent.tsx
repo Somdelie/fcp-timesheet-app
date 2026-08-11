@@ -171,7 +171,9 @@ export function ForemanContent({
   const teamLabels = useMemo(
     () => ({
       ...TEAM_LABELS,
-      ...Object.fromEntries(teamOptions.map((team) => [team.value, team.label])),
+      ...Object.fromEntries(
+        teamOptions.map((team) => [team.value, team.label]),
+      ),
     }),
     [teamOptions],
   );
@@ -280,7 +282,7 @@ export function ForemanContent({
         toast.error(result.error);
       }
     } catch (e: any) {
-      toast.error(e?.message || "Failed to load employees");
+      toast.error(e?.message || "Failed to load team members");
     }
   };
 
@@ -316,7 +318,7 @@ export function ForemanContent({
       return;
     }
     if (!createAssistantData.employeeId) {
-      toast.error("Please select an employee");
+      toast.error("Please select a team member");
       return;
     }
     if (!createAssistantData.assistantPassword) {
@@ -752,7 +754,7 @@ export function ForemanContent({
           </DialogHeader>
           <form onSubmit={handleCreateAssistant} className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Select Employee</label>
+              <label className="text-sm font-medium">Select Team Member</label>
               <Popover
                 open={assistantEmployeeOpen}
                 onOpenChange={setAssistantEmployeeOpen}
@@ -772,17 +774,17 @@ export function ForemanContent({
                           );
                           return emp
                             ? `${emp.firstName} ${emp.lastName}`
-                            : "Choose an employee...";
+                            : "Choose a team member...";
                         })()
-                      : "Choose an employee..."}
+                      : "Choose a team member..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[320px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search employees…" />
+                    <CommandInput placeholder="Search team members…" />
                     <CommandList>
-                      <CommandEmpty>No employees found.</CommandEmpty>
+                      <CommandEmpty>No team members found.</CommandEmpty>
                       <CommandGroup>
                         {employees.map((emp) => (
                           <CommandItem
@@ -825,7 +827,7 @@ export function ForemanContent({
               <div className="rounded bg-blue-50 dark:bg-blue-950 p-3 text-sm">
                 {isNewUserAssistant ? (
                   <p className="text-muted-foreground">
-                    Creating new user account for this employee
+                    Creating new user account for this team member
                   </p>
                 ) : (
                   <p className="text-muted-foreground">

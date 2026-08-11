@@ -90,6 +90,8 @@ const BodySchema = z.object({
   latitude: z.number().optional().nullable(),
   longitude: z.number().optional().nullable(),
   address: z.string().optional().nullable(),
+  supervisorAuthConfirmed: z.boolean().optional(),
+  supervisorAuthDevice: z.string().optional().nullable(),
 });
 
 export async function POST(
@@ -119,11 +121,30 @@ export async function POST(
     latitude,
     longitude,
     address,
+    supervisorAuthConfirmed,
+    supervisorAuthDevice,
   } = body.data;
 
   const selectedDate = await validateSupervisorScanDate(workDateISO);
   if (!selectedDate.ok) {
     return NextResponse.json({ error: selectedDate.error }, { status: 400 });
+  }
+
+  const site = await prisma.site.findUnique({
+    where: { id: siteId },
+    select: { manualAttendanceRequiresSupervisorFingerprint: true },
+  });
+  if (!site) {
+    return NextResponse.json({ error: "Site not found" }, { status: 404 });
+  }
+  if (site.manualAttendanceRequiresSupervisorFingerprint && !supervisorAuthConfirmed) {
+    return NextResponse.json(
+      {
+        error:
+          "This site requires supervisor fingerprint verification before manual attendance can be recorded.",
+      },
+      { status: 409 },
+    );
   }
 
   const normalizedCodes = employeeCodes.map(normalizeEmployeeCode);
@@ -269,6 +290,13 @@ export async function POST(
           address: address ?? null,
           scanType: "MANUAL",
           manualReason: "SUPERVISOR",
+          ...(supervisorAuthConfirmed
+            ? {
+                supervisorAuthByUser: { connect: { id: userId } },
+                supervisorAuthAt: new Date(),
+                supervisorAuthDevice: supervisorAuthDevice ?? null,
+              }
+            : {}),
         },
       });
 

@@ -68,6 +68,14 @@ model User {
   paidOvertimeEntries                OvertimeEntry[]              @relation("OvertimeEntryPaidBy")
   paintPlans                         SitePaintPlan[]              @relation("PaintPlanCreatedBy")
   paintUsages                        SitePaintUsage[]             @relation("PaintUsageCreatedBy")
+  createdLabourPlans                 LabourPlan[]                 @relation("LabourPlanCreatedBy")
+  submittedLabourPlans               LabourPlan[]                 @relation("LabourPlanSubmittedBy")
+  approvedLabourPlans                LabourPlan[]                 @relation("LabourPlanApprovedBy")
+  cancelledLabourPlans               LabourPlan[]                 @relation("LabourPlanCancelledBy")
+  completedLabourPlans               LabourPlan[]                 @relation("LabourPlanCompletedBy")
+  createdLabourChangeRequests        LabourChangeRequest[]        @relation("LabourChangeRequestCreatedBy")
+  approvedLabourChangeRequests       LabourChangeRequest[]        @relation("LabourChangeRequestApprovedBy")
+  rejectedLabourChangeRequests       LabourChangeRequest[]        @relation("LabourChangeRequestRejectedBy")
   notifications                      Notification[]
   schedulerTasks                     SchedulerTask[]
 
@@ -98,6 +106,14 @@ model User {
 
   // TDS files uploaded by this user.
   paintTdsImports PaintTdsImport[]
+
+  // ✅ NEW: fingerprint verification & accountability
+  supervisorAuthedScans          AttendanceScan[]        @relation("SupervisorAuthByUser")
+  approvedFingerprintEnrollments FingerprintEnrollment[] @relation("FingerprintEnrollmentApprovedBy")
+  attendanceScanReviews          AttendanceScanReview[]  @relation("AttendanceScanReviewByUser")
+
+  // ✅ NEW: face verification & accountability
+  approvedFaceEnrollments FaceEnrollment[] @relation("FaceEnrollmentApprovedBy")
 
   @@index([supplierId])
 }
@@ -167,6 +183,13 @@ model Employee {
   rateOverrides       EmployeeDayRateOverride[]
   attendanceCardScans AttendanceCardScan[]      @relation("AttendanceCardScanEmployee")
 
+  // ✅ NEW: fingerprint verification & accountability
+  fingerprintEnrollment FingerprintEnrollment?
+
+  // ✅ NEW: face verification & accountability
+  faceEnrollments          FaceEnrollment[]
+  faceVerificationAttempts FaceVerificationAttempt[]
+
   @@index([isActive])
   @@index([lastName, firstName])
 }
@@ -184,8 +207,10 @@ model Supervisor {
   siteAssignments SupervisorSiteAssignment[]
 
   // Timesheets / approvals
-  approvedTimesheets Timesheet[]              @relation("SupervisorApprovals")
-  dayAcceptances     TimesheetDayAcceptance[] @relation("DayAcceptances")
+  approvedTimesheets       Timesheet[]              @relation("SupervisorApprovals")
+  dayAcceptances           TimesheetDayAcceptance[] @relation("DayAcceptances")
+  suggestedLabourPlanTeams LabourPlanTeam[]         @relation("LabourPlanTeamSuggestedSupervisor")
+  overrideLabourPlanTeams  LabourPlanTeam[]         @relation("LabourPlanTeamOverrideSupervisor")
 }
 
 model Foreman {
@@ -216,7 +241,8 @@ model Foreman {
   supervisorLinks SupervisorForeman[]
 
   // Timesheets per period (+ optional per site)
-  timesheets Timesheet[]
+  timesheets      Timesheet[]
+  labourPlanTeams LabourPlanTeam[]
 
   // ✅ NEW: deductions created against workers under this foreman
   deductions Deduction[]
@@ -234,6 +260,12 @@ model Foreman {
   overtimeEntries OvertimeEntry[]
 
   ppeOrders ForemanPpeOrder[]
+
+  // ✅ NEW: fingerprint enrollments this foreman captured for their crew
+  enrolledFingerprints FingerprintEnrollment[]
+
+  // ✅ NEW: face enrollments this foreman captured for their crew
+  enrolledFaces FaceEnrollment[]
 }
 
 // A link between a foreman and an employee who is acting as assistant for that foreman.
@@ -306,6 +338,10 @@ model Site {
   /// Manual override for sites that had a finishing schedule before the system existed.
   finishingScheduleDone Boolean @default(false)
 
+  // ✅ NEW: when true, manual attendance on this site requires the capturing
+  // supervisor to self-authenticate via fingerprint before it's accepted.
+  manualAttendanceRequiresSupervisorFingerprint Boolean @default(false)
+
   amountClaimed Decimal @default(0) @db.Decimal(14, 2)
 
   createdAt     DateTime  @default(now())
@@ -343,6 +379,7 @@ model Site {
   claims    SiteClaim[]
 
   paintPlans    SitePaintPlan[]
+  labourPlans   LabourPlan[]
   notifications Notification[]
   progressNotes SiteProgressNote[]
 
@@ -624,6 +661,22 @@ model AttendanceScan {
   scannedOutAt   DateTime?
   scanOutPhotoId String?
 
+  // ✅ NEW: fingerprint verification & accountability (all nullable — existing rows unaffected)
+  scanOutMethod                ScanOutMethod?
+  scanOutFingerprintMatchScore Float?
+  verificationStatus           AttendanceVerificationStatus?
+
+  // ✅ NEW: face verification & accountability (all nullable — existing rows unaffected)
+  scanOutFaceMatchScore    Float?
+  faceVerificationAttempts FaceVerificationAttempt[]
+
+  // ✅ NEW: supervisor self-authentication for manual attendance (site opt-in only)
+  supervisorAuthByUserId   String?
+  supervisorAuthAt         DateTime?
+  supervisorAuthDevice     String?
+  supervisorAuthMatchScore Float?
+  supervisorAuthByUser     User?     @relation("SupervisorAuthByUser", fields: [supervisorAuthByUserId], references: [id], onDelete: SetNull)
+
   // ✅ Transfer: if employee was transferred from another site
   transferredFromSiteId String?
   transferredFromScanId String?
@@ -651,6 +704,9 @@ model AttendanceScan {
   scanOutPhoto  SiteDayPhoto? @relation("ScanOutPhoto", fields: [scanOutPhotoId], references: [id])
   transferredBy User?         @relation("TransferredByUser", fields: [transferredByUserId], references: [id])
 
+  // ✅ NEW: admin review actions (missing scan-out exception handling)
+  reviews AttendanceScanReview[]
+
   @@unique([employeeId, workDate])
   @@unique([siteDayId, employeeId])
   @@index([siteId, workDate])
@@ -662,6 +718,155 @@ model AttendanceScan {
   @@index([hasEarlySignOut])
   @@index([earlySignOutReasonId])
   @@index([earlySignOutCapturedByUserId])
+  @@index([verificationStatus])
+  @@index([scanOutMethod])
+  @@index([supervisorAuthByUserId])
+}
+
+//
+// ============================
+// FINGERPRINT VERIFICATION & ACCOUNTABILITY (additive only)
+// ============================
+//
+// Enrollment never blocks attendance: employees keep scanning in/out via the
+// existing QR + photo flow regardless of status. Approval only affects
+// whether related AttendanceScan rows read as VERIFIED vs PENDING_REVIEW.
+//
+model FingerprintEnrollment {
+  id String @id @default(cuid())
+
+  employeeId String   @unique
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Nullable/unused: enrollment now happens via the phone's own OS-level
+  // fingerprint sensor (foreman adds the employee's print in device
+  // Settings; the app only records that this happened — see `device`
+  // below). Kept nullable rather than dropped, in case a template-based
+  // approach is revisited later.
+  rightThumbTemplate Bytes?
+  leftThumbTemplate  Bytes?
+
+  status FingerprintEnrollmentStatus @default(PENDING_APPROVAL)
+
+  enrolledByForemanId String
+  enrolledByForeman   Foreman  @relation(fields: [enrolledByForemanId], references: [id])
+  enrolledAt          DateTime @default(now())
+  device              String?
+  latitude            Float?
+  longitude           Float?
+
+  approvedByUserId String?
+  approvedByUser   User?     @relation("FingerprintEnrollmentApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedAt       DateTime?
+
+  rejectedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([enrolledByForemanId])
+  @@index([approvedByUserId])
+}
+
+//
+// ============================
+// FACE VERIFICATION & ACCOUNTABILITY (additive only)
+// ============================
+//
+// Same lifecycle shape as FingerprintEnrollment (PENDING_APPROVAL ->
+// APPROVED/REJECTED, never blocks attendance), but one-to-many: face
+// matching needs several reference photos per employee (site conditions —
+// hard hats, PPE, lighting — vary too much for one image to be reliable),
+// unlike fingerprint enrollment which is a single OS-level record.
+model FaceEnrollment {
+  id String @id @default(cuid())
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  pose         FaceEnrollmentPose
+  imageUrl     String
+  embedding    Float[]
+  qualityScore Float?
+
+  // Capture-condition metadata — not used for matching. Purely explanatory,
+  // so an admin reviewing a poorly-performing enrollment can see why
+  // ("all five photos indoors, no hard hat") instead of guessing.
+  helmetDetected        Boolean?
+  safetyGlassesDetected Boolean?
+  lightingCondition     String?
+
+  status FaceEnrollmentStatus @default(PENDING_APPROVAL)
+
+  enrolledByForemanId String
+  enrolledByForeman   Foreman  @relation(fields: [enrolledByForemanId], references: [id])
+  enrolledAt          DateTime @default(now())
+  device              String?
+  latitude            Float?
+  longitude           Float?
+
+  approvedByUserId String?
+  approvedByUser   User?     @relation("FaceEnrollmentApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedAt       DateTime?
+  rejectedReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts FaceVerificationAttempt[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([enrolledByForemanId])
+}
+
+// Audit log — one row per verification attempt (not just the winning one).
+// Attendance is payroll data; AttendanceScan stores only the final outcome,
+// this table keeps the evidence trail for disputes, threshold tuning, and
+// debugging without cluttering the scan row itself.
+model FaceVerificationAttempt {
+  id String @id @default(cuid())
+
+  attendanceScanId String?
+  attendanceScan   AttendanceScan? @relation(fields: [attendanceScanId], references: [id], onDelete: SetNull)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  matchedEnrollmentId String?
+  matchedEnrollment   FaceEnrollment? @relation(fields: [matchedEnrollmentId], references: [id], onDelete: SetNull)
+
+  confidence       Float
+  livenessPassed   Boolean?
+  processingTimeMs Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([attendanceScanId])
+  @@index([employeeId])
+  @@index([createdAt])
+}
+
+// Admin actions taken against a specific AttendanceScan exception row
+// (e.g. from the Daily Exception Dashboard). Additive audit trail — never
+// mutates or removes the underlying scan itself.
+model AttendanceScanReview {
+  id String @id @default(cuid())
+
+  attendanceScanId String
+  attendanceScan   AttendanceScan @relation(fields: [attendanceScanId], references: [id], onDelete: Cascade)
+
+  action AttendanceScanReviewAction
+  note   String?
+
+  byUserId String
+  byUser   User   @relation("AttendanceScanReviewByUser", fields: [byUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([attendanceScanId])
+  @@index([byUserId])
 }
 
 enum AttendanceCardScanStatus {
@@ -1151,6 +1356,11 @@ model CompanySettings {
   // Cape Town location rate — applies when a foreman is switched to CAPE_TOWN
   defaultCapeTownDayRate Decimal @default(0) @db.Decimal(12, 2)
 
+  // ✅ NEW: global rollout gate for fingerprint verification. Stays false
+  // (fingerprint optional, QR/photo flow always available) until explicitly
+  // flipped later — not part of this rollout.
+  fingerprintMandatory Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -1219,6 +1429,22 @@ enum TimesheetStatus {
   ACCEPTED
 }
 
+enum LabourPlanStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  CANCELLED
+  COMPLETED
+}
+
+enum LabourChangeRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum PhotoRequestStatus {
   REQUESTED
   SUBMITTED
@@ -1249,6 +1475,45 @@ enum OvertimeType {
   NONE
   HALF_DAY
   FULL_DAY
+}
+
+// ✅ NEW: Fingerprint verification & accountability (additive only)
+enum FingerprintEnrollmentStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceVerificationStatus {
+  VERIFIED
+  PENDING_REVIEW
+  REJECTED
+}
+
+enum ScanOutMethod {
+  PHOTO
+  FINGERPRINT
+  FACE
+}
+
+enum FaceEnrollmentStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum FaceEnrollmentPose {
+  FRONT
+  LEFT
+  RIGHT
+  SMILE
+  NEUTRAL
+}
+
+enum AttendanceScanReviewAction {
+  MARK_VALID
+  REQUEST_EXPLANATION
+  ADD_SCAN_OUT
 }
 
 enum DayAcceptanceStatus {
@@ -2596,6 +2861,144 @@ model SitePaintPlan {
   @@index([productId])
 }
 
+// Management-authored labour forecasts are independent of attendance. They
+// capture intended staffing so the app can compare plans to existing scans.
+model LabourPlan {
+  id String @id @default(cuid())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime
+  status    LabourPlanStatus @default(DRAFT)
+
+  title  String?
+  reason String?
+  notes  String?
+
+  createdByUserId   String
+  createdByUser     User      @relation("LabourPlanCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  submittedByUserId String?
+  submittedByUser   User?     @relation("LabourPlanSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  submittedAt       DateTime?
+  approvedByUserId  String?
+  approvedByUser    User?     @relation("LabourPlanApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedAt        DateTime?
+  cancelledByUserId String?
+  cancelledByUser   User?     @relation("LabourPlanCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  cancelledAt       DateTime?
+  completedByUserId String?
+  completedByUser   User?     @relation("LabourPlanCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  completedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams            LabourPlanTeam[]
+  approvalSnapshot LabourPlanApprovalSnapshot?
+  changeRequests   LabourChangeRequest[]
+
+  @@index([siteId, startDate, endDate])
+  @@index([status, startDate])
+  @@index([createdByUserId])
+}
+
+model LabourPlanTeam {
+  id String @id @default(cuid())
+
+  planId String
+  plan   LabourPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  teamCode         String
+  teamNameSnapshot String
+
+  foremanId             String
+  foreman               Foreman     @relation(fields: [foremanId], references: [id], onDelete: Restrict)
+  suggestedSupervisorId String?
+  suggestedSupervisor   Supervisor? @relation("LabourPlanTeamSuggestedSupervisor", fields: [suggestedSupervisorId], references: [id], onDelete: SetNull)
+  overrideSupervisorId  String?
+  overrideSupervisor    Supervisor? @relation("LabourPlanTeamOverrideSupervisor", fields: [overrideSupervisorId], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  days           LabourPlanDay[]
+  changeRequests LabourChangeRequest[]
+
+  @@index([planId])
+  @@index([teamCode])
+  @@index([foremanId])
+  @@index([suggestedSupervisorId])
+  @@index([overrideSupervisorId])
+}
+
+model LabourPlanDay {
+  id String @id @default(cuid())
+
+  teamId String
+  team   LabourPlanTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  workDate         DateTime
+  peopleCount      Int
+  expectedOvertime Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, workDate])
+  @@index([workDate])
+}
+
+// Captured only once management approves a plan. Draft and submitted forecasts
+// always use current production wage rates.
+model LabourPlanApprovalSnapshot {
+  id String @id @default(cuid())
+
+  planId String     @unique
+  plan   LabourPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  plannedCost   Decimal  @db.Decimal(14, 2)
+  rateBreakdown Json
+  capturedAt    DateTime @default(now())
+}
+
+// Approved plans are immutable. Labour changes are separate, auditable requests.
+model LabourChangeRequest {
+  id String @id @default(cuid())
+
+  planId String
+  plan   LabourPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  teamId String
+  team   LabourPlanTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  startDate   DateTime
+  endDate     DateTime
+  peopleDelta Int
+  reason      String
+  notes       String?
+  status      LabourChangeRequestStatus @default(DRAFT)
+
+  createdByUserId  String
+  createdByUser    User      @relation("LabourChangeRequestCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  submittedAt      DateTime?
+  approvedByUserId String?
+  approvedByUser   User?     @relation("LabourChangeRequestApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedAt       DateTime?
+  rejectedByUserId String?
+  rejectedByUser   User?     @relation("LabourChangeRequestRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+  rejectedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId, status])
+  @@index([teamId, startDate, endDate])
+  @@index([status, startDate])
+}
+
 model PaintTdsImport {
   id String @id @default(cuid())
 
@@ -2714,6 +3117,9 @@ enum NotificationType {
   PHOTO_REJECTED
   MATERIAL_ORDER
   GENERAL
+  FINGERPRINT_ENROLLMENT_APPROVED
+  FINGERPRINT_ENROLLMENT_REJECTED
+  ATTENDANCE_EXPLANATION_REQUESTED
 }
 
 model Notification {

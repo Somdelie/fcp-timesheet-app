@@ -8,6 +8,7 @@ import {
   inferBuildSmartProductCode,
   normalizeSkuKey,
 } from "@/lib/procurement/buildsmartProductCodes";
+import { getCanonicalFamily } from "@/lib/procurement/buildsmartProductMatcher";
 import type { ParsedMaterialLine } from "@/lib/buildsmart-cost-parser";
 import {
   Prisma,
@@ -63,13 +64,52 @@ function toDecimal(value: unknown, fallback = "0"): Prisma.Decimal {
   }
 }
 
-function normalizeCatalogueName(value: string): string {
+export function normalizeCatalogueName(value: string): string {
   return value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Matches the casing convention already used by the archived master-catalogue
+// base seed scripts, so newly-created bases don't fork into a differently
+// cased duplicate of a base that already exists for the same product.
+export function normalizeBaseName(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/&/g, " AND ")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const NUMBERED_BASE_RE = /\bBASE\s*([6-9])\b/i;
+// "Pastel Base" word order
+const NAMED_BASE_RE = /\b(Transparent|Deep|Pastel|Neutral)\s*Base\b/i;
+// "T/Base Pastel" / "Base Pastel" order — at least as common in this data
+const NAMED_BASE_REVERSED_RE =
+  /\bT?\/?\s*Base\s+(Transparent|Deep|Pastel|Neutral)\b/i;
+
+/**
+ * Detect an explicit tinting base label (Dulux-style numbered, or
+ * Plascon-style named, either word order) in a raw BuildSmart description.
+ * Returns null when no explicit base is stated — callers should fall back to
+ * whatever specific colour text was extracted instead.
+ */
+export function extractBaseLabel(text: string): string | null {
+  const numbered = text.match(NUMBERED_BASE_RE);
+  if (numbered) return `Base ${numbered[1]}`;
+
+  const named = text.match(NAMED_BASE_RE) ?? text.match(NAMED_BASE_REVERSED_RE);
+  if (named) {
+    const word = named[1].toLowerCase();
+    return `${word.charAt(0).toUpperCase()}${word.slice(1)} Base`;
+  }
+
+  return null;
 }
 
 async function resolveStoredUnitPrice({
@@ -266,19 +306,48 @@ async function resolveProduct(
   isTinted: boolean;
 }> {
   const mapped = mapDescriptionToProduct(description);
+  const family = getCanonicalFamily(description, null);
 
   const {
     cleanName,
     sku: parsedSku,
-    colorName,
+    colorName: parsedColorName,
     colorCode,
     baseType,
     isTinted,
   } = parseBuildSmartProduct(description.trim());
 
+  // For tintable-base products (Trade100, Wall&All, Micatex, Cashmere
+  // Tintbase, ...) the meaningful "variant" is a base, not a colour — prefer
+  // an explicit Base 6/7/8/9 or named-base match, falling back to whatever
+  // specific tint text the parser found (still stored as free text either way).
+  const baseLabel =
+    family?.kind === "BASE_TINTABLE" ? extractBaseLabel(description) : null;
+  const colorName =
+    (family?.kind === "BASE_TINTABLE"
+      ? (baseLabel ?? parsedColorName)
+      : parsedColorName) ??
+    // No specific tint name, but a real base-type keyword was still found
+    // (e.g. a plain "... White" product with no other colour text) — keep
+    // that as the variant rather than losing it entirely. "DEEP" is the
+    // parser's no-match default, not a real signal, so it's excluded.
+    (baseType !== "DEEP"
+      ? baseType.charAt(0) + baseType.slice(1).toLowerCase()
+      : null);
+
   const productCode = parsedSku ?? inferBuildSmartProductCode(description);
 
-  const canonicalName = (mapped ?? cleanName).trim();
+  // Only let a canonical family override the display name for genuinely
+  // one-product-many-variants families (BASE_TINTABLE, e.g. Trade100). Other
+  // families (e.g. "Plascon Velvaglo") are broad brand-level aliases used for
+  // matching/scoring — collapsing every product under that brand onto one
+  // generic name would merge distinct products (Velvaglo Satin vs Velvaglo
+  // Non-Drip) together.
+  const canonicalName = (
+    mapped ??
+    (family?.kind === "BASE_TINTABLE" ? family.canonicalName : null) ??
+    cleanName
+  ).trim();
   const normalizedName = normalizeCatalogueName(canonicalName);
   const normalizedSku = normalizeSkuKey(productCode);
 
@@ -642,6 +711,35 @@ async function resolveProduct(
         masterCatalogueProductId: true,
       },
     });
+  }
+
+  /*
+   * Tintable-base products (Trade100, Wall&All Tintbase, Micatex Tint Base,
+   * Cashmere Tint Base, ...) get a real MasterProductBase row so the
+   * catalogue reflects actual supplier-specific bases instead of collapsing
+   * every base into one product. Best-effort: never blocks order creation.
+   */
+  if (baseLabel && masterProduct) {
+    const normalizedBaseName = normalizeBaseName(baseLabel);
+    try {
+      await prisma.masterProductBase.upsert({
+        where: {
+          productId_normalizedName: {
+            productId: masterProduct.id,
+            normalizedName: normalizedBaseName,
+          },
+        },
+        create: {
+          productId: masterProduct.id,
+          name: baseLabel,
+          normalizedName: normalizedBaseName,
+        },
+        update: {},
+      });
+    } catch {
+      // Catalogue enrichment only — a race or transient error here should
+      // never fail the order/line-item import.
+    }
   }
 
   /*

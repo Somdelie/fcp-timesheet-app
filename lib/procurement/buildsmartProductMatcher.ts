@@ -19,6 +19,7 @@ export type CanonicalFamilyMatch = {
   normalizedInput: string;
   hadVariant: boolean;
   brandHint?: string | null;
+  kind?: "BASE_TINTABLE" | "PRETINTED";
 };
 
 export type ProductMatch = {
@@ -29,6 +30,7 @@ export type ProductMatch = {
   mode: ProductMode;
   confidence: number;
   reason: string;
+  kind?: "BASE_TINTABLE" | "PRETINTED";
 };
 
 type MatchInput = {
@@ -43,6 +45,11 @@ type CanonicalFamilyDefinition = {
   canonicalName: string;
   brandHint?: string;
   aliases: string[];
+  // BASE_TINTABLE: one product sold as several tinting bases (Dulux-style
+  // numbered "Base 6/8/9", Plascon-style "Transparent/Deep/Pastel Base").
+  // Unset/PRETINTED: each SKU is a specific already-mixed colour, or the
+  // product has no base/colour concept at all.
+  kind?: "BASE_TINTABLE" | "PRETINTED";
 };
 
 const CANONICAL_VARIANT_PATTERNS = [
@@ -71,6 +78,7 @@ const CANONICAL_FAMILIES: CanonicalFamilyDefinition[] = [
     key: "DULUX_TRADE_100_LOWSHEEN",
     canonicalName: "Trade 100 Lowsheen",
     brandHint: "dulux",
+    kind: "BASE_TINTABLE",
     aliases: [
       "TRADE 100 LOWSHEEN",
       "100 LOWSHEEN",
@@ -154,22 +162,50 @@ const CANONICAL_FAMILIES: CanonicalFamilyDefinition[] = [
     ],
   },
   {
+    key: "PLASCON_PEM_600",
+    canonicalName: "Prof. Contractors Matt",
+    brandHint: "plascon",
+    aliases: ["PEM 600", "PEM600"],
+  },
+  {
     key: "PLASCON_PEM_900",
-    canonicalName: "PEM 900",
+    canonicalName: "Prof. Super Matt Acrylic",
     brandHint: "plascon",
     aliases: ["PEM 900", "PEM900"],
   },
   {
-    key: "PLASCON_TSA_1010",
-    canonicalName: "TSA 1010",
+    key: "PLASCON_TSA_SUPER_MATT",
+    canonicalName: "Prof. Super Matt",
     brandHint: "plascon",
-    aliases: ["TSA 1010", "TSA1010"],
+    aliases: [
+      "TSA 1010",
+      "TSA1010",
+      "TSA 2000",
+      "TSA2000",
+      "TSA 3010",
+      "TSA3010",
+    ],
   },
   {
     key: "PLASCON_TCA_1000",
-    canonicalName: "TCA 1000",
+    canonicalName: "Cashmere Tint Base",
     brandHint: "plascon",
+    kind: "BASE_TINTABLE",
     aliases: ["TCA 1000", "TCA1000"],
+  },
+  {
+    key: "PLASCON_TMX_MICATEX_TINTBASE",
+    canonicalName: "Micatex Tint Base",
+    brandHint: "plascon",
+    kind: "BASE_TINTABLE",
+    aliases: [
+      "TMX 1050",
+      "TMX1050",
+      "TMX 2050",
+      "TMX2050",
+      "MICATEX TINT BASE",
+      "MICATEX TINTBASE",
+    ],
   },
   {
     key: "PLASCON_VELVAGLO",
@@ -185,13 +221,19 @@ const CANONICAL_FAMILIES: CanonicalFamilyDefinition[] = [
   },
   {
     key: "PLASCON_WALL_AND_ALL",
-    canonicalName: "Plascon Wall&All",
+    canonicalName: "Wall and All Tintbase",
     brandHint: "plascon",
+    kind: "BASE_TINTABLE",
     aliases: [
       "PLASCON WALL AND ALL",
       "PLASCON WALL ALL",
       "WALL AND ALL",
       "WALL ALL",
+      "TWA 1000",
+      "TWA1000",
+      "TWA 2000",
+      "TWA2000",
+      "WALL AND ALL TINTBASE",
     ],
   },
   {
@@ -395,6 +437,7 @@ export function getCanonicalFamily(
           mode: "CANONICAL_FAMILY",
           normalizedInput,
           hadVariant,
+          kind: definition.kind,
           brandHint:
             definition.brandHint ??
             (brandMatchesHint("DULUX", supplierName)
@@ -506,6 +549,7 @@ export function findExistingCanonicalProduct(
       mode: family.mode,
       confidence: family.hadVariant ? 0.85 : 0.75,
       reason: `Canonical family ${family.canonicalName} detected but no existing product matched`,
+      kind: family.kind,
     };
   }
 
@@ -518,6 +562,7 @@ export function findExistingCanonicalProduct(
     mode: family.mode,
     confidence: Math.min(0.99, 0.85 + best.score / 200),
     reason: `Matched canonical family ${family.canonicalName}`,
+    kind: family.kind,
   };
 }
 

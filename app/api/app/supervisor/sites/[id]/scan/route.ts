@@ -90,6 +90,11 @@ const BodySchema = z.object({
   latitude: z.number().optional().nullable(),
   longitude: z.number().optional().nullable(),
   address: z.string().optional().nullable(),
+  // Present when the capturing device has just completed an OS-level
+  // owner biometric check (e.g. expo-local-authentication) — required
+  // when the site opts into manualAttendanceRequiresSupervisorFingerprint.
+  supervisorAuthConfirmed: z.boolean().optional(),
+  supervisorAuthDevice: z.string().optional().nullable(),
 });
 
 export async function POST(
@@ -112,8 +117,33 @@ export async function POST(
   if (!body.success)
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
-  const { foremanId, employeeCode, workDateISO, latitude, longitude, address } =
-    body.data;
+  const {
+    foremanId,
+    employeeCode,
+    workDateISO,
+    latitude,
+    longitude,
+    address,
+    supervisorAuthConfirmed,
+    supervisorAuthDevice,
+  } = body.data;
+
+  const site = await prisma.site.findUnique({
+    where: { id: siteId },
+    select: { manualAttendanceRequiresSupervisorFingerprint: true },
+  });
+  if (!site) {
+    return NextResponse.json({ error: "Site not found" }, { status: 404 });
+  }
+  if (site.manualAttendanceRequiresSupervisorFingerprint && !supervisorAuthConfirmed) {
+    return NextResponse.json(
+      {
+        error:
+          "This site requires supervisor fingerprint verification before manual attendance can be recorded.",
+      },
+      { status: 409 },
+    );
+  }
 
   const selectedDate = await validateSupervisorScanDate(workDateISO);
   if (!selectedDate.ok) {
@@ -244,6 +274,13 @@ export async function POST(
         scanType: "MANUAL",
         manualReason: "SUPERVISOR",
         // direction defaults to IN
+        ...(supervisorAuthConfirmed
+          ? {
+              supervisorAuthByUser: { connect: { id: userId } },
+              supervisorAuthAt: now,
+              supervisorAuthDevice: supervisorAuthDevice ?? null,
+            }
+          : {}),
       },
       select: {
         id: true,

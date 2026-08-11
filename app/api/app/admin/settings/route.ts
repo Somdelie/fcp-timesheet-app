@@ -20,6 +20,7 @@ function serializeSettings(s: any) {
   return {
     id: s.id,
     defaultEmployeeDayRate: String(s.defaultEmployeeDayRate),
+    fingerprintMandatory: Boolean(s.fingerprintMandatory),
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()

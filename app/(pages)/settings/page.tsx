@@ -278,7 +278,7 @@ export default function SettingsPage() {
       const res = await updateCompanySettings({
         defaultEmployeeDayRate: trimmed,
       });
-      if (res.ok) toast.success("Default employee day rate updated!");
+      if (res.ok) toast.success("Default team member day rate updated!");
       else toast.error(res.error || "Failed to save settings.");
     } catch (err) {
       console.error("Error saving settings:", err);
@@ -920,18 +920,19 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Payroll Settings</CardTitle>
                 <CardDescription>
-                  Configure default rates for employees
+                  Configure default rates for team members
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="defaultDayRate">
-                      Default Employee Day Rate (R)
+                      Default Team Member Day Rate (R)
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      This rate will be used for all employees unless they have
-                      an individual override. Foremen can have custom rates.
+                      This rate will be used for all team members unless they
+                      have an individual override. Foremen can have custom
+                      rates.
                     </p>
                     <Input
                       id="defaultDayRate"
@@ -964,8 +965,8 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Team Default Day Rates</CardTitle>
                 <CardDescription>
-                  Set default day rates per team type. These rates apply when an
-                  employee has no individual override and the foreman has no
+                  Set default day rates per team type. These rates apply when a
+                  team member has no individual override and the foreman has no
                   custom rate.
                 </CardDescription>
               </CardHeader>
@@ -1472,11 +1473,11 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-orange-500" />
                       <span className="font-medium text-sm">
-                        Inactive Employees
+                        Inactive Team Members
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Employees with no attendance scans for 2+ months are
+                      Team members with no attendance scans for 2+ months are
                       permanently removed. They can re-register if needed.
                     </p>
                   </div>

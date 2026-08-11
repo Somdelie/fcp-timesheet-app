@@ -7,9 +7,11 @@ import PaintPlanningPage from "@/app/(pages)/admin/paint-planning/page";
 import PrintCardsPage from "@/app/(pages)/admin/print-cards/page";
 import SiteProgramPage from "../site-program/page";
 import SiteWageCostsPage from "./site-wage-costs";
+import LabourPlanningPage from "../labour-planning/page";
 
 const TABS = [
-  { value: "wage-costs", label: "Wage Costs" },
+  { value: "wage-costs", label: "Labour & Wages" },
+  { value: "labour-planning", label: "Labour Planning" },
   { value: "finishing-schedules", label: "Finishing Schedules" },
   { value: "job-program", label: "Sites Programs" },
   { value: "job-progress", label: "Job Progress" },
@@ -53,6 +55,7 @@ export default async function SitesOperationsPage({
 
         <div className="mt-3">
           {activeTab === "wage-costs" ? <SiteWageCostsPage /> : null}
+          {activeTab === "labour-planning" ? <LabourPlanningPage /> : null}
           {activeTab === "finishing-schedules" ? (
             <FinishingSchedulesPage />
           ) : null}

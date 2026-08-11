@@ -46,11 +46,20 @@ export async function POST(
       );
     }
 
-    // Optional: ensure foreman has relationship to this employee
+    // Ensure foreman manages this employee — same definition used to
+    // populate the foreman's worker list (GET /api/app/foreman/employees):
+    // created by this foreman, explicitly linked via ForemanEmployee, or
+    // scanned in on one of this foreman's site days at some point. A bare
+    // ForemanEmployee-only check missed the common case of a worker known
+    // only through daily QR attendance scans.
     const employee = await prisma.employee.findFirst({
       where: {
         id: employeeId,
-        foremanLinks: { some: { foremanId: foreman.id } },
+        OR: [
+          { createdByUserId: payload.sub },
+          { foremanLinks: { some: { foremanId: foreman.id } } },
+          { attendance: { some: { siteDay: { foremanId: foreman.id } } } },
+        ],
       },
       select: { id: true },
     });

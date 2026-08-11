@@ -42,15 +42,18 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import {
+  Camera,
   Check,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  Fingerprint,
   Loader2,
   MapPin,
   QrCode,
+  ScanFace,
   Trash2,
   UserPlus,
 } from "lucide-react";
@@ -71,11 +74,71 @@ interface Scan {
   supervisorName: string | null;
   workDateISO: string;
   scannedAtISO: string;
+  scannedOutAtISO: string | null;
   scanType: "REGULAR" | "MANUAL";
   overtimeType: "NONE" | "HALF_DAY" | "FULL_DAY";
+  scanOutMethod: "PHOTO" | "FINGERPRINT" | "FACE" | null;
+  verificationStatus: "VERIFIED" | "PENDING_REVIEW" | "REJECTED" | null;
   latitude: number | null;
   longitude: number | null;
   address: string | null;
+}
+
+function ScanOutMethodBadge({ method }: { method: Scan["scanOutMethod"] }) {
+  if (method === "FINGERPRINT") {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <Fingerprint className="h-3 w-3" />
+        Fingerprint
+      </Badge>
+    );
+  }
+  if (method === "FACE") {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <ScanFace className="h-3 w-3" />
+        Face
+      </Badge>
+    );
+  }
+  if (method === "PHOTO") {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <Camera className="h-3 w-3" />
+        Photo
+      </Badge>
+    );
+  }
+  return null;
+}
+
+function VerificationStatusBadge({
+  status,
+}: {
+  status: Scan["verificationStatus"];
+}) {
+  if (status === "VERIFIED") {
+    return (
+      <Badge className="gap-1 border-transparent bg-green-100 text-green-800 hover:bg-green-100">
+        Verified
+      </Badge>
+    );
+  }
+  if (status === "PENDING_REVIEW") {
+    return (
+      <Badge className="gap-1 border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100">
+        Pending Review
+      </Badge>
+    );
+  }
+  if (status === "REJECTED") {
+    return (
+      <Badge className="gap-1 border-transparent bg-red-100 text-red-800 hover:bg-red-100">
+        Rejected
+      </Badge>
+    );
+  }
+  return null;
 }
 
 interface FilterOption {
@@ -608,6 +671,9 @@ export default function AdminAttendanceScansPage() {
                               Scanned At
                             </TableHead>
                             <TableHead className="border-x">Type</TableHead>
+                            <TableHead className="border-x">
+                              Scan Out
+                            </TableHead>
                             <TableHead className="border-x">Location</TableHead>
                             <TableHead className="border-x w-12 text-right">
                               Actions
@@ -691,6 +757,32 @@ export default function AdminAttendanceScansPage() {
                                       ? "½ OT"
                                       : "Full OT"}
                                   </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="border-x">
+                                {scan.scannedOutAtISO ? (
+                                  <div className="space-y-1">
+                                    <div className="text-sm">
+                                      {new Date(
+                                        scan.scannedOutAtISO,
+                                      ).toLocaleTimeString("en-GB", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                      <ScanOutMethodBadge
+                                        method={scan.scanOutMethod}
+                                      />
+                                      <VerificationStatusBadge
+                                        status={scan.verificationStatus}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">
+                                    Not scanned out
+                                  </span>
                                 )}
                               </TableCell>
                               <TableCell className="border-x">
