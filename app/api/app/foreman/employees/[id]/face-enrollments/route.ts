@@ -112,7 +112,25 @@ export async function POST(
     const buffers = await Promise.all(files.map((f) => f.arrayBuffer().then(Buffer.from)));
 
     const faceVerifier = getFaceVerifier();
-    const outcomes = await faceVerifier.enroll(buffers);
+    let outcomes;
+    try {
+      outcomes = await faceVerifier.enroll(buffers);
+    } catch (e: any) {
+      // Unlike scan-out-face, enrollment can't gracefully "fall back" when
+      // face-service is unreachable — producing the embedding *is* the
+      // point, there's nothing meaningful to save without it. So instead of
+      // letting this fall into the generic catch below (which would surface
+      // a raw "fetch failed" to the foreman), recognize the connection-level
+      // failure specifically and return an honest, retryable message.
+      if (e?.cause?.code === "ECONNREFUSED" || e?.cause?.code === "ETIMEDOUT") {
+        console.error("Face enrollment error: face-service unreachable", e);
+        return NextResponse.json(
+          { error: "Face verification service is temporarily unavailable. Please try again shortly." },
+          { status: 503 },
+        );
+      }
+      throw e;
+    }
 
     const results: ({ id: string; pose: string; qualityScore: number | null } | { pose: string; error: string })[] = [];
 
