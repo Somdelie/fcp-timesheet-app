@@ -40,6 +40,7 @@ import {
   Archive,
   BadgeMinus,
   Trash2,
+  ScanFace,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -204,6 +205,12 @@ const menuGroups: {
         label: "Attendance",
         icon: ScanLine,
         iconSrc: icon3d("Attendance"),
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/face-verifications",
+        label: "Face Verifications",
+        icon: ScanFace,
         roles: ["ADMIN"],
       },
       {

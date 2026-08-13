@@ -5,7 +5,14 @@ import { getAdminOrSupervisorFromRequest } from "@/lib/adminOrSupervisorAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** POST /api/app/admin/face-enrollments/[id]/reject  body: { reason?: string } */
+/**
+ * POST /api/app/admin/face-enrollments/[id]/reject  body: { reason: string }
+ *
+ * `reason` is required — a foreman checking a rejected enrollment needs to
+ * know why before recapturing, and an unexplained rejection is just as
+ * unhelpful as the silent per-photo failures capture-reference.tsx used to
+ * paper over.
+ */
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
@@ -17,7 +24,13 @@ export async function POST(
 
   const { id } = await ctx.params;
   const body = await req.json().catch(() => ({}));
-  const reason = typeof body?.reason === "string" ? body.reason : null;
+  const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
+  if (!reason) {
+    return NextResponse.json(
+      { error: "A rejection reason is required" },
+      { status: 400 },
+    );
+  }
 
   const enrollment = await prisma.faceEnrollment.findUnique({ where: { id } });
   if (!enrollment) {
