@@ -654,6 +654,10 @@ model AttendanceScan {
   // Existing:
   scanType ScanType @default(REGULAR)
 
+  // ✅ NEW: DAY vs NIGHT shift — lets an employee have a second scan on the
+  // same workDate for a manually-recorded double/night shift.
+  shiftType ShiftType @default(DAY)
+
   // ✅ NEW: scan in vs scan out
   direction ScanDirection @default(IN)
 
@@ -712,14 +716,15 @@ model AttendanceScan {
   // ✅ NEW: admin review actions (missing scan-out exception handling)
   reviews AttendanceScanReview[]
 
-  @@unique([employeeId, workDate])
-  @@unique([siteDayId, employeeId])
+  @@unique([employeeId, workDate, shiftType])
+  @@unique([siteDayId, employeeId, shiftType])
   @@index([siteId, workDate])
   @@index([siteDayId])
   @@index([scannedAt])
   @@index([scanType])
   @@index([direction])
   @@index([team])
+  @@index([shiftType])
   @@index([hasEarlySignOut])
   @@index([earlySignOutReasonId])
   @@index([earlySignOutCapturedByUserId])
@@ -1480,6 +1485,12 @@ enum OvertimeType {
   NONE
   HALF_DAY
   FULL_DAY
+}
+
+// ✅ NEW: supports a second (night) shift for the same employee/day
+enum ShiftType {
+  DAY
+  NIGHT
 }
 
 // ✅ NEW: Fingerprint verification & accountability (additive only)
