@@ -181,11 +181,14 @@ export async function POST(req: Request) {
   const now = new Date();
 
   // Find the existing scan at the source site for the selected work date.
+  // Scoped to the DAY shift: if the employee also has a NIGHT scan for this
+  // date, it's intentionally left behind at the source site, not moved.
   const existingScan = await prisma.attendanceScan.findFirst({
     where: {
       employeeId,
       siteId: fromSiteId,
       workDate,
+      shiftType: "DAY",
     },
     select: {
       id: true,

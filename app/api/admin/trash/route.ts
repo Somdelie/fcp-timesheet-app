@@ -191,9 +191,12 @@ export async function POST(req: Request) {
 
         const existingForEmployeeDate = await tx.attendanceScan.findUnique({
           where: {
-            employeeId_workDate: {
+            // Trashed scans predate ShiftType, so restore always targets the
+            // DAY shift for that employee/date.
+            employeeId_workDate_shiftType: {
               employeeId: scan.employeeId,
               workDate: new Date(scan.workDateISO),
+              shiftType: "DAY",
             },
           },
           select: { id: true },
