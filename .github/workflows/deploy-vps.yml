@@ -16,10 +16,37 @@ jobs:
           git fetch origin
           git reset --hard origin/main
 
-      - name: Rebuild Docker
+      - name: Build new image
         run: |
           cd /opt/apps/fcp
-          docker compose up -d --build
+          docker compose build
+
+      - name: Apply database migrations
+        run: |
+          cd /opt/apps/fcp
+          docker compose run --rm fcp npx prisma migrate deploy
+
+      - name: Start application
+        run: |
+          cd /opt/apps/fcp
+          docker compose up -d
+
+      - name: Health check
+        run: |
+          set -e
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+              echo "FCP application is responding."
+              exit 0
+            fi
+            echo "Waiting for FCP application... ($i/30)"
+            sleep 2
+          done
+
+          echo "FCP application failed health check."
+          docker compose ps
+          docker compose logs --tail=100 fcp
+          exit 1
 
       - name: Cleanup old images
         run: docker image prune -f
