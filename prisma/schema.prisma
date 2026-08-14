@@ -670,6 +670,11 @@ model AttendanceScan {
   scanOutFaceMatchScore    Float?
   faceVerificationAttempts FaceVerificationAttempt[]
 
+  // Device string the scan-out was performed from (currently only populated
+  // by the face scan-out route — bulk/manual scan-out have no per-employee
+  // device to attribute). Nullable, existing rows unaffected.
+  scanOutDevice String?
+
   // ✅ NEW: supervisor self-authentication for manual attendance (site opt-in only)
   supervisorAuthByUserId   String?
   supervisorAuthAt         DateTime?
