@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
 import { uploadImageBuffer, getSecureUrl } from "@/lib/cloudinary";
-import { getFaceVerifier } from "@/lib/faceVerifier";
+import { getFaceVerifier, type FaceEnrollmentPose } from "@/lib/faceVerifier";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +14,8 @@ function getBearer(req: Request) {
 }
 
 const VALID_POSES = new Set(["FRONT", "LEFT", "RIGHT", "SMILE", "NEUTRAL"]);
+
+const DUPLICATE_FACE_DISTANCE_THRESHOLD = 0.5;
 
 /**
  * POST /api/app/foreman/employees/[id]/face-enrollments
@@ -111,10 +113,21 @@ export async function POST(
 
     const buffers = await Promise.all(files.map((f) => f.arrayBuffer().then(Buffer.from)));
 
+    // Every other employee's currently-live embeddings (approved or still
+    // pending review) — fetched once up front so the duplicate-face check
+    // below doesn't re-query per photo. APPROVED + PENDING_APPROVAL only:
+    // a REJECTED photo shouldn't keep blocking a real distinct worker.
+    const otherEmployeeEmbeddings = await prisma.faceEnrollment
+      .findMany({
+        where: { employeeId: { not: employeeId }, status: { in: ["APPROVED", "PENDING_APPROVAL"] } },
+        select: { embedding: true },
+      })
+      .then((rows) => rows.map((r) => r.embedding));
+
     const faceVerifier = getFaceVerifier();
     let outcomes;
     try {
-      outcomes = await faceVerifier.enroll(buffers);
+      outcomes = await faceVerifier.enroll(buffers, poses as FaceEnrollmentPose[]);
     } catch (e: any) {
       // Unlike scan-out-face, enrollment can't gracefully "fall back" when
       // face-service is unreachable — producing the embedding *is* the
@@ -132,15 +145,32 @@ export async function POST(
       throw e;
     }
 
-    const results: ({ id: string; pose: string; qualityScore: number | null } | { pose: string; error: string })[] = [];
+    const results: (
+      | { id: string; pose: string; qualityScore: number | null }
+      | { pose: string; error: string; warnings?: string[] }
+    )[] = [];
 
     for (let i = 0; i < outcomes.length; i++) {
       const outcome = outcomes[i];
       const pose = poses[i];
 
       if ("error" in outcome) {
-        results.push({ pose, error: outcome.error });
+        results.push({ pose, error: outcome.error, ...(outcome.warnings ? { warnings: outcome.warnings } : {}) });
         continue;
+      }
+
+      // Duplicate-face gate: the same real face shouldn't end up enrolled
+      // under two different Employee records. Distance threshold is
+      // stricter than compare.ts's general "distance <= 0.6 = same person"
+      // verification rule of thumb — a false positive here wrongly blocks a
+      // real, distinct worker, so this errs conservative. Starting point,
+      // not calibrated against real data yet.
+      if (otherEmployeeEmbeddings.length > 0) {
+        const match = await faceVerifier.matchEmbedding(outcome.embedding, otherEmployeeEmbeddings);
+        if (match && match.distance <= DUPLICATE_FACE_DISTANCE_THRESHOLD) {
+          results.push({ pose, error: "duplicate_face" });
+          continue;
+        }
       }
 
       const upload = await uploadImageBuffer(buffers[i], { folder: "face-enrollments" });

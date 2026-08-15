@@ -4,14 +4,46 @@
 // details directly, so swapping the model/provider later doesn't touch
 // callers.
 
+/** Mirrors face-service's services/quality.ts QualityWarning union. */
+export type FaceQualityWarning =
+  | "resolution_too_low"
+  | "too_dark"
+  | "too_bright"
+  | "too_blurry"
+  | "face_too_small"
+  | "not_centered"
+  | "face_turned"
+  | "head_tilted";
+
+/** Mirrors face-service's services/quality.ts QualityMetrics. */
+export interface FaceQualityMetrics {
+  score: number;
+  brightness: number;
+  sharpness: number;
+  faceSize: number;
+  centered: boolean;
+  pose: { yaw: number; roll: number };
+}
+
+/** Mirrors face-service's services/quality.ts EnrollmentPose — same vocabulary as the Prisma FaceEnrollmentPose enum and office-app's capture-reference.tsx. */
+export type FaceEnrollmentPose = "FRONT" | "LEFT" | "RIGHT" | "SMILE" | "NEUTRAL";
+
 export interface FaceEnrollResult {
   embedding: number[];
+  /** Composite photo-quality score in [0,1] — see face-service's services/quality.ts. */
   qualityScore: number;
+  /** Raw face-detector confidence, 0-1 — a separate signal from qualityScore (see face-service's faceEngine.ts). */
+  detectionConfidence: number;
+  quality: FaceQualityMetrics;
 }
 
 export type FaceEnrollOutcome =
   | FaceEnrollResult
-  | { error: "no_face_detected" | "multiple_faces_detected" | "decode_failed" };
+  | {
+      error: "no_face_detected" | "multiple_faces_detected" | "decode_failed" | "low_quality";
+      /** Present when error is "low_quality" — which specific checks failed. */
+      warnings?: FaceQualityWarning[];
+    };
 
 export interface FaceVerifyResult {
   confidence: number;
@@ -26,13 +58,28 @@ export type FaceVerifyOutcome =
   | ({ ok: true } & FaceVerifyResult)
   | { ok: false; error: string };
 
+export interface FaceMatchResult {
+  bestIndex: number;
+  distance: number;
+  confidence: number;
+}
+
 export interface FaceVerifier {
-  enroll(images: Buffer[]): Promise<FaceEnrollOutcome[]>;
+  /** `poses`, when given, must be the same length/order as `images` — see face-service's EnrollmentPose. Omit for the strict frontal check on every image. */
+  enroll(images: Buffer[], poses?: FaceEnrollmentPose[]): Promise<FaceEnrollOutcome[]>;
   verify(
     image: Buffer,
     candidateEmbeddings: number[][],
     options?: { checkLiveness?: boolean },
   ): Promise<FaceVerifyOutcome>;
+  /**
+   * Embedding-to-embedding comparison (no image, no face detection) — for
+   * server-side checks that already have both embeddings on hand, e.g. the
+   * duplicate-face-across-employees check at enrollment time. Returns null
+   * (never throws) if face-service is unreachable — a biometric-infra hiccup
+   * should never block a legitimate enrollment; callers just skip the check.
+   */
+  matchEmbedding(embedding: number[], candidateEmbeddings: number[][]): Promise<FaceMatchResult | null>;
 }
 
 function getFaceServiceBase(): string {
@@ -42,11 +89,14 @@ function getFaceServiceBase(): string {
 }
 
 class HttpFaceVerifier implements FaceVerifier {
-  async enroll(images: Buffer[]): Promise<FaceEnrollOutcome[]> {
+  async enroll(images: Buffer[], poses?: FaceEnrollmentPose[]): Promise<FaceEnrollOutcome[]> {
     const res = await fetch(`${getFaceServiceBase()}/enroll`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images: images.map((b) => b.toString("base64")) }),
+      body: JSON.stringify({
+        images: images.map((b) => b.toString("base64")),
+        ...(poses ? { poses } : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -83,6 +133,24 @@ class HttpFaceVerifier implements FaceVerifier {
     }
 
     return { ok: true, ...(json as FaceVerifyResult) };
+  }
+
+  async matchEmbedding(
+    embedding: number[],
+    candidateEmbeddings: number[][],
+  ): Promise<FaceMatchResult | null> {
+    try {
+      const res = await fetch(`${getFaceServiceBase()}/match`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ embedding, candidateEmbeddings }),
+      });
+      if (!res.ok) return null;
+      return (await res.json()) as FaceMatchResult;
+    } catch (e) {
+      console.error("face-service /match failed:", e);
+      return null;
+    }
   }
 }
 
