@@ -133,10 +133,17 @@ export async function POST(
       // face-service is unreachable — producing the embedding *is* the
       // point, there's nothing meaningful to save without it. So instead of
       // letting this fall into the generic catch below (which would surface
-      // a raw "fetch failed" to the foreman), recognize the connection-level
-      // failure specifically and return an honest, retryable message.
-      if (e?.cause?.code === "ECONNREFUSED" || e?.cause?.code === "ETIMEDOUT") {
-        console.error("Face enrollment error: face-service unreachable", e);
+      // a raw error message to the foreman), recognize connection-level and
+      // timeout failures specifically and return an honest, retryable
+      // message. A fetch aborted by AbortSignal.timeout() throws a
+      // DOMException named "TimeoutError" with no `.cause` at all (verified
+      // directly against this runtime, not assumed) — a different shape
+      // from a raw network-level ECONNREFUSED/ETIMEDOUT, so both need their
+      // own check.
+      const isConnectionFailure = e?.cause?.code === "ECONNREFUSED" || e?.cause?.code === "ETIMEDOUT";
+      const isTimeout = e?.name === "TimeoutError";
+      if (isConnectionFailure || isTimeout) {
+        console.error("Face enrollment error: face-service unreachable or timed out", e);
         return NextResponse.json(
           { error: "Face verification service is temporarily unavailable. Please try again shortly." },
           { status: 503 },
@@ -196,8 +203,12 @@ export async function POST(
 
     return NextResponse.json({ results });
   } catch (e: any) {
+    // Unexpected/internal failure (not one of the specific, deliberate
+    // face-service error codes above, which are returned per-photo in the
+    // 200 `results` array and never reach this catch) — log the real error
+    // server-side, but never forward its raw message to the client.
     console.error("Face enrollment error", e);
-    return NextResponse.json({ error: e?.message ?? "Enrollment failed" }, { status: 500 });
+    return NextResponse.json({ error: "Enrollment failed. Please try again." }, { status: 500 });
   }
 }
 

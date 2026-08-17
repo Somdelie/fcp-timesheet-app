@@ -65,9 +65,15 @@ export async function POST(req: Request) {
 
   const actingForemanIdHeader =
     req.headers.get("x-acting-foreman-id")?.trim() || null;
-  const resolved = await resolveActingForeman(payload.sub, actingForemanIdHeader);
+  const resolved = await resolveActingForeman(
+    payload.sub,
+    actingForemanIdHeader,
+  );
   if (!resolved.ok) {
-    return NextResponse.json({ error: resolved.error }, { status: resolved.status });
+    return NextResponse.json(
+      { error: resolved.error },
+      { status: resolved.status },
+    );
   }
 
   const body = BodySchema.safeParse(await req.json().catch(() => null));
@@ -95,14 +101,22 @@ export async function POST(req: Request) {
   }
   if (scan.scannedOutAt) {
     return NextResponse.json(
-      { error: "This employee is already scanned out." },
+      { error: "This guy is already scanned out." },
       { status: 409 },
     );
   }
 
   // Phase 1 default — overwritten below only if a real comparison succeeds.
-  let verificationStatus: "VERIFIED" | "PENDING_REVIEW" | "REJECTED" = "PENDING_REVIEW";
+  let verificationStatus: "VERIFIED" | "PENDING_REVIEW" | "REJECTED" =
+    "PENDING_REVIEW";
   let scanOutFaceMatchScore: number | undefined;
+  // Response-only (not persisted — verificationStatus/schema unchanged) so
+  // the client can tell "no face was even found in the photo" / "the photo
+  // itself is unusable" apart from "a face was found but we're not
+  // confident it matches" instead of all three silently reading as the same
+  // PENDING_REVIEW outcome.
+  let noFaceReason: "no_face_detected" | "multiple_faces_detected" | "low_quality" | undefined;
+  let qualityWarnings: string[] | undefined;
 
   if (image) {
     const approvedEnrollments = await prisma.faceEnrollment.findMany({
@@ -148,14 +162,32 @@ export async function POST(req: Request) {
               processingTimeMs: result.processingTimeMs,
             },
           });
+        } else if (
+          result.error === "no_face_detected" ||
+          result.error === "multiple_faces_detected" ||
+          result.error === "low_quality"
+        ) {
+          // verificationStatus/DB stays the Phase 1 PENDING_REVIEW default
+          // (detection/quality failing isn't grounds to reject or block
+          // clocking out), but the client should say so honestly instead of
+          // showing the same "couldn't confidently match" copy it'd show for
+          // a genuinely ambiguous comparison. low_quality never reaches
+          // findBestMatch on the face-service side, so this is always a
+          // "we didn't attempt a comparison" case, never a low-confidence one.
+          noFaceReason = result.error;
+          if (result.error === "low_quality") qualityWarnings = result.warnings;
         }
-        // result.ok === false (e.g. no_face_detected): leave the Phase 1
-        // PENDING_REVIEW default in place, no attempt row — nothing
-        // meaningful to log when detection itself failed.
+        // Any other result.ok === false case (including a timeout, which
+        // throws and lands in the outer catch below instead): leave the
+        // Phase 1 PENDING_REVIEW default in place, no attempt row — nothing
+        // meaningful to log when detection itself failed for another reason.
       } catch (e) {
         // face-service unreachable or errored — never let a biometric
         // engine failure block clocking out.
-        console.error("Face verification failed, falling back to PENDING_REVIEW:", e);
+        console.error(
+          "Face verification failed, falling back to PENDING_REVIEW:",
+          e,
+        );
       }
     }
   }
@@ -166,6 +198,7 @@ export async function POST(req: Request) {
     data: {
       scannedOutAt: now,
       scanOutMethod: "FACE",
+      scanOutDevice: device,
       verificationStatus,
       ...(scanOutFaceMatchScore !== undefined ? { scanOutFaceMatchScore } : {}),
     },
@@ -178,5 +211,7 @@ export async function POST(req: Request) {
     verificationStatus,
     confidence: scanOutFaceMatchScore ?? null,
     device,
+    ...(noFaceReason ? { reason: noFaceReason } : {}),
+    ...(qualityWarnings ? { warnings: qualityWarnings } : {}),
   });
 }

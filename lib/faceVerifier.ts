@@ -56,7 +56,7 @@ export interface FaceVerifyResult {
 
 export type FaceVerifyOutcome =
   | ({ ok: true } & FaceVerifyResult)
-  | { ok: false; error: string };
+  | { ok: false; error: string; warnings?: FaceQualityWarning[] };
 
 export interface FaceMatchResult {
   bestIndex: number;
@@ -88,6 +88,18 @@ function getFaceServiceBase(): string {
   return process.env.FACE_SERVICE_URL ?? "http://localhost:4001";
 }
 
+// Fetch timeouts — engineering estimates, not calibrated against real
+// production latency (face-service has effectively zero real-traffic
+// history as of Phase 2's audit). Not biometric thresholds: a timeout fails
+// exactly the same way an unreachable face-service already does, callers
+// already handle that safely — these just bound how long "safely" takes.
+/** Single image: decode + detect + landmarks + descriptor + distance. */
+const VERIFY_TIMEOUT_MS = 8_000;
+/** Pure vector comparison, no image decode/inference at all. */
+const MATCH_TIMEOUT_MS = 5_000;
+/** Up to 5 images processed sequentially, each through the same pipeline as verify. */
+const ENROLL_TIMEOUT_MS = 30_000;
+
 class HttpFaceVerifier implements FaceVerifier {
   async enroll(images: Buffer[], poses?: FaceEnrollmentPose[]): Promise<FaceEnrollOutcome[]> {
     const res = await fetch(`${getFaceServiceBase()}/enroll`, {
@@ -97,6 +109,7 @@ class HttpFaceVerifier implements FaceVerifier {
         images: images.map((b) => b.toString("base64")),
         ...(poses ? { poses } : {}),
       }),
+      signal: AbortSignal.timeout(ENROLL_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -120,16 +133,18 @@ class HttpFaceVerifier implements FaceVerifier {
         candidateEmbeddings,
         checkLiveness: options?.checkLiveness,
       }),
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
     });
 
     const json = await res.json();
 
     if (!res.ok) {
-      // 422 = no_face_detected / multiple_faces_detected (expected,
-      // recoverable); anything else is a real failure. Either way, never
-      // throw here — verification failures must never block attendance
-      // (design doc §11), callers decide the fallback behavior.
-      return { ok: false, error: json?.error ?? `status ${res.status}` };
+      // 422 = no_face_detected / multiple_faces_detected / low_quality
+      // (expected, recoverable); anything else (including a timeout, which
+      // throws below rather than landing here) is a real failure. Either
+      // way, never throw here — verification failures must never block
+      // attendance (design doc §11), callers decide the fallback behavior.
+      return { ok: false, error: json?.error ?? `status ${res.status}`, warnings: json?.warnings };
     }
 
     return { ok: true, ...(json as FaceVerifyResult) };
@@ -144,6 +159,7 @@ class HttpFaceVerifier implements FaceVerifier {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ embedding, candidateEmbeddings }),
+        signal: AbortSignal.timeout(MATCH_TIMEOUT_MS),
       });
       if (!res.ok) return null;
       return (await res.json()) as FaceMatchResult;
