@@ -222,7 +222,7 @@ export async function POST(req: Request) {
         qrCodeValue: qr as string,
         status: "INACTIVE",
         employeeName: fullName,
-        error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+        error: `${fullName} is deactivated. Please contact your supervisor.`,
       });
       continue;
     }

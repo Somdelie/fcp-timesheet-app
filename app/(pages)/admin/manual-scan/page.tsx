@@ -303,10 +303,10 @@ export default function AdminManualScanPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-2">
       <div>
-        <h1 className="text-2xl font-bold">Manual Employee Scan</h1>
+        <h1 className="text-2xl font-bold">Manual Scan</h1>
         <p className="text-muted-foreground">
-          Create attendance scans for multiple employees across one or more
-          dates. Use this when a foreman forgot to scan employees.
+          Create attendance scans for multiple members across one or more dates.
+          Use this when a foreman forgot to scan members.
         </p>
       </div>
 
@@ -317,7 +317,7 @@ export default function AdminManualScanPage() {
             New Manual Scans
           </CardTitle>
           <CardDescription>
-            Select the site, foreman, dates, and employees to create scans in
+            Select the site, foreman, dates, and members to create scans in
             batch.
           </CardDescription>
         </CardHeader>
@@ -584,7 +584,8 @@ export default function AdminManualScanPage() {
             ) : (
               <>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Create {selectedEmployeeIds.length * workDates.length || ""}{" "}
+                Create {selectedEmployeeIds.length * workDates.length ||
+                  ""}{" "}
                 Manual Scan
                 {selectedEmployeeIds.length * workDates.length === 1 ? "" : "s"}
               </>

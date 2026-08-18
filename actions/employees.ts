@@ -300,7 +300,7 @@ export async function createEmployee(input: {
 
       return { ok: true as const, employee: serializeEmployee(created) };
     } catch (e: any) {
-      console.error("Error creating employee:", e);
+      console.error("Error creating team member:", e);
       if (String(e?.code) === "P2002") {
         const target = e?.meta?.target;
         const t = Array.isArray(target)
@@ -310,13 +310,13 @@ export async function createEmployee(input: {
         if (t.includes("qrCodeValue")) continue; // retry collision
         return {
           ok: false as const,
-          error: "Employee violates a unique constraint.",
+          error: "Team violates a unique constraint.",
         };
       }
       const message = e instanceof Error ? e.message : String(e);
       return {
         ok: false as const,
-        error: `Failed to create employee: ${message}`,
+        error: `Failed to create team member: ${message}`,
       };
     }
   }
@@ -498,9 +498,9 @@ export async function promoteEmployeeToForeman(input: { employeeId: string }) {
       userId: true,
     },
   });
-  if (!employee) return { ok: false as const, error: "Employee not found." };
+  if (!employee) return { ok: false as const, error: "Team member not found." };
   if (employee.userId) {
-    return { ok: false as const, error: "Employee is already a foreman." };
+    return { ok: false as const, error: "Team member is already a foreman." };
   }
 
   try {

@@ -252,7 +252,7 @@ export async function POST(req: Request) {
       deactivatedEmployees.push({
         code: scan.cardNumber,
         name: fullName,
-        error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+        error: `${fullName} is deactivated. Please contact your supervisor.`,
       });
       continue;
     }

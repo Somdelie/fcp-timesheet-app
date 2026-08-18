@@ -768,7 +768,7 @@ export function AdminForemenContent({ foremen }: { foremen: Foreman[] }) {
               <div className="rounded bg-blue-50 dark:bg-blue-950 p-3 text-sm">
                 {isNewUserAssistant ? (
                   <p className="text-muted-foreground">
-                    Creating new user account for this employee
+                    Creating new user account for this member
                   </p>
                 ) : (
                   <p className="text-muted-foreground">

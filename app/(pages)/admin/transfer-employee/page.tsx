@@ -19,7 +19,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -169,7 +175,9 @@ function dateLabel(dateISO: string) {
 export default function AdminTransferEmployeePage() {
   const [sites, setSites] = useState<SiteOption[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState("");
-  const [selectedDateISOs, setSelectedDateISOs] = useState<string[]>(() => [todayISO()]);
+  const [selectedDateISOs, setSelectedDateISOs] = useState<string[]>(() => [
+    todayISO(),
+  ]);
   const [dateCalendarMonth, setDateCalendarMonth] = useState(new Date());
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [siteOpen, setSiteOpen] = useState(false);
@@ -178,14 +186,20 @@ export default function AdminTransferEmployeePage() {
   const [selectedScanIds, setSelectedScanIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
-  const [foremenBySite, setForemenBySite] = useState<Record<string, SiteForemenState>>({});
+  const [foremenBySite, setForemenBySite] = useState<
+    Record<string, SiteForemenState>
+  >({});
   const [dragging, setDragging] = useState(false);
   const [dragOverSiteId, setDragOverSiteId] = useState<string | null>(null);
-  const [transferringSiteId, setTransferringSiteId] = useState<string | null>(null);
+  const [transferringSiteId, setTransferringSiteId] = useState<string | null>(
+    null,
+  );
   const [isOverBin, setIsOverBin] = useState(false);
   const [isDroppedInBin, setIsDroppedInBin] = useState(false);
   const [deletingSelected, setDeletingSelected] = useState(false);
-  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
   const [trashOpen, setTrashOpen] = useState(false);
   const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -195,12 +209,16 @@ export default function AdminTransferEmployeePage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/app/admin/sites?fields=lite&isActive=true");
+        const res = await fetch(
+          "/api/app/admin/sites?fields=lite&isActive=true",
+        );
         if (!res.ok) throw new Error("Failed to load sites");
         const data = await res.json();
         setSites(data.sites || []);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to load sites");
+        toast.error(
+          err instanceof Error ? err.message : "Failed to load sites",
+        );
       }
     })();
   }, []);
@@ -219,11 +237,16 @@ export default function AdminTransferEmployeePage() {
             `/api/app/supervisor/sites/${encodeURIComponent(siteId)}/scans-today?dateISO=${encodeURIComponent(dateISO)}`,
           );
           const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || `Failed to load scans for ${dateISO}`);
-          const scansForDate: SiteScan[] = (data.scans || []).map((scan: SiteScan) => ({
-            ...scan,
-            workDateISO: dateISO,
-          }));
+          if (!res.ok)
+            throw new Error(
+              data.error || `Failed to load scans for ${dateISO}`,
+            );
+          const scansForDate: SiteScan[] = (data.scans || []).map(
+            (scan: SiteScan) => ({
+              ...scan,
+              workDateISO: dateISO,
+            }),
+          );
           return scansForDate;
         }),
       );
@@ -234,7 +257,11 @@ export default function AdminTransferEmployeePage() {
         if (result.status === "fulfilled") {
           nextScans.push(...result.value);
         } else {
-          errors.push(result.reason instanceof Error ? result.reason.message : "Failed to load scans");
+          errors.push(
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Failed to load scans",
+          );
         }
       });
 
@@ -243,7 +270,11 @@ export default function AdminTransferEmployeePage() {
         ids.filter((id) => nextScans.some((scan) => scan.id === id)),
       );
       if (errors.length > 0) {
-        toast.error(errors.length === 1 ? errors[0] : `${errors.length} dates failed to load`);
+        toast.error(
+          errors.length === 1
+            ? errors[0]
+            : `${errors.length} dates failed to load`,
+        );
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load scans");
@@ -267,7 +298,8 @@ export default function AdminTransferEmployeePage() {
   const ensureForemenForSite = useCallback(
     async (siteId: string) => {
       const current = foremenBySite[siteId];
-      if (current?.loaded || current?.loading) return current ?? emptyForemenState;
+      if (current?.loaded || current?.loading)
+        return current ?? emptyForemenState;
 
       setForemenBySite((state) => ({
         ...state,
@@ -332,7 +364,10 @@ export default function AdminTransferEmployeePage() {
     );
   }, [scans, searchQuery]);
 
-  const selectedScanIdSet = useMemo(() => new Set(selectedScanIds), [selectedScanIds]);
+  const selectedScanIdSet = useMemo(
+    () => new Set(selectedScanIds),
+    [selectedScanIds],
+  );
   const selectedScans = useMemo(
     () => scans.filter((scan) => selectedScanIdSet.has(scan.id)),
     [scans, selectedScanIdSet],
@@ -343,7 +378,8 @@ export default function AdminTransferEmployeePage() {
     filteredScans.length > 0 &&
     filteredScans.every((scan) => selectedScanIdSet.has(scan.id));
   const someVisibleSelected =
-    filteredScans.some((scan) => selectedScanIdSet.has(scan.id)) && !allVisibleSelected;
+    filteredScans.some((scan) => selectedScanIdSet.has(scan.id)) &&
+    !allVisibleSelected;
   const showTrashBin = dragging || isDroppedInBin || deletingSelected;
   const binImage = isDroppedInBin
     ? "/trash/bin-drop.png"
@@ -436,7 +472,8 @@ export default function AdminTransferEmployeePage() {
 
     const foremenState = await ensureForemenForSite(siteId);
     const latestState = foremenBySite[siteId] ?? foremenState;
-    const foremanId = latestState.selectedForemanId || foremenState.selectedForemanId;
+    const foremanId =
+      latestState.selectedForemanId || foremenState.selectedForemanId;
 
     if (!foremenState.foremen.length) {
       toast.error("No foreman assigned to this destination site");
@@ -487,7 +524,9 @@ export default function AdminTransferEmployeePage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          failures.push(`${scan.employeeName}: ${data.error || "Transfer failed"}`);
+          failures.push(
+            `${scan.employeeName}: ${data.error || "Transfer failed"}`,
+          );
         } else {
           transferredIds.push(scan.id);
         }
@@ -496,10 +535,12 @@ export default function AdminTransferEmployeePage() {
       if (transferredIds.length > 0) {
         toast.success(
           transferredIds.length === 1
-            ? "Employee transferred"
-            : `${transferredIds.length} employees transferred`,
+            ? "Member transferred"
+            : `${transferredIds.length} team members transferred`,
         );
-        setSelectedScanIds((ids) => ids.filter((id) => !transferredIds.includes(id)));
+        setSelectedScanIds((ids) =>
+          ids.filter((id) => !transferredIds.includes(id)),
+        );
       }
 
       if (failures.length > 0) {
@@ -536,7 +577,9 @@ export default function AdminTransferEmployeePage() {
         );
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          failures.push(`${scan.employeeName}: ${data.error || "Delete failed"}`);
+          failures.push(
+            `${scan.employeeName}: ${data.error || "Delete failed"}`,
+          );
         } else {
           deletedIds.push(scan.id);
         }
@@ -545,10 +588,12 @@ export default function AdminTransferEmployeePage() {
       if (deletedIds.length > 0) {
         toast.success(
           deletedIds.length === 1
-            ? "Employee scan deleted"
-            : `${deletedIds.length} employee scans deleted`,
+            ? "Personnel scan deleted"
+            : `${deletedIds.length} personnel scans deleted`,
         );
-        setSelectedScanIds((ids) => ids.filter((id) => !deletedIds.includes(id)));
+        setSelectedScanIds((ids) =>
+          ids.filter((id) => !deletedIds.includes(id)),
+        );
       }
 
       if (failures.length > 0) {
@@ -650,7 +695,8 @@ export default function AdminTransferEmployeePage() {
             Transfer Employee
           </CardTitle>
           <CardDescription>
-            Select employees, then drag them to a destination site or the dustbin.
+            Select employees, then drag them to a destination site or the
+            dustbin.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -686,14 +732,18 @@ export default function AdminTransferEmployeePage() {
                             value={site.id}
                             keywords={[site.name, site.code ?? ""]}
                             onSelect={() => {
-                              setSelectedSiteId(site.id === selectedSiteId ? "" : site.id);
+                              setSelectedSiteId(
+                                site.id === selectedSiteId ? "" : site.id,
+                              );
                               setSiteOpen(false);
                             }}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedSiteId === site.id ? "opacity-100" : "opacity-0",
+                                selectedSiteId === site.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             {siteLabel(site)}
@@ -752,7 +802,11 @@ export default function AdminTransferEmployeePage() {
                     >
                       Today only
                     </Button>
-                    <Button type="button" size="sm" onClick={() => setDatePopoverOpen(false)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setDatePopoverOpen(false)}
+                    >
                       Done
                     </Button>
                   </div>
@@ -788,16 +842,28 @@ export default function AdminTransferEmployeePage() {
           {selectedSiteId ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded border p-3 text-center">
-                <div className="text-2xl font-black text-green-600">{scannedCount}</div>
-                <div className="text-xs font-medium text-muted-foreground">Scanned</div>
+                <div className="text-2xl font-black text-green-600">
+                  {scannedCount}
+                </div>
+                <div className="text-xs font-medium text-muted-foreground">
+                  Scanned
+                </div>
               </div>
               <div className="rounded border p-3 text-center">
-                <div className="text-2xl font-black text-slate-500">{photoScanOutCount}</div>
-                <div className="text-xs font-medium text-muted-foreground">Closed by Site Photo</div>
+                <div className="text-2xl font-black text-slate-500">
+                  {photoScanOutCount}
+                </div>
+                <div className="text-xs font-medium text-muted-foreground">
+                  Closed by Site Photo
+                </div>
               </div>
               <div className="rounded border p-3 text-center">
-                <div className="text-2xl font-black text-blue-600">{selectedScans.length}</div>
-                <div className="text-xs font-medium text-muted-foreground">Selected</div>
+                <div className="text-2xl font-black text-blue-600">
+                  {selectedScans.length}
+                </div>
+                <div className="text-xs font-medium text-muted-foreground">
+                  Selected
+                </div>
               </div>
               <div
                 role="button"
@@ -822,11 +888,16 @@ export default function AdminTransferEmployeePage() {
                   selectedScans.length > 0
                     ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300"
                     : "bg-muted/30 text-muted-foreground",
-                  isOverBin && "scale-[1.02] border-red-500 bg-red-100 ring-2 ring-red-200 dark:bg-red-950/40",
+                  isOverBin &&
+                    "scale-[1.02] border-red-500 bg-red-100 ring-2 ring-red-200 dark:bg-red-950/40",
                   isDroppedInBin && "animate-bounce",
                 )}
               >
-                <img src={binImage} alt="Trash bin" className="h-14 w-14 shrink-0 object-contain" />
+                <img
+                  src={binImage}
+                  alt="Trash bin"
+                  className="h-14 w-14 shrink-0 object-contain"
+                />
                 <div className="min-w-0">
                   <div className="text-sm font-bold">Delete scans</div>
                   <div className="text-xs font-medium">{trashTileLabel}</div>
@@ -848,14 +919,23 @@ export default function AdminTransferEmployeePage() {
                     Employees ({filteredScans.length})
                   </CardTitle>
                   <CardDescription>
-                    Site-photo closed rows can be deleted. Only open scans can be transferred.
+                    Site-photo closed rows can be deleted. Only open scans can
+                    be transferred.
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox
                     aria-label="Select all visible employees"
-                    checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
-                    onCheckedChange={(checked) => toggleVisible(checked === true)}
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(checked) =>
+                      toggleVisible(checked === true)
+                    }
                   />
                   <span className="text-xs text-muted-foreground">All</span>
                 </div>
@@ -877,7 +957,8 @@ export default function AdminTransferEmployeePage() {
                   onDragEnd={handleDragEnd}
                   className={cn(
                     "space-y-2 rounded border border-dashed p-2 transition-colors",
-                    selectedScans.length > 0 && "cursor-grab border-primary/40 bg-primary/5 active:cursor-grabbing",
+                    selectedScans.length > 0 &&
+                      "cursor-grab border-primary/40 bg-primary/5 active:cursor-grabbing",
                   )}
                 >
                   {selectedScans.length > 0 ? (
@@ -911,7 +992,9 @@ export default function AdminTransferEmployeePage() {
                       >
                         <Checkbox
                           checked={selected}
-                          onCheckedChange={(checked) => toggleScan(scan.id, checked === true)}
+                          onCheckedChange={(checked) =>
+                            toggleScan(scan.id, checked === true)
+                          }
                           onClick={(event) => event.stopPropagation()}
                           aria-label={`Select ${scan.employeeName}`}
                         />
@@ -931,7 +1014,9 @@ export default function AdminTransferEmployeePage() {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold">{scan.employeeName}</div>
+                          <div className="truncate text-sm font-semibold">
+                            {scan.employeeName}
+                          </div>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>{scan.employeeCode}</span>
                             <span className="inline-flex items-center gap-1">
@@ -947,7 +1032,10 @@ export default function AdminTransferEmployeePage() {
                           </div>
                         </div>
                         {scan.isTransferred ? (
-                          <Badge variant="secondary" className="shrink-0 text-xs">
+                          <Badge
+                            variant="secondary"
+                            className="shrink-0 text-xs"
+                          >
                             Transferred here
                           </Badge>
                         ) : null}
@@ -974,8 +1062,8 @@ export default function AdminTransferEmployeePage() {
                 <div>
                   <CardTitle>Destination Sites</CardTitle>
                   <CardDescription>
-                    Drop selected employees onto a destination site, or onto the source site
-                    itself to move them to a different foreman.
+                    Drop selected employees onto a destination site, or onto the
+                    source site itself to move them to a different foreman.
                   </CardDescription>
                 </div>
                 <div className="relative w-full md:w-72">
@@ -1016,16 +1104,23 @@ export default function AdminTransferEmployeePage() {
                       className={cn(
                         "rounded border bg-background p-3 transition-colors",
                         dragging && "border-dashed",
-                        isSameSite && "border-amber-300 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/10",
-                        isOver && "border-primary bg-primary/10 ring-2 ring-primary/20",
+                        isSameSite &&
+                          "border-amber-300 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/10",
+                        isOver &&
+                          "border-primary bg-primary/10 ring-2 ring-primary/20",
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <div className="truncate text-sm font-semibold">{siteLabel(site)}</div>
+                            <div className="truncate text-sm font-semibold">
+                              {siteLabel(site)}
+                            </div>
                             {isSameSite ? (
-                              <Badge variant="outline" className="shrink-0 text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="shrink-0 text-[10px]"
+                              >
                                 Same site
                               </Badge>
                             ) : null}
@@ -1048,7 +1143,11 @@ export default function AdminTransferEmployeePage() {
                           disabled={state.loading}
                           onClick={() => void ensureForemenForSite(site.id)}
                         >
-                          {state.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Load"}
+                          {state.loading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            "Load"
+                          )}
                         </Button>
                       </div>
 
@@ -1056,7 +1155,9 @@ export default function AdminTransferEmployeePage() {
                         <div className="mt-3">
                           <Select
                             value={state.selectedForemanId}
-                            onValueChange={(value) => setSiteForeman(site.id, value)}
+                            onValueChange={(value) =>
+                              setSiteForeman(site.id, value)
+                            }
                           >
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Select foreman" />
@@ -1082,7 +1183,11 @@ export default function AdminTransferEmployeePage() {
                         type="button"
                         className="mt-3 w-full gap-2"
                         size="sm"
-                        disabled={selectedScans.length === 0 || state.loading || isTransferring}
+                        disabled={
+                          selectedScans.length === 0 ||
+                          state.loading ||
+                          isTransferring
+                        }
                         onMouseEnter={() => void ensureForemenForSite(site.id)}
                         onClick={() => void requestTransferToSite(site.id)}
                       >
@@ -1139,11 +1244,16 @@ export default function AdminTransferEmployeePage() {
         <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
             <div className="flex items-center gap-3">
-              <img src="/trash/bin-closed.png" alt="Trash bin" className="h-12 w-12 object-contain" />
+              <img
+                src="/trash/bin-closed.png"
+                alt="Trash bin"
+                className="h-12 w-12 object-contain"
+              />
               <div>
                 <SheetTitle>Trash Bin</SheetTitle>
                 <SheetDescription>
-                  Deleted items stay here for 7 days before they are cleared automatically.
+                  Deleted items stay here for 7 days before they are cleared
+                  automatically.
                 </SheetDescription>
               </div>
             </div>
@@ -1162,12 +1272,19 @@ export default function AdminTransferEmployeePage() {
             ) : (
               <div className="space-y-3">
                 {trashItems.map((item) => (
-                  <div key={item.id} className="rounded border bg-background p-3">
+                  <div
+                    key={item.id}
+                    className="rounded border bg-background p-3"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold">{item.label}</div>
+                        <div className="truncate text-sm font-semibold">
+                          {item.label}
+                        </div>
                         {item.description ? (
-                          <div className="mt-0.5 text-xs text-muted-foreground">{item.description}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">
+                            {item.description}
+                          </div>
                         ) : null}
                       </div>
                       <Badge variant="outline" className="shrink-0 text-xs">
@@ -1176,10 +1293,14 @@ export default function AdminTransferEmployeePage() {
                     </div>
                     <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
                       <span>
-                        Deleted {new Date(item.deletedAt).toLocaleString("en-GB")}
+                        Deleted{" "}
+                        {new Date(item.deletedAt).toLocaleString("en-GB")}
                         {item.deletedByName ? ` by ${item.deletedByName}` : ""}
                       </span>
-                      <span>Auto clears {new Date(item.expiresAt).toLocaleString("en-GB")}</span>
+                      <span>
+                        Auto clears{" "}
+                        {new Date(item.expiresAt).toLocaleString("en-GB")}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -1194,23 +1315,37 @@ export default function AdminTransferEmployeePage() {
               onClick={() => void loadTrash()}
               disabled={loadingTrash || clearingTrash}
             >
-              {loadingTrash ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loadingTrash ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               Refresh
             </Button>
             <Button
               type="button"
               variant="destructive"
               disabled={trashItems.length === 0 || clearingTrash}
-              onClick={() => setPendingAction({ type: "clear-trash", employeeCount: trashItems.length })}
+              onClick={() =>
+                setPendingAction({
+                  type: "clear-trash",
+                  employeeCount: trashItems.length,
+                })
+              }
             >
-              {clearingTrash ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {clearingTrash ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
               Clear Bin
             </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={pendingAction !== null} onOpenChange={(open) => !open && cancelPendingAction()}>
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => !open && cancelPendingAction()}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -1231,21 +1366,28 @@ export default function AdminTransferEmployeePage() {
                   ? `This will permanently clear ${pendingAction.employeeCount} item${
                       pendingAction.employeeCount === 1 ? "" : "s"
                     } from the trash bin.`
-                : pendingAction?.sameSite
-                  ? `This will reassign ${pendingAction.employeeCount} open scan${
-                      pendingAction.employeeCount === 1 ? "" : "s"
-                    } at ${selectedSiteName || "this site"} to foreman ${pendingAction.foremanName}.`
-                : pendingAction
-                  ? `This will transfer ${pendingAction.employeeCount} open scan${
-                      pendingAction.employeeCount === 1 ? "" : "s"
-                    } from ${selectedSiteName || "the source site"} to ${pendingAction.siteName} (foreman ${pendingAction.foremanName}).`
-                  : ""}
+                  : pendingAction?.sameSite
+                    ? `This will reassign ${pendingAction.employeeCount} open scan${
+                        pendingAction.employeeCount === 1 ? "" : "s"
+                      } at ${selectedSiteName || "this site"} to foreman ${pendingAction.foremanName}.`
+                    : pendingAction
+                      ? `This will transfer ${pendingAction.employeeCount} open scan${
+                          pendingAction.employeeCount === 1 ? "" : "s"
+                        } from ${selectedSiteName || "the source site"} to ${pendingAction.siteName} (foreman ${pendingAction.foremanName}).`
+                      : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelPendingAction}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelPendingAction}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              variant={pendingAction?.type === "delete" || pendingAction?.type === "clear-trash" ? "destructive" : "default"}
+              variant={
+                pendingAction?.type === "delete" ||
+                pendingAction?.type === "clear-trash"
+                  ? "destructive"
+                  : "default"
+              }
               onClick={(event) => {
                 event.preventDefault();
                 void confirmPendingAction();

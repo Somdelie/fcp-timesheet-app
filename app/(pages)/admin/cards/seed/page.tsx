@@ -245,7 +245,7 @@ export default function SeedCardNumbersPage() {
             {selectedEmployee && (
               <div className="rounded-md border border-border bg-muted/50 p-4 text-sm">
                 <p className="font-medium">
-                  Selected employee: {selectedEmployee.firstName}{" "}
+                  Selected Personnel: {selectedEmployee.firstName}{" "}
                   {selectedEmployee.lastName}
                 </p>
                 <p className="text-muted-foreground">
