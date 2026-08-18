@@ -183,7 +183,7 @@ export async function POST(req: Request) {
     const fullName = `${employee.firstName} ${employee.lastName}`.trim();
     return NextResponse.json(
       {
-        error: `This employee ${fullName} is deactivated. Please contact your supervisor.`,
+        error: `${fullName} is deactivated. Please contact your supervisor.`,
       },
       { status: 409 },
     );

@@ -135,7 +135,10 @@ export async function POST(
   if (!site) {
     return NextResponse.json({ error: "Site not found" }, { status: 404 });
   }
-  if (site.manualAttendanceRequiresSupervisorFingerprint && !supervisorAuthConfirmed) {
+  if (
+    site.manualAttendanceRequiresSupervisorFingerprint &&
+    !supervisorAuthConfirmed
+  ) {
     return NextResponse.json(
       {
         error:
@@ -221,7 +224,7 @@ export async function POST(
   if (!employee.isActive) {
     return NextResponse.json(
       {
-        error: `This employee ${employee.firstName} ${employee.lastName} is deactivated.`,
+        error: `${employee.firstName} ${employee.lastName} is deactivated.`,
       },
       { status: 409 },
     );

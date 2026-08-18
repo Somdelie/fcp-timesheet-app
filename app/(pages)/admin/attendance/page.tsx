@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import AdminAttendanceAnalyticsPage from "@/app/(pages)/admin/attendance-analytics/page";
 import AdminAttendanceScansPage from "@/app/(pages)/admin/attendance-scans/page";
+import AdminAttendanceScansOutPage from "@/app/(pages)/admin/attendance-scans-out/page";
 import AdminManualScanPage from "@/app/(pages)/admin/manual-scan/page";
 import AdminSitePhotosPage from "@/app/(pages)/admin/site-photos/page";
 import EmployeePayrollSummaryReport from "@/components/timesheets/EmployeePayrollSummaryReport";
@@ -11,6 +12,7 @@ const TABS = [
   { value: "analytics", label: "Fortnight Analytics" },
   { value: "payroll", label: "Payroll Summary" },
   { value: "scans", label: "Attendance Scans" },
+  { value: "scans-out", label: "Scans Out" },
   { value: "manual", label: "Manual Scan" },
   { value: "photos", label: "Photo Verification" },
 ] as const;
@@ -56,6 +58,7 @@ export default async function AdminAttendancePage({
           {activeTab === "analytics" ? <AdminAttendanceAnalyticsPage /> : null}
           {activeTab === "payroll" ? <EmployeePayrollSummaryReport /> : null}
           {activeTab === "scans" ? <AdminAttendanceScansPage /> : null}
+          {activeTab === "scans-out" ? <AdminAttendanceScansOutPage /> : null}
           {activeTab === "manual" ? <AdminManualScanPage /> : null}
           {activeTab === "photos" ? <AdminSitePhotosPage /> : null}
         </div>

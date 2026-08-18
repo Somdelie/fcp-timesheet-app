@@ -58,7 +58,7 @@ export default async function EmployeeDetailPage({ params }) {
   });
 
   if (!employee) {
-    return <div className="p-6">Employee not found</div>;
+    return <div className="p-6">Personnel not found</div>;
   }
 
   const isForeman = !!(
