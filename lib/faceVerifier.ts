@@ -49,6 +49,8 @@ export interface FaceVerifyResult {
   confidence: number;
   distance: number;
   bestIndex: number;
+  /** Distance to every candidate, same order/length as the request's candidateEmbeddings — lets a 1:N caller check the margin between the best and second-best match, not just the winner's absolute distance. */
+  distances: number[];
   processingTimeMs: number;
   /** Present only when a liveness check was requested (Phase 3 first-cut). */
   livenessPassed?: boolean;
