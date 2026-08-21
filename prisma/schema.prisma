@@ -1389,6 +1389,12 @@ model CompanySettings {
   // flipped later — not part of this rollout.
   fingerprintMandatory Boolean @default(false)
 
+  // Which scan-out flows the foreman app offers. Both on by default so
+  // nothing changes until an admin explicitly turns one off; at least one
+  // must always stay enabled (enforced in updateScanOutMethodSettings).
+  scanOutFaceEnabled  Boolean @default(true)
+  scanOutPhotoEnabled Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
