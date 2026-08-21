@@ -115,6 +115,11 @@ export async function GET(req: Request) {
     }
   }
 
+  const companySettings = await prisma.companySettings.findUnique({
+    where: { id: "singleton" },
+    select: { scanOutFaceEnabled: true, scanOutPhotoEnabled: true },
+  });
+
   return NextResponse.json({
     user: {
       ...user,
@@ -122,5 +127,11 @@ export async function GET(req: Request) {
       actingForeman: null,
     },
     sites,
+    // Admin-controlled app config. Defaults to both enabled when no
+    // CompanySettings row exists yet (same default as the column itself).
+    appSettings: {
+      scanOutFaceEnabled: companySettings?.scanOutFaceEnabled ?? true,
+      scanOutPhotoEnabled: companySettings?.scanOutPhotoEnabled ?? true,
+    },
   });
 }

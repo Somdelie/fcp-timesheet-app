@@ -1,2 +1,0 @@
-ALTER TABLE IF EXISTS "SiteFinishingSchedule"
-ADD COLUMN IF NOT EXISTS "fcpQs" TEXT;

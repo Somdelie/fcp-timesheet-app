@@ -21,6 +21,8 @@ function serializeSettings(s: any) {
     id: s.id,
     defaultEmployeeDayRate: String(s.defaultEmployeeDayRate),
     fingerprintMandatory: Boolean(s.fingerprintMandatory),
+    scanOutFaceEnabled: s.scanOutFaceEnabled ?? true,
+    scanOutPhotoEnabled: s.scanOutPhotoEnabled ?? true,
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()

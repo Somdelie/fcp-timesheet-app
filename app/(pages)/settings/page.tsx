@@ -42,10 +42,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   getCompanySettings,
   deleteTeamRate,
   updateCompanySettings,
+  updateScanOutMethodSettings,
   updateTeamDefaultRates,
   verifyTeamRateConfirmationCode,
 } from "@/actions/company-settings";
@@ -167,6 +169,10 @@ export default function SettingsPage() {
   const [isSavingRate, setIsSavingRate] = useState(false);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
+  const [scanOutFaceEnabled, setScanOutFaceEnabled] = useState(true);
+  const [scanOutPhotoEnabled, setScanOutPhotoEnabled] = useState(true);
+  const [isSavingScanOutMethod, setIsSavingScanOutMethod] = useState(false);
+
   const [isLoadingAnchor, setIsLoadingAnchor] = useState(false);
   const [isSavingAnchor, setIsSavingAnchor] = useState(false);
 
@@ -182,6 +188,8 @@ export default function SettingsPage() {
           setDefaultEmployeeDayRate(
             String(res.settings.defaultEmployeeDayRate),
           );
+          setScanOutFaceEnabled(res.settings.scanOutFaceEnabled);
+          setScanOutPhotoEnabled(res.settings.scanOutPhotoEnabled);
           setTeamRates(
             res.settings.teamRates?.length
               ? res.settings.teamRates.map((team) => ({
@@ -285,6 +293,38 @@ export default function SettingsPage() {
       toast.error("Failed to save settings.");
     } finally {
       setIsSavingRate(false);
+    }
+  };
+
+  const handleSaveScanOutMethod = async (
+    next: Partial<{ face: boolean; photo: boolean }>,
+  ) => {
+    const face = next.face ?? scanOutFaceEnabled;
+    const photo = next.photo ?? scanOutPhotoEnabled;
+
+    if (!face && !photo) {
+      toast.error("At least one scan-out method must stay enabled.");
+      return;
+    }
+
+    setIsSavingScanOutMethod(true);
+    try {
+      const res = await updateScanOutMethodSettings({
+        scanOutFaceEnabled: face,
+        scanOutPhotoEnabled: photo,
+      });
+      if (res.ok) {
+        setScanOutFaceEnabled(res.settings.scanOutFaceEnabled);
+        setScanOutPhotoEnabled(res.settings.scanOutPhotoEnabled);
+        toast.success("Scan-out method updated!");
+      } else {
+        toast.error(res.error || "Failed to save scan-out method.");
+      }
+    } catch (err) {
+      console.error("Error saving scan-out method:", err);
+      toast.error("Failed to save scan-out method.");
+    } finally {
+      setIsSavingScanOutMethod(false);
     }
   };
 
@@ -1157,6 +1197,60 @@ export default function SettingsPage() {
 
           {/* System */}
           <TabsContent value="system" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Scan-Out Method</CardTitle>
+                <CardDescription>
+                  Which scan-out flows the foreman app offers. Both stay on
+                  by default; foremen choose between them when more than one
+                  is enabled. At least one must always stay on.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="scanOutFaceEnabled"
+                    checked={scanOutFaceEnabled}
+                    disabled={isSavingScanOutMethod || isLoadingSettings}
+                    onCheckedChange={(checked) => {
+                      const next = checked === true;
+                      setScanOutFaceEnabled(next);
+                      handleSaveScanOutMethod({ face: next });
+                    }}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="scanOutFaceEnabled">
+                      Face scan-out enabled
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Per-employee face-verified scan-out.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="scanOutPhotoEnabled"
+                    checked={scanOutPhotoEnabled}
+                    disabled={isSavingScanOutMethod || isLoadingSettings}
+                    onCheckedChange={(checked) => {
+                      const next = checked === true;
+                      setScanOutPhotoEnabled(next);
+                      handleSaveScanOutMethod({ photo: next });
+                    }}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="scanOutPhotoEnabled">
+                      Photo scan-out enabled
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Bulk end-of-day scan-out witnessed by a site photo.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>System Settings</CardTitle>

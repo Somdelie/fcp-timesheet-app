@@ -23,6 +23,17 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS });
 }
 
+// @react-pdf/renderer's toBuffer() is misleadingly named — it actually
+// resolves to a Node ReadableStream, not a Buffer, which NextResponse
+// doesn't accept directly. Collect it into a real Buffer instead.
+async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 /** Dual auth: Bearer token (desktop/mobile) or cookie session (web) */
 async function getAuth(req: NextRequest) {
   const h = req.headers.get("authorization") ?? "";
@@ -69,7 +80,7 @@ export async function GET(
 
   // Generate PDF as a Node Buffer to avoid relying on Blob/DOM APIs
   // (useful in Node runtimes where toBlob() can hang or be unavailable)
-  const buffer = await pdf(pdfDoc).toBuffer();
+  const buffer = await streamToBuffer(await pdf(pdfDoc).toBuffer());
 
   const safeSiteName = dto.siteName
     .replace(/[^a-zA-Z0-9 _-]/g, "")
@@ -78,7 +89,10 @@ export async function GET(
 
   const filename = `Finishing_Schedule_${safeSiteName}_${dto.contractNo.replace(/[^a-zA-Z0-9-]/g, "")}.pdf`;
 
-  return new NextResponse(buffer, {
+  // NextResponse's BodyInit typing doesn't resolve Buffer's overload
+  // correctly (misreads it as URLSearchParams-ish); a plain Uint8Array
+  // view over the same bytes is unambiguous.
+  return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       ...CORS,

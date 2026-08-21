@@ -14,6 +14,8 @@ export type CompanySettingsDTO = {
   defaultCapeTownDayRate: string;
   teamRates: CompanyTeamRateDTO[];
   fingerprintMandatory: boolean;
+  scanOutFaceEnabled: boolean;
+  scanOutPhotoEnabled: boolean;
   updatedAt: string;
 };
 
@@ -101,6 +103,8 @@ function serializeSettings(s: any, teamRates: any[] = []): CompanySettingsDTO {
     defaultCapeTownDayRate: String(s.defaultCapeTownDayRate ?? "0"),
     teamRates: teamRates.map(serializeTeamRate),
     fingerprintMandatory: Boolean(s.fingerprintMandatory),
+    scanOutFaceEnabled: s.scanOutFaceEnabled ?? true,
+    scanOutPhotoEnabled: s.scanOutPhotoEnabled ?? true,
     updatedAt:
       s.updatedAt instanceof Date
         ? s.updatedAt.toISOString()
@@ -247,6 +251,58 @@ export async function updateFingerprintMandatorySetting(input: {
     entity: "CompanySettings",
     entityId: "singleton",
     metadata: { fingerprintMandatory: input.fingerprintMandatory },
+  });
+
+  revalidatePath("/settings");
+  return { ok: true as const, settings: serializeSettings(result) };
+}
+
+/**
+ * Which scan-out flows the foreman app offers. Both on by default; an admin
+ * can turn either off once the other is trusted enough to stand alone, but
+ * at least one must always stay enabled or foremen would have no way to
+ * scan out at all.
+ */
+export async function updateScanOutMethodSettings(input: {
+  scanOutFaceEnabled: boolean;
+  scanOutPhotoEnabled: boolean;
+}) {
+  const auth = await requireServerAuth();
+
+  if (auth.role !== "ADMIN") {
+    return { ok: false as const, error: "Unauthorized. Admin only." };
+  }
+
+  if (!input.scanOutFaceEnabled && !input.scanOutPhotoEnabled) {
+    return {
+      ok: false as const,
+      error: "At least one scan-out method must stay enabled.",
+    };
+  }
+
+  const result = await prisma.companySettings.upsert({
+    where: { id: "singleton" },
+    update: {
+      scanOutFaceEnabled: input.scanOutFaceEnabled,
+      scanOutPhotoEnabled: input.scanOutPhotoEnabled,
+    },
+    create: {
+      id: "singleton",
+      defaultEmployeeDayRate: 0,
+      scanOutFaceEnabled: input.scanOutFaceEnabled,
+      scanOutPhotoEnabled: input.scanOutPhotoEnabled,
+    },
+  });
+
+  await writeAuditEvent({
+    actorUserId: auth.userId,
+    action: "company_settings_scan_out_method_updated",
+    entity: "CompanySettings",
+    entityId: "singleton",
+    metadata: {
+      scanOutFaceEnabled: input.scanOutFaceEnabled,
+      scanOutPhotoEnabled: input.scanOutPhotoEnabled,
+    },
   });
 
   revalidatePath("/settings");
