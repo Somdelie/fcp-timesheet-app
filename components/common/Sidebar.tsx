@@ -41,6 +41,7 @@ import {
   BadgeMinus,
   Trash2,
   ScanFace,
+  Smartphone,
 } from "lucide-react";
 
 type Role = "ADMIN" | "OFFICE" | "SUPERVISOR" | "FOREMAN";
@@ -245,6 +246,12 @@ const menuGroups: {
         label: "Trash",
         icon: Trash2,
         iconSrc: icon3d("Trash"),
+        roles: ["ADMIN"],
+      },
+      {
+        href: "/admin/app-updates",
+        label: "App Updates",
+        icon: Smartphone,
         roles: ["ADMIN"],
       },
     ],

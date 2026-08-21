@@ -67,8 +67,9 @@ export async function GET(
     data: dto,
   }) as any;
 
-  const blob = await pdf(pdfDoc).toBlob();
-  const buffer = Buffer.from(await blob.arrayBuffer());
+  // Generate PDF as a Node Buffer to avoid relying on Blob/DOM APIs
+  // (useful in Node runtimes where toBlob() can hang or be unavailable)
+  const buffer = await pdf(pdfDoc).toBuffer();
 
   const safeSiteName = dto.siteName
     .replace(/[^a-zA-Z0-9 _-]/g, "")

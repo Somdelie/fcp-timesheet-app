@@ -10,26 +10,86 @@ import {
   loadExistingOrderReferences,
 } from "@/lib/procurement/buildsmartOrderDedup";
 
+import { getFortnightForDateUTC } from "@/lib/timesheetPeriods";
+
 export type { HistoricalCostCategory };
 
 /**
  * BUILDSMART CUTOVER RULES
  * ─────────────────────────
  *
- * Up to and including 3 July 2026:
- *   BuildSmart is the financial source of truth.
+ * Labour is cut over separately from every other cost category, because the
+ * FCP app started recording live attendance (AttendanceScan.dayRateAtScan)
+ * before it took over as source of truth for materials and other costs.
  *
- * From 4 July 2026:
- *   The FCP app is the financial source of truth.
+ * LABOUR:
+ *   BuildSmart is the source of truth for every row dated before the start
+ *   of the current fortnight (the fortnight containing `asOfDate`, per the
+ *   canonical `TimesheetYear.anchorSat` fortnight boundary used everywhere
+ *   else in the app — see lib/timesheetPeriods.ts). From that fortnight's
+ *   start date onward, the FCP app (AttendanceScan) is the sole source of
+ *   truth and BuildSmart labour rows must not be imported.
  *
- * BuildSmart rows dated 4 July 2026 or later must not be imported.
+ *   This boundary is not a fixed date. It moves every 14 days and is
+ *   resolved fresh each time the importer runs, from `asOfDate` (defaults
+ *   to now, but callers can pass an explicit date for deterministic/
+ *   reproducible imports).
+ *
+ * MATERIAL / CONSUMABLE / PLANT / TOOLS / SAFETY / SCAFFOLDING / SUBCONTRACT / OTHER:
+ *   Up to and including 3 July 2026:  BuildSmart is the source of truth.
+ *   From 4 July 2026:                 the FCP app is the source of truth.
+ *   BuildSmart rows dated 4 July 2026 or later must not be imported.
  */
 
-// The FCP app becomes the source of truth from 4 July 2026.
+// The FCP app becomes the source of truth for every non-labour category from 4 July 2026.
 const APP_CUTOVER_DATE = new Date("2026-07-04T00:00:00.000Z");
 
-// BuildSmart remains the source of truth up to and including 3 July 2026.
+// BuildSmart remains the source of truth for non-labour categories up to and including 3 July 2026.
 const BUILDSMART_LAST_DATE = new Date("2026-07-03T23:59:59.999Z");
+
+/**
+ * Resolves the labour cutover boundary as of `asOfDate`: the start of the
+ * fortnight containing `asOfDate`, per the canonical `TimesheetYear.anchorSat`
+ * used by the rest of the app's fortnight logic (see lib/timesheetPeriods.ts).
+ *
+ * Throws if the relevant year has no configured anchor, rather than guessing
+ * one — matching the convention already used by the timesheet-period
+ * generation routes.
+ */
+async function resolveLabourCutover(
+  asOfDate: Date,
+): Promise<{ cutoverDate: Date; lastValidDate: Date }> {
+  const year = asOfDate.getUTCFullYear();
+
+  const yearConfig = await prisma.timesheetYear.findUnique({
+    where: { year },
+    select: { anchorSat: true },
+  });
+
+  if (!yearConfig) {
+    throw new Error(
+      `Cannot resolve the labour cutover: no TimesheetYear configured for ${year}. ` +
+        `Configure it via /admin/timesheets/generate-year first.`,
+    );
+  }
+
+  const fortnight = getFortnightForDateUTC(asOfDate, yearConfig.anchorSat);
+  const cutoverDate = fortnight.startDate;
+  const lastValidDate = new Date(cutoverDate.getTime() - 1);
+
+  return { cutoverDate, lastValidDate };
+}
+
+/**
+ * Returns the cutover date (first date the app takes over, exclusive of
+ * BuildSmart) for the given category.
+ */
+function cutoverDateFor(
+  category: HistoricalCostCategory,
+  labourCutoverDate: Date,
+): Date {
+  return category === "LABOUR" ? labourCutoverDate : APP_CUTOVER_DATE;
+}
 
 export type ImportStatus =
   | "NEW_HISTORICAL"
@@ -161,6 +221,8 @@ async function processBuildSmartRow(
   row: BuildSmartRow,
   siteMap: Map<string, string>,
   existingOrderRefs: Set<string>,
+  labourCutoverDate: Date,
+  labourLastValidDate: Date,
 ): Promise<ImportResult> {
   const normalizedSiteCode = row.siteCode?.trim();
   const normalizedLedgerCode = row.ledgerCode?.trim();
@@ -198,12 +260,20 @@ async function processBuildSmartRow(
 
   const transactionDate = normalizeTransactionDate(row.transactionDate);
 
+  // Category determines which cutover rule applies. Labour cuts over at the
+  // start of the current fortnight (resolved per-batch by the caller from
+  // TimesheetYear.anchorSat); every other category cuts over on 2026-07-04.
+  const category = mapLedgerCategory(normalizedLedgerCode);
+
   /**
-   * Reject transactions dated from 4 July 2026 onward.
-   *
-   * BuildSmart is only valid up to and including 3 July 2026.
+   * Reject transactions dated on or after the app cutover for this category.
    */
-  if (transactionDate >= APP_CUTOVER_DATE) {
+  const cutoverDate = cutoverDateFor(category, labourCutoverDate);
+
+  if (transactionDate >= cutoverDate) {
+    const finalValidDate =
+      category === "LABOUR" ? labourLastValidDate : BUILDSMART_LAST_DATE;
+
     return {
       row,
       status: "INVALID_ROW",
@@ -212,22 +282,33 @@ async function processBuildSmartRow(
         .slice(
           0,
           10,
-        )} is on or after the 2026-07-04 FCP app cutover. BuildSmart is only valid up to 2026-07-03.`,
+        )} is on or after the ${cutoverDate
+        .toISOString()
+        .slice(0, 10)} FCP app ${category === "LABOUR" ? "labour " : ""}cutover. BuildSmart is only valid up to ${finalValidDate
+        .toISOString()
+        .slice(0, 10)}.`,
+      category,
     };
   }
 
   /**
    * Secondary boundary check.
    *
-   * This explicitly enforces the final BuildSmart timestamp.
+   * This explicitly enforces the final BuildSmart timestamp per category.
    */
-  if (transactionDate > BUILDSMART_LAST_DATE) {
+  const finalValidDate =
+    category === "LABOUR" ? labourLastValidDate : BUILDSMART_LAST_DATE;
+
+  if (transactionDate > finalValidDate) {
     return {
       row,
       status: "INVALID_ROW",
       reason: `Date ${transactionDate
         .toISOString()
-        .slice(0, 10)} is after the final BuildSmart date of 2026-07-03`,
+        .slice(0, 10)} is after the final BuildSmart ${category === "LABOUR" ? "labour " : ""}date of ${finalValidDate
+        .toISOString()
+        .slice(0, 10)}`,
+      category,
     };
   }
 
@@ -238,10 +319,9 @@ async function processBuildSmartRow(
       row,
       status: "MISSING_SITE",
       reason: `Site code "${normalizedSiteCode}" was not found`,
+      category,
     };
   }
-
-  const category = mapLedgerCategory(normalizedLedgerCode);
 
   /**
    * Skip BuildSmart rows where the PO already exists in the live order
@@ -327,12 +407,12 @@ async function processBuildSmartRow(
 
   /**
    * This safeguard is normally unreachable because rows from the app
-   * cutover date are rejected above.
+   * cutover date (per category) are rejected above.
    *
    * It is retained in case the permitted BuildSmart window is extended
    * later without removing overlap protection.
    */
-  if (transactionDate >= APP_CUTOVER_DATE) {
+  if (transactionDate >= cutoverDate) {
     const overlaps = await appRecordExists(
       siteId,
       category,
@@ -427,22 +507,43 @@ async function loadImportContext(rows: BuildSmartRow[]): Promise<{
   };
 }
 
+export interface ImportOptions {
+  /**
+   * The date used to resolve the current fortnight for the labour cutover
+   * boundary (see resolveLabourCutover). Defaults to now. Pass an explicit
+   * date to make an import deterministic/reproducible regardless of when
+   * it's actually run.
+   */
+  asOfDate?: Date;
+}
+
 /**
  * Imports all supplied BuildSmart rows and returns the completed results.
  */
 export async function importBuildSmartRows(
   rows: BuildSmartRow[],
+  options: ImportOptions = {},
 ): Promise<ImportResult[]> {
   if (rows.length === 0) {
     return [];
   }
+
+  const asOfDate = options.asOfDate ?? new Date();
+  const { cutoverDate: labourCutoverDate, lastValidDate: labourLastValidDate } =
+    await resolveLabourCutover(asOfDate);
 
   const results: ImportResult[] = [];
 
   const { siteMap, existingOrderRefs } = await loadImportContext(rows);
 
   for (const row of rows) {
-    const result = await processBuildSmartRow(row, siteMap, existingOrderRefs);
+    const result = await processBuildSmartRow(
+      row,
+      siteMap,
+      existingOrderRefs,
+      labourCutoverDate,
+      labourLastValidDate,
+    );
 
     results.push(result);
   }
@@ -455,6 +556,7 @@ export async function importBuildSmartRows(
  */
 export async function* importBuildSmartRowsStream(
   rows: BuildSmartRow[],
+  options: ImportOptions = {},
 ): AsyncGenerator<
   {
     total: number;
@@ -468,12 +570,22 @@ export async function* importBuildSmartRowsStream(
     return;
   }
 
+  const asOfDate = options.asOfDate ?? new Date();
+  const { cutoverDate: labourCutoverDate, lastValidDate: labourLastValidDate } =
+    await resolveLabourCutover(asOfDate);
+
   const { siteMap, existingOrderRefs } = await loadImportContext(rows);
 
   let done = 0;
 
   for (const row of rows) {
-    const result = await processBuildSmartRow(row, siteMap, existingOrderRefs);
+    const result = await processBuildSmartRow(
+      row,
+      siteMap,
+      existingOrderRefs,
+      labourCutoverDate,
+      labourLastValidDate,
+    );
 
     done += 1;
 

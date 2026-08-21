@@ -131,6 +131,24 @@ model PushToken {
   @@index([userId])
 }
 
+// Published mobile app releases (private APK distribution, not EAS Update).
+// One row per publish; `isActive` marks the current release for a platform,
+// enforced in application code (deactivate-previous-on-publish), not the DB.
+model AppRelease {
+  id               String   @id @default(cuid())
+  platform         String   @default("android")
+  version          String
+  versionCode      Int
+  minVersionCode   Int
+  githubAssetId    Int
+  releaseNotes     String[]
+  isActive         Boolean  @default(true)
+  createdByUserId  String?
+  createdAt        DateTime @default(now())
+
+  @@index([platform, isActive])
+}
+
 //
 // ============================
 // WORKER / EMPLOYEE
