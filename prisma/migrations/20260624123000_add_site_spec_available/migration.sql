@@ -1,2 +1,0 @@
-ALTER TABLE "Site"
-  ADD COLUMN "specAvailable" BOOLEAN NOT NULL DEFAULT false;
