@@ -58,7 +58,16 @@ export async function GET(req: Request) {
       foreman: {
         select: {
           id: true,
-          user: { select: { name: true } },
+          user: {
+            select: {
+              name: true,
+              // Existing Employee.faceImageUrl, same field the /api/employees
+              // and /api/app/foreman/employees endpoints already expose as
+              // "photoUrl" — no schema change, just surfacing it here too so
+              // the Assistant can show the acting foreman's real photo.
+              employee: { select: { faceImageUrl: true } },
+            },
+          },
         },
       },
     },
@@ -67,6 +76,7 @@ export async function GET(req: Request) {
   const availableForemen = assistantLinks.map((x) => ({
     foremanId: x.foreman.id,
     name: x.foreman.user.name ?? "Foreman",
+    photoUrl: x.foreman.user.employee?.faceImageUrl ?? null,
   }));
 
   // ✅ sites for FOREMAN via ForemanSiteAssignment, active assignment window + active sites
