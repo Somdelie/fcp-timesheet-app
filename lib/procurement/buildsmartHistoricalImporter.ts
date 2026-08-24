@@ -55,8 +55,12 @@ const BUILDSMART_LAST_DATE = new Date("2026-07-03T23:59:59.999Z");
  * Throws if the relevant year has no configured anchor, rather than guessing
  * one — matching the convention already used by the timesheet-period
  * generation routes.
+ *
+ * Exported because the wage-reporting layer (calcSiteCosts, listSites) needs
+ * the same boundary to stop double-counting AttendanceScan labour for
+ * periods BuildSmart already covers historically — see calcSiteCosts.ts.
  */
-async function resolveLabourCutover(
+export async function resolveLabourCutover(
   asOfDate: Date,
 ): Promise<{ cutoverDate: Date; lastValidDate: Date }> {
   const year = asOfDate.getUTCFullYear();

@@ -8,6 +8,7 @@ import { parseWorkDate, toISODate } from "@/lib/workdate";
 import { writeAuditEvent } from "@/lib/audit";
 import { requireCanManageSite } from "@/lib/guards";
 import { revalidatePath } from "next/cache";
+import { resolveLabourCutover } from "@/lib/procurement/buildsmartHistoricalImporter";
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
@@ -251,6 +252,13 @@ export async function listSites(input?: {
   if (input?.dateTo) dateFilter.lte = new Date(input.dateTo + "T23:59:59.999Z");
   const hasDateFilter = Object.keys(dateFilter).length > 0;
 
+  // Labour cutover: AttendanceScan only counts from here onward, historical
+  // BuildSmart labour only counts before it — keeps the two sources from
+  // double-counting the same period. See resolveLabourCutover.
+  const { cutoverDate: labourCutoverDate } = await resolveLabourCutover(
+    new Date(),
+  );
+
   const sites = await prisma.site.findMany({
     where: {
       ...scope,
@@ -307,7 +315,15 @@ export async function listSites(input?: {
         orderBy: { startsOn: "desc" },
       },
       attendanceScans: {
-        where: hasDateFilter ? { workDate: dateFilter } : undefined,
+        where: {
+          workDate: {
+            ...dateFilter,
+            gte:
+              dateFilter.gte && dateFilter.gte > labourCutoverDate
+                ? dateFilter.gte
+                : labourCutoverDate,
+          },
+        },
         select: {
           workDate: true,
           dayRateAtScan: true,
@@ -354,7 +370,12 @@ export async function listSites(input?: {
         where: {
           siteId: { in: siteIds },
           category: "LABOUR",
-          ...histDateWhere,
+          // Only before the labour cutover — not just relying on the
+          // importer to have refused later rows.
+          transactionDate: {
+            ...(hasDateFilter ? dateFilter : {}),
+            lt: labourCutoverDate,
+          },
         },
         _sum: { amount: true },
       }),

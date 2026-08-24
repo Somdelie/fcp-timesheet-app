@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/client";
+import { resolveLabourCutover } from "./buildsmartHistoricalImporter";
 
 export interface SiteCostRow {
   siteId: string;
@@ -38,7 +39,11 @@ export interface SiteCostSummary {
  *
  * materialCost  = SUM(orderItem.quantity * orderItem.unitPriceAtOrder)
  *                 for orders linked to the site within the period
- * wagesCost     = SUM(attendanceScan.dayRateAtScan) within the period for that site
+ * wagesCost     = SUM(attendanceScan.dayRateAtScan) from the labour cutover
+ *                 onward, PLUS SUM(historicalSiteCost LABOUR) before it —
+ *                 the two sources are cutover-bounded so they never overlap
+ *                 for the same date (see resolveLabourCutover). Any caller-
+ *                 supplied date range still applies on top of that boundary.
  * projectCost   = materialCost + wagesCost
  *
  * Revenue and profit fields are set to 0 for now.
@@ -52,6 +57,10 @@ export async function calcSiteCosts(
     startDate && endDateExclusive
       ? { gte: startDate, lt: endDateExclusive }
       : undefined;
+
+  const { cutoverDate: labourCutoverDate } = await resolveLabourCutover(
+    new Date(),
+  );
 
   // ── Material costs (via SiteProductOrderItem → SiteProductOrder) ──
   const materialWhere: Record<string, unknown> = {
@@ -104,8 +113,17 @@ export async function calcSiteCosts(
   }
 
   // ── Wages costs (via AttendanceScan.dayRateAtScan) ──
+  // Only counted from the labour cutover onward — BuildSmart is the source
+  // of truth before it (see historicalWageRows below), so scans before the
+  // cutover are excluded here to avoid double-counting the same labour.
   const wagesWhere: Record<string, unknown> = {
-    ...(dateRange ? { workDate: dateRange } : {}),
+    workDate: {
+      ...dateRange,
+      gte:
+        dateRange?.gte && dateRange.gte > labourCutoverDate
+          ? dateRange.gte
+          : labourCutoverDate,
+    },
     ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
   };
 
@@ -129,9 +147,18 @@ export async function calcSiteCosts(
   }
 
   // ── Historical labour costs imported from BuildSmart ──
+  // Only counted before the labour cutover — capped here too (not just relied
+  // on at import time) so reporting stays correct even if the cutover moves
+  // after a row was already imported.
   const historicalWageRows = await prisma.historicalSiteCost.findMany({
     where: {
-      ...(dateRange ? { transactionDate: dateRange } : {}),
+      transactionDate: {
+        ...dateRange,
+        lt:
+          dateRange?.lt && dateRange.lt < labourCutoverDate
+            ? dateRange.lt
+            : labourCutoverDate,
+      },
       category: "LABOUR",
       ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
     },
