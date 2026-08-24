@@ -229,6 +229,9 @@ model Supervisor {
   dayAcceptances           TimesheetDayAcceptance[] @relation("DayAcceptances")
   suggestedLabourPlanTeams LabourPlanTeam[]         @relation("LabourPlanTeamSuggestedSupervisor")
   overrideLabourPlanTeams  LabourPlanTeam[]         @relation("LabourPlanTeamOverrideSupervisor")
+
+  // ✅ NEW: face enrollments this supervisor captured for their crew
+  enrolledFaces FaceEnrollment[]
 }
 
 model Foreman {
@@ -827,8 +830,13 @@ model FaceEnrollment {
 
   status FaceEnrollmentStatus @default(PENDING_APPROVAL)
 
-  enrolledByForemanId String
-  enrolledByForeman   Foreman  @relation(fields: [enrolledByForemanId], references: [id])
+  // Exactly one of enrolledByForemanId / enrolledBySupervisorId is set,
+  // depending on who captured the photo. Both nullable rather than a single
+  // role-agnostic user id so each keeps its own typed FK/relation.
+  enrolledByForemanId String?
+  enrolledByForeman   Foreman?  @relation(fields: [enrolledByForemanId], references: [id])
+  enrolledBySupervisorId String?
+  enrolledBySupervisor   Supervisor? @relation(fields: [enrolledBySupervisorId], references: [id])
   enrolledAt          DateTime @default(now())
   device              String?
   latitude            Float?
@@ -847,6 +855,7 @@ model FaceEnrollment {
   @@index([employeeId])
   @@index([status])
   @@index([enrolledByForemanId])
+  @@index([enrolledBySupervisorId])
 }
 
 // Audit log — one row per verification attempt (not just the winning one).

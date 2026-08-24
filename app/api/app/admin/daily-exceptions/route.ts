@@ -106,6 +106,7 @@ export async function GET(req: NextRequest) {
           enrolledAt: true,
           employee: { select: { id: true, firstName: true, lastName: true } },
           enrolledByForeman: { select: { id: true, user: { select: { name: true } } } },
+          enrolledBySupervisor: { select: { id: true, user: { select: { name: true } } } },
         },
       }),
     ]);
@@ -153,7 +154,10 @@ export async function GET(req: NextRequest) {
       pose: e.pose,
       imageUrl: e.imageUrl,
       qualityScore: e.qualityScore,
-      foremanName: e.enrolledByForeman.user.name ?? "Unknown",
+      foremanName:
+        e.enrolledByForeman?.user.name ??
+        e.enrolledBySupervisor?.user.name ??
+        "Unknown",
       enrolledAtISO: e.enrolledAt.toISOString(),
     })),
   });
