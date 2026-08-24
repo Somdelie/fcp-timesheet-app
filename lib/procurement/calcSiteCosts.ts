@@ -113,18 +113,41 @@ export async function calcSiteCosts(
   }
 
   // ── Wages costs (via AttendanceScan.dayRateAtScan) ──
-  // Only counted from the labour cutover onward — BuildSmart is the source
-  // of truth before it (see historicalWageRows below), so scans before the
-  // cutover are excluded here to avoid double-counting the same labour.
+  // The cutover exclusion only applies to sites that actually HAVE historical
+  // BuildSmart labour to avoid double-counting against — otherwise a site
+  // that's always been live-only would have its real pre-cutover wages wiped
+  // out with nothing to replace them. So: sites with historical LABOUR rows
+  // only count scans from the cutover onward; every other site counts all
+  // its scans, same as before this cutover logic existed.
+  const cutoverSiteIds = (
+    await prisma.historicalSiteCost.findMany({
+      where: {
+        category: "LABOUR",
+        ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
+      },
+      select: { siteId: true },
+      distinct: ["siteId"],
+    })
+  ).map((r) => r.siteId);
+
   const wagesWhere: Record<string, unknown> = {
-    workDate: {
-      ...dateRange,
-      gte:
-        dateRange?.gte && dateRange.gte > labourCutoverDate
-          ? dateRange.gte
-          : labourCutoverDate,
-    },
     ...(siteIds?.length ? { siteId: { in: siteIds } } : {}),
+    OR: [
+      {
+        siteId: { in: cutoverSiteIds },
+        workDate: {
+          ...dateRange,
+          gte:
+            dateRange?.gte && dateRange.gte > labourCutoverDate
+              ? dateRange.gte
+              : labourCutoverDate,
+        },
+      },
+      {
+        siteId: { notIn: cutoverSiteIds },
+        ...(dateRange ? { workDate: dateRange } : {}),
+      },
+    ],
   };
 
   const wageRows = await prisma.attendanceScan.findMany({

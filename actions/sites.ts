@@ -252,9 +252,11 @@ export async function listSites(input?: {
   if (input?.dateTo) dateFilter.lte = new Date(input.dateTo + "T23:59:59.999Z");
   const hasDateFilter = Object.keys(dateFilter).length > 0;
 
-  // Labour cutover: AttendanceScan only counts from here onward, historical
-  // BuildSmart labour only counts before it — keeps the two sources from
-  // double-counting the same period. See resolveLabourCutover.
+  // Labour cutover: for sites that have historical BuildSmart labour,
+  // AttendanceScan only counts from here onward and BuildSmart only counts
+  // before it — keeps the two sources from double-counting the same period.
+  // Sites with no historical labour at all are unaffected (see the per-site
+  // check further down). See resolveLabourCutover.
   const { cutoverDate: labourCutoverDate } = await resolveLabourCutover(
     new Date(),
   );
@@ -315,15 +317,11 @@ export async function listSites(input?: {
         orderBy: { startsOn: "desc" },
       },
       attendanceScans: {
-        where: {
-          workDate: {
-            ...dateFilter,
-            gte:
-              dateFilter.gte && dateFilter.gte > labourCutoverDate
-                ? dateFilter.gte
-                : labourCutoverDate,
-          },
-        },
+        // Fetches ALL scans in range here; the cutover exclusion is applied
+        // below (per site, only when that site actually has historical
+        // BuildSmart labour) rather than at this query level, since a static
+        // where-clause can't vary per site within one nested include.
+        where: hasDateFilter ? { workDate: dateFilter } : undefined,
         select: {
           workDate: true,
           dayRateAtScan: true,
@@ -458,10 +456,31 @@ export async function listSites(input?: {
       const amountReceived = hasDateFilter
         ? (periodClaim?.amountReceived ?? 0)
         : row.claimAmountReceived;
+
+      // Only exclude pre-cutover live wages for sites that actually have
+      // historical BuildSmart labour to avoid double-counting against —
+      // otherwise a site with no historical import at all would have real
+      // wages wiped out with nothing to replace them.
+      const hasHistLabour = histWagesMap.has(s.id);
+      const liveWages = hasHistLabour
+        ? (s.attendanceScans ?? []).reduce(
+            (sum: number, scan: { workDate: unknown; dayRateAtScan: unknown }) => {
+              const workDate =
+                scan.workDate instanceof Date
+                  ? scan.workDate
+                  : new Date(String(scan.workDate));
+              return workDate >= labourCutoverDate
+                ? sum + (Number(scan.dayRateAtScan) || 0)
+                : sum;
+            },
+            0,
+          )
+        : row.totalWages;
+
       return {
         ...row,
         amountClaimed,
-        totalWages: row.totalWages + (histWagesMap.get(s.id) ?? 0),
+        totalWages: liveWages + (histWagesMap.get(s.id) ?? 0),
         totalMaterialCost:
           row.totalMaterialCost + (histMaterialMap.get(s.id) ?? 0),
         claimDate: hasDateFilter
