@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteImage } from "@/lib/cloudinary";
+import { authorizedCron } from "@/lib/cronAuth";
 
 /**
  * Cron-callable cleanup endpoint.
@@ -18,26 +19,13 @@ import { deleteImage } from "@/lib/cloudinary";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // If no secret configured, reject all cron calls
-
-  const fromQuery = req.nextUrl.searchParams.get("secret");
-  if (fromQuery === secret) return true;
-
-  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (bearer === secret) return true;
-
-  return false;
-}
-
 function extractPublicId(url: string): string | null {
   const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
   return match?.[1] ?? null;
 }
 
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!authorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

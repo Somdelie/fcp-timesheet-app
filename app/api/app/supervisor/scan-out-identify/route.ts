@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyApiToken } from "@/lib/jwt";
-import { resolveActingForeman } from "@/lib/resolveActingForeman";
-import { resolveForemanSiteDays } from "@/lib/resolveForemanSiteDays";
 import { getFaceVerifier } from "@/lib/faceVerifier";
 import {
   VERIFIED_THRESHOLD,
@@ -13,6 +13,32 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function getBearer(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] ?? null;
+}
+
+async function getAuth(req: Request) {
+  let userId: string | null = null;
+  let role: string | null = null;
+
+  const token = getBearer(req);
+  if (token) {
+    const payload = await verifyApiToken(token);
+    if (!payload) return { userId: null, role: null };
+    userId = payload.sub;
+    role = payload.role;
+  } else {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as any;
+    userId = user?.id ?? null;
+    role = user?.role ?? null;
+  }
+
+  return { userId, role };
+}
+
 function startOfDayUTC(dateISO: string) {
   const d = new Date(`${dateISO}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid dateISO");
@@ -20,48 +46,34 @@ function startOfDayUTC(dateISO: string) {
 }
 
 /**
- * POST /api/app/attendance/scan-out-identify
+ * POST /api/app/supervisor/scan-out-identify
  *
- * The continuous-scanner counterpart to scan-out-face: "here's a face, tell
- * me who this is" instead of "verify this specific employee". Candidate
- * pool is deliberately narrow — only employees scanned IN today at this
- * site with no scan-out yet (same set as GET .../day/scan-out-pending) —
- * never company-wide. That bound is the main defense against a wrong-person
- * match as the crew size grows (see faceVerificationThresholds.ts).
- *
- * A VERIFIED-band match with a clear margin over the next-closest employee
- * is recorded immediately. Anything less certain (PENDING_REVIEW band, or a
- * VERIFIED-band match too close to a runner-up to trust unattended) comes
- * back as needsConfirmation instead of being recorded — the client shows
- * the candidate and waits for a foreman tap before calling
- * scan-out-confirm. Detection/quality failures and "no plausible match" are
- * both reported as ok:false so the client can reset the scanner instead of
- * treating them as a hard error.
- *
- * siteId is optional: a real foreman scanning out from one site passes it
- * as before, scoping candidates to that site's SiteDay. An assistant
- * scanning out on a foreman's behalf (resolveActingForeman) has no site to
- * pick ahead of time, so omitting it widens the candidate pool to every
- * site that foreman is currently assigned to (resolveForemanSiteDays) — the
- * matched scan's own site is reported back in the response either way so
- * the client can show what was auto-detected.
+ * Supervisor counterpart of /api/app/attendance/scan-out-identify. A
+ * supervisor oversees several sites/foremen at once, so unlike the foreman
+ * version there is no siteId in the request - the candidate pool is every
+ * not-yet-scanned-out IN scan across every site this supervisor is
+ * currently assigned to (SupervisorSiteAssignment), and the matched
+ * employee's site/foreman are resolved from whichever scan wins the face
+ * match, then returned so the client can show what was auto-detected.
  */
 export async function POST(req: Request) {
-  const auth = req.headers.get("authorization") ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token)
+  const { userId, role } = await getAuth(req);
+  if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const payload = await verifyApiToken(token);
-  if (!payload)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (payload.role !== "FOREMAN" && payload.role !== "EMPLOYEE") {
+  if (role !== "SUPERVISOR")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+
+  const supervisor = await prisma.supervisor.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!supervisor)
+    return NextResponse.json(
+      { error: "Supervisor not found" },
+      { status: 404 },
+    );
 
   const body = await req.json().catch(() => null);
-  const siteId =
-    typeof body?.siteId === "string" && body.siteId.trim() ? body.siteId.trim() : null;
   const dateISO = typeof body?.dateISO === "string" ? body.dateISO : "";
   const device = typeof body?.device === "string" ? body.device.slice(0, 200) : "";
   const image = typeof body?.image === "string" ? body.image : "";
@@ -78,27 +90,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const actingForemanIdHeader =
-    req.headers.get("x-acting-foreman-id")?.trim() || null;
-  const resolved = await resolveActingForeman(payload.sub, actingForemanIdHeader);
-  if (!resolved.ok) {
-    return NextResponse.json({ error: resolved.error }, { status: resolved.status });
-  }
-  const actingForemanId = resolved.foremanId!;
-
-  const siteDays = await resolveForemanSiteDays(actingForemanId, siteId, workDate);
-  if ("error" in siteDays) {
-    return NextResponse.json({ error: siteDays.error }, { status: siteDays.status });
-  }
-  if (siteDays.length === 0) {
+  const now = new Date();
+  const assignments = await prisma.supervisorSiteAssignment.findMany({
+    where: {
+      supervisorId: supervisor.id,
+      startsOn: { lte: now },
+      OR: [{ endsOn: null }, { endsOn: { gt: now } }],
+    },
+    select: { siteId: true },
+  });
+  const siteIds = Array.from(new Set(assignments.map((a) => a.siteId)));
+  if (siteIds.length === 0) {
     return NextResponse.json({ ok: false, error: "no_candidates" });
   }
-  const siteDayIds = siteDays.map((d) => d.id);
-  const siteBySiteDayId = new Map(siteDays.map((d) => [d.id, d.site]));
 
   const scans = await prisma.attendanceScan.findMany({
-    where: { siteDayId: { in: siteDayIds }, direction: "IN", scannedOutAt: null },
-    select: { id: true, employeeId: true, siteDayId: true },
+    where: {
+      siteId: { in: siteIds },
+      workDate,
+      direction: "IN",
+      scannedOutAt: null,
+    },
+    select: {
+      id: true,
+      employeeId: true,
+      site: { select: { id: true, name: true } },
+      siteDay: {
+        select: {
+          foreman: { select: { id: true, user: { select: { name: true } } } },
+        },
+      },
+    },
   });
   if (scans.length === 0) {
     return NextResponse.json({ ok: false, error: "no_candidates" });
@@ -129,15 +151,9 @@ export async function POST(req: Request) {
   }
 
   if (!result.ok) {
-    // no_face_detected / multiple_faces_detected / low_quality — nothing to
-    // identify, never a hard error: the client just resets the scanner.
     return NextResponse.json({ ok: false, error: result.error, warnings: result.warnings });
   }
 
-  // Best distance per distinct employee (not per raw embedding) — an
-  // employee with several close-together poses shouldn't look artificially
-  // more "won" against themselves; the margin that matters is winner vs.
-  // the next different person.
   const bestDistanceByEmployee = new Map<string, number>();
   for (let i = 0; i < enrollments.length; i++) {
     const employeeId = enrollments[i].employeeId;
@@ -149,7 +165,8 @@ export async function POST(req: Request) {
   }
 
   const ranked = Array.from(bestDistanceByEmployee.entries()).sort((a, b) => a[1] - b[1]);
-  const [winnerEmployeeId, winnerDistance] = ranked[0];
+  const [winnerEmployeeId] = ranked[0];
+  const winnerDistance = ranked[0][1];
   const runnerUpDistance = ranked.length > 1 ? ranked[1][1] : Infinity;
   const margin = runnerUpDistance - winnerDistance;
 
@@ -167,10 +184,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "no_match" });
   }
 
-  const canAutoRecord = result.confidence >= VERIFIED_THRESHOLD && margin >= MIN_IDENTIFY_MARGIN;
-
   const scan = scanByEmployeeId.get(winnerEmployeeId)!;
-  const site = siteBySiteDayId.get(scan.siteDayId)!;
+  const site = { id: scan.site.id, name: scan.site.name };
+  const foreman = scan.siteDay.foreman
+    ? { id: scan.siteDay.foreman.id, name: scan.siteDay.foreman.user.name ?? "Unknown foreman" }
+    : null;
+
+  const canAutoRecord = result.confidence >= VERIFIED_THRESHOLD && margin >= MIN_IDENTIFY_MARGIN;
 
   if (!canAutoRecord) {
     return NextResponse.json({
@@ -182,14 +202,12 @@ export async function POST(req: Request) {
       confidence: result.confidence,
       matchedEnrollmentId: matchedEnrollment.id,
       site,
+      foreman,
     });
   }
 
-  const now = new Date();
-
-  // Atomic conditional update, not read-then-write — two near-simultaneous
-  // frames (or a race with scan-out-confirm) can never both record the same
-  // employee's scan-out.
+  // Atomic conditional update, not read-then-write — see the equivalent
+  // comment in attendance/scan-out-identify.
   const updateResult = await prisma.attendanceScan.updateMany({
     where: { id: scan.id, scannedOutAt: null },
     data: {
@@ -223,5 +241,6 @@ export async function POST(req: Request) {
     verificationStatus: "VERIFIED",
     scannedOutAt: now.toISOString(),
     site,
+    foreman,
   });
 }
